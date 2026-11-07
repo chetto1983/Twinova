@@ -55,7 +55,7 @@ scripts/check-single-runtime.mjs
 
 ## Tasks
 
-- [ ] **1. CI bundles.** Verify: the `bundle` jobs list `.msi`, `.deb`, `.AppImage` with their sizes.
-- [ ] **2. release.yml + CHANGELOG.md.** Verify: `actionlint`-clean YAML; the notes step extracts the v0.1.0 section
+- [x] **1. CI bundles.** Verify: the `bundle` jobs list `.msi`, `.deb`, `.AppImage` with their sizes.
+- [x] **2. release.yml + CHANGELOG.md.** Verify: `actionlint`-clean YAML; the notes step extracts the v0.1.0 section
   locally (same awk).
-- [ ] **3. Verification file, ROADMAP 2.4.**
+- [x] **3. Verification file, ROADMAP 2.4.**
