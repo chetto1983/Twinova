@@ -2,14 +2,20 @@ name: CI
 
 # The ModbusTool set (chetto1983/ModbusTool .github/workflows/ci.yml), with the app under app/.
 
-# A change made only of Markdown and docs/ (research, specs, verification images) builds and tests
-# nothing, so it skips the run: GitHub skips a workflow only when every changed path matches
-# (https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore).
+# As in chetto1983/Aura: a push or PR that changes only prose (ROADMAP.md, Markdown under docs/)
+# runs nothing; no build or test reads it, and the next code change's run covers it. Pushes run on
+# main only; a working branch is checked by its pull_request run, so one SHA does not run twice.
+# No tag trigger here, so `paths` cannot swallow a tag push.
 on:
   push:
-    paths-ignore: ["**.md", "docs/**"]
+    branches: ["main"]
+    paths: &code-paths
+      - "**"
+      - "!ROADMAP.md"
+      - "!docs/**/*.md"
   pull_request:
-    paths-ignore: ["**.md", "docs/**"]
+    branches: ["main"]
+    paths: *code-paths
 
 permissions:
   contents: read
