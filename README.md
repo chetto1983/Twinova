@@ -34,6 +34,12 @@ cd app && npm install && npm run tauri dev
 Linux needs the Tauri prerequisites (WebKitGTK 4.1 and friends). Spec, plan and verification are in
 [`docs/superpowers/`](docs/superpowers/).
 
+CI builds the installers on every change: an MSI for Windows, and a deb and an AppImage for Linux. They are not signed.
+No release is published yet; the release text comes from [`CHANGELOG.md`](CHANGELOG.md).
+
+Development checks run as git hooks (`cd app && npm run hooks`), and in CI on every pull request. The full list,
+including the end-to-end run of the real app (`npm run e2e`), is in [`CLAUDE.md`](CLAUDE.md), "Post-edit validation".
+
 ## Roadmap
 
 Milestones and their phases, with acceptance criteria and status: [`ROADMAP.md`](ROADMAP.md).
@@ -47,7 +53,8 @@ Milestones and their phases, with acceptance criteria and status: [`ROADMAP.md`]
 - a benchmark of 13 other commercial simulators, plus open-source projects, and a "best of" matrix;
 - an assessment of Open Industry Project, with test and benchmark measurements;
 - an inventory of the Rust ecosystem for each building block;
-- the open-source IEC 61131-3 runtimes that could run component logic.
+- the open-source IEC 61131-3 runtimes that could run component logic;
+- how to run Structured Text without a compiler, in the app and in a browser.
 
 Every claim cites its source. Descriptions of commercial products are paraphrased from public
 documentation (clean-room). Twinova is not affiliated with any of the vendors named there.

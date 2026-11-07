@@ -52,6 +52,6 @@ The backend tests include the spec's two 60 s scenarios on the default program:
 - Performance with many parts or many scenes.
 - Determinism across machines, and the IEC conformance of truST's former VM beyond the cases tested.
 - No coverage or mutation figures were measured in this slice. CLAUDE.md asks for them at Definition of Done, so
-  setting up that tooling is the next task.
+  setting up that tooling is the next task. (Done on 2026-11-07: `2026-11-07-engineering-foundation.md`.)
 - The release binary was not built or bundled. The debug binary is 557 MB, because trust-runtime's `full` feature
   pulls the whole truST product.

@@ -14,7 +14,7 @@ Twinova keeps the app under `app/` and the research at the root.
 
 | ModbusTool | Twinova |
 |---|---|
-| `.github/workflows/ci.yml` (rust, frontend, file-size, bundle, e2e) | `ci.yml`: rust, **rust-windows**, frontend, file-size, build |
+| `.github/workflows/ci.yml` (rust, frontend, file-size, bundle, e2e) | `ci.yml`: rust, frontend, file-size, build, **e2e** (Linux and Windows). The first version had a `rust-windows` job, replaced by the E2E (amended 2026-11-07, below) |
 | `.github/workflows/mutation.yml` | the same, scope `scene.rs`, `engine.rs` and `src/lib/snapshot.ts` |
 | `.github/actions/linux-deps` | the same, without `libudev-dev` (no serial port here) |
 | `scripts/check-file-size.sh`, `memory-capped.sh` | the same; the cap also covers `.st` files (CLAUDE.md) |

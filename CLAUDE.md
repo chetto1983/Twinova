@@ -5,7 +5,8 @@ Guida per Claude Code su questo repository. Regole derivate da `chetto1983/Aura`
 messa in servizio virtuale, open source. Lo stack previsto, da confermare con le prove di
 `docs/research/08-inventario-rust.md`, è nucleo in **Rust**, editor in **TypeScript** e logica dei
 componenti in **IEC 61131-3** (Structured Text e Ladder), non Python: chi programma PLC non lo conosce
-(decisione dell'utente, 2026-11-07; `docs/research/09-iec61131-runtime.md`). Oggi il repository contiene solo la ricerca: `docs/research/00-indice.md`.
+(decisione dell'utente, 2026-11-07; `docs/research/09-iec61131-runtime.md`). Oggi il repository contiene la ricerca (`docs/research/00-indice.md`), la prima app desktop (`app/`, M1) e la
+fondazione di CI e release (M2); lo stato delle fasi è in `ROADMAP.md`.
 
 ## Principio: misura, poi documenta, poi implementa
 
