@@ -6,7 +6,7 @@ Spike for ROADMAP 3.1: nexosim 1.0 (MIT OR Apache-2.0) against a plain event que
 
 ```sh
 cargo run --release                                     # A determinism, B throughput, D save/restore
-cargo build --release --target wasm32-unknown-unknown   # C: builds (running in wasm is not measured)
+cargo build --release --target wasm32-unknown-unknown   # C: builds; not a requirement since wasm was dropped
 ```
 
 - `src/own.rs`: the plain queue, about 40 lines.

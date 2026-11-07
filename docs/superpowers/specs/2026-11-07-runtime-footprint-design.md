@@ -87,7 +87,7 @@ path A′ at "about 10 800 lines (the encoder)": the measurement is at least fou
 | Option | Cost | Gain |
 |---|---|---|
 | **Keep `full`** | none | none; a cold Linux build keeps ~1/3 of its time in unused crates |
-| **A′: fork lowering, encoder and runtime** | ≥ 45 700 coupled lines to own and cut free | build time, about 300 fewer crates, a path to wasm (M9.4); little binary size |
+| **A′: fork lowering, encoder and runtime** | ≥ 45 700 coupled lines to own and cut free | build time, about 300 fewer crates, little binary size |
 | **B: an interpreter of our own on `trust-hir`** | an interpreter to write | the same, plus it follows truST's maintained frontend (ROADMAP 2.6) |
 
 ## Decision
@@ -98,7 +98,10 @@ path A′ at "about 10 800 lines (the encoder)": the measurement is at least fou
 - a fork is at least 45 700 coupled lines to own.
 
 The choice of the ST engine, A′ against B, is taken when it is needed: in M3, where Twinova's own engine and PLC scan
-come, or in M9.4 (wasm). That choice starts from these numbers, and B has to be measured first.
+come. That choice starts from these numbers, and B has to be measured first.
+
+Amended 2026-11-07: wasm is dropped (user, 2026-11-07). The browser edition, ROADMAP 9.4, is removed, so building for
+wasm is no longer a reason to remove `full` or to fork.
 
 ## What this does not prove
 

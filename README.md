@@ -54,7 +54,7 @@ Milestones and their phases, with acceptance criteria and status: [`ROADMAP.md`]
 - an assessment of Open Industry Project, with test and benchmark measurements;
 - an inventory of the Rust ecosystem for each building block;
 - the open-source IEC 61131-3 runtimes that could run component logic;
-- how to run Structured Text without a compiler, in the app and in a browser.
+- how to run Structured Text without a compiler, inside the app.
 
 Every claim cites its source. Descriptions of commercial products are paraphrased from public
 documentation (clean-room). Twinova is not affiliated with any of the vendors named there.

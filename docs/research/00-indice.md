@@ -5,6 +5,9 @@ progettare un **nuovo simulatore open source** che prenda il meglio dei simulato
 a componenti, flusso materiali, robot, messa in servizio virtuale con PLC). Non è legato alla BoxLine
 (correzione dell'utente, 2026-11-07).
 
+Aggiornamento 2026-11-07 (decisione dell'utente): Twinova è un'app desktop Tauri e **non avrà un'edizione browser né
+WASM**. Le note che valutano il WASM (07, 08, 09, 10) restano come registro; non condizionano più le scelte.
+
 ## 1. Cosa prova e cosa non prova
 
 - **Prova:** che cosa la guida ufficiale di Visual Components 5.1 (Premium, help del 13/10/2026,

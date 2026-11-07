@@ -76,6 +76,9 @@ adatto).
 
 ## Prove da fare prima di fissare lo stack
 
+Aggiornamento 2026-11-07: i punti sul WASM qui sotto non valgono più. L'app è desktop (Tauri), senza edizione browser
+(decisione dell'utente).
+
 1. nexosim: un nastro analitico con 1 000 pezzi e sensori, confrontato con il passo fisso; ordine degli eventi
    simultanei; compilazione in `wasm32`.
 2. Rapier: determinismo tra nativo e WASM con la feature `enhanced-determinism`.
