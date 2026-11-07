@@ -19,7 +19,8 @@ be built on.
 - **Headless first**: the engine runs as a library or service; the 3D editor is a client.
 
 Planned stack, to be confirmed by measurements: the engine in **Rust**, the editor in **TypeScript**,
-component scripting in **Python**.
+component logic in **IEC 61131-3** (Structured Text and Ladder), the languages PLC programmers already
+use.
 
 ## Research (in Italian)
 
@@ -29,7 +30,8 @@ component scripting in **Python**.
 - how simulation engines are organised (discrete-event, fixed-step and hybrid) and how they sync with a PLC;
 - a benchmark of 13 other commercial simulators, plus open-source projects, and a "best of" matrix;
 - an assessment of Open Industry Project, with test and benchmark measurements;
-- an inventory of the Rust ecosystem for each building block.
+- an inventory of the Rust ecosystem for each building block;
+- the open-source IEC 61131-3 runtimes that could run component logic.
 
 Every claim cites its source. Descriptions of commercial products are paraphrased from public
 documentation (clean-room). Twinova is not affiliated with any of the vendors named there.

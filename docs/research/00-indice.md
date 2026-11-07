@@ -44,6 +44,7 @@ a componenti, flusso materiali, robot, messa in servizio virtuale con PLC). Non 
 | [06](06-matrice-meglio-di.md) | Matrice "il meglio di ciascuno" su 14 simulatori commerciali, vuoti comuni, open source riusabile, decisioni aperte | 23 aree |
 | [07](07-open-industry-project.md) | Open Industry Project (MIT, browser) come base: copertura della matrice, rischi, tre strade | – |
 | [08](08-inventario-rust.md) | Strada C: inventario dei crate Rust (licenza, versione, download) per ogni bisogno, vuoti e prove | – |
+| [09](09-iec61131-runtime.md) | Logica dei componenti in IEC 61131-3 (non Python): runtime open source, truST in dettaglio | – |
 | [benchmark/](benchmark/) | Schede prodotto con URL: virtual commissioning (g1), flusso/DES (g2), didattici e open source (g3) | – |
 | [ricerca/](ricerca/) | Note di ricerca con URL: eventi discreti (r1), passo fisso e fisica (r2), virtual commissioning e PLCSIM (r3) | – |
 

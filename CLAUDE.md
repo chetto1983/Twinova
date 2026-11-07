@@ -3,8 +3,9 @@
 Guida per Claude Code su questo repository. Regole derivate da `chetto1983/Aura` attraverso
 `chetto1983/ModbusTool` (CLAUDE.md), adattate a Twinova: simulatore di fabbrica 3D e strumento di
 messa in servizio virtuale, open source. Lo stack previsto, da confermare con le prove di
-`docs/research/08-inventario-rust.md`, è nucleo in **Rust**, editor in **TypeScript** e script dei
-componenti in **Python**. Oggi il repository contiene solo la ricerca: `docs/research/00-indice.md`.
+`docs/research/08-inventario-rust.md`, è nucleo in **Rust**, editor in **TypeScript** e logica dei
+componenti in **IEC 61131-3** (Structured Text e Ladder), non Python: chi programma PLC non lo conosce
+(decisione dell'utente, 2026-11-07; `docs/research/09-iec61131-runtime.md`). Oggi il repository contiene solo la ricerca: `docs/research/00-indice.md`.
 
 ## Principio: misura, poi documenta, poi implementa
 
@@ -74,7 +75,7 @@ mai il loro materiale.
 - **NEVER SUPPOSE.** Read code before editing. If uncertain about an API contract, stop and ask.
 - **READ THE DOCUMENTATION FIRST — ALWAYS.** Before writing a line against any external system or
   library, read its documentation: the PLCSIM Advanced API, S7, OPC UA, Modbus, nexosim, Rapier,
-  wasm-bindgen, PyO3, three.js. Probing to discover an API is guessing with extra steps. Cite the
+  wasm-bindgen, the IEC 61131-3 runtime, three.js. Probing to discover an API is guessing with extra steps. Cite the
   page in a code comment when the behaviour is surprising.
 - **INVENTORY BEFORE INVENTION.** Before writing a component, enumerate what the libraries you
   already depend on ALREADY DO. Read the public symbol list of the INSTALLED version
@@ -92,7 +93,7 @@ mai il loro materiale.
   rewrite the test with explicit justification in the commit message.
 - **SCOPE CONTROL.** Do exactly what was asked. No unrequested features, refactors or improvements.
 - **FOLLOW EXISTING PATTERNS.** Never invent new approaches when codebase patterns exist.
-- **NO GOD FILE.** Never create a file >600 LOC (Rust, TS, Python). Split by concern
+- **NO GOD FILE.** Never create a file >600 LOC (Rust, TS, ST). Split by concern
   (`<name>_<concern>.rs`, sub-modules). Remove dead code and unused params. DARK CODE IS FORBIDDEN.
 - **CODE BASE RULES.** Clean, readable, as simple as the behaviour allows. In case of doubt:
   > Beautiful is better than ugly. Explicit is better than implicit. Simple is better than complex.
@@ -120,7 +121,7 @@ mai il loro materiale.
 - **NO SKIP-AS-GREEN IN CI.** A test that skips under `$CI` exercises nothing. Integration tests
   that need a resource must fail under `$CI` when it is missing, not skip.
 - **COVERAGE FLOOR 85%.** No task closes below 85% measured coverage (Rust: `cargo llvm-cov`;
-  TS: `vitest --coverage`; Python: `pytest --cov`). Report the combined figure, not a
+  TS: `vitest --coverage`). Report the combined figure, not a
   cherry-picked one.
 - **MUTATION ≥70%** on the critical files of each task (Rust: `cargo mutants`): event scheduler,
   protocol codecs, data-type conversions, conveyor kinematics.
@@ -146,7 +147,7 @@ After every Rust edit:
 - the wasm target builds: `cargo build --target wasm32-unknown-unknown`, for the crates meant
   for the browser
 
-After every TypeScript or Python edit: type check, lint with zero warnings, format check, tests
+After every TypeScript edit: type check, lint with zero warnings, format check, tests
 with coverage, build.
 
 Repository-wide: the 600-LOC cap is checked in CI.

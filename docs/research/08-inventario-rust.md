@@ -3,6 +3,10 @@
 Stato: **inventario, 2026-11-07**. Decisione dell'utente: **strada C**, cioè un progetto nuovo (07 §4). La proposta di
 stack, da confermare, è nucleo in Rust, interfaccia in TypeScript e script in Python.
 
+> **Correzione 2026-11-07 (decisione dell'utente):** niente Python per la logica dei componenti, perché chi
+> programma PLC non lo conosce. Si usa IEC 61131-3 (ST e Ladder): vedi [09](09-iec61131-runtime.md). La riga
+> `pyo3` qui sotto resta come inventario, ma non fa più parte dello stack.
+
 ## Metodo, e cosa prova e cosa non prova
 
 - **Fonte:** l'API di crates.io (`https://crates.io/api/v1/crates/<nome>`), interrogata il 2026-11-07. Da lì vengono
