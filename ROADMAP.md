@@ -31,19 +31,21 @@ Spec `2026-11-07-tauri-shell-design.md`.
 | 1.1 | Tauri 2 + Svelte 5 shell, Aura tokens, en/it | `svelte-check` clean, app starts | ✅ |
 | 1.2 | Closed-form belt, ST on truST's VM, lockstep engine | 18 Rust tests incl. the 60 s scenarios | ✅ |
 | 1.3 | E2E under Xvfb | screenshots; pacing 10.04 s virtual in 10.06 s wall | ✅ |
-| 1.4 | **DoD gaps**: coverage ≥85 %, mutation ≥70 % on `scene`/`engine`, Windows run | figures in a verification file | ⬜ |
+| 1.4 | **DoD gaps**: coverage ≥85 %, mutation ≥70 % on `scene`/`engine`, Windows run | figures in a verification file | 🔶 coverage 93.6 % Rust / 100 % TS, mutation 62/62; Windows compiles, tests do not start yet |
 
-## M2 — Engineering foundation ⬜
+## M2 — Engineering foundation 🔶
+
+The gate set of chetto1983/ModbusTool, ported in `2026-11-07-engineering-foundation` (plan and verification).
 
 The tooling that every later phase relies on.
 
-| Phase | Deliverable | Acceptance |
-|---|---|---|
-| 2.1 | CI on GitHub Actions, Linux and Windows: fmt, clippy `-D warnings`, tests, svelte-check, Vitest, build | green on `main` |
-| 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI |
-| 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings |
-| 2.4 | Release bundles: MSI/NSIS, AppImage/deb, dmg, plus `CHANGELOG.md` | installers built by CI, sizes recorded |
-| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests) |
+| Phase | Deliverable | Acceptance | Status |
+|---|---|---|---|
+| 2.1 | CI on GitHub Actions, Linux and Windows: fmt, clippy `-D warnings`, tests, svelte-check, Vitest, build | green on `main` | 🔶 Linux green; Windows test binary needs the app manifest |
+| 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI | 🔶 coverage enforced; `mutation.yml` runs on `main` only, not run yet |
+| 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings | ✅ |
+| 2.4 | Release bundles: MSI/NSIS, AppImage/deb, dmg, plus `CHANGELOG.md` | installers built by CI, sizes recorded | ⬜ |
+| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests) | ⬜ |
 
 ## M3 — Deterministic engine core ⬜
 
