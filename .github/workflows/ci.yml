@@ -2,17 +2,18 @@ name: CI
 
 # The ModbusTool set (chetto1983/ModbusTool .github/workflows/ci.yml), with the app under app/.
 
-# As in chetto1983/Aura: a push or PR that changes only prose (ROADMAP.md, Markdown under docs/)
-# runs nothing; no build or test reads it, and the next code change's run covers it. Pushes run on
-# main only; a working branch is checked by its pull_request run, so one SHA does not run twice.
-# No tag trigger here, so `paths` cannot swallow a tag push.
+# Prose runs nothing: no build, test or workflow step of this CI reads a Markdown file or anything
+# under docs/ (grep, 2026-11-07), so a change made only of them skips the run. The scheme is Aura's
+# (chetto1983/Aura ci.yml): `paths` with negations, where a file a test reads could be re-included.
+# Pushes run on main only; a working branch is checked by its pull_request run, so one SHA does not
+# run twice. No tag trigger here, so `paths` cannot swallow a tag push.
 on:
   push:
     branches: ["main"]
     paths: &code-paths
       - "**"
-      - "!ROADMAP.md"
-      - "!docs/**/*.md"
+      - "!**.md"
+      - "!docs/**"
   pull_request:
     branches: ["main"]
     paths: *code-paths

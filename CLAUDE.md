@@ -134,7 +134,7 @@ mai il loro materiale.
 - **GIT PUSH DISCIPLINE.** Push at the end of a task or completed job, then check that all CI runs
   on the pushed SHA are green. Never leave work only in a local branch. CI runs on pushes to `main`
   and on pull requests (the Aura scheme), so a working branch needs an open PR to be checked; a
-  change of prose only (`ROADMAP.md`, Markdown under `docs/`) runs nothing.
+  change made only of Markdown files or of `docs/` runs nothing (nothing in CI reads them).
 
 ## truST, the ST runtime
 
