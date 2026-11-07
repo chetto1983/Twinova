@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import", "unicorn", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn"
+  },
+  "env": { "builtin": true, "browser": true },
+  "rules": {
+    "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts"],
+      "rules": { "import/no-named-as-default-member": "off" }
+    },
+    {
+      "files": ["e2e/**"],
+      "rules": { "no-await-in-loop": "off" }
+    }
+  ],
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "reports/**",
+    "src-tauri/**",
+    "node_modules/**",
+    ".stryker-tmp/**",
+    ".claude/**",
+    "src/paraglide/**"
+  ]
+}

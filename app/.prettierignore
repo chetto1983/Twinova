@@ -1,0 +1,10 @@
+dist/
+coverage/
+reports/
+src-tauri/
+docs/
+package-lock.json
+*.md
+.claude/
+src/paraglide/
+project.inlang/
