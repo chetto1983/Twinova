@@ -1,5 +1,6 @@
 //! Spike for ROADMAP 3.1: nexosim 1.0 against a plain (t, prio, seq) queue. See README.md.
 
+mod m1;
 mod nexo;
 mod own;
 
@@ -111,7 +112,31 @@ fn save_restore() {
     }
 }
 
+fn m1_scene() {
+    println!(
+        "E. The M1 scene (belt + default ST program, 60 s) on nexosim, scan by scan against M1's engine."
+    );
+    for blocked in [false, true] {
+        let t = Instant::now();
+        let reference = m1::reference(blocked, 60);
+        let t_ref = t.elapsed();
+        let t = Instant::now();
+        let nexo = m1::nexosim(blocked, 60);
+        let t_nexo = t.elapsed();
+        println!(
+            "  outlet {}: {} scans; controller identical: {}; scene identical: {}; M1 engine {:.0} ms, nexosim {:.0} ms",
+            if blocked { "blocked" } else { "free   " },
+            nexo.0.len(),
+            nexo.0 == reference.0,
+            nexo.1 == reference.1,
+            t_ref.as_secs_f64() * 1e3,
+            t_nexo.as_secs_f64() * 1e3
+        );
+    }
+}
+
 fn main() {
+    m1_scene();
     determinism();
     throughput();
     save_restore();

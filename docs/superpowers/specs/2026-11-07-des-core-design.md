@@ -113,6 +113,38 @@ The patch makes the work queue a `VecDeque` used FIFO. It adds a test and docume
 
 Not run: Miri, which is in their CI, because no nightly toolchain is installed here.
 
+### F. The M1 scene on nexosim
+
+The scene of M1 (the belt, `scene.rs`) and its ST controller (`plc.rs`, truST at the pin, the default program) run as
+two nexosim models on one thread, reused from the app as a library:
+- `PlcModel` scans every 10 ms and sends `motor`;
+- `SceneModel` advances 10 ms with that motor and sends the photocell back.
+
+Everything happens at the same instant, as a chain of messages: the order of M1's lockstep step.
+
+The non-serializable parts, the truST harness and the scene, live in each model's environment (`Model::Env`, built by
+a `ProtoModel`). This uses nexosim 1.0 as published, without the patch: with one thread and two models, the order does
+not depend on it.
+
+| 60 s simulated, 6 000 scans | Controller (`motor`, `jam`) | Scene (part ids and exact fronts, photocell, delivered) |
+|---|---|---|
+| Outlet free | identical to M1's engine, scan by scan | identical |
+| Outlet blocked | identical | identical |
+
+Wall time for 60 s simulated: 27–46 ms for M1's engine and 33–51 ms for nexosim over three launches, with run-to-run
+noise larger than the difference.
+
+**Negative control.** The scene was made to send the photocell from before its step, which is one scan late:
+- with the outlet blocked, the comparison fails, so it detects the error;
+- with the outlet free, it does not, because there the photocell only feeds the 2 s jam timer, which never trips.
+
+The blocked case is therefore the one that checks the coupling.
+
+**A limit for ROADMAP 3.5 (snapshots).** nexosim's `save` and `restore` do not include `Model::Env`. The truST VM's
+state (timers, latches) lives there, so a snapshot of this bench would not hold the PLC's state. truST's harness offers
+no serialization at the pin. 3.5 has to solve this, for example by restoring through replay, or by serializing the
+VM's state ourselves.
+
 ## Requirements against the two candidates
 
 | Requirement (05 §6, CLAUDE.md) | nexosim 1.0 | Own queue |
@@ -142,8 +174,7 @@ poor choice in the long run, and chose to act on nexosim's kernel instead.
 
 - That the maintainers accept the patch, or that the order stays as it is in later nexosim releases without it.
 - That FIFO is never slower on other workloads: only the two throughput cases above were run.
-- The M1 scene itself: ROADMAP 3.1 asks for the spike "on the M1 scene". These measurements use synthetic
-  periodic emitters, which isolate the core properties (order, throughput, snapshots), but no conveyor ran.
+- That the coupling stays exact for scenes richer than M1's: F runs one belt and one controller.
 - That nexosim's order is fixed for a given thread count on other machines: 20 runs on one machine are not a proof.
 - Throughput with real models: the probe has no messages in B and no conveyor kinematics.
 - The cost of writing the clock, the cap and the snapshots ourselves: estimated, not measured.
