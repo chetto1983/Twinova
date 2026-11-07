@@ -131,7 +131,9 @@ mai il loro materiale.
   runs and exchanges I/O with a real or emulated PLC, ideally checked against an independent
   reference.
 - **GIT PUSH DISCIPLINE.** Push at the end of a task or completed job, then check that all CI runs
-  on the pushed SHA are green. Never leave work only in a local branch.
+  on the pushed SHA are green. Never leave work only in a local branch. CI runs on pushes to `main`
+  and on pull requests (the Aura scheme), so a working branch needs an open PR to be checked; a
+  change of prose only (`ROADMAP.md`, Markdown under `docs/`) runs nothing.
 
 ## Post-edit validation (Gate 2)
 
