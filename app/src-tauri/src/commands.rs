@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Runtime, State};
 
 use crate::engine::{Engine, Snapshot};
 use crate::plc::Plc;
@@ -93,7 +93,7 @@ pub fn pause(state: State<'_, AppState>) {
 
 /// Starts the Run loop; a second call while running does nothing.
 #[tauri::command]
-pub fn run(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+pub fn run<R: Runtime>(app: AppHandle<R>, state: State<'_, AppState>) -> Result<(), String> {
     let origin_ms = with_engine(&state, |e| Ok(e.time_ms()))?;
     if state.running.swap(true, Ordering::SeqCst) {
         return Ok(());
@@ -126,3 +126,7 @@ pub fn run(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     });
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "commands_tests.rs"]
+mod tests;
