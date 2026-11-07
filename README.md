@@ -34,6 +34,10 @@ cd app && npm install && npm run tauri dev
 Linux needs the Tauri prerequisites (WebKitGTK 4.1 and friends). Spec, plan and verification are in
 [`docs/superpowers/`](docs/superpowers/).
 
+## Roadmap
+
+Milestones and their phases, with acceptance criteria and status: [`ROADMAP.md`](ROADMAP.md).
+
 ## Research (in Italian)
 
 [`docs/research/00-indice.md`](docs/research/00-indice.md) is the entry point. It covers:
