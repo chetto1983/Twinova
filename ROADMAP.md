@@ -45,7 +45,7 @@ The tooling that every later phase relies on.
 | 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI | 🔶 coverage enforced; `mutation.yml` runs on `main` only, not run yet |
 | 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings | ✅ |
 | 2.4 | Release bundles: MSI/NSIS, AppImage/deb, dmg, plus `CHANGELOG.md` | installers built by CI, sizes recorded | ⬜ |
-| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests) | ⬜ |
+| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests); `trust-wasm-analysis` kept for 4.7 | ⬜ |
 
 ## M3 — Deterministic engine core ⬜
 
@@ -70,6 +70,9 @@ The core of the product [02a, 06 #1–2].
 | 4.3 | Behaviours written as ST function blocks bound to component signals | a component's logic edited and rebuilt in the app |
 | 4.4 | Library v1: belt, roller and curved conveyors, diverter, stopper, pusher, turntable, sensors (diffuse, through-beam, colour, barcode), creator and sink | each component has an E2E scene |
 | 4.5 | Editor: catalogue, drag and drop, snapping by interfaces, move/rotate, signal wiring, undo | build a two-conveyor line with a diverter by hand |
+| 4.6 | **ST in VS Code**: the scene's programs are `.st` files in a project folder, rebuilt on save; VS Code with truST's `trust-lsp` extension (MIT OR Apache-2.0) is the external editor | edit in VS Code, save, the running scene picks up the new program |
+| 4.7 | **In-app ST editor** for who has no VS Code (classrooms, the browser edition): Monaco with diagnostics, hover and completion from truST's `BrowserAnalysisEngine` (`trust-wasm-analysis`, already in the dependency tree) through Tauri commands | the same diagnostics as `trust-lsp` on the default program and on a broken one; Monaco measured on WebKitGTK |
+| 4.8 | Spike: truST's runtime control endpoint on Twinova's simulated PLC, so VS Code's Live Values and debugger attach to the scene | decision recorded: protocol inventory, and whether it fits the virtual-time harness |
 
 ## M5 — PLC in the loop ⬜
 
@@ -90,7 +93,7 @@ What makes it "powerful for schools" (the user, 2026-11-07).
 
 | Phase | Deliverable | Acceptance |
 |---|---|---|
-| 6.1 | Ladder editor producing ST (truST approach [09]) | the default program written in LD runs the same |
+| 6.1 | Ladder editor producing ST (truST approach [09]). First a spike on reusing the Ladder webview of truST's VS Code extension (React, `*.ladder.json`, PLCopen LD interop) | the default program written in LD runs the same |
 | 6.2 | Fault injection as saved scenarios, with an instructor mode behind a password [06 #12] | a teacher sets faults the student cannot see |
 | 6.3 | Graded exercises: scene, goal, automatic check of the result | 10 exercises from start/stop to sorting |
 | 6.4 | Classroom distribution: offline installers, auto-update, no account | installed on a clean Windows machine |
