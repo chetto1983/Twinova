@@ -48,17 +48,17 @@ The tooling that every later phase relies on.
 | 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests); `trust-wasm-analysis` kept for 4.7 | ⏸ measured (spec `2026-11-07-runtime-footprint-design`): little binary size, ~1/3 of a cold Linux build; a fork is ≥ 45 700 coupled lines. **Deferred** (user, 2026-11-07): keep `full`; A′ against B decided in M3 or M9.4 |
 | 2.6 | **truST upstream policy.** Execution (VM and encoder): deleted upstream on 2026-10-24, so it stays pinned at `6405915` and is ours to maintain (forked or replaced when 2.5's A′/B choice is made); upstream fixes are ported by hand. Language frontend (`trust-syntax`, `trust-hir`, `trust-ide`, `trust-wasm-analysis`): followed upstream by moving its git `rev` in a PR, after reading the commits that touch those crates, monthly. None of these crates is on crates.io, so nothing updates automatically | the policy in CONTRIBUTING or CLAUDE.md; the first frontend bump done through it, with CI green | 🔶 policy written (spec `2026-11-07-trust-upstream-policy-design`, CLAUDE.md) and first review done: upstream 0.34.0, 680 commits since the pin, VM gone. The first frontend bump moves to 4.7: nothing depends on the frontend directly before then |
 
-## M3 — Deterministic engine core ⬜
+## M3 — Deterministic engine core 🔶
 
 The hybrid engine of [05 §6]: discrete events with analytic motion, and fixed steps only where they are needed.
 
-| Phase | Deliverable | Acceptance |
-|---|---|---|
-| 3.1 | Spike: nexosim 1.0 versus our own scheduler, on the M1 scene [08] | decision recorded with measurements |
-| 3.2 | Event core: integer ns time, `(t, priority, seq)` queue, same-instant iteration with a cap | property tests for ordering; replay fingerprint test |
-| 3.3 | Analytic conveyor segments with exact sensor edges (JaamSim scheme [05, r1 §4]) | edges exact to the ns; benchmark against the fixed step (OIP baseline [07]) |
-| 3.4 | PLC scan as a periodic event, with the scan time per program | same results as M1 at 10 ms; scan time configurable |
-| 3.5 | Run modes: Run (wall clock × scale, `OutOfSync` beyond a tolerance), as fast as possible, Step, Reset, snapshots | the lag is reported, never hidden; save and restore a state |
+| Phase | Deliverable | Acceptance | Status |
+|---|---|---|---|
+| 3.1 | Spike: nexosim 1.0 versus our own scheduler, on the M1 scene [08] | decision recorded with measurements | 🔶 measured (spec `2026-11-07-des-core-design`): nexosim leaves the order of simultaneous events unspecified, and it changes with the thread count; synthetic emitters, not yet the M1 scene. Decision pending |
+| 3.2 | Event core: integer ns time, `(t, priority, seq)` queue, same-instant iteration with a cap | property tests for ordering; replay fingerprint test | ⬜ |
+| 3.3 | Analytic conveyor segments with exact sensor edges (JaamSim scheme [05, r1 §4]) | edges exact to the ns; benchmark against the fixed step (OIP baseline [07]) | ⬜ |
+| 3.4 | PLC scan as a periodic event, with the scan time per program | same results as M1 at 10 ms; scan time configurable | ⬜ |
+| 3.5 | Run modes: Run (wall clock × scale, `OutOfSync` beyond a tolerance), as fast as possible, Step, Reset, snapshots | the lag is reported, never hidden; save and restore a state | ⬜ |
 
 ## M4 — Component model and scene editor ⬜
 

@@ -1,0 +1,4 @@
+# The toolchain the probed truST commit pins (trust-platform 64059159, rust-toolchain.toml).
+[toolchain]
+channel = "1.99.0"
+targets = ["wasm32-unknown-unknown"]
