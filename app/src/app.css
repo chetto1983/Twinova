@@ -1,0 +1,434 @@
+/* Twinova visual system: the Aura design tokens (chetto1983/Aura, web/tokens/tokens.json), as in
+   chetto1983/ModbusTool: graphite surfaces, a calm blue accent, Fraunces headings, Atkinson
+   Hyperlegible Next text and Commit Mono data. Components only use these variables. */
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("./assets/fonts/atkinson-hyperlegible-next-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("./assets/fonts/fraunces-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Commit Mono";
+  src: url("./assets/fonts/commit-mono-regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #101214;
+  --color-surface: #191c20;
+  --color-surface-2: #252a31;
+  --color-surface-3: #303741;
+  --color-border: #343c46;
+  --color-border-strong: #718394;
+  --color-text: #eef2f6;
+  --color-text-muted: #c8d0d8;
+  --color-text-faint: #9ba8b5;
+  --color-text-disabled: #6f7377;
+  --color-accent: #1f3760;
+  --color-accent-text: #d3e3fd;
+  --color-accent-muted: #1d4068;
+  --color-accent-pressed: #2a4b7b;
+  --color-on-accent: #d3e3fd;
+  --color-success: #81c995;
+  --color-warning: #fdd663;
+  --color-danger: #f28b82;
+  --color-info: #aecbfa;
+  --color-ring: #8ab4f8;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f8fafb;
+  --color-surface: #ffffff;
+  --color-surface-2: #f3f6f8;
+  --color-surface-3: #e8eef2;
+  --color-border: #dee3e8;
+  --color-border-strong: #6b7785;
+  --color-text: #172026;
+  --color-text-muted: #3f4b55;
+  --color-text-faint: #64717d;
+  --color-text-disabled: #9aa0a6;
+  --color-accent: #d7e7ff;
+  --color-accent-text: #07346f;
+  --color-accent-muted: #b5d1fa;
+  --color-accent-pressed: #c5daf8;
+  --color-on-accent: #07346f;
+  --color-success: #137333;
+  --color-warning: #8a4b00;
+  --color-danger: #b3261e;
+  --color-info: #0b57d0;
+  --color-ring: #0b57d0;
+}
+
+:root {
+  --color-accent-soft: color-mix(in oklab, var(--color-accent) 55%, transparent);
+  --color-danger-soft: color-mix(in oklab, var(--color-danger) 15%, transparent);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --font-display: Fraunces, Georgia, serif;
+  --font-sans: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Commit Mono", ui-monospace, SFMono-Regular, monospace;
+  --shadow-popover: 0 18px 44px rgb(0 0 0 / 0.18);
+  --shadow-focus: 0 0 0 3px rgb(138 180 248 / 0.32);
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-text);
+  background: var(--color-bg);
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--color-accent) 16%, transparent), transparent 20rem),
+    var(--color-bg);
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-accent) 45%, transparent);
+  color: var(--color-text);
+}
+
+/* ---------- cards ---------- */
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  animation: enter var(--motion-base) var(--motion-ease-out) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.panel-body {
+  padding: 16px;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* ---------- form controls ---------- */
+
+label.field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+input,
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+select {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-3);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text);
+  outline: none;
+  transition: box-shadow var(--motion-fast);
+}
+
+input[type="number"],
+input.data {
+  font-family: var(--font-mono);
+}
+
+input::placeholder {
+  color: var(--color-text-faint);
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-ring);
+}
+
+input:disabled,
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+select {
+  appearance: none;
+  padding-right: 30px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-text-faint) 50%),
+    linear-gradient(135deg, var(--color-text-faint) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* The open list of a <select> is drawn by the OS. WebView2 on Windows paints it white whatever
+   color-scheme says, while the options inherit the select's text colour: light text on white in
+   the dark theme (ModbusTool user report 2026-11-06). Colours on the options themselves are honoured. */
+option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+input[type="number"]::-webkit-inner-spin-button {
+  opacity: 0.35;
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-ring);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-surface-3);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--color-accent);
+  border-color: transparent;
+  color: var(--color-on-accent);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--color-accent-pressed);
+}
+
+.btn.danger {
+  background: var(--color-danger);
+  border-color: transparent;
+  color: var(--color-bg);
+}
+
+.btn.danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  opacity: 0.9;
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn.ghost:hover:not(:disabled) {
+  background: var(--color-surface-2);
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segmented button {
+  all: unset;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.segmented button.active {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.segmented button:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-ring);
+}
+
+.btn.icon {
+  width: 30px;
+  padding: 0;
+}
+
+.btn.small {
+  min-height: 30px;
+  padding: 0 10px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  color: var(--color-text-faint);
+}
+
+.data {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.error-line {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+/* status dot, as Aura's readiness indicators */
+.led {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-disabled);
+  flex: none;
+}
+
+.led.on {
+  background: var(--color-success);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-success) 22%, transparent);
+}
+
+.led.warn {
+  background: var(--color-warning);
+}
+
+.led.err {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 3px var(--color-danger-soft);
+}
+
+::-webkit-scrollbar {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border: 3px solid var(--color-surface);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

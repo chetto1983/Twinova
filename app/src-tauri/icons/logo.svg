@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Two linked rings, "the twin". Crossings at (512, 302) and (512, 722): blue over green at the top,
+       green over blue at the bottom. Aura tokens color-bg, color-ring, color-success (dark theme). -->
+  <rect width="1024" height="1024" rx="224" fill="#101214"/>
+  <g fill="none" stroke-width="88">
+    <circle cx="404" cy="512" r="236" stroke="#8ab4f8"/>
+    <circle cx="620" cy="512" r="236" stroke="#81c995"/>
+    <path d="M 453.9 281.3 A 236 236 0 0 1 562.5 337.2" stroke="#8ab4f8"/>
+  </g>
+</svg>

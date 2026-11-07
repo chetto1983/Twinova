@@ -3,8 +3,7 @@
 An open-source 3D factory simulator and virtual-commissioning tool: lay out a line from components,
 run its material flow, and test a real or emulated PLC against it before the machine exists.
 
-**Status: research.** There is no code yet. This repository currently holds the study the design will
-be built on.
+**Status: early prototype.** The research the design is built on, and a first desktop app (`app/`).
 
 ## Goals
 
@@ -21,6 +20,19 @@ be built on.
 Planned stack, to be confirmed by measurements: the engine in **Rust**, the editor in **TypeScript**,
 component logic in **IEC 61131-3** (Structured Text and Ladder), the languages PLC programmers already
 use.
+
+## The app
+
+`app/` is the first runnable slice: a Tauri 2 desktop app with one belt conveyor in 3D, driven by an IEC 61131-3
+Structured Text program you edit and build inside the app. It runs on truST's bytecode VM, with no toolchain needed.
+It is available in English and Italian, with light and dark themes.
+
+```sh
+cd app && npm install && npm run tauri dev
+```
+
+Linux needs the Tauri prerequisites (WebKitGTK 4.1 and friends). Spec, plan and verification are in
+[`docs/superpowers/`](docs/superpowers/).
 
 ## Research (in Italian)
 

@@ -1,0 +1,4 @@
+# trust-runtime at the pinned commit needs Rust 1.99 (trust-platform 6405915973a7, rust-toolchain.toml).
+[toolchain]
+channel = "1.99.0"
+components = ["clippy", "rustfmt"]
