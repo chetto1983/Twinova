@@ -41,7 +41,7 @@ The tooling that every later phase relies on.
 
 | Phase | Deliverable | Acceptance | Status |
 |---|---|---|---|
-| 2.1 | CI on GitHub Actions, Linux and Windows: fmt, clippy `-D warnings`, tests, svelte-check, Vitest, build | green on `main` | 🔶 green on this branch, Windows through the E2E; not yet on `main` |
+| 2.1 | CI on GitHub Actions, Linux and Windows: fmt, clippy `-D warnings`, tests, svelte-check, Vitest, build | green on `main` | 🔶 all green on this branch (run 42382743771), Windows through the E2E; not yet on `main` |
 | 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI | 🔶 coverage enforced; `mutation.yml` runs on `main` only, not run yet |
 | 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings | ✅ |
 | 2.4 | Release bundles: MSI/NSIS, AppImage/deb, dmg, plus `CHANGELOG.md` | installers built by CI, sizes recorded | ⬜ |

@@ -55,6 +55,11 @@ Run 42380805842 on `d586dbc`:
 | `build (ubuntu-24.04)`: release binary | green, **8 852 208 bytes** (`twinova`) |
 | `build (windows-latest)`: release binary | built in 12 min 01 s; the size step failed (below) |
 
+Run 42382743771 on `543a878`, after the shell fix: **all seven jobs green**. The Windows release binary is
+**11 078 144 bytes** (`twinova.exe`), the Linux one 8 852 208 bytes as above. The debug binary of M1 was 557 MB: the
+release profile (`lto`, `opt-level = "s"`, `strip`) drops most of what trust-runtime `full` adds, which ROADMAP 2.5
+measures against.
+
 The E2E replays the M1 acceptance: the default program builds, Start latches the motor, parts are delivered,
 virtual time follows the wall clock within 10 %, a part held at a blocked outlet trips the jam and stops the motor,
 and Italian applies without a reload. Locally under Xvfb: 6/6, 5.09 s virtual in 5.05 s wall.
