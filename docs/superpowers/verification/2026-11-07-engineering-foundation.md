@@ -74,6 +74,11 @@ The Windows size step ran in PowerShell, where `2>/dev/null` does not exist: a j
 directory) replaces the workflow's `shell: bash`. Every job now repeats the shell, and the step fails if the binary is
 missing.
 
+### On `main`
+
+After PR #1 was merged (`fc0d725`): CI run 42385068785 **all green**; the first `mutation.yml` run, 42385068809, gives
+cargo mutants **62 caught of 63 (1 unviable)** in 12 min and Stryker **27/27**, the same as the local runs.
+
 ## Found and fixed
 
 - **Windows build.** The first CI run on Windows failed in `tiverse-mmap` 1.0.0, a trust-runtime dependency: the
