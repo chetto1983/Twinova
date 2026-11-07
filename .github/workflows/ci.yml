@@ -104,13 +104,18 @@ jobs:
           persist-credentials: false
       - run: bash scripts/check-file-size.sh
 
-  # The release binary on both desktop platforms, without installers (those are ROADMAP 2.4).
-  build:
+  # The installers release.yml publishes, built and checked on every change (ROADMAP 2.4), as in
+  # ModbusTool: MSI on Windows, deb and AppImage on Linux. Built, not uploaded: the sizes are in the log.
+  bundle:
     needs: [rust, frontend, file-size]
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-latest]
+        include:
+          - os: windows-latest
+            bundles: msi
+          - os: ubuntu-24.04
+            bundles: deb,appimage
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -128,20 +133,27 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: 1.99.0
+      # Shared with release.yml: a tag builds from main's warm dependency cache.
       - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
         with:
           workspaces: app/src-tauri
-          shared-key: build
+          shared-key: bundle
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: System dependencies
         if: runner.os == 'Linux'
         uses: ./.github/actions/linux-deps
         timeout-minutes: 30
       - run: npm ci
-      - run: npx tauri build --no-bundle
-      # The size is a figure ROADMAP 2.5 measures against.
-      - name: Release binary size
-        run: ls -l "src-tauri/target/release/twinova${{ runner.os == 'Windows' && '.exe' || '' }}"
+      - run: npx tauri build --bundles ${{ matrix.bundles }}
+      - name: One Paraglide runtime in the frontend bundle
+        run: node ../scripts/check-single-runtime.mjs
+      # The binary inside the installers is ROADMAP 2.5's size baseline.
+      - name: Installer and binary sizes
+        run: |
+          ls -l "src-tauri/target/release/twinova${{ runner.os == 'Windows' && '.exe' || '' }}"
+          installers=$(find src-tauri/target/release/bundle -maxdepth 2 -type f \( -name '*.msi' -o -name '*.deb' -o -name '*.AppImage' \))
+          test -n "$installers"
+          ls -l $installers
 
   # The real app through tauri-driver (e2e/run.mjs), on both desktop platforms Tauri can drive.
   # As in ModbusTool, Windows is tested here and not with cargo test: tauri-build embeds the Common
