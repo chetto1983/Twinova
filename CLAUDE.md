@@ -135,6 +135,16 @@ mai il loro materiale.
   and on pull requests (the Aura scheme), so a working branch needs an open PR to be checked; a
   change of prose only (`ROADMAP.md`, Markdown under `docs/`) runs nothing.
 
+## truST, the ST runtime
+
+Policy: `docs/superpowers/specs/2026-11-07-trust-upstream-policy-design.md`.
+
+- **Execution** (`trust-runtime`, `trust-runtime-core`): pinned at `6405915`, the last commit with the bytecode VM.
+  Never move that `rev`, because upstream deleted the VM. Port an upstream fix by hand, with a test and the upstream
+  commit cited.
+- **Language frontend** (`trust-syntax`, `trust-hir`, `trust-ide`, `trust-wasm-analysis`): once Twinova depends on it
+  directly, review upstream monthly and move its `rev` in a PR that lists the commits.
+
 ## Post-edit validation (Gate 2)
 
 The set comes from `chetto1983/ModbusTool`; CI runs it in `.github/workflows/ci.yml` and
