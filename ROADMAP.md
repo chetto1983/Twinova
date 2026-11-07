@@ -54,7 +54,7 @@ The hybrid engine of [05 §6]: discrete events with analytic motion, and fixed s
 
 | Phase | Deliverable | Acceptance | Status |
 |---|---|---|---|
-| 3.1 | Spike: nexosim 1.0 versus our own scheduler, on the M1 scene [08] | decision recorded with measurements | 🔶 measured (spec `2026-11-07-des-core-design`): nexosim leaves the order of simultaneous events unspecified, and it changes with the thread count; synthetic emitters, not yet the M1 scene. Decision pending |
+| 3.1 | Spike: nexosim 1.0 versus our own scheduler, on the M1 scene [08] | decision recorded with measurements | 🔶 decided (spec `2026-11-07-des-core-design`): nexosim on one thread with its executor made FIFO; the order of simultaneous events is tested. Patch ready for an upstream PR; synthetic emitters, not yet the M1 scene |
 | 3.2 | Event core: integer ns time, `(t, priority, seq)` queue, same-instant iteration with a cap | property tests for ordering; replay fingerprint test | ⬜ |
 | 3.3 | Analytic conveyor segments with exact sensor edges (JaamSim scheme [05, r1 §4]) | edges exact to the ns; benchmark against the fixed step (OIP baseline [07]) | ⬜ |
 | 3.4 | PLC scan as a periodic event, with the scan time per program | same results as M1 at 10 ms; scan time configurable | ⬜ |

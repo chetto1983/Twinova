@@ -76,6 +76,15 @@ fn throughput() {
             1.0 / d.as_secs_f64()
         );
     }
+    for threads in [1, 4] {
+        let d = best(&|| {
+            nexo::run(threads, 1_000, MS, 1_000 * MS, true, |_| 0);
+        });
+        println!(
+            "  nexosim, {threads} thread(s), each event sends a message to one collector: {:>8.1} ms",
+            d.as_secs_f64() * 1e3
+        );
+    }
     let d = best(&|| {
         own::run(1_000, MS, 1_000 * MS, |_, _| {});
     });

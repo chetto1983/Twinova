@@ -1,6 +1,7 @@
 # Spec: the discrete-event core, nexosim against our own queue (ROADMAP 3.1)
 
-Date: 2026-11-07. Status: **measured; decision pending**.
+Date: 2026-11-07. Status: **decided: nexosim, on one thread, with its single-threaded executor made FIFO**
+(user, 2026-11-07); the patch is proposed upstream.
 
 ROADMAP 3.1 asks whether Twinova's event core should be nexosim 1.0 or a scheduler of our own. The answer is measured
 against the requirements of research note 05 §6 and CLAUDE.md:
@@ -82,12 +83,42 @@ Measured before wasm was dropped: `cargo build --release --target wasm32-unknown
 Run to 0.5 s, `save`, rebuild the bench, `restore`, run to 1 s. Compared with one uninterrupted run, with 1 and with
 4 threads: the same 8 000 events in the same order, from a 210-byte state.
 
+### E. The executor patch (decided after A–D)
+
+Where the order is decided, read in nexosim's `main` (`0579f95`, 2026-10-22):
+- **The scheduler queue is already totally ordered.** Its key is `(MonotonicTime, origin model id)`
+  (`simulation/scheduler.rs:249`), and equal keys come out FIFO (`util/priority_queue.rs`). The model id is the
+  registration index (`simulation.rs:1307`); the global scheduler's id is `usize::MAX - 1` (`simulation.rs:168`), so
+  its events come last.
+- **The executor then reverses it.** `handle_scheduler_step` spawns one task per origin, in key order
+  (`simulation.rs:1461`). The single-threaded executor keeps its work queue in a `Vec` and takes the last task first,
+  with `pop()` (`executor/st_executor.rs`), so it runs them LIFO.
+- **What the maintainers have said** (issue #34, PRs #62 and #122): full determinism needs a single thread; in
+  multi-threaded execution "the relative order can never be guaranteed whatever we do". The order by origin was added
+  for determinism. Nobody had raised the LIFO work queue.
+
+The patch makes the work queue a `VecDeque` used FIFO. It adds a test and documents the single-threaded order: 4 files,
++74/−6. It is in `prototypes/des-probe/nexosim-fifo-st-executor.patch`, signed by the user.
+
+| Check | Result |
+|---|---|
+| nexosim's own suite, `cargo test --all-features` | 220 passed, 4 ignored, before and after |
+| New test, five models with same-time events on one thread | passes; with the old LIFO queue it fails with `[4, 3, 2, 1, 0]` |
+| `cargo fmt --check`, clippy on the touched files, wasm build (their CI) | clean |
+| Probe A with the patch | 0, 1, …, 7 with 1, 2, 3, 4 and 8 threads; 1 distinct order in 20 runs, also with skewed work |
+| Probe D with the patch | save and restore still exact |
+| Throughput, 1 thread, no messages (B) | 476–491 ms before, 462–526 ms after: within noise |
+| Throughput, 1 thread, each event sends a message to one collector | 848–913 ms before, **963–1 050 ms after: about 10–15 % slower** |
+| Throughput, 4 threads, with messages | 1 214–1 345 ms either way (the multi-threaded executor is untouched) |
+
+Not run: Miri, which is in their CI, because no nightly toolchain is installed here.
+
 ## Requirements against the two candidates
 
 | Requirement (05 §6, CLAUDE.md) | nexosim 1.0 | Own queue |
 |---|---|---|
 | Integer ns time | yes | yes (`u64` ns) |
-| Specified `(t, prio, seq)` order for simultaneous events | **no**: causal order only, no priority; measured to depend on the thread count | yes, by construction |
+| Specified `(t, prio, seq)` order for simultaneous events | causal order only, no priority; it depended on the thread count. **With the patch on one thread**: by scheduler key, tested and documented (E) | yes, by construction |
 | Same order on every machine | only by pinning 1 thread (an undocumented order) | yes |
 | Same-instant iteration with a cap and an error | no cap; timeout on native only | to write (a counter) |
 | Wall clock with `OutOfSync` | yes | to write; M1's `catch_up` already reports the lag |
@@ -98,15 +129,19 @@ Run to 0.5 s, `save`, rebuild the bench, `restore`, run to 1 s. Compared with on
 
 ## Decision
 
-Pending: the user decides. The measurement points to **our own queue for the core**:
-- simultaneous-event order is a stated requirement ("specified and tested"), and the deciding one for a PLC lockstep,
-  where two edges at one instant must reach the program in a known order;
-- nexosim does not specify that order, and its observed order changes with the thread count.
-
-nexosim's other strengths can be taken as ideas: the clock tolerance with `OutOfSync`, save and restore through serde.
+**nexosim, run on one thread, with the FIFO executor patch** (user, 2026-11-07). The user rejected our own queue as a
+poor choice in the long run, and chose to act on nexosim's kernel instead.
+- The order of simultaneous events, which the PLC lockstep needs, then follows the scheduler key: time, then origin
+  model in registration order, then the global scheduler. The new test pins it.
+- The patch goes upstream as a pull request. Until it is merged, Twinova depends on the patched commit
+  (`[patch.crates-io]` to a fork). If the maintainers refuse it, that fork is ours to keep in step.
+- The price: about 10–15 % throughput on one thread when models exchange many messages. Twinova's scenes need far
+  less than either rate.
 
 ## What this does not prove
 
+- That the maintainers accept the patch, or that the order stays as it is in later nexosim releases without it.
+- That FIFO is never slower on other workloads: only the two throughput cases above were run.
 - The M1 scene itself: ROADMAP 3.1 asks for the spike "on the M1 scene". These measurements use synthetic
   periodic emitters, which isolate the core properties (order, throughput, snapshots), but no conveyor ran.
 - That nexosim's order is fixed for a given thread count on other machines: 20 runs on one machine are not a proof.
