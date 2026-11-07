@@ -1,6 +1,6 @@
 # Spec: runtime footprint, measured before deciding (ROADMAP 2.5)
 
-Date: 2026-11-07. Status: **measured; decision pending** (the user chose "a measurement spike first").
+Date: 2026-11-07. Status: **decided: keep `full`, no fork now** (user, 2026-11-07, after this measurement).
 
 ROADMAP 2.5 asked to replace trust-runtime's `full` feature with "only the encoder and the VM" (path A′ of research
 note 10) and to measure the binary size before and after. This spec records what that would cost and gain, measured
@@ -89,6 +89,16 @@ path A′ at "about 10 800 lines (the encoder)": the measurement is at least fou
 | **Keep `full`** | none | none; a cold Linux build keeps ~1/3 of its time in unused crates |
 | **A′: fork lowering, encoder and runtime** | ≥ 45 700 coupled lines to own and cut free | build time, about 300 fewer crates, a path to wasm (M9.4); little binary size |
 | **B: an interpreter of our own on `trust-hir`** | an interpreter to write | the same, plus it follows truST's maintained frontend (ROADMAP 2.6) |
+
+## Decision
+
+**Keep `full`; no fork now** (user, 2026-11-07). CLAUDE.md's "baseline or drop" applies:
+- the binary gain is small;
+- the build-time gain is absorbed by the CI cache after the first build;
+- a fork is at least 45 700 coupled lines to own.
+
+The choice of the ST engine, A′ against B, is taken when it is needed: in M3, where Twinova's own engine and PLC scan
+come, or in M9.4 (wasm). That choice starts from these numbers, and B has to be measured first.
 
 ## What this does not prove
 
