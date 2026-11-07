@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignoreExportsUsedInFile": true,
-  "ignoreDependencies": ["@inlang/plugin-message-format", "@inlang/plugin-m-function-matcher"]
+  "ignoreDependencies": ["@inlang/plugin-message-format", "@inlang/plugin-m-function-matcher"],
+  "ignoreBinaries": ["tauri-driver"]
 }

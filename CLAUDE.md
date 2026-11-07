@@ -142,7 +142,7 @@ After every Rust edit, in `app/src-tauri`:
 
 - `cargo fmt --check`
 - `cargo clippy --all-targets -- -D warnings`
-- `cargo test` (CI: `cargo llvm-cov --fail-under-lines 85`, and `cargo test` on Windows)
+- `cargo test` (CI: `cargo llvm-cov --fail-under-lines 85`; Windows is covered by the E2E, not by `cargo test`)
 - engine core or protocol changes: `cargo mutants` (scope in `.cargo/mutants.toml`)
 - the wasm target builds: `cargo build --target wasm32-unknown-unknown`, for the crates meant
   for the browser (none yet)
@@ -153,6 +153,7 @@ After every TypeScript or Svelte edit, in `app`:
 - `npm run format:check`, `npm run check:i18n`, `npm run deadcode` (knip), `npm run dup` (jscpd)
 - `npm run coverage` (85 % thresholds in `vite.config.ts`) and `npm run build`
 - `src/lib` helpers: `npm run mutation` (Stryker, breaks below 70 %)
+- the real app: `npx tauri build --debug --no-bundle && npm run e2e` (tauri-driver; under `xvfb-run` on Linux)
 
 Repository-wide: `bash scripts/check-file-size.sh` (600-LOC cap, also in CI).
 
