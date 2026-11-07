@@ -21,7 +21,7 @@ Status: ✅ done · 🔶 partly done (gaps listed) · ⬜ not started.
 | 0.4 | Open Industry Project assessed, with measured tests and benchmark [07] | ✅ |
 | 0.5 | Rust ecosystem and IEC 61131-3 runtime inventory, plus the ST-without-compilation probe [08–10] | ✅ |
 
-## M1 — Walking skeleton 🔶
+## M1 — Walking skeleton ✅
 
 One belt conveyor in 3D, driven by Structured Text, in a Tauri desktop app.
 Spec `2026-11-07-tauri-shell-design.md`.
@@ -31,7 +31,7 @@ Spec `2026-11-07-tauri-shell-design.md`.
 | 1.1 | Tauri 2 + Svelte 5 shell, Aura tokens, en/it | `svelte-check` clean, app starts | ✅ |
 | 1.2 | Closed-form belt, ST on truST's VM, lockstep engine | 18 Rust tests incl. the 60 s scenarios | ✅ |
 | 1.3 | E2E under Xvfb | screenshots; pacing 10.04 s virtual in 10.06 s wall | ✅ |
-| 1.4 | **DoD gaps**: coverage ≥85 %, mutation ≥70 % on `scene`/`engine`, Windows run | figures in a verification file | 🔶 coverage 93.6 % Rust / 100 % TS, mutation 62/62; Windows compiles, tests do not start yet |
+| 1.4 | **DoD gaps**: coverage ≥85 %, mutation ≥70 % on `scene`/`engine`, Windows run | figures in a verification file | ✅ coverage 93.6 % Rust / 100 % TS, mutation 62/62, E2E 6/6 on Linux and Windows |
 
 ## M2 — Engineering foundation 🔶
 
@@ -41,7 +41,7 @@ The tooling that every later phase relies on.
 
 | Phase | Deliverable | Acceptance | Status |
 |---|---|---|---|
-| 2.1 | CI on GitHub Actions, Linux and Windows: fmt, clippy `-D warnings`, tests, svelte-check, Vitest, build | green on `main` | 🔶 Linux green; Windows test binary needs the app manifest |
+| 2.1 | CI on GitHub Actions, Linux and Windows: fmt, clippy `-D warnings`, tests, svelte-check, Vitest, build | green on `main` | 🔶 green on this branch, Windows through the E2E; not yet on `main` |
 | 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI | 🔶 coverage enforced; `mutation.yml` runs on `main` only, not run yet |
 | 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings | ✅ |
 | 2.4 | Release bundles: MSI/NSIS, AppImage/deb, dmg, plus `CHANGELOG.md` | installers built by CI, sizes recorded | ⬜ |

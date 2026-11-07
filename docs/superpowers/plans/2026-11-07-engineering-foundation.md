@@ -43,9 +43,9 @@ jscpd 4, lefthook 2. Rust 1.99.0 (pinned by `rust-toolchain.toml` for trust-runt
 
 ## Decisions taken while writing this plan
 
-- **Windows**: `cargo test` runs on `windows-latest`, and the release binary is built there. The E2E of the app on
-  Windows (tauri-driver, as in ModbusTool) is not ported: Twinova has no WebDriver E2E yet (its M1 E2E was driven
-  with xdotool).
+- **Windows**: tested by the E2E of the real app through tauri-driver (`app/e2e/run.mjs`), on `ubuntu-24.04` and
+  `windows-2022`, as in ModbusTool; the release binary is built on both. (Amended 2026-11-07: the first version ran
+  `cargo test` on Windows, whose test binary does not start there.)
 - **Installers** are ROADMAP 2.4: CI builds the release binary with `--no-bundle` and prints its size for 2.5.
 - **fast-check** is not added: knip flags it as unused, there is no TS codec to property-test yet.
 - **Svelte components** stay outside the Vitest coverage, as in ModbusTool: the figure covers `src/lib/**/*.ts`.
@@ -62,6 +62,7 @@ app/vite.config.ts                      coverage thresholds
 app/src/lib/{backend,i18n,preferences}.test.ts
 app/src-tauri/.cargo/mutants.toml
 app/src-tauri/src/commands_tests.rs     commands on a mock app
+app/e2e/run.mjs                         the real app through tauri-driver
 ```
 
 ## Tasks
@@ -72,6 +73,7 @@ app/src-tauri/src/commands_tests.rs     commands on a mock app
 - [x] **2. Rust coverage.** `run` generic over `tauri::Runtime`; `commands_tests.rs` on `mock_app`; a PLC fault test
   (truST reports `DivisionByZero` from the cycle). Verify: `cargo llvm-cov --fail-under-lines 85`.
 - [x] **3. Rust mutation.** `.cargo/mutants.toml` on `scene.rs` and `engine.rs`. Verify: `cargo mutants` ≥70 %.
-- [ ] **4. CI and hooks.** `ci.yml`, `mutation.yml`, `linux-deps`, `lefthook.yml`, file-size script.
-  Verify: every job green on the pushed SHA. (Open: the Windows test binary needs the app manifest.)
+- [x] **4. CI and hooks.** `ci.yml`, `mutation.yml`, `linux-deps`, `lefthook.yml`, file-size script.
+  Verify: every job green on the pushed SHA. Windows is verified by the E2E job (tauri-driver), as in ModbusTool:
+  the unit-test binary cannot start there without the app manifest (verification file, CI).
 - [x] **5. Docs.** CLAUDE.md Gate 2 with the real commands; verification file; ROADMAP status.

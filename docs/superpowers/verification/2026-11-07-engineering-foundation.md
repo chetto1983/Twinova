@@ -43,20 +43,32 @@ lefthook pre-commit and pre-push hooks.
 
 ## CI
 
-Run 42378063592 on `567ecea` (this branch): `rust` (Linux: fmt, clippy, coverage gate), `frontend` and `file-size` are
-**green**. `rust-windows` is **red**:
+Run 42380805842 on `d586dbc`:
 
-- the crate now **compiles on Windows** (5 min 32 s, after the `tiverse-mmap` fix below);
-- the lib's test binary does not start: `0xc0000139 STATUS_ENTRYPOINT_NOT_FOUND`.
+| Job | Result |
+|---|---|
+| `rust` (Linux): fmt, clippy, `cargo llvm-cov --fail-under-lines 85` | green |
+| `frontend`: svelte-check, oxlint, prettier, inlang, knip, jscpd, Vitest coverage, build | green |
+| `file-size` | green |
+| `e2e (ubuntu-24.04)`: the real app through tauri-driver, under Xvfb | green, 6/6 |
+| `e2e (windows-2022)`: the real app through tauri-driver and msedgedriver on WebView2 | **green, 6/6** |
+| `build (ubuntu-24.04)`: release binary | green, **8 852 208 bytes** (`twinova`) |
+| `build (windows-latest)`: release binary | built in 12 min 01 s; the size step failed (below) |
 
-Cause, from the installed sources. tauri-build 2.7.4 embeds the application manifest (Common Controls v6,
-`windows-app-manifest.xml`) with `WindowsResource::compile()`, which links it into binaries only
-(`tauri-build/src/lib.rs:871`). tauri-winres 0.3.7 documents `compile_for_everything()` for the case where "the
-application manifest has to be present in test binaries too, for example because the code under test depends on
-Common Controls v6". The test binary links muda, which imports `TaskDialogIndirect` from ComCtl32 v6 (muda README,
-`common-controls-v6`); without the manifest Windows loads ComCtl32 v5, which lacks it. Not yet confirmed by a run.
+The E2E replays the M1 acceptance: the default program builds, Start latches the motor, parts are delivered,
+virtual time follows the wall clock within 10 %, a part held at a blocked outlet trips the jam and stops the motor,
+and Italian applies without a reload. Locally under Xvfb: 6/6, 5.09 s virtual in 5.05 s wall.
 
-`build` (release binary on both platforms) was skipped because it needs `rust-windows`.
+**Windows** is tested this way, as in ModbusTool, and not with `cargo test`. An earlier run (42378063592) ran the
+unit tests on Windows: they compiled, but the test binary did not start (`0xc0000139 STATUS_ENTRYPOINT_NOT_FOUND`).
+tauri-build 2.7.4 embeds the Common Controls v6 manifest in binaries only (`WindowsResource::compile()`,
+`tauri-build/src/lib.rs:871`; tauri-winres documents `compile_for_everything()` for test binaries), and the test
+binary links tauri, whose menus import `TaskDialogIndirect` from ComCtl32 v6 (muda README). The unit tests run on
+Linux; the app runs on both.
+
+The Windows size step ran in PowerShell, where `2>/dev/null` does not exist: a job's `defaults.run` (here the working
+directory) replaces the workflow's `shell: bash`. Every job now repeats the shell, and the step fails if the binary is
+missing.
 
 ## Found and fixed
 
@@ -73,11 +85,12 @@ Common Controls v6". The test binary links muda, which imports `TaskDialogIndire
 
 ## What this does not prove
 
-- **The app running on Windows.** CI runs the Rust tests on Windows and builds the release binary there; nobody has
-  launched the window, and there is no WebDriver E2E yet (ModbusTool has one; Twinova's M1 E2E was driven by hand with
-  xdotool on Linux).
+- **Windows beyond the E2E.** The E2E reads the DOM; nobody looked at the 3D view on Windows, and pacing there was
+  checked only by the 10 % ratio. The Rust unit tests do not run on Windows (see CI).
 - macOS: not built.
 - The Svelte components are outside the Vitest coverage, as in ModbusTool; their behaviour was checked by the M1 E2E
   only.
 - Mutation testing covers `scene.rs`, `engine.rs` and `snapshot.ts`, not `plc.rs` or `commands.rs`.
 - No installers were built (ROADMAP 2.4).
+- The CI mutation workflow (`mutation.yml`, with ModbusTool's three caches) runs on `main` only: the figures above are
+  local runs.
