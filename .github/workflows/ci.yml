@@ -17,7 +17,8 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
 
-# Without a shell key a step runs without pipefail (pattern from Aura's workflows).
+# Without a shell key a step runs without pipefail (pattern from Aura's workflows). A job's own
+# defaults replace these, so every job that sets a working directory repeats the shell.
 defaults:
   run:
     shell: bash
@@ -27,6 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
+        shell: bash
         working-directory: app/src-tauri
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -60,6 +62,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
+        shell: bash
         working-directory: app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -100,6 +103,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     defaults:
       run:
+        shell: bash
         working-directory: app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -126,7 +130,7 @@ jobs:
       - run: npx tauri build --no-bundle
       # The size is a figure ROADMAP 2.5 measures against.
       - name: Release binary size
-        run: ls -l src-tauri/target/release/twinova src-tauri/target/release/twinova.exe 2>/dev/null || true
+        run: ls -l "src-tauri/target/release/twinova${{ runner.os == 'Windows' && '.exe' || '' }}"
 
   # The real app through tauri-driver (e2e/run.mjs), on both desktop platforms Tauri can drive.
   # As in ModbusTool, Windows is tested here and not with cargo test: tauri-build embeds the Common
@@ -144,6 +148,7 @@ jobs:
     timeout-minutes: 60
     defaults:
       run:
+        shell: bash
         working-directory: app
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
