@@ -1,0 +1,22 @@
+# https://editorconfig.org — consistent editor defaults (taken from Aura).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# rustfmt default.
+[*.rs]
+indent_size = 4
+
+# Python follows PEP 8.
+[*.py]
+indent_size = 4
+
+# Markdown: keep trailing whitespace (two-space hard line breaks).
+[*.md]
+trim_trailing_whitespace = false

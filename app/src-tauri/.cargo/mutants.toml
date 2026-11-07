@@ -1,0 +1,3 @@
+# cargo mutants configuration (https://mutants.rs). Scope: the conveyor kinematics and the engine's
+# lockstep (CLAUDE.md "MUTATION >=70%", ROADMAP 1.4).
+examine_globs = ["src/scene.rs", "src/engine.rs"]

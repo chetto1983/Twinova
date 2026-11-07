@@ -1,0 +1,58 @@
+# Local git hooks (https://lefthook.dev), from chetto1983/ModbusTool: a fast subset of the CI
+# gates so problems surface at commit/push time instead of in CI.
+#
+# Install once per clone:  cd app && npx lefthook install
+# Bypass in an emergency:  git commit --no-verify   /   git push --no-verify
+#
+# Heavy gates (coverage, mutation, release builds) stay in CI.
+
+pre-commit:
+  parallel: true
+  commands:
+    rustfmt:
+      glob: "app/src-tauri/**/*.rs"
+      root: "app/src-tauri/"
+      run: cargo fmt --check
+    clippy:
+      glob: "app/src-tauri/**/*.rs"
+      root: "app/src-tauri/"
+      run: cargo clippy --all-targets -- -D warnings
+    oxlint:
+      glob: "app/**/*.{ts,svelte,mjs}"
+      root: "app/"
+      run: npx oxlint --max-warnings=0 {staged_files}
+    prettier:
+      glob: "app/**/*.{ts,svelte,mjs,json,css,html}"
+      root: "app/"
+      exclude:
+        - "app/src-tauri/**"
+        - "app/package-lock.json"
+      run: npx prettier --check {staged_files}
+    svelte-check:
+      glob: "app/src/**/*.{ts,svelte}"
+      root: "app/"
+      run: npm run -s check
+    # Per-file property: only the staged files can introduce a violation.
+    file-size:
+      glob: "*.{rs,ts,svelte,mjs,st}"
+      run: bash scripts/check-file-size.sh {staged_files}
+
+pre-push:
+  parallel: true
+  commands:
+    cargo-test:
+      glob: "app/src-tauri/**"
+      root: "app/src-tauri/"
+      run: cargo test
+    vitest:
+      glob: "app/{src/**,package.json,vite.config.ts}"
+      root: "app/"
+      run: npm test
+    deadcode:
+      glob: "app/{src/**,package.json}"
+      root: "app/"
+      run: npm run -s deadcode
+    dup:
+      glob: "app/src/**"
+      root: "app/"
+      run: npm run -s dup
