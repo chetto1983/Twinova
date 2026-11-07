@@ -7,7 +7,7 @@ the engine is deterministic, no component library before the component model exi
 References in brackets point to the research in `docs/research/` (in Italian): `06` is the best-of matrix, `05` the
 engine study, `08` the Rust inventory, `09`/`10` the IEC 61131-3 runtime work.
 
-Status: ✅ done · 🔶 partly done (gaps listed) · ⬜ not started.
+Status: ✅ done · 🔶 partly done (gaps listed) · ⏸ measured and deferred · ⬜ not started.
 
 ---
 
@@ -45,7 +45,7 @@ The tooling that every later phase relies on.
 | 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI | ✅ coverage gates in CI; first `mutation.yml` run on `main` (42385068809): cargo mutants 62/62, Stryker 27/27 |
 | 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings | ✅ |
 | 2.4 | Release bundles as in ModbusTool: MSI, deb and AppImage, a tag-driven `release.yml`, plus `CHANGELOG.md`. Not now (user, 2026-11-07): dmg, NSIS, signing, the updater (6.4) | installers built by CI, sizes recorded | ✅ MSI 4.55 MB, deb 4.14 MB, AppImage 82.8 MB (run 42387823991); `release.yml` ready, no tag yet |
-| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests); `trust-wasm-analysis` kept for 4.7 | ⬜ |
+| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests); `trust-wasm-analysis` kept for 4.7 | ⏸ measured (spec `2026-11-07-runtime-footprint-design`): little binary size, ~1/3 of a cold Linux build; a fork is ≥ 45 700 coupled lines. **Deferred** (user, 2026-11-07): keep `full`; A′ against B decided in M3 or M9.4 |
 | 2.6 | **truST upstream policy.** Execution (VM and encoder): deleted upstream on 2026-10-24, so it is forked once into a crate of ours, with attribution, and maintained here; upstream fixes are ported by hand. Language frontend (`trust-syntax`, `trust-hir`, `trust-ide`, `trust-wasm-analysis`): followed upstream by moving its git `rev` in a PR, after reading the commits that touch those crates, monthly. None of these crates is on crates.io, so nothing updates automatically | the policy in CONTRIBUTING or CLAUDE.md; the first frontend bump done through it, with CI green | ⬜ |
 
 ## M3 — Deterministic engine core ⬜
