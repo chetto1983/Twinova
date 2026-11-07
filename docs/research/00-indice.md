@@ -45,6 +45,7 @@ a componenti, flusso materiali, robot, messa in servizio virtuale con PLC). Non 
 | [07](07-open-industry-project.md) | Open Industry Project (MIT, browser) come base: copertura della matrice, rischi, tre strade | – |
 | [08](08-inventario-rust.md) | Strada C: inventario dei crate Rust (licenza, versione, download) per ogni bisogno, vuoti e prove | – |
 | [09](09-iec61131-runtime.md) | Logica dei componenti in IEC 61131-3 (non Python): runtime open source, truST in dettaglio | – |
+| [10](10-st-senza-compilazione.md) | ST e Ladder senza compilazione per il browser: il motore a bytecode tolto da truST compila in WASM (misurato); quattro strade | – |
 | [benchmark/](benchmark/) | Schede prodotto con URL: virtual commissioning (g1), flusso/DES (g2), didattici e open source (g3) | – |
 | [ricerca/](ricerca/) | Note di ricerca con URL: eventi discreti (r1), passo fisso e fisica (r2), virtual commissioning e PLCSIM (r3) | – |
 
