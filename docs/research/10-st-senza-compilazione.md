@@ -82,6 +82,13 @@ un crate da 286 000 righe. Le varianti realistiche sono due:
   in un crate nostro, sostituendo le sue dipendenze interne (`program_model`, `value`, `memory`, `io`);
 - **B**: un interprete nuovo su `trust-syntax` e `trust-hir`.
 
+**Correzione 2026-11-07 (misura, spec `2026-11-07-runtime-footprint-design.md`).** La stima di A′ "circa 10 800
+righe" vale per il solo `bytecode/`. Per arrivare all'encoder servono anche il lowering (`host/harness`, 12 510 righe
+senza test), il `Runtime` (`runtime/`, 14 316) e `io/` (8 104): **almeno circa 45 700 righe**. Seguendo i riferimenti
+fra moduli a livello di file si arriva a 119 522 righe su 151 403, perché l'encoder usa `crate::harness` e il
+runtime usa `crate::ads` e `crate::debug`. Inoltre `full` pesa poco sul binario (LTO toglie il codice non chiamato):
+pesa sul tempo di compilazione, circa un terzo su Linux, con OpenSSL compilato da sorgente in 174 s.
+
 Raccomandazione originale, prima del prototipo:
 
 **Raccomandazione [inferenza]: A come primo passo, B come ripiego.** La prova successiva decide fra le due:
