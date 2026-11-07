@@ -56,9 +56,8 @@ Run 42380805842 on `d586dbc`:
 | `build (windows-latest)`: release binary | built in 12 min 01 s; the size step failed (below) |
 
 Run 42382743771 on `543a878`, after the shell fix: **all seven jobs green**. The Windows release binary is
-**11 078 144 bytes** (`twinova.exe`), the Linux one 8 852 208 bytes as above. The debug binary of M1 was 557 MB: the
-release profile (`lto`, `opt-level = "s"`, `strip`) drops most of what trust-runtime `full` adds, which ROADMAP 2.5
-measures against.
+**11 078 144 bytes** (`twinova.exe`), the Linux one 8 852 208 bytes as above. The 557 MB of M1 was a debug
+binary with debug info, so it is not comparable; these two release sizes are the baseline for ROADMAP 2.5.
 
 The E2E replays the M1 acceptance: the default program builds, Start latches the motor, parts are delivered,
 virtual time follows the wall clock within 10 %, a part held at a blocked outlet trips the jam and stops the motor,
