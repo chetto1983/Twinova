@@ -3,7 +3,14 @@
   import { onMount } from "svelte";
   import * as THREE from "three";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-  import { BELT_LENGTH_M, PART_LENGTH_M, PHOTOCELL_AT_M, framingDistance, partCentreX, type Snapshot } from "./snapshot";
+  import {
+    BELT_LENGTH_M,
+    PART_LENGTH_M,
+    PHOTOCELL_AT_M,
+    framingDistance,
+    partCentreX,
+    type Snapshot,
+  } from "./snapshot";
 
   let { snapshot, theme }: { snapshot: Snapshot | null; theme: string } = $props();
 

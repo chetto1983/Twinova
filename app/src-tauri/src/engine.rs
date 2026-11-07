@@ -101,6 +101,7 @@ impl Engine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::scene::{BELT_SPEED_M_S, PART_LENGTH_M};
 
     const DEFAULT_PROGRAM: &str = include_str!("default_program.st");
 
@@ -150,6 +151,19 @@ mod tests {
         );
         let last = history.last().unwrap();
         assert!(!last.motor && last.sensor && last.delivered == 0);
+    }
+
+    #[test]
+    fn each_scan_moves_the_belt_by_one_scan_of_virtual_time() {
+        let mut engine = started(false);
+        run_for(&mut engine, 1);
+        // The first scan latches the motor and the part enters after it moves: 99 scans of movement.
+        let travelled = BELT_SPEED_M_S * 99.0 * SCAN_MS as f64 / 1000.0;
+        let front = engine.snapshot().parts[0].front_m;
+        assert!(
+            (front - (PART_LENGTH_M + travelled)).abs() < 1e-9,
+            "front at {front} m"
+        );
     }
 
     #[test]

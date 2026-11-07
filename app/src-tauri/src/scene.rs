@@ -135,6 +135,35 @@ mod tests {
     }
 
     #[test]
+    fn a_part_whose_front_reaches_the_end_exactly_is_delivered() {
+        // 2.75 + 0.5 * 0.5 = 3.0 exactly in binary floating point.
+        let mut s = Scene {
+            parts: vec![Part {
+                id: 1,
+                front_m: 2.75,
+            }],
+            ..Scene::default()
+        };
+        s.step(0.5, true);
+        assert_eq!(s.delivered, 1);
+        let fronts: Vec<f64> = s.parts.iter().map(|p| p.front_m).collect();
+        assert_eq!(
+            fronts,
+            [PART_LENGTH_M],
+            "only the part that just entered is left"
+        );
+    }
+
+    #[test]
+    fn every_part_gets_its_own_increasing_id() {
+        let mut s = Scene::default();
+        // Parts enter at 0, 2 and 4 s; at 5 s the first is at 2.8 m, still on the belt.
+        run(&mut s, 2.5 * SPAWN_INTERVAL_S, true);
+        let ids: Vec<u64> = s.parts.iter().map(|p| p.id).collect();
+        assert_eq!(ids, [1, 2, 3]);
+    }
+
+    #[test]
     fn a_blocked_outlet_accumulates_parts_nose_to_tail() {
         let mut s = Scene {
             outlet_blocked: true,

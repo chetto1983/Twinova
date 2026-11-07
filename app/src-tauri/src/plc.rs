@@ -100,6 +100,15 @@ mod tests {
     }
 
     #[test]
+    fn a_runtime_fault_in_the_cycle_is_an_error() {
+        let source = "PROGRAM Main\nVAR sensor : BOOL; start : BOOL; stop : BOOL; motor : BOOL;\n\
+            zero : INT; result : INT; END_VAR\nresult := 10 / zero;\nEND_PROGRAM\n";
+        let mut plc = Plc::build(source).expect("builds");
+        let error = plc.scan(Inputs::default(), 10).expect_err("a fault");
+        assert!(error.to_lowercase().contains("division"), "{error}");
+    }
+
+    #[test]
     fn a_scan_applies_the_inputs_and_returns_the_motor() {
         let mut plc = Plc::build(MINIMAL).expect("builds");
         assert!(!plc.scan(Inputs::default(), 10).unwrap());

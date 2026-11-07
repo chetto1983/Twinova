@@ -1,0 +1,72 @@
+name: Linux build dependencies
+description: >-
+  The system packages Tauri needs on Linux (from chetto1983/ModbusTool). apt on hosted runners sometimes hangs on a mirror
+  (jobs stuck 30+ minutes on 2026-11-05 and twice on 2026-11-06), so the downloaded packages are
+  cached: on a hit they are installed with dpkg, with no apt-get update and no mirror at all. The
+  key includes the runner image version, so the cached .deb files always match the base system.
+  On a miss apt runs with time limits and retries, and the packages it downloaded are saved.
+inputs:
+  extra:
+    description: More packages for this job (e.g. the E2E's WebKitWebDriver, Xvfb, socat).
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - id: key
+      shell: bash
+      env:
+        EXTRA: ${{ inputs.extra }}
+      run: |
+        packages="libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev $EXTRA"
+        echo "packages=$packages" >> "$GITHUB_OUTPUT"
+        echo "dir=$HOME/.cache/linux-deps" >> "$GITHUB_OUTPUT"
+        hash=$(printf '%s' "$packages" | sha256sum | cut -c1-16)
+        echo "key=linux-deps-$ImageOS-$ImageVersion-$hash" >> "$GITHUB_OUTPUT"
+    - id: cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.key.outputs.dir }}
+        key: ${{ steps.key.outputs.key }}
+    - id: install
+      shell: bash
+      env:
+        PACKAGES: ${{ steps.key.outputs.packages }}
+        DEBS: ${{ steps.key.outputs.dir }}
+        HIT: ${{ steps.cache.outputs.cache-hit }}
+      run: |
+        read -ra packages <<< "$PACKAGES"
+        installed() {
+          for p in "${packages[@]}"; do
+            [ "$(dpkg-query -W -f='${Status}' "$p" 2>/dev/null)" = "install ok installed" ] || return 1
+          done
+        }
+        if [ "$HIT" = "true" ]; then
+          # The real install (maintainer scripts run), only without the network.
+          if timeout 300 sudo dpkg -i "$DEBS"/*.deb && installed; then
+            echo "Installed ${#packages[@]} packages from the cache"
+            exit 0
+          fi
+          echo "::warning::cached packages did not install; falling back to apt"
+          sudo dpkg --configure -a || true
+        fi
+        apt=(sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20)
+        sudo apt-get clean
+        for attempt in 1 2 3; do
+          if timeout 120 "${apt[@]}" update && timeout 300 "${apt[@]}" install -y "${packages[@]}" && installed; then
+            mkdir -p "$DEBS"
+            cp /var/cache/apt/archives/*.deb "$DEBS"/ 2>/dev/null || true
+            echo "save=$([ "$HIT" != "true" ] && ls "$DEBS"/*.deb >/dev/null 2>&1 && echo true || echo false)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "::warning::apt attempt $attempt failed or timed out"
+          # A timed-out install can leave dpkg half done; finish it before the next attempt.
+          sudo dpkg --configure -a || true
+          sleep 10
+        done
+        exit 1
+    - if: steps.install.outputs.save == 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.key.outputs.dir }}
+        key: ${{ steps.key.outputs.key }}

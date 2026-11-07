@@ -1,0 +1,212 @@
+name: CI
+
+# The ModbusTool set (chetto1983/ModbusTool .github/workflows/ci.yml), with the app under app/.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request makes the older run moot.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Without a shell key a step runs without pipefail (pattern from Aura's workflows). A job's own
+# defaults replace these, so every job that sets a working directory repeats the shell.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  rust:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: app/src-tauri
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: System dependencies
+        uses: ./.github/actions/linux-deps
+        timeout-minutes: 30
+      # The toolchain app/src-tauri/rust-toolchain.toml pins (trust-runtime needs 1.99).
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: 1.99.0
+          components: rustfmt, clippy, llvm-tools-preview
+      # One writer per cache, as in Aura: main saves, branches and PRs only read, so a branch
+      # push never evicts the entry main's next run needs.
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          workspaces: app/src-tauri
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
+        with:
+          tool: cargo-llvm-cov
+      - name: Frontend dist placeholder (required by tauri::generate_context)
+        run: mkdir -p ../dist
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - name: Tests with coverage gate (85% of lines, CLAUDE.md)
+        run: cargo llvm-cov --fail-under-lines 85 --summary-only
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - name: Translations complete (messages/, project.inlang)
+        run: npm run check:i18n
+      - run: npm run format:check
+      - run: npm run deadcode
+      - run: npm run dup
+      - name: Tests with coverage gate (85%, vite.config.ts thresholds)
+        run: npm run coverage
+      - run: npm run build
+
+  file-size:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: bash scripts/check-file-size.sh
+
+  # The release binary on both desktop platforms, without installers (those are ROADMAP 2.4).
+  build:
+    needs: [rust, frontend, file-size]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: 1.99.0
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          workspaces: app/src-tauri
+          shared-key: build
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: System dependencies
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/linux-deps
+        timeout-minutes: 30
+      - run: npm ci
+      - run: npx tauri build --no-bundle
+      # The size is a figure ROADMAP 2.5 measures against.
+      - name: Release binary size
+        run: ls -l "src-tauri/target/release/twinova${{ runner.os == 'Windows' && '.exe' || '' }}"
+
+  # The real app through tauri-driver (e2e/run.mjs), on both desktop platforms Tauri can drive.
+  # As in ModbusTool, Windows is tested here and not with cargo test: tauri-build embeds the Common
+  # Controls v6 manifest in binaries only, so a test binary that links tauri does not start there
+  # (0xc0000139, measured on this repository's run 42378063592).
+  e2e:
+    needs: [rust, frontend, file-size]
+    strategy:
+      fail-fast: false
+      matrix:
+        # Not windows-latest: on windows-2025 msedgedriver cannot attach to WebView2 even at matching
+        # versions (ModbusTool, 2026-11-06; https://github.com/actions/runner-images/issues/14738).
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: 1.99.0
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          workspaces: app/src-tauri
+          shared-key: e2e
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: System dependencies
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/linux-deps
+        timeout-minutes: 30
+        with:
+          extra: webkit2gtk-driver xvfb
+      - run: cargo install tauri-driver --locked --version 2.1.0
+      # tauri-driver drives Edge WebView2 through msedgedriver, whose version must match the
+      # WebView2 on the runner (https://v2.tauri.app/develop/tests/webdriver/ci/).
+      - name: Edge driver matching WebView2
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cargo install --git https://github.com/chippers/msedgedriver-tool
+          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
+          $PWD.Path >> $env:GITHUB_PATH
+          # The driver must match WebView2, which can differ from Edge: print both to compare.
+          $webview = Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" -ErrorAction SilentlyContinue
+          $edge = (Get-Item "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe" -ErrorAction SilentlyContinue).VersionInfo.ProductVersion
+          Write-Output "WebView2 $($webview.pv), Edge $edge, $(& .\msedgedriver.exe --version)"
+      - run: npm ci
+      - run: npx tauri build --debug --no-bundle
+      # Software GL and no DMA-BUF renderer: the three.js view under Xvfb, as measured for M1.
+      - name: E2E (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a -s "-screen 0 1440x900x24" node e2e/run.mjs
+        env:
+          E2E_OUT: ${{ runner.temp }}/e2e
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          WEBKIT_DISABLE_DMABUF_RENDERER: "1"
+      - name: E2E (Windows)
+        if: runner.os == 'Windows'
+        run: node e2e/run.mjs
+        env:
+          E2E_OUT: ${{ runner.temp }}/e2e
+      # Failure screenshots and the driver's log, to read a failure without guessing.
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: e2e-${{ runner.os }}
+          path: ${{ runner.temp }}/e2e
+          if-no-files-found: ignore
+          retention-days: 7

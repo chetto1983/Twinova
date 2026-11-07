@@ -21,7 +21,7 @@ Status: ✅ done · 🔶 partly done (gaps listed) · ⬜ not started.
 | 0.4 | Open Industry Project assessed, with measured tests and benchmark [07] | ✅ |
 | 0.5 | Rust ecosystem and IEC 61131-3 runtime inventory, plus the ST-without-compilation probe [08–10] | ✅ |
 
-## M1 — Walking skeleton 🔶
+## M1 — Walking skeleton ✅
 
 One belt conveyor in 3D, driven by Structured Text, in a Tauri desktop app.
 Spec `2026-11-07-tauri-shell-design.md`.
@@ -31,19 +31,21 @@ Spec `2026-11-07-tauri-shell-design.md`.
 | 1.1 | Tauri 2 + Svelte 5 shell, Aura tokens, en/it | `svelte-check` clean, app starts | ✅ |
 | 1.2 | Closed-form belt, ST on truST's VM, lockstep engine | 18 Rust tests incl. the 60 s scenarios | ✅ |
 | 1.3 | E2E under Xvfb | screenshots; pacing 10.04 s virtual in 10.06 s wall | ✅ |
-| 1.4 | **DoD gaps**: coverage ≥85 %, mutation ≥70 % on `scene`/`engine`, Windows run | figures in a verification file | ⬜ |
+| 1.4 | **DoD gaps**: coverage ≥85 %, mutation ≥70 % on `scene`/`engine`, Windows run | figures in a verification file | ✅ coverage 93.6 % Rust / 100 % TS, mutation 62/62, E2E 6/6 on Linux and Windows |
 
-## M2 — Engineering foundation ⬜
+## M2 — Engineering foundation 🔶
+
+The gate set of chetto1983/ModbusTool, ported in `2026-11-07-engineering-foundation` (plan and verification).
 
 The tooling that every later phase relies on.
 
-| Phase | Deliverable | Acceptance |
-|---|---|---|
-| 2.1 | CI on GitHub Actions, Linux and Windows: fmt, clippy `-D warnings`, tests, svelte-check, Vitest, build | green on `main` |
-| 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI |
-| 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings |
-| 2.4 | Release bundles: MSI/NSIS, AppImage/deb, dmg, plus `CHANGELOG.md` | installers built by CI, sizes recorded |
-| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests) |
+| Phase | Deliverable | Acceptance | Status |
+|---|---|---|---|
+| 2.1 | CI on GitHub Actions, Linux and Windows: fmt, clippy `-D warnings`, tests, svelte-check, Vitest, build | green on `main` | 🔶 all green on this branch (run 42382743771), Windows through the E2E; not yet on `main` |
+| 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI | 🔶 coverage enforced; `mutation.yml` runs on `main` only, not run yet |
+| 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings | ✅ |
+| 2.4 | Release bundles: MSI/NSIS, AppImage/deb, dmg, plus `CHANGELOG.md` | installers built by CI, sizes recorded | ⬜ |
+| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests); `trust-wasm-analysis` kept for 4.7 | ⬜ |
 
 ## M3 — Deterministic engine core ⬜
 
@@ -68,6 +70,9 @@ The core of the product [02a, 06 #1–2].
 | 4.3 | Behaviours written as ST function blocks bound to component signals | a component's logic edited and rebuilt in the app |
 | 4.4 | Library v1: belt, roller and curved conveyors, diverter, stopper, pusher, turntable, sensors (diffuse, through-beam, colour, barcode), creator and sink | each component has an E2E scene |
 | 4.5 | Editor: catalogue, drag and drop, snapping by interfaces, move/rotate, signal wiring, undo | build a two-conveyor line with a diverter by hand |
+| 4.6 | **ST in VS Code**: the scene's programs are `.st` files in a project folder, rebuilt on save; VS Code with truST's `trust-lsp` extension (MIT OR Apache-2.0) is the external editor | edit in VS Code, save, the running scene picks up the new program |
+| 4.7 | **In-app ST editor** for who has no VS Code (classrooms, the browser edition): Monaco with diagnostics, hover and completion from truST's `BrowserAnalysisEngine` (`trust-wasm-analysis`, already in the dependency tree) through Tauri commands | the same diagnostics as `trust-lsp` on the default program and on a broken one; Monaco measured on WebKitGTK |
+| 4.8 | Spike: truST's runtime control endpoint on Twinova's simulated PLC, so VS Code's Live Values and debugger attach to the scene | decision recorded: protocol inventory, and whether it fits the virtual-time harness |
 
 ## M5 — PLC in the loop ⬜
 
@@ -88,7 +93,7 @@ What makes it "powerful for schools" (the user, 2026-11-07).
 
 | Phase | Deliverable | Acceptance |
 |---|---|---|
-| 6.1 | Ladder editor producing ST (truST approach [09]) | the default program written in LD runs the same |
+| 6.1 | Ladder editor producing ST (truST approach [09]). First a spike on reusing the Ladder webview of truST's VS Code extension (React, `*.ladder.json`, PLCopen LD interop) | the default program written in LD runs the same |
 | 6.2 | Fault injection as saved scenarios, with an instructor mode behind a password [06 #12] | a teacher sets faults the student cannot see |
 | 6.3 | Graded exercises: scene, goal, automatic check of the result | 10 exercises from start/stop to sorting |
 | 6.4 | Classroom distribution: offline installers, auto-update, no account | installed on a clean Windows machine |

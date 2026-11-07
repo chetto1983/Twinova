@@ -78,10 +78,18 @@
       <button class="btn primary" disabled={status !== "ok"} onclick={toggleRun}>
         {running ? m.pause() : m.run()}
       </button>
-      <button class="btn" disabled={status !== "ok"} onclick={() => replace(backend.step).then(() => (running = false))}>
+      <button
+        class="btn"
+        disabled={status !== "ok"}
+        onclick={() => replace(backend.step).then(() => (running = false))}
+      >
         {m.step()}
       </button>
-      <button class="btn" disabled={status !== "ok"} onclick={() => replace(backend.reset).then(() => (running = false))}>
+      <button
+        class="btn"
+        disabled={status !== "ok"}
+        onclick={() => replace(backend.reset).then(() => (running = false))}
+      >
         {m.reset()}
       </button>
       <span class="sep"></span>

@@ -22,6 +22,10 @@ serde_json = "1"
 # docs/research/10-st-senza-compilazione.md. MIT OR Apache-2.0.
 trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }
 
+[dev-dependencies]
+# mock_app for the command tests (src/commands_tests.rs), as in chetto1983/ModbusTool.
+tauri = { version = "2", features = ["test"] }
+
 # The webview's language under a C locale (src/webview_locale.rs).
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
@@ -31,3 +35,9 @@ codegen-units = 1
 lto = true
 opt-level = "s"
 strip = true
+
+# trust-runtime asks for tiverse-mmap 1.0.0, which does not build on Windows (VirtualAlloc and LockFileEx
+# take typed flags in windows 0.52). truST's workspace patches it with its fixed copy (trust-platform
+# Cargo.toml, [patch.crates-io]), but a patch does not reach dependents, so it is repeated here.
+[patch.crates-io]
+tiverse-mmap = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0" }

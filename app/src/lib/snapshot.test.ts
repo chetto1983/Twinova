@@ -35,6 +35,8 @@ describe("framingDistance", () => {
     // 90 degrees vertical: tan(45) = 1, so distance = half-extent / aspect-scaled tangent.
     expect(framingDistance(2, 1, 90, 0.5)).toBeCloseTo(4);
     expect(framingDistance(2, 1, 90, 4)).toBeCloseTo(1);
+    // 60 degrees: tan(30) = 1 / sqrt(3), where dividing and multiplying by the tangent differ.
+    expect(framingDistance(2, 1, 60, 10)).toBeCloseTo(Math.sqrt(3));
   });
   it("grows as the viewport narrows", () => {
     expect(framingDistance(1.8, 1, 40, 0.8)).toBeGreaterThan(framingDistance(1.8, 1, 40, 1.6));

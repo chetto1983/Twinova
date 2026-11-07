@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "mutate": ["src/lib/snapshot.ts"],
+  "reporters": ["clear-text", "progress", "json"],
+  "thresholds": {
+    "high": 90,
+    "low": 70,
+    "break": 70
+  },
+  "tempDirName": ".stryker-tmp",
+  "ignorePatterns": ["src-tauri", "dist", "coverage", "reports"],
+  "coverageAnalysis": "perTest",
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "cleanTempDir": true,
+  "incremental": true,
+  "incrementalFile": "reports/stryker-incremental.json"
+}
