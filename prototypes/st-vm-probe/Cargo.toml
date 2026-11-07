@@ -1,0 +1,17 @@
+[package]
+name = "st-vm-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "Probe: run IEC 61131-3 ST on truST's former bytecode VM, natively and in wasm"
+
+# truST at the last commit read that still has its bytecode engine (deleted upstream on 2026-10-24).
+[dependencies]
+trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }
+
+[workspace]
+
+# getrandom needs an explicit backend on wasm32-unknown-unknown (docs.rs/getrandom/0.3.4, "WebAssembly support").
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
