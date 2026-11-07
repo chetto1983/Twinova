@@ -6155,8 +6155,7 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 [[package]]
 name = "tiverse-mmap"
 version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a31e59c3d64c554d4c6a364a895b38c115f0380df67b52503c5928b02e05a9e"
+source = "git+https://github.com/johannesPettersson80/trust-platform?rev=6405915973a77587748ffb061a61d37bb8a368b0#6405915973a77587748ffb061a61d37bb8a368b0"
 dependencies = [
  "cfg-if",
  "libc",
