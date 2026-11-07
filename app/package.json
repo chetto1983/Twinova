@@ -18,7 +18,8 @@
     "deadcode": "npm run -s i18n && knip",
     "dup": "jscpd",
     "mutation": "npm run -s i18n && stryker run",
-    "check:i18n": "inlang check --project ./project.inlang"
+    "check:i18n": "inlang check --project ./project.inlang",
+    "hooks": "lefthook install"
   },
   "devDependencies": {
     "@inlang/cli": "^3.6.0",

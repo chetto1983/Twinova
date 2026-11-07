@@ -135,22 +135,26 @@ mai il loro materiale.
 
 ## Post-edit validation (Gate 2)
 
-The tooling does not exist yet. The first implementation plan sets it up, and this section is
-then updated with the real commands.
+The set comes from `chetto1983/ModbusTool`; CI runs it in `.github/workflows/ci.yml` and
+`mutation.yml`, and `lefthook.yml` runs the fast part as git hooks (`cd app && npm run hooks`).
 
-After every Rust edit:
+After every Rust edit, in `app/src-tauri`:
 
 - `cargo fmt --check`
 - `cargo clippy --all-targets -- -D warnings`
-- `cargo test` (CI: `cargo llvm-cov --fail-under-lines 85`)
-- engine core or protocol changes: `cargo mutants`
+- `cargo test` (CI: `cargo llvm-cov --fail-under-lines 85`, and `cargo test` on Windows)
+- engine core or protocol changes: `cargo mutants` (scope in `.cargo/mutants.toml`)
 - the wasm target builds: `cargo build --target wasm32-unknown-unknown`, for the crates meant
-  for the browser
+  for the browser (none yet)
 
-After every TypeScript edit: type check, lint with zero warnings, format check, tests
-with coverage, build.
+After every TypeScript or Svelte edit, in `app`:
 
-Repository-wide: the 600-LOC cap is checked in CI.
+- `npm run check` (svelte-check, zero warnings) and `npm run lint` (oxlint, zero warnings)
+- `npm run format:check`, `npm run check:i18n`, `npm run deadcode` (knip), `npm run dup` (jscpd)
+- `npm run coverage` (85 % thresholds in `vite.config.ts`) and `npm run build`
+- `src/lib` helpers: `npm run mutation` (Stryker, breaks below 70 %)
+
+Repository-wide: `bash scripts/check-file-size.sh` (600-LOC cap, also in CI).
 
 Fix issues before moving on.
 
