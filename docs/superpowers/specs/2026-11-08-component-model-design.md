@@ -1,8 +1,8 @@
 # M4.1 — Component model and editor foundation
 
-Status: **draft for approval**, 2026-11-08. The user asked to start the recommended catalogue-first
-direction, then requested a live exploration of Open Industry Project before finalising M4. Three decisions of
-2026-11-08 are recorded below: decisions are commanded by the PLC, signals bind to IEC direct addresses
+Status: **approved** (user, 2026-11-08); verification `verification/2026-11-08-component-model.md`.
+The user asked to start the recommended catalogue-first direction, then requested a live exploration of
+Open Industry Project before finalising M4. Three decisions of 2026-11-08 are recorded below: decisions are commanded by the PLC, signals bind to IEC direct addresses
 (measured on the pinned truST), and the document is Y up.
 This document records that direction and implementation proposals; it does not claim that M4 functionality exists.
 
