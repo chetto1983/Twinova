@@ -75,16 +75,16 @@ app/src-tauri/.cargo/mutants.toml engine.rs and bench.rs in scope
 
 ## Tasks
 
-- [ ] **1. Dependency.** The fork has the patch; `[patch.crates-io] nexosim = { git = <fork>, rev = <commit> }`.
+- [x] **1. Dependency.** The fork has the patch; `[patch.crates-io] nexosim = { git = <fork>, rev = <commit> }`.
   Verify: `cargo tree -i nexosim` shows the fork; the 27 tests still pass.
 - [x] **2. Pin M1's results.** Before touching the engine, record the per-scan fingerprints of the two 60 s scenarios
   as a test against the current engine. Verify: green on the current engine.
-- [ ] **3. Bench.** `bench.rs` with the models, ported from the prototype, with error handling instead of `expect`.
+- [x] **3. Bench.** `bench.rs` with the models, ported from the prototype, with error handling instead of `expect`.
   Verify: the pinned results from task 2 are reproduced; a runtime-fault test reaches the error.
-- [ ] **4. Engine on the bench.** `engine.rs` keeps its public API (`new`, `press`, `set_outlet_blocked`, `step`,
+- [x] **4. Engine on the bench.** `engine.rs` keeps its public API (`new`, `press`, `set_outlet_blocked`, `step`,
   `catch_up`, `snapshot`, `time_ms`); `commands.rs` unchanged. Verify: 27 tests, `cargo clippy -D warnings`, E2E 6/6.
-- [ ] **5. Determinism tests.** Replay fingerprint (two runs, the same inputs, identical snapshots), and a property test
+- [x] **5. Determinism tests.** Replay fingerprint (two runs, the same inputs, identical snapshots), and a property test
   of the order of simultaneous events with random model counts and times. Verify: green; `cargo mutants` ≥ 70 % on
   `engine.rs` and `bench.rs`; `cargo llvm-cov` ≥ 85 %.
-- [ ] **6. Docs.** Verification file, ROADMAP 3.2, CHANGELOG (no user-visible change: an "Internal" note only if the
+- [x] **6. Docs.** Verification file, ROADMAP 3.2, CHANGELOG (no user-visible change: an "Internal" note only if the
   format has one).
