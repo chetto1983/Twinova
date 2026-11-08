@@ -55,5 +55,7 @@
   "inspector_overridden": "impostato su questa istanza",
   "signal_unbound": "non collegato",
   "signal_plc_input": "Ingresso PLC",
-  "signal_plc_output": "Uscita PLC"
+  "signal_plc_output": "Uscita PLC",
+  "view_grid": "Griglia",
+  "view_frame": "Inquadra tutto"
 }

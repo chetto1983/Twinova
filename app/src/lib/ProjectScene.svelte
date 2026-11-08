@@ -33,14 +33,6 @@
 
   function build(): void {
     dispose();
-    scene.background = token("--color-bg");
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(view.radius * 3, view.radius * 3),
-      new THREE.MeshStandardMaterial({ color: token("--color-surface"), roughness: 1 }),
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(view.centre[0], 0, view.centre[2]);
-    content.add(floor);
     for (const instance of project.instances) {
       const def = project.definitions[instance.definition];
       if (!def) continue;
@@ -51,11 +43,12 @@
       const lit = instance.id === selected;
       const material = new THREE.MeshStandardMaterial({
         color: token(shape.token),
-        emissive: lit ? token("--color-accent") : new THREE.Color(0),
+        emissive: lit ? token("--scene-selected") : new THREE.Color(0),
         emissiveIntensity: lit ? 0.6 : 0,
         roughness: 0.8,
       });
       const mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true;
       mesh.position.set(...shape.centre);
       const placed = new THREE.Group();
       placed.position.set(...instance.position);
@@ -74,4 +67,4 @@
   $effect(() => dispose);
 </script>
 
-<Viewport {scene} {target} halfWidth={view.radius} bind:requestRender />
+<Viewport {scene} {theme} {target} halfWidth={view.radius} bind:requestRender />

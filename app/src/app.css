@@ -49,6 +49,12 @@
   --color-danger: #f28b82;
   --color-info: #aecbfa;
   --color-ring: #8ab4f8;
+  /* The 3D scene: a dim plant hall, so the parts read against it. */
+  --scene-sky: #2b313a;
+  --scene-hemi-sky: #7d8894;
+  --scene-hemi-ground: #4a453e;
+  --scene-floor: #3b3f45;
+  --scene-grid: #5f6772;
 }
 
 :root[data-theme="light"] {
@@ -73,9 +79,26 @@
   --color-danger: #b3261e;
   --color-info: #0b57d0;
   --color-ring: #0b57d0;
+  /* The 3D scene: an industrial hall in daylight, after Open Industry Project's (THIRD_PARTY_NOTICES.md). */
+  --scene-sky: #9fb1c4;
+  --scene-hemi-sky: #c4cfdc;
+  --scene-hemi-ground: #9a948a;
+  --scene-floor: #a7a9ab;
+  --scene-grid: #6b727b;
 }
 
 :root {
+  /* Scene materials, the same in both themes: what a plant is made of does not change with the UI theme. */
+  --scene-key-light: #fff3e0;
+  --scene-fill-light: #dde6f2;
+  --scene-belt: #2f3338;
+  --scene-frame: #5c6f82;
+  --scene-steel: #b7bec5;
+  --scene-product: #c89b62;
+  --scene-device: #e8b923;
+  --scene-sensor: #2e6fb0;
+  --scene-sink: #7a838c;
+  --scene-selected: #3d8bfd;
   --color-accent-soft: color-mix(in oklab, var(--color-accent) 55%, transparent);
   --color-danger-soft: color-mix(in oklab, var(--color-danger) 15%, transparent);
   --radius-sm: 8px;

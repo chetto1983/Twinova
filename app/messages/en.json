@@ -55,5 +55,7 @@
   "inspector_overridden": "set on this instance",
   "signal_unbound": "not bound",
   "signal_plc_input": "PLC input",
-  "signal_plc_output": "PLC output"
+  "signal_plc_output": "PLC output",
+  "view_grid": "Grid",
+  "view_frame": "Frame all"
 }
