@@ -48,9 +48,24 @@ Frames/s counts the `requestAnimationFrame` callbacks over 10 s, in a separate r
 - **The engine's memory is flat** at 168–173 MB in every phase. This matches the model: the belt holds at most 10
   parts, and the input log grows only with user inputs.
 
-## One hour on the fixed build
+## One hour on the fixed build (`0fad8c7`), 15 min per phase
 
-Four 15-minute phases. The result is pending and will be added here.
+| Phase | twinova | WebKitWebProcess | RSS twinova | RSS WebKitWebProcess |
+|---|---|---|---|---|
+| Idle | 0.0 % | 0.0 % | 173 → 173 MB | 396 → 394 MB |
+| Run ×1 | 7.2 % | 276 % | 174 → 174 MB | 405 → 429 MB (peak 445) |
+| As fast as possible | 41.3 % | 182 % | 174 → 174 MB | 431 → 451 MB |
+| Paused | 0.0 % | 0.0 % | 174 → 173 MB | 453 → 448 MB |
+
+- **The engine's memory is flat over the hour**: 173–174 MB.
+- **The UI grows while snapshots arrive**: +24 MB in 15 min of Run ×1, +20 MB in 15 min as fast as possible. It does not
+  grow while idle or paused, and it gives back 5 MB once paused.
+  - Whether that is a leak is not settled. If the growth were linear, it would be about +90 MB per hour of running, and
+    a heap profile of the web process would tell garbage from retained objects.
+  - Hypothesis, not measured: retained snapshot objects or the JIT. The check belongs to the M4 stress scene.
+- **As fast as possible**: 493 185 s of virtual time in 900 s, i.e. 548 × real time with the UI attached.
+- **Disturbance**: the phases ran 09:13–10:13 UTC. A local E2E with its own app process ran for one minute at 09:22
+  (idle phase), and a low-priority (`nice 19`) release build for 5 min at 09:47 (as-fast-as-possible phase).
 
 ## What this does not prove
 
@@ -58,5 +73,5 @@ Four 15-minute phases. The result is pending and will be added here.
   Run is the drop from 60 to about 30 frames per second, which is a hypothesis, not measured.
 - **Complex lines.** There is one belt with at most 10 parts. A stress scene with many belts and parts belongs to M4,
   where the budget is to be measured.
-- **A memory leak or its absence** over hours: 4 minutes cannot tell garbage collection from a leak, hence the one-hour
-  run.
+- **A memory leak or its absence** over a working day: one hour shows the UI growing only while it receives snapshots,
+  not whether that growth stops.

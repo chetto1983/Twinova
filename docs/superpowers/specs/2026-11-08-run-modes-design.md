@@ -1,7 +1,7 @@
 # Spec: run modes and snapshots (ROADMAP 3.5)
 
-Date: 2026-11-08. Status: **implemented** (user, 2026-11-08: snapshots by replay; a lag beyond the tolerance is
-reported and the run goes on).
+Date: 2026-11-08. Status: **verified** (`verification/2026-11-08-run-modes.md`). Decided by the user, 2026-11-08:
+snapshots by replay; a lag beyond the tolerance is reported and the run goes on.
 
 ROADMAP 3.5:
 - Run (wall clock × scale, `OutOfSync` beyond a tolerance);
@@ -56,11 +56,13 @@ lag indicator too: the UI shows "Behind real time" above 100 ms (`isBehind`, `sn
   200 ms. The E2E checks ×1 within 10 % and ×2 within 10 % on the real app (CI).
 - **As fast as possible.** One 25 ms tick ran more than 25 ms of virtual time (command test, debug build).
 - **Replay cost.** Restoring a snapshot taken at 600 s simulated (60 000 scans) took **4.5 s in a debug build**, about
-  7.5 ms per simulated second, so about 27 s per simulated hour in debug.
-  - The release build was not measured, to avoid a long local build (user's request): a release run is expected to be
-    much faster, but that is a hypothesis.
-  - Replay grows linearly with the snapshot's time. Snapshots of long runs therefore call for a faster path later,
-    such as saving the VM's state if truST ever offers it.
+  7.5 ms per simulated second.
+  - **Release build** (`examples/replay_cost.rs`, default program, line started): 600 s restore in **0.34 s**, one
+    simulated hour in **2.33 s**, i.e. 0.65 ms per simulated second, about 1 700 × real time.
+  - Replay grows linearly with the snapshot's time: a snapshot of an 8 h shift would take about 19 s. Snapshots of long
+    runs therefore call for a faster path later, such as saving the VM's state if truST ever offers it.
+- **As fast as possible, release build.** In the app, 493 185 s of virtual time in 900 s of wall time (548 × real
+  time, CPU soak of 2026-11-08); the criterion was more than 10 ×.
 
 ## What this will not prove
 
