@@ -19,6 +19,7 @@
     "dup": "jscpd",
     "mutation": "npm run -s i18n && stryker run",
     "e2e": "node e2e/run.mjs",
+    "soak": "node e2e/soak.mjs",
     "check:i18n": "inlang check --project ./project.inlang",
     "hooks": "lefthook install"
   },
