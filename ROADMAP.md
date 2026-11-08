@@ -80,7 +80,7 @@ The model is not yet an implemented format; the implementation acceptance from 4
 | Phase | Deliverable | Acceptance | Status |
 |---|---|---|---|
 | 4.1 | Spec of the component model: node tree, joints, properties, typed signals, behaviours, interfaces | spec approved | ✅ spec approved (user, 2026-11-08): `2026-11-08-component-model-design`; signals bind to IEC direct addresses, per instance through `VAR_CONFIG`, measured on the pinned truST (`verification/2026-11-08-component-model.md`) |
-| 4.2 | Open scene and component format: JSON plus glTF geometry, versioned, with migrations | round-trip tests; a corpus of saved scenes opens | ⬜ |
+| 4.2 | Open scene and component format: JSON plus glTF geometry, versioned, with migrations | round-trip tests; a corpus of saved scenes opens | 🔶 container and save protocol decided (user, 2026-11-08; spec `2026-11-08-project-format-design`, research 14); schema, probes and implementation open |
 | 4.3 | Behaviours written as ST function blocks bound to component signals | a component's logic edited and rebuilt in the app | ⬜ |
 | 4.4 | Library v1: belt, roller and curved conveyors, diverter, stopper, pusher, turntable, sensors (diffuse, through-beam, colour, barcode), creator and sink | each component has an E2E scene | ⬜ |
 | 4.5 | Editor: catalogue, drag and drop, snapping by interfaces, move/rotate, signal wiring, undo | build a two-conveyor line with a diverter by hand | ⬜ |
