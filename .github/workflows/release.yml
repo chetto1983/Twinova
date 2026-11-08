@@ -106,19 +106,24 @@ jobs:
         timeout-minutes: 30
       # Tauri's bundler downloads WiX (MSI) and linuxdeploy with AppRun (AppImage) from GitHub releases
       # into dirs::cache_dir()/tauri, unless they are already there (tauri-bundler 2.10.4,
-      # bundle/windows/msi/mod.rs and bundle/linux/appimage/linuxdeploy.rs). Those downloads failed with
-      # 504 twice on main (run 42464179086), so the tools are cached.
+      # bundle/windows/msi/mod.rs and bundle/linux/appimage/linuxdeploy.rs), once and with no retry.
+      # GitHub answered 504 to it three times in a row on main, so the tools are cached, and fetched
+      # with retries by scripts/fetch-bundler-tools.sh when the cache is empty.
       - name: Bundler tools directory
         id: tools
         run: |
-          if [ "$RUNNER_OS" = Windows ]; then base="$LOCALAPPDATA"; else base="${XDG_CACHE_HOME:-$HOME/.cache}"; fi
+          if [ "$RUNNER_OS" = Windows ]; then base=$(cygpath -m "$LOCALAPPDATA"); else base="${XDG_CACHE_HOME:-$HOME/.cache}"; fi
           echo "dir=$base/tauri" >> "$GITHUB_OUTPUT"
       # Reads the tools ci.yml's bundle job saves on main.
-      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      - id: tools-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ steps.tools.outputs.dir }}
           key: tauri-tools-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
           restore-keys: tauri-tools-${{ runner.os }}-
+      - name: Bundler tools, fetched with retries when not cached
+        if: steps.tools-cache.outputs.cache-hit != 'true'
+        run: bash ../scripts/fetch-bundler-tools.sh "${{ steps.tools.outputs.dir }}" "$RUNNER_OS"
       - run: npm ci
       - run: npx tauri build --bundles ${{ matrix.bundles }}
       - name: One Paraglide runtime in the frontend bundle
