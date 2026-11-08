@@ -39,8 +39,19 @@ the concrete schema as the spec's annex; Tasks 2–5 wait for it.
 
 ## Decisions taken while writing this plan
 
-By the user, 2026-11-08: a folder with an Export/Import archive of the same files; the manifest is written last and
-lists every file's SHA-256, with the replaced files kept in `.twinova/previous/` for recovery.
+By the user, 2026-11-08:
+- a folder, with an Export/Import archive of the same files;
+- the manifest is written last and lists every file's SHA-256, and the replaced files are kept in
+  `.twinova/previous/` for recovery;
+- dependencies: `sha2` and `tempfile` at the versions already in the lockfile, and `zip` 9.4.2 (MIT, deflate only);
+- the Windows cases are measured by tests in the repository, run by CI on windows-2022.
+
+Taken while writing the plan, from those decisions: the project format is its own crate, `twinova-project`, with no
+Tauri dependency, in a Cargo workspace with the app.
+- A test binary that links Tauri does not start on Windows (0xc0000139, run 42378063592), and every test of the
+  current crate links it through `twinova_lib`.
+- A crate without Tauri can be tested on windows-2022. It also keeps the format usable headless, as the README's
+  goals ask.
 
 4.2 closes on native open/display/save, not multi-component runtime execution. Reusable assemblies are templates
 expanded into independent scene groups with new IDs. Parametric built-ins use versioned native family generators;
@@ -48,7 +59,10 @@ a new geometry expression language is not required. These are assistant proposal
 
 ## File structure
 
-- `app/src-tauri/src/project/`: model, validation, codec, storage and tests, split by responsibility.
+- `app/src-tauri/Cargo.toml`: becomes a workspace with the app and `project/`.
+- `app/src-tauri/project/` (crate `twinova-project`, no Tauri): model, validation, codec, storage and tests, split by
+  responsibility.
+- `.github/workflows/ci.yml`: a job running `cargo test -p twinova-project` on ubuntu-24.04 and windows-2022.
 - `app/src-tauri/src/project_commands.rs`: project command boundary and transaction checks.
 - `app/src/lib/project.ts`: UI projection types and document state; no simulation authority.
 - `app/src/lib/ProjectPanel.svelte`: open/save/status and actionable validation errors.
@@ -63,6 +77,8 @@ a new geometry expression language is not required. These are assistant proposal
 - [ ] Read installed serde/Tauri file-I/O and glTF APIs, plus existing repository patterns, before choosing a helper.
 - [ ] Write the concrete manifest, definition, assembly, connection and scene schemas as a spec annex; include one
   legacy-demo fixture and one two-belt/diverter fixture. List exact supported capability IDs and parameter fields.
+- [x] Linux probes measured 2026-11-08, recorded in the spec ("Measured on Linux"); the Windows cases move to Task 3's
+  tests on windows-2022.
 - [ ] Measure, in a throwaway directory, the items of the spec's "To be measured" list: the manifest-last save under
   a killed process, a read-only file and a full disk; rename over an existing and an open file on Windows; numeric
   round-trip at the limits; path traversal, absolute paths and case; zip reproducibility.
@@ -90,7 +106,14 @@ the active document and last saved project unchanged; exact file transaction fol
 - [ ] Add failing tests for missing files, path escape, failed writes, unsupported assets, a hash mismatch (an
   interrupted save) and a file the manifest does not list.
 - [ ] Implement candidate validation before activation and save recovery. Expose typed errors, not panics.
-- [ ] Test interrupted-save recovery on both supported platforms. Keep project save separate from `save_state`.
+- [ ] Test interrupted-save recovery on both supported platforms, in `twinova-project`'s tests that CI runs on
+  windows-2022:
+  - rename over a read-only file;
+  - rename over a file held open;
+  - names that differ only in case;
+  - a second interruption during recovery.
+
+  Keep project save separate from `save_state`.
 - [ ] Export and Import the archive through the same validator; prove the same project gives the same bytes.
 - [ ] Register project commands and prove a failed open does not replace the current project. Commit.
 
