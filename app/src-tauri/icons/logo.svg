@@ -1,10 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- Two linked rings, "the twin". Crossings at (512, 302) and (512, 722): blue over green at the top,
-       green over blue at the bottom. Aura tokens color-bg, color-ring, color-success (dark theme). -->
-  <rect width="1024" height="1024" rx="224" fill="#101214"/>
-  <g fill="none" stroke-width="88">
-    <circle cx="404" cy="512" r="236" stroke="#8ab4f8"/>
-    <circle cx="620" cy="512" r="236" stroke="#81c995"/>
-    <path d="M 453.9 281.3 A 236 236 0 0 1 562.5 337.2" stroke="#8ab4f8"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>twinova-logo</title>
+  <g id="Layer_1" data-name="Layer 1">
+    <polygon id="Twin_A___blue_conveyor_path" data-name="Twin A — blue conveyor path" points="276,220 456,220 584,348 584,676 456,804 276,804 148,676 148,348" fill="none" stroke="#8ab4f8" stroke-width="112" stroke-linejoin="bevel"/>
+    <polygon id="Twin_B___green_conveyor_path" data-name="Twin B — green conveyor path" points="568,220 748,220 876,348 876,676 748,804 568,804 440,676 440,348" fill="none" stroke="#81c995" stroke-width="112" stroke-linejoin="bevel"/>
+    <line id="Upper_synchronization_crossover" data-name="Upper synchronization crossover" x1="456" y1="220" x2="584" y2="348" fill="none" stroke="#8ab4f8" stroke-width="112" stroke-linejoin="bevel"/>
   </g>
 </svg>

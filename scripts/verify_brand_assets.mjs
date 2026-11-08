@@ -1,0 +1,66 @@
+import assert from "node:assert/strict";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const iconsDir = join(repoRoot, "app", "src-tauri", "icons");
+
+const pngDimensions = new Map([
+  ["32x32.png", 32],
+  ["64x64.png", 64],
+  ["128x128.png", 128],
+  ["128x128@2x.png", 256],
+  ["icon.png", 512],
+  ["StoreLogo.png", 50],
+  ["Square30x30Logo.png", 30],
+  ["Square44x44Logo.png", 44],
+  ["Square71x71Logo.png", 71],
+  ["Square89x89Logo.png", 89],
+  ["Square107x107Logo.png", 107],
+  ["Square142x142Logo.png", 142],
+  ["Square150x150Logo.png", 150],
+  ["Square284x284Logo.png", 284],
+  ["Square310x310Logo.png", 310],
+]);
+
+function required(path) {
+  assert.ok(existsSync(path), `missing required brand asset: ${path}`);
+  return path;
+}
+
+function readPng(path, expectedSize) {
+  const bytes = readFileSync(required(path));
+  assert.equal(bytes.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", `${path} is not a PNG`);
+  assert.equal(bytes.subarray(12, 16).toString("ascii"), "IHDR", `${path} has no IHDR header`);
+  assert.equal(bytes.readUInt32BE(16), expectedSize, `${path} width`);
+  assert.equal(bytes.readUInt32BE(20), expectedSize, `${path} height`);
+  assert.ok([4, 6].includes(bytes[25]), `${path} must preserve an alpha channel`);
+}
+
+for (const [filename, size] of pngDimensions) {
+  readPng(join(iconsDir, filename), size);
+}
+
+const ico = readFileSync(required(join(iconsDir, "icon.ico")));
+assert.equal(ico.subarray(0, 4).toString("hex"), "00000100", "icon.ico has an invalid ICO header");
+
+const icns = readFileSync(required(join(iconsDir, "icon.icns")));
+assert.equal(icns.subarray(0, 4).toString("ascii"), "icns", "icon.icns has an invalid ICNS header");
+
+const vectorcraftPath = required(join(iconsDir, "twinova-logo.vectorcraft"));
+assert.ok(statSync(vectorcraftPath).size > 500, "editable VectorCraft master is unexpectedly small");
+
+const svg = readFileSync(required(join(iconsDir, "logo.svg")), "utf8");
+assert.match(svg, /viewBox=["']0 0 1024 1024["']/, "logo.svg must use the 1024×1024 master artboard");
+assert.doesNotMatch(svg, /<(?:text|image|foreignObject)\b/i, "logo.svg must contain vector paths only");
+assert.doesNotMatch(svg, /(?:font-family|data:image|background(?:-color)?\s*:)/i, "logo.svg must not embed fonts, rasters, or a background");
+assert.doesNotMatch(svg, /<rect\b[^>]*(?:width=["']1024["']|width=["']100%["'])/i, "logo.svg canvas must stay transparent");
+
+const colors = new Set([...svg.matchAll(/#[0-9a-f]{6}/gi)].map(([color]) => color.toUpperCase()));
+const allowedColors = new Set(["#8AB4F8", "#81C995"]);
+assert.ok(colors.has("#8AB4F8"), "logo.svg is missing Aura blue");
+assert.ok(colors.has("#81C995"), "logo.svg is missing Aura green");
+assert.deepEqual([...colors].filter((color) => !allowedColors.has(color)), [], "logo.svg uses colors outside the approved palette");
+
+console.log(`Brand assets verified: ${pngDimensions.size} PNGs, ICO, ICNS, SVG, and editable VectorCraft master.`);
