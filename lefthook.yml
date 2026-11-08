@@ -12,11 +12,11 @@ pre-commit:
     rustfmt:
       glob: "app/src-tauri/**/*.rs"
       root: "app/src-tauri/"
-      run: cargo fmt --check
+      run: cargo fmt --all --check
     clippy:
       glob: "app/src-tauri/**/*.rs"
       root: "app/src-tauri/"
-      run: cargo clippy --all-targets -- -D warnings
+      run: cargo clippy --workspace --all-targets -- -D warnings
     oxlint:
       glob: "app/**/*.{ts,svelte,mjs}"
       root: "app/"
@@ -43,7 +43,7 @@ pre-push:
     cargo-test:
       glob: "app/src-tauri/**"
       root: "app/src-tauri/"
-      run: cargo test
+      run: cargo test --workspace
     vitest:
       glob: "app/{src/**,package.json,vite.config.ts}"
       root: "app/"

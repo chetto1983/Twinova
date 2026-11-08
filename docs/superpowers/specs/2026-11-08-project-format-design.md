@@ -196,8 +196,9 @@ identifier matches `^[a-z][a-z0-9_]*$`, and a definition id is a dotted name suc
   before Run.
 - **Address rules.** The size must match the type: `X` for BOOL, `D` for DINT and REAL. Addresses must not overlap,
   and the direction must match the area (`%I` for `plc_input`, `%Q` for `plc_output`).
-- **Connections** reference `[instance, port]`, by id. A flow `from` is a `flow_out` and its `to` a `flow_in`; each
-  endpoint has at most one peer.
+- **Connections** reference `[instance, port]`, by id. A flow `from` is a `flow_out` and its `to` a `flow_in`. A flow
+  endpoint and a mounted device each have one peer; a `mount_host` may carry several devices, for example two sensors
+  on one belt.
 - **`groups`** hold instance ids. A group id is unique among instances and groups; an instance belongs to at most one
   group.
 - **`controller.program_instance`** is the name the generated `CONFIGURATION` gives the program. Build writes
@@ -219,7 +220,7 @@ identifier matches `^[a-z][a-z0-9_]*$`, and a definition id is a dotted name suc
 - **`two_belts_diverter`**: the M4.1 acceptance line.
   - Source → belt A → diverter → belt B → normal sink, and the second diverter output → reject sink.
   - Two diffuse sensors.
-  - Addresses: `%IX0.0`–`%IX0.3`, `%QX0.0`–`%QX0.2`, and the two sinks' counters at `%ID4` and `%ID8`.
+  - Addresses: `%IX0.0`–`%IX0.4`, `%QX0.0`–`%QX0.2`, and the two sinks' counters at `%ID4` and `%ID8`.
 
 Negative fixtures, one per rule above:
 - a version that is too new;

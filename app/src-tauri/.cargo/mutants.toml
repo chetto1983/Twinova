@@ -1,6 +1,10 @@
 # cargo mutants configuration (https://mutants.rs). Scope: the conveyor kinematics (closed-form and stepped), the
-# engine and its nexosim bench (CLAUDE.md "MUTATION >=70%", ROADMAP 1.4, 3.2 and 3.3).
-examine_globs = ["src/belt.rs", "src/scene.rs", "src/engine.rs", "src/bench.rs"]
+# engine and its nexosim bench (CLAUDE.md "MUTATION >=70%", ROADMAP 1.4, 3.2 and 3.3), and the project format's
+# address parser, validation and codec (ROADMAP 4.2). mutation.yml runs it with --workspace.
+examine_globs = [
+  "src/belt.rs", "src/scene.rs", "src/engine.rs", "src/bench.rs",
+  "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
+]
 
 # Equivalent mutant, excluded on purpose: the photocell sits exactly one part length before the end of the belt
 # (PHOTOCELL_NM + PART_NM == LENGTH_NM; the scene tests pin 3.0, 0.30 and 2.70 m), so a part's rear passes it when

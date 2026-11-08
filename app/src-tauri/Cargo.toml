@@ -7,6 +7,11 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 rust-version = "1.99"
 
+# The project format is its own crate without Tauri, so its tests also run on Windows, where a test binary that links
+# Tauri does not start (0xc0000139, run 42378063592).
+[workspace]
+members = ["project"]
+
 [lib]
 name = "twinova_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

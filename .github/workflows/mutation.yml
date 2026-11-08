@@ -76,7 +76,7 @@ jobs:
         working-directory: app/src-tauri
         run: |
           set +e
-          cargo mutants -j 2 --timeout 60 --copy-target=true
+          cargo mutants --workspace -j 2 --timeout 60 --copy-target=true
           echo $? > mutants.out/exit-code
 
       # Saved when the gate fails too: a measurement stays a measurement for this commit.
