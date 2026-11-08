@@ -45,22 +45,28 @@ The tooling that every later phase relies on.
 | 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI | ✅ coverage gates in CI; first `mutation.yml` run on `main` (42385068809): cargo mutants 62/62, Stryker 27/27. The cargo mutants gate fails on any survivor since PR #11: exit code 3 (timeouts) had hidden 7 of them |
 | 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings | ✅ |
 | 2.4 | Release bundles as in ModbusTool: MSI, deb and AppImage, a tag-driven `release.yml`, plus `CHANGELOG.md`. Not now (user, 2026-11-07): dmg, NSIS, signing, the updater (6.4) | installers built by CI, sizes recorded | ✅ MSI 4.55 MB, deb 4.14 MB, AppImage 82.8 MB (run 42387823991); `release.yml` ready, no tag yet. Since 2026-11-08 the installers are built on pushes to `main` only (user), and the bundler's tools are cached and fetched with retries |
-| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests); `trust-wasm-analysis` kept for 4.7 | ⏸ measured (spec `2026-11-07-runtime-footprint-design`): little binary size, ~1/3 of a cold Linux build; a fork is ≥ 45 700 coupled lines. **Deferred** (user, 2026-11-07): keep `full`; A′ against B decided in M3 |
+| 2.5 | **Runtime footprint**: evaluate reducing trust-runtime `full` to the encoder and VM (path A′ in [10]) | measured cost/benefit and execution decision; preserve ST behaviour; frontend work stays in 4.7 | ✅ decision closed in M3: retain `full` at `6405915`. Extraction would own ≥45,700 coupled lines; B has no comparative measurements. No runtime replacement was implemented. See `2026-11-08-m3-closure-design.md` for evidence and reopening criteria |
 | 2.6 | **truST upstream policy.** Execution (VM and encoder): deleted upstream on 2026-10-24, so it stays pinned at `6405915` and is ours to maintain (forked or replaced when 2.5's A′/B choice is made); upstream fixes are ported by hand. Language frontend (`trust-syntax`, `trust-hir`, `trust-ide`, `trust-wasm-analysis`): followed upstream by moving its git `rev` in a PR, after reading the commits that touch those crates, monthly. None of these crates is on crates.io, so nothing updates automatically | the policy in CONTRIBUTING or CLAUDE.md; the first frontend bump done through it, with CI green | 🔶 policy written (spec `2026-11-07-trust-upstream-policy-design`, CLAUDE.md) and first review done: upstream 0.34.0, 680 commits since the pin, VM gone. The first frontend bump moves to 4.7: nothing depends on the frontend directly before then |
 
-## M3 — Deterministic engine core 🔶
+## M3 — Deterministic engine core ✅
 
 The hybrid engine of [05 §6]: discrete events with analytic motion, and fixed steps only where they are needed.
 
 | Phase | Deliverable | Acceptance | Status |
 |---|---|---|---|
-| 3.1 | Spike: nexosim 1.0 versus our own scheduler, on the M1 scene [08] | decision recorded with measurements | ✅ nexosim on one thread, executor made FIFO (spec `2026-11-07-des-core-design`). The M1 scene on nexosim matches M1's engine scan by scan over 60 s. Upstream PR pending (needs the user's fork) |
+| 3.1 | Spike: nexosim 1.0 versus our own scheduler, on the M1 scene [08] | decision recorded with measurements | ✅ nexosim on one thread, executor made FIFO (spec `2026-11-07-des-core-design`). The M1 scene on nexosim matches M1's engine scan by scan over 60 s. FIFO patch submitted as [upstream PR #189](https://github.com/asynchronics/nexosim/pull/189); acceptance pending, fork pin retained |
 | 3.2 | Event core on nexosim (decided in 3.1): the app's lockstep engine replaced by a nexosim bench on one thread, with the FIFO executor patch; PLC and scene as models; UI inputs as events, snapshots as queries | the 27 tests and the E2E still green; property test on the order of simultaneous events; replay fingerprint test; mutation ≥70 % on the engine | ✅ on the user's nexosim fork with the FIFO patch; M1 reproduced scan by scan; replay and ordering property tests; mutation 80/80; E2E on Linux and Windows (run 42459841117) |
 | 3.3 | Analytic conveyor segments with exact sensor edges (JaamSim scheme [05, r1 §4]) | edges exact to the ns; benchmark against the fixed step (OIP baseline [07]) | ✅ closed-form belt, edges exact to the ns; events at their closed-form times (10 ms before M1, whose float sum was late); one hour in 1.2–2.0 ms against 3.2–4.4 ms at a 10 ms step (spec `2026-11-08-analytic-belt-design`) |
 | 3.4 | PLC scan as a periodic event, with the scan time per program | same results as M1 at 10 ms; scan time configurable | ✅ the period comes from the program's IEC `TASK` intervals (their greatest common divisor), 10 ms without one; the default program's pinned scans are unchanged (spec `2026-11-08-scan-period-design`) |
 | 3.5 | Run modes: Run (wall clock × scale, `OutOfSync` beyond a tolerance), as fast as possible, Step, Reset, snapshots | the lag is reported, never hidden; save and restore a state | ✅ speed ×0.25–×10 and as fast as possible (548 × real time in release), lag reported; snapshots by replay, exact, one hour restored in 2.33 s (release); verification `2026-11-08-run-modes.md` |
 
-Open in M3: the A′/B choice for the runtime footprint, deferred from 2.5, and the upstream nexosim PR of 3.1.
+Closed 2026-11-08: retain the measured pinned truST runtime; neither extraction A′ nor a new interpreter B is
+justified for M3. The FIFO contribution is submitted upstream; maintainer acceptance remains external, and the
+tested fork pin stays in use. [Closure decision](docs/superpowers/specs/2026-11-08-m3-closure-design.md) and
+[acceptance evidence](docs/superpowers/verification/2026-11-08-m3-closure.md).
+
+Handoff to M4: measure multi-component scaling and investigate the webview memory growth recorded in the soak.
+Snapshots currently use one in-memory replay slot, for the same program. External PLC connectivity remains M5.
 
 ## M4 — Component model and scene editor ⬜
 

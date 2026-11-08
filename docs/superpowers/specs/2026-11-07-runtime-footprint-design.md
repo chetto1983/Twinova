@@ -97,8 +97,12 @@ path A′ at "about 10 800 lines (the encoder)": the measurement is at least fou
 - the build-time gain is absorbed by the CI cache after the first build;
 - a fork is at least 45 700 coupled lines to own.
 
-The choice of the ST engine, A′ against B, is taken when it is needed: in M3, where Twinova's own engine and PLC scan
-come. That choice starts from these numbers, and B has to be measured first.
+M3 closure amendment (2026-11-08): retain `full` at the existing pin as the accepted execution baseline.
+Phases 3.2–3.5 and native Windows/Linux E2E now demonstrate that it meets the deterministic engine requirements.
+Neither A′ nor B is selected; B remains unmeasured, not a claimed inferior implementation. Reopening requires a
+reproducible compatibility, correctness or resource-budget failure and comparative measurements. See
+[the M3 decision](2026-11-08-m3-closure-design.md) and
+[closure verification](../verification/2026-11-08-m3-closure.md).
 
 Amended 2026-11-07: wasm is dropped (user, 2026-11-07). The browser edition, ROADMAP 9.4, is removed, so building for
 wasm is no longer a reason to remove `full` or to fork.

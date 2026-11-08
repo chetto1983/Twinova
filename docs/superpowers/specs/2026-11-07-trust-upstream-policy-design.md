@@ -45,9 +45,9 @@ no tool updates them: a git `rev` moves only by hand.
 `trust-runtime` (lowering, encoder, `Runtime`) and `trust-runtime-core` (VM) stay at `6405915`, the last commit with
 the bytecode engine. Upstream has no successor to move to.
 - Upstream fixes are ported by hand, as a reviewed change with a test, citing the upstream commit.
-- When the engine is forked or replaced (path A′ or B, decided in M3 or M9.4: spec
-  `2026-11-07-runtime-footprint-design.md`), the forked code keeps truST's licence notice and names the commit it came
-  from.
+- M3 closed with the existing `full` pin retained (spec `2026-11-08-m3-closure-design.md`). A′ and B are not selected.
+  If measured compatibility, correctness or resource constraints later require a fork or replacement, the copied
+  code keeps truST's licence notice and names the commit it came from. The browser milestone M9.4 was removed.
 
 ### 2. Language frontend: followed upstream, monthly
 
