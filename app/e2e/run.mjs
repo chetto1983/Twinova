@@ -18,6 +18,7 @@ import {
   click,
   eventually,
   expectEqual,
+  selectLanguage,
   selectSpeed,
   session,
   value,
@@ -117,14 +118,14 @@ async function languageScenario() {
   console.log("Interface language");
   await check("Italian applies at once and the run goes on (no reload)", async () => {
     const before = await virtualSeconds("Virtual time");
-    await (await browser.$("//header//select")).selectByVisibleText("Italiano");
+    await selectLanguage("Italiano");
     await browser.$(`//h2[normalize-space()="Ingressi e uscite"]`).waitForExist({ timeout: 3000 });
     expectEqual(await browser.execute(() => document.documentElement.lang), "it", "lang");
     const after = await virtualSeconds("Tempo virtuale");
     if (after < before) throw new Error(`virtual time went back: ${before} -> ${after}`);
   });
   await screenshot("italian");
-  await (await browser.$("//header//select")).selectByVisibleText("English");
+  await selectLanguage("English");
 }
 
 session("debug", async () => {

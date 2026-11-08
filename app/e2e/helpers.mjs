@@ -65,8 +65,11 @@ export const virtualSeconds = async (term) => {
   const [minutes, seconds] = (await value(term)).split(":");
   return Number(minutes) * 60 + Number(seconds);
 };
-export const selectSpeed = async (label) =>
-  (await browser.$(`//header//select[@aria-label="Speed"]`)).selectByVisibleText(label);
+/** A header select by its class, which does not change with the language (its aria-label does). */
+const choose = async (cls, label) =>
+  (await browser.$(`//header//select[contains(concat(" ", @class, " "), " ${cls} ")]`)).selectByVisibleText(label);
+export const selectSpeed = (label) => choose("speed", label);
+export const selectLanguage = (label) => choose("lang", label);
 
 async function whenStarted() {
   try {
