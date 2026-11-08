@@ -180,10 +180,6 @@ pub struct Bench {
     belt: EventQueueReader<BeltState>,
 }
 
-fn text(error: nexosim::simulation::ExecutionError) -> String {
-    error.to_string()
-}
-
 impl Bench {
     /// The bench at time zero, with the states before the first scan.
     pub fn new(plc: Plc) -> Result<(Self, ControllerState, BeltState), String> {
@@ -239,17 +235,19 @@ impl Bench {
     /// Runs every scan up to `time_ms`.
     pub fn advance_to(&mut self, time_ms: i64) -> Result<(), String> {
         let deadline = MonotonicTime::EPOCH + Duration::from_millis(time_ms as u64);
-        self.simu.step_until(deadline).map_err(text)
+        self.simu.step_until(deadline).map_err(|e| e.to_string())
     }
 
     pub fn press(&mut self, start: bool, stop: bool) -> Result<(), String> {
         self.simu
             .process_event(&self.press, (start, stop))
-            .map_err(text)
+            .map_err(|e| e.to_string())
     }
 
     pub fn set_outlet_blocked(&mut self, blocked: bool) -> Result<(), String> {
-        self.simu.process_event(&self.outlet, blocked).map_err(text)
+        self.simu
+            .process_event(&self.outlet, blocked)
+            .map_err(|e| e.to_string())
     }
 
     /// The latest state each model reported since the last call, if any.
