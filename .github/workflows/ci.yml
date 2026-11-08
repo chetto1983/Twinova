@@ -31,6 +31,12 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # Dev and test builds without debug info, which CI does not use, as mutation.yml does (the release
+  # profile of the bundles has none anyway). Debug info is 62 % of a dependency's rlib and 94 % of the
+  # app's binaries (measured 2026-11-08), so the caches shrink, and with them the repository's total
+  # under GitHub's 10 GB limit, past which the least recently used entries are evicted: the rust job
+  # found no cache in run 42463081110.
+  CARGO_PROFILE_DEV_DEBUG: "0"
 
 # Without a shell key a step runs without pipefail (pattern from Aura's workflows). A job's own
 # defaults replace these, so every job that sets a working directory repeats the shell.
