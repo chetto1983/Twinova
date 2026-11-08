@@ -124,7 +124,7 @@ describe("geometry", () => {
       kind: "box",
       size: [2, 0.08, 0.6],
       centre: [1, 0.76, 0],
-      token: "--color-surface-3",
+      token: "--scene-belt",
     });
     const diverter = shapeOf(instance("diverter"), definition("diverter"));
     expect([diverter.size, diverter.centre]).toEqual([
@@ -136,20 +136,20 @@ describe("geometry", () => {
   it("gives every other family its own stand-in", () => {
     const shape = (id: string, kind: string) => shapeOf(instance(id), definition(kind));
     const sensor = shape("sensor_a", "sensor_diffuse");
-    expect([sensor.kind, sensor.size, sensor.token]).toEqual(["cylinder", [0.06, 0.3, 0.06], "--color-success"]);
+    expect([sensor.kind, sensor.size, sensor.token]).toEqual(["cylinder", [0.06, 0.3, 0.06], "--scene-sensor"]);
     expect([sensor.centre.length, sensor.centre[0], sensor.centre[2]]).toEqual([3, 0, 0]);
     expect(sensor.centre[1]).toBeCloseTo(0.95, 12);
     expect(shape("source", "source")).toEqual({
       kind: "box",
       size: [0.4, 0.4, 0.4],
       centre: [0, 0.2, 0],
-      token: "--color-info",
+      token: "--scene-device",
     });
     expect(shape("sink_ok", "sink")).toEqual({
       kind: "box",
       size: [0.4, 0.4, 0.4],
       centre: [0, 0.2, 0],
-      token: "--color-border-strong",
+      token: "--scene-sink",
     });
     const unknown = { ...definition("sink"), generator: "acme.robot/3" };
     expect(shapeOf(instance("sink_ok"), unknown)).toEqual({

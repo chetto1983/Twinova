@@ -130,7 +130,7 @@ export interface Shape {
   kind: "box" | "cylinder";
   size: Vec3;
   centre: Vec3;
-  /** An Aura colour token. */
+  /** A scene colour token (app.css, `--scene-*`). */
   token: string;
 }
 
@@ -154,14 +154,14 @@ export function shapeOf(instance: Instance, def: Definition): Shape {
         kind: "box",
         size: [length, DECK_M, width],
         centre: [length / 2, top - DECK_M / 2, 0],
-        token: "--color-surface-3",
+        token: "--scene-belt",
       };
     case "twinova.sensor_diffuse/1":
-      return { kind: "cylinder", size: [0.06, 0.3, 0.06], centre: [0, top + 0.15, 0], token: "--color-success" };
+      return { kind: "cylinder", size: [0.06, 0.3, 0.06], centre: [0, top + 0.15, 0], token: "--scene-sensor" };
     case "twinova.source/1":
-      return { kind: "box", size: [0.4, 0.4, 0.4], centre: [0, 0.2, 0], token: "--color-info" };
+      return { kind: "box", size: [0.4, 0.4, 0.4], centre: [0, 0.2, 0], token: "--scene-device" };
     case "twinova.sink/1":
-      return { kind: "box", size: [0.4, 0.4, 0.4], centre: [0, 0.2, 0], token: "--color-border-strong" };
+      return { kind: "box", size: [0.4, 0.4, 0.4], centre: [0, 0.2, 0], token: "--scene-sink" };
     default:
       return { kind: "box", size: [0.3, 0.3, 0.3], centre: [0, 0.15, 0], token: "--color-warning" };
   }

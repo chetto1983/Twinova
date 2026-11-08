@@ -17,7 +17,6 @@
     frame: new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.4 }),
     part: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
     beam: new THREE.MeshStandardMaterial({ emissiveIntensity: 1 }),
-    floor: new THREE.MeshStandardMaterial({ roughness: 1 }),
   };
   const parts = new Map<number, THREE.Mesh>();
   const partGeometry = new THREE.BoxGeometry(PART_LENGTH_M, PART_SIZE, PART_SIZE * 1.4);
@@ -28,11 +27,9 @@
   function applyTokens(): void {
     const css = getComputedStyle(document.documentElement);
     const token = (name: string) => new THREE.Color(css.getPropertyValue(name).trim() || "#888");
-    scene.background = token("--color-bg");
-    materials.floor.color = token("--color-surface");
-    materials.frame.color = token("--color-border-strong");
-    materials.belt.color = token("--color-surface-3");
-    materials.part.color = token("--color-warning");
+    materials.frame.color = token("--scene-frame");
+    materials.belt.color = token("--scene-belt");
+    materials.part.color = token("--scene-product");
     paintBeam();
   }
 
@@ -46,9 +43,6 @@
   }
 
   function addStatic(): void {
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), materials.floor);
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
     const belt = new THREE.Mesh(new THREE.BoxGeometry(BELT_LENGTH_M, 0.08, BELT_WIDTH), materials.belt);
     belt.position.y = BELT_TOP - 0.04;
     scene.add(belt);
@@ -83,6 +77,7 @@
       let mesh = parts.get(p.id);
       if (!mesh) {
         mesh = new THREE.Mesh(partGeometry, materials.part);
+        mesh.castShadow = true;
         mesh.position.y = BELT_TOP + PART_SIZE / 2;
         scene.add(mesh);
         parts.set(p.id, mesh);
@@ -104,7 +99,8 @@
   });
 
   addStatic();
+  scene.traverse((o) => (o.castShadow = o instanceof THREE.Mesh));
 </script>
 
 <!-- Fit the belt plus a margin whatever the panel's shape. -->
-<Viewport {scene} target={TARGET} halfWidth={BELT_LENGTH_M / 2 + 0.4} bind:requestRender />
+<Viewport {scene} {theme} target={TARGET} halfWidth={BELT_LENGTH_M / 2 + 0.4} bind:requestRender />
