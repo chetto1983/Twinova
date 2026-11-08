@@ -91,7 +91,9 @@ a new geometry expression language is not required. These are assistant proposal
 Delivered in `twinova-project` (2026-11-08): `parse_project(&Files) -> Result<Project, Vec<Diagnostic>>` and
 `encode_project(&Project) -> Files`, where `Files` maps relative paths to bytes. `parse_project` validates everything
 before returning; `encode_project` writes canonical JSON (sorted keys, final newline) and the manifest's hashes.
-- Tests: 2 valid and 13 invalid fixtures, written by a script independent of the encoder, so the byte comparison
+- A hash that differs is reported in `Opened::changed_outside`, not refused (decision 2 as amended after run
+  42510999331); the save marker that recognises an interrupted save is Task 3's.
+- Tests: 2 valid and 12 invalid fixtures, written by a script independent of the encoder, so the byte comparison
   checks the encoder against another implementation; a rule-by-rule table; and unit tests.
 - Coverage of the crate: 98.8 % of lines.
 - `cargo mutants --in-place` on the crate: 189 mutants, 178 caught, 11 unviable, none missed.

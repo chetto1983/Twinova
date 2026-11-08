@@ -79,7 +79,8 @@ fn instance<'a>(scene: &'a mut Value, id: &str) -> &'a mut Value {
 fn the_reference_line_is_valid() {
     let mut files = reference();
     rehash(&mut files);
-    parse_project(&files).unwrap();
+    let opened = parse_project(&files).unwrap();
+    assert!(opened.changed_outside.is_empty());
 }
 
 #[test]

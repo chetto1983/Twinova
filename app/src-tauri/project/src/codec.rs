@@ -23,8 +23,17 @@ pub fn sha256(bytes: &[u8]) -> String {
         .collect()
 }
 
+/// A project as opened, with the files whose bytes no longer match the manifest's hash.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Opened {
+    pub project: Project,
+    /// Changed outside Twinova (git, an editor, a copy), validated like any file. An interrupted save is recognised by
+    /// the save marker, not by these hashes (spec 2026-11-08-project-format-design.md, decision 2).
+    pub changed_outside: Vec<String>,
+}
+
 /// Reads and validates a whole project. Files the manifest does not list are ignored.
-pub fn parse_project(files: &Files) -> Result<Project, Vec<Diagnostic>> {
+pub fn parse_project(files: &Files) -> Result<Opened, Vec<Diagnostic>> {
     let manifest: Manifest = match files.get(MANIFEST) {
         None => {
             return Err(vec![Diagnostic::new(
@@ -42,6 +51,16 @@ pub fn parse_project(files: &Files) -> Result<Project, Vec<Diagnostic>> {
     if !diags.is_empty() {
         return Err(diags);
     }
+    let changed_outside: Vec<String> = manifest
+        .files
+        .iter()
+        .filter(|(path, hash)| {
+            files
+                .get(*path)
+                .is_some_and(|bytes| sha256(bytes) != **hash)
+        })
+        .map(|(path, _)| path.clone())
+        .collect();
     let listed = |path: &str| files.get(path).map(Vec::as_slice).unwrap_or_default();
     let assets: BTreeMap<String, Vec<u8>> = manifest
         .files
@@ -98,13 +117,16 @@ pub fn parse_project(files: &Files) -> Result<Project, Vec<Diagnostic>> {
         }
     }
     match scene {
-        Some(scene) if diags.is_empty() => Ok(Project {
-            name: manifest.name,
-            app: manifest.app,
-            scene,
-            definitions,
-            program,
-            assets,
+        Some(scene) if diags.is_empty() => Ok(Opened {
+            project: Project {
+                name: manifest.name,
+                app: manifest.app,
+                scene,
+                definitions,
+                program,
+                assets,
+            },
+            changed_outside,
         }),
         _ => Err(diags),
     }
@@ -224,17 +246,8 @@ fn manifest_problems(m: &Manifest, files: &Files) -> Vec<Diagnostic> {
             err(field, format!("'{path}' is not listed in files"));
         }
     }
-    for (path, hash) in &m.files {
-        match files.get(path) {
-            None => err("files", format!("'{path}' is listed but missing")),
-            Some(bytes) if sha256(bytes) != *hash => err(
-                "files",
-                format!(
-                    "'{path}' does not match its hash: the last save may have been interrupted"
-                ),
-            ),
-            Some(_) => {}
-        }
+    for path in m.files.keys().filter(|path| !files.contains_key(*path)) {
+        err("files", format!("'{path}' is listed but missing"));
     }
     out
 }

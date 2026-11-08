@@ -37,7 +37,13 @@ fn read_folder(root: &Path) -> Files {
 fn every_valid_fixture_opens_and_is_written_back_byte_for_byte() {
     for name in ["demo_m3", "two_belts_diverter"] {
         let files = read_folder(&fixtures("valid").join(name));
-        let project = parse_project(&files).unwrap_or_else(|d| panic!("{name}: {d:?}"));
+        let opened = parse_project(&files).unwrap_or_else(|d| panic!("{name}: {d:?}"));
+        assert!(
+            opened.changed_outside.is_empty(),
+            "{name}: {:?}",
+            opened.changed_outside
+        );
+        let project = opened.project;
         let written = encode_project(&project);
         for (path, bytes) in &files {
             assert_eq!(
@@ -48,7 +54,7 @@ fn every_valid_fixture_opens_and_is_written_back_byte_for_byte() {
         }
         assert_eq!(written.len(), files.len(), "{name}: the same files");
         assert_eq!(
-            parse_project(&written).unwrap(),
+            parse_project(&written).unwrap().project,
             project,
             "{name}: parse after encode"
         );
@@ -59,7 +65,6 @@ fn every_valid_fixture_opens_and_is_written_back_byte_for_byte() {
 fn every_invalid_fixture_is_refused_with_its_diagnostic() {
     let expected = [
         ("version_newer", "saved by a newer Twinova (format 2)"),
-        ("hash_mismatch", "'scene.json' does not match its hash"),
         (
             "path_traversal",
             "'../outside.st' must not contain empty, '.' or '..' parts",
@@ -110,9 +115,41 @@ fn every_invalid_fixture_is_refused_with_its_diagnostic() {
 #[test]
 fn files_the_manifest_does_not_list_are_ignored() {
     let mut files = read_folder(&fixtures("valid").join("demo_m3"));
-    let project = parse_project(&files).unwrap();
+    let project = parse_project(&files).unwrap().project;
     files.insert("notes.txt".into(), b"an author's note".to_vec());
-    assert_eq!(parse_project(&files).unwrap(), project);
+    assert_eq!(parse_project(&files).unwrap().project, project);
+}
+
+/// git with autocrlf on Windows (run 42510999331), or an editor, changes bytes without an interrupted save.
+#[test]
+fn files_changed_outside_twinova_open_and_are_reported() {
+    let files = read_folder(&fixtures("valid").join("two_belts_diverter"));
+    let lf = parse_project(&files).unwrap().project;
+    let crlf: Files = files
+        .iter()
+        .map(|(path, bytes)| {
+            let text = String::from_utf8(bytes.clone()).unwrap();
+            let converted = if path == "twinova.json" {
+                text
+            } else {
+                text.replace('\n', "\r\n")
+            };
+            (path.clone(), converted.into_bytes())
+        })
+        .collect();
+    let opened = parse_project(&crlf).expect("CRLF line endings are still a valid project");
+    assert_eq!(
+        opened.changed_outside.len(),
+        files.len() - 1,
+        "every file but the manifest"
+    );
+    assert_eq!(opened.project.scene, lf.scene);
+    assert_eq!(opened.project.definitions, lf.definitions);
+    assert_eq!(
+        opened.project.program[0].1,
+        lf.program[0].1.replace('\n', "\r\n"),
+        "ST text is kept as written"
+    );
 }
 
 #[test]

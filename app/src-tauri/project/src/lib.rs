@@ -8,7 +8,7 @@ pub mod model;
 mod validate;
 mod validate_scene;
 
-pub use codec::{Files, encode_project, parse_project};
+pub use codec::{Files, Opened, encode_project, parse_project};
 pub use diagnostic::Diagnostic;
 pub use model::Project;
 
