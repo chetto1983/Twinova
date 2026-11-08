@@ -76,7 +76,7 @@ mai il loro materiale.
 - **NEVER SUPPOSE.** Read code before editing. If uncertain about an API contract, stop and ask.
 - **READ THE DOCUMENTATION FIRST — ALWAYS.** Before writing a line against any external system or
   library, read its documentation: the PLCSIM Advanced API, S7, OPC UA, Modbus, nexosim, Rapier,
-  wasm-bindgen, the IEC 61131-3 runtime, three.js. Probing to discover an API is guessing with extra steps. Cite the
+  Tauri, the IEC 61131-3 runtime, three.js. Probing to discover an API is guessing with extra steps. Cite the
   page in a code comment when the behaviour is surprising.
 - **INVENTORY BEFORE INVENTION.** Before writing a component, enumerate what the libraries you
   already depend on ALREADY DO. Read the public symbol list of the INSTALLED version
@@ -157,8 +157,6 @@ After every Rust edit, in `app/src-tauri`:
 - `cargo clippy --all-targets -- -D warnings`
 - `cargo test` (CI: `cargo llvm-cov --fail-under-lines 85`; Windows is covered by the E2E, not by `cargo test`)
 - engine core or protocol changes: `cargo mutants` (scope in `.cargo/mutants.toml`)
-- the wasm target builds: `cargo build --target wasm32-unknown-unknown`, for the crates meant
-  for the browser (none yet)
 
 After every TypeScript or Svelte edit, in `app`:
 

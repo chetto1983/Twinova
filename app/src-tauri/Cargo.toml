@@ -18,6 +18,8 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The discrete-event core (spec 2026-11-07-des-core-design.md), MIT OR Apache-2.0; patched below.
+nexosim = "=1.0.0"
 # truST at the last commit read that still has its bytecode VM (deleted upstream on 2026-10-24):
 # docs/research/10-st-senza-compilazione.md. MIT OR Apache-2.0.
 trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }
@@ -25,6 +27,8 @@ trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform"
 [dev-dependencies]
 # mock_app for the command tests (src/commands_tests.rs), as in chetto1983/ModbusTool.
 tauri = { version = "2", features = ["test"] }
+# Property tests of the event order (CLAUDE.md, "property-based tests for ... the event queue"). MIT OR Apache-2.0.
+proptest = "1.12"
 
 # The webview's language under a C locale (src/webview_locale.rs).
 [target.'cfg(target_os = "linux")'.dependencies]
@@ -40,4 +44,7 @@ strip = true
 # take typed flags in windows 0.52). truST's workspace patches it with its fixed copy (trust-platform
 # Cargo.toml, [patch.crates-io]), but a patch does not reach dependents, so it is repeated here.
 [patch.crates-io]
+# nexosim with its single-threaded executor made FIFO, so that same-time events follow the scheduler key
+# (spec 2026-11-07-des-core-design.md, section E). The user's fork, until the upstream PR is merged.
+nexosim = { git = "https://github.com/chetto1983/nexosim", rev = "480e72471ec3f9f64833bfbb925a1d67d3711ce6" }
 tiverse-mmap = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0" }

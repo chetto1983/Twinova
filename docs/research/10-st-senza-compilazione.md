@@ -3,6 +3,10 @@
 Stato: **misura e opzioni, 2026-11-07**. Richiesta dell'utente: eseguire la logica IEC 61131-3 **senza compilare**,
 così si apre una pagina web e la scena gira subito, senza toolchain, adatto alle scuole.
 
+**Decisione successiva (utente, 2026-11-07): niente browser e niente WASM.** Twinova è un'app desktop Tauri e il
+motore gira nativo nel backend Rust. L'edizione browser (ROADMAP 9.4) è tolta, quindi il WASM non è più un requisito
+né un criterio di scelta. Questa nota resta come registro della misura.
+
 ## Il punto di partenza (09)
 
 truST, il miglior runtime IEC 61131-3 open source (MIT OR Apache-2.0, Rust), oggi esegue **solo codice

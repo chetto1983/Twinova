@@ -42,7 +42,7 @@ pub fn default_program() -> String {
 #[tauri::command]
 pub fn build(state: State<'_, AppState>, source: String) -> Result<Snapshot, String> {
     state.running.store(false, Ordering::SeqCst);
-    let engine = Engine::new(Plc::build(&source)?);
+    let engine = Engine::new(Plc::build(&source)?)?;
     let snapshot = engine.snapshot();
     *state.engine.lock().map_err(|_| "engine lock poisoned")? = Some(engine);
     *state.source.lock().map_err(|_| "source lock poisoned")? = source;
@@ -72,16 +72,13 @@ pub fn step(state: State<'_, AppState>) -> Result<Snapshot, String> {
 
 #[tauri::command]
 pub fn press(state: State<'_, AppState>, start: bool, stop: bool) -> Result<(), String> {
-    with_engine(&state, |e| {
-        e.press(start, stop);
-        Ok(())
-    })
+    with_engine(&state, |e| e.press(start, stop))
 }
 
 #[tauri::command]
 pub fn set_outlet_blocked(state: State<'_, AppState>, blocked: bool) -> Result<Snapshot, String> {
     with_engine(&state, |e| {
-        e.set_outlet_blocked(blocked);
+        e.set_outlet_blocked(blocked)?;
         Ok(e.snapshot())
     })
 }

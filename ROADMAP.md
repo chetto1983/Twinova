@@ -45,20 +45,20 @@ The tooling that every later phase relies on.
 | 2.2 | Coverage (`cargo llvm-cov`, `vitest --coverage`) and mutation (`cargo mutants`) gates | thresholds enforced in CI | ✅ coverage gates in CI; first `mutation.yml` run on `main` (42385068809): cargo mutants 62/62, Stryker 27/27 |
 | 2.3 | 600-LOC check, oxlint and prettier, dead-code and duplication checks (the ModbusTool set) | zero warnings | ✅ |
 | 2.4 | Release bundles as in ModbusTool: MSI, deb and AppImage, a tag-driven `release.yml`, plus `CHANGELOG.md`. Not now (user, 2026-11-07): dmg, NSIS, signing, the updater (6.4) | installers built by CI, sizes recorded | ✅ MSI 4.55 MB, deb 4.14 MB, AppImage 82.8 MB (run 42387823991); `release.yml` ready, no tag yet |
-| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests); `trust-wasm-analysis` kept for 4.7 | ⏸ measured (spec `2026-11-07-runtime-footprint-design`): little binary size, ~1/3 of a cold Linux build; a fork is ≥ 45 700 coupled lines. **Deferred** (user, 2026-11-07): keep `full`; A′ against B decided in M3 or M9.4 |
+| 2.5 | **Runtime footprint**: replace trust-runtime `full` with only the encoder and the VM (path A′ in [10]) | binary size before/after measured; ST behaviour unchanged (same tests); `trust-wasm-analysis` kept for 4.7 | ⏸ measured (spec `2026-11-07-runtime-footprint-design`): little binary size, ~1/3 of a cold Linux build; a fork is ≥ 45 700 coupled lines. **Deferred** (user, 2026-11-07): keep `full`; A′ against B decided in M3 |
 | 2.6 | **truST upstream policy.** Execution (VM and encoder): deleted upstream on 2026-10-24, so it stays pinned at `6405915` and is ours to maintain (forked or replaced when 2.5's A′/B choice is made); upstream fixes are ported by hand. Language frontend (`trust-syntax`, `trust-hir`, `trust-ide`, `trust-wasm-analysis`): followed upstream by moving its git `rev` in a PR, after reading the commits that touch those crates, monthly. None of these crates is on crates.io, so nothing updates automatically | the policy in CONTRIBUTING or CLAUDE.md; the first frontend bump done through it, with CI green | 🔶 policy written (spec `2026-11-07-trust-upstream-policy-design`, CLAUDE.md) and first review done: upstream 0.34.0, 680 commits since the pin, VM gone. The first frontend bump moves to 4.7: nothing depends on the frontend directly before then |
 
-## M3 — Deterministic engine core ⬜
+## M3 — Deterministic engine core 🔶
 
 The hybrid engine of [05 §6]: discrete events with analytic motion, and fixed steps only where they are needed.
 
-| Phase | Deliverable | Acceptance |
-|---|---|---|
-| 3.1 | Spike: nexosim 1.0 versus our own scheduler, on the M1 scene [08] | decision recorded with measurements |
-| 3.2 | Event core: integer ns time, `(t, priority, seq)` queue, same-instant iteration with a cap | property tests for ordering; replay fingerprint test |
-| 3.3 | Analytic conveyor segments with exact sensor edges (JaamSim scheme [05, r1 §4]) | edges exact to the ns; benchmark against the fixed step (OIP baseline [07]) |
-| 3.4 | PLC scan as a periodic event, with the scan time per program | same results as M1 at 10 ms; scan time configurable |
-| 3.5 | Run modes: Run (wall clock × scale, `OutOfSync` beyond a tolerance), as fast as possible, Step, Reset, snapshots | the lag is reported, never hidden; save and restore a state |
+| Phase | Deliverable | Acceptance | Status |
+|---|---|---|---|
+| 3.1 | Spike: nexosim 1.0 versus our own scheduler, on the M1 scene [08] | decision recorded with measurements | ✅ nexosim on one thread, executor made FIFO (spec `2026-11-07-des-core-design`). The M1 scene on nexosim matches M1's engine scan by scan over 60 s. Upstream PR pending (needs the user's fork) |
+| 3.2 | Event core on nexosim (decided in 3.1): the app's lockstep engine replaced by a nexosim bench on one thread, with the FIFO executor patch; PLC and scene as models; UI inputs as events, snapshots as queries | the 27 tests and the E2E still green; property test on the order of simultaneous events; replay fingerprint test; mutation ≥70 % on the engine | ✅ on the user's nexosim fork with the FIFO patch; M1 reproduced scan by scan; replay and ordering property tests; mutation 80/80; E2E on Linux and Windows (run 42459841117) |
+| 3.3 | Analytic conveyor segments with exact sensor edges (JaamSim scheme [05, r1 §4]) | edges exact to the ns; benchmark against the fixed step (OIP baseline [07]) | ⬜ |
+| 3.4 | PLC scan as a periodic event, with the scan time per program | same results as M1 at 10 ms; scan time configurable | ⬜ |
+| 3.5 | Run modes: Run (wall clock × scale, `OutOfSync` beyond a tolerance), as fast as possible, Step, Reset, snapshots | the lag is reported, never hidden; save and restore a state | ⬜ |
 
 ## M4 — Component model and scene editor ⬜
 
@@ -72,7 +72,7 @@ The core of the product [02a, 06 #1–2].
 | 4.4 | Library v1: belt, roller and curved conveyors, diverter, stopper, pusher, turntable, sensors (diffuse, through-beam, colour, barcode), creator and sink | each component has an E2E scene |
 | 4.5 | Editor: catalogue, drag and drop, snapping by interfaces, move/rotate, signal wiring, undo | build a two-conveyor line with a diverter by hand |
 | 4.6 | **ST in VS Code**: the scene's programs are `.st` files in a project folder, rebuilt on save; VS Code with truST's `trust-lsp` extension (MIT OR Apache-2.0) is the external editor | edit in VS Code, save, the running scene picks up the new program |
-| 4.7 | **In-app ST editor** for who has no VS Code (classrooms, the browser edition): Monaco with diagnostics, hover and completion from truST's `BrowserAnalysisEngine` (`trust-wasm-analysis`, already in the dependency tree) through Tauri commands | the same diagnostics as `trust-lsp` on the default program and on a broken one; Monaco measured on WebKitGTK; the frontend `rev` moved as the 2.6 policy says |
+| 4.7 | **In-app ST editor** for who has no VS Code (classrooms): Monaco with diagnostics, hover and completion from truST's `BrowserAnalysisEngine` (`trust-wasm-analysis`, already in the dependency tree) through Tauri commands | the same diagnostics as `trust-lsp` on the default program and on a broken one; Monaco measured on WebKitGTK; the frontend `rev` moved as the 2.6 policy says |
 | 4.8 | Spike: truST's runtime control endpoint on Twinova's simulated PLC, so VS Code's Live Values and debugger attach to the scene | decision recorded: protocol inventory, and whether it fits the virtual-time harness |
 
 ## M5 — PLC in the loop ⬜
@@ -127,4 +127,6 @@ What the discrete-event tools do [06 #14–17, 22].
 | 9.1 | CAD import: glTF native, STEP via a compatible library (truck-stepio first [08]) | a real machine STEP imported |
 | 9.2 | Component packages: versioned, signed, a public registry [06 #20] | install a package from the registry |
 | 9.3 | Engine as a service: REST and CLI, Docker [06 #18] | a scene run in CI from the CLI |
-| 9.4 | Browser edition: ST interpreter in wasm (path A′/B in [10]) | the M1 scene runs in a browser tab |
+
+The browser edition (wasm) that stood here as 9.4 is dropped (user, 2026-11-07): Twinova is a Tauri desktop app, and its
+engine runs natively. No phase is chosen or weighed for wasm.

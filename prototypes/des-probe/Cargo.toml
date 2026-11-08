@@ -1,0 +1,16 @@
+[package]
+name = "des-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# The candidate of ROADMAP 3.1 (research notes 05 §6, 08): MIT OR Apache-2.0.
+nexosim = "=1.0.0"
+serde = { version = "1", features = ["derive"] }
+# The M1 scene and its ST controller, reused as they are (app/src-tauri, lib twinova_lib).
+twinova = { path = "../../app/src-tauri" }
+
+[profile.release]
+debug = false
