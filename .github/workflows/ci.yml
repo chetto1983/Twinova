@@ -31,12 +31,6 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  # Dev and test builds without debug info, which CI does not use, as mutation.yml does (the release
-  # profile of the bundles has none anyway). Debug info is 62 % of a dependency's rlib and 94 % of the
-  # app's binaries (measured 2026-11-08), so the caches shrink, and with them the repository's total
-  # under GitHub's 10 GB limit, past which the least recently used entries are evicted: the rust job
-  # found no cache in run 42463081110.
-  CARGO_PROFILE_DEV_DEBUG: "0"
 
 # Without a shell key a step runs without pipefail (pattern from Aura's workflows). A job's own
 # defaults replace these, so every job that sets a working directory repeats the shell.
@@ -47,6 +41,14 @@ defaults:
 jobs:
   rust:
     runs-on: ubuntu-24.04
+    # Dev and test builds without debug info, which CI does not use, as mutation.yml does. Debug info is
+    # 62 % of a dependency's rlib and 94 % of the app's binaries (measured 2026-11-08), so the caches
+    # shrink, and with them the repository's total under GitHub's 10 GB limit, past which the least
+    # recently used entries are evicted: this job found no cache in run 42463081110. Only on the jobs
+    # that build dev or test profiles: rust-cache hashes every CARGO* variable into its key, and the
+    # bundle cache must keep the key release.yml computes.
+    env: &no-debug-info
+      CARGO_PROFILE_DEV_DEBUG: "0"
     defaults:
       run:
         shell: bash
@@ -155,6 +157,21 @@ jobs:
         if: runner.os == 'Linux'
         uses: ./.github/actions/linux-deps
         timeout-minutes: 30
+      # Tauri's bundler downloads WiX (MSI) and linuxdeploy with AppRun (AppImage) from GitHub releases
+      # into dirs::cache_dir()/tauri, unless they are already there (tauri-bundler 2.10.4,
+      # bundle/windows/msi/mod.rs and bundle/linux/appimage/linuxdeploy.rs). Those downloads failed with
+      # 504 twice on main (run 42464179086), so the tools are cached.
+      - name: Bundler tools directory
+        id: tools
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then base="$LOCALAPPDATA"; else base="${XDG_CACHE_HOME:-$HOME/.cache}"; fi
+          echo "dir=$base/tauri" >> "$GITHUB_OUTPUT"
+      # Saved here, on main only (this job runs on pushes to main); release.yml only reads it.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ steps.tools.outputs.dir }}
+          key: tauri-tools-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
+          restore-keys: tauri-tools-${{ runner.os }}-
       - run: npm ci
       - run: npx tauri build --bundles ${{ matrix.bundles }}
       - name: One Paraglide runtime in the frontend bundle
@@ -180,6 +197,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    env: *no-debug-info
     defaults:
       run:
         shell: bash
