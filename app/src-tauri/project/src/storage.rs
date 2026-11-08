@@ -174,11 +174,37 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), StorageError> {
     let mut file = tempfile::NamedTempFile::new_in(parent).map_err(io_at(parent))?;
     file.write_all(bytes).map_err(io_at(path))?;
     file.as_file().sync_all().map_err(io_at(path))?;
-    file.persist(path).map_err(|e| StorageError::Io {
-        path: path.to_path_buf(),
-        error: e.error,
-    })?;
-    Ok(())
+    persist(file, path).map_err(io_at(path))
+}
+
+/// Waits between renames refused because another process holds the file, about 2 s in all.
+#[cfg(windows)]
+const HELD_RETRY_MS: [u64; 8] = [10, 20, 40, 80, 160, 320, 640, 730];
+
+/// On Windows a rename over a file another process holds open is refused with "Access is denied", even when Rust
+/// opened it (measured on windows-2022, run 42514839589): an antivirus, an indexer or OneDrive holds files for a
+/// moment, so a refusal is retried before the save fails and rolls back.
+#[cfg(windows)]
+fn persist(mut file: tempfile::NamedTempFile, path: &Path) -> io::Result<()> {
+    let mut waits = HELD_RETRY_MS.iter();
+    loop {
+        match file.persist(path) {
+            Ok(_) => return Ok(()),
+            Err(e) => match waits.next() {
+                Some(ms) if e.error.kind() == io::ErrorKind::PermissionDenied => {
+                    file = e.file;
+                    std::thread::sleep(std::time::Duration::from_millis(*ms));
+                }
+                _ => return Err(e.error),
+            },
+        }
+    }
+}
+
+/// Elsewhere a refused rename is a permission, which waiting does not change.
+#[cfg(not(windows))]
+fn persist(file: tempfile::NamedTempFile, path: &Path) -> io::Result<()> {
+    file.persist(path).map(drop).map_err(|e| e.error)
 }
 
 /// The files an existing manifest lists, to remove the ones a save no longer writes.

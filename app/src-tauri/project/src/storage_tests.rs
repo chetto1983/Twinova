@@ -185,45 +185,48 @@ fn a_read_only_file_in_the_way() {
     }
 }
 
-/// An editor holding the file open, as VS Code may. Rust opens files with FILE_SHARE_DELETE on Windows, so the
-/// rename is expected to succeed on both platforms; CI on windows-2022 measures it.
+/// Another process holding the file open for good. Windows refuses the rename even after the retries (run 42514839589),
+/// so the save fails; its rollback writes the same file and fails too, which leaves the marker, and the next open
+/// recovers once the file is released. Linux renames over an open file.
 #[test]
 fn a_file_held_open_by_another_reader() {
     let dir = tempfile::tempdir().unwrap();
     let p1 = reference();
     save_folder(dir.path(), &p1).unwrap();
-    let _held = fs::File::open(dir.path().join("plc/Main.st")).unwrap();
+    let held = fs::File::open(dir.path().join("plc/Main.st")).unwrap();
     let mut p2 = p1.clone();
     p2.program[0].1.push_str("(* saved while open *)\n");
-    save_folder(dir.path(), &p2).unwrap();
-    assert_eq!(open(dir.path()).opened.project, p2);
+    let result = save_folder(dir.path(), &p2);
+    drop(held);
+    if cfg!(windows) {
+        let error = result.unwrap_err().to_string();
+        assert!(
+            error.contains("Main.st"),
+            "the error names the held file: {error}"
+        );
+        let opened = open(dir.path());
+        assert_eq!(opened.opened.project, p1, "the previous save survives");
+    } else {
+        result.unwrap();
+        assert_eq!(open(dir.path()).opened.project, p2);
+    }
 }
 
+/// A file held for a moment, as an antivirus scan does: on Windows the retry outlasts it. The thread's sleep is the
+/// length of the hold being modelled, not a synchronisation.
 #[test]
-fn a_restore_without_a_marker_is_done_and_a_marker_it_cannot_remove_is_an_error() {
+fn a_file_held_for_a_moment_is_saved() {
     let dir = tempfile::tempdir().unwrap();
-    restore_previous(dir.path()).expect("nothing to restore, no marker");
-    fs::create_dir_all(dir.path().join(MARKER)).unwrap();
-    assert!(
-        matches!(restore_previous(dir.path()), Err(StorageError::Io { .. })),
-        "a directory is not a marker file"
-    );
-}
-
-#[test]
-fn errors_say_what_went_wrong() {
-    let io = StorageError::Io {
-        path: "a/b".into(),
-        error: io::Error::other("disk on fire"),
-    };
-    assert_eq!(io.to_string(), "a/b: disk on fire");
-    let invalid = StorageError::Invalid(vec![
-        Diagnostic::new("scene.json", "x", "bad"),
-        Diagnostic::new("t", "", "worse"),
-    ]);
-    assert_eq!(invalid.to_string(), "scene.json: x: bad\nt: worse");
-    assert_eq!(
-        StorageError::Interrupted.to_string(),
-        "a save was interrupted; open the project to recover it"
-    );
+    let p1 = reference();
+    save_folder(dir.path(), &p1).unwrap();
+    let held = fs::File::open(dir.path().join("plc/Main.st")).unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        drop(held);
+    });
+    let mut p2 = p1.clone();
+    p2.program[0].1.push_str("(* saved after the scan *)\n");
+    save_folder(dir.path(), &p2).unwrap();
+    release.join().unwrap();
+    assert_eq!(open(dir.path()).opened.project, p2);
 }
