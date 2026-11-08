@@ -121,6 +121,47 @@ mod tests {
             .collect()
     }
 
+    /// FNV-1a over an explicit byte layout of every scan, so the value is stable across Rust versions (unlike
+    /// `DefaultHasher`).
+    fn fingerprint(history: &[Snapshot]) -> u64 {
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        let mut feed = |bytes: &[u8]| {
+            for byte in bytes {
+                hash = (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3);
+            }
+        };
+        for s in history {
+            feed(&s.time_ms.to_le_bytes());
+            feed(&[
+                u8::from(s.motor),
+                u8::from(s.sensor),
+                s.jam.map_or(2, u8::from),
+            ]);
+            feed(&s.delivered.to_le_bytes());
+            for part in &s.parts {
+                feed(&part.id.to_le_bytes());
+                feed(&part.front_m.to_bits().to_le_bytes());
+            }
+        }
+        hash
+    }
+
+    /// M1's results over 60 s, pinned before the engine moves onto nexosim (plan 2026-11-08-des-core-integration,
+    /// task 2): any engine must reproduce every scan of both scenarios exactly.
+    #[test]
+    fn every_scan_of_the_m1_scenarios_is_reproduced() {
+        assert_eq!(
+            fingerprint(&run_for(&mut started(false), 60)),
+            17_403_443_809_136_332_006,
+            "outlet free"
+        );
+        assert_eq!(
+            fingerprint(&run_for(&mut started(true), 60)),
+            9_118_810_849_520_154_159,
+            "outlet blocked"
+        );
+    }
+
     #[test]
     fn with_the_outlet_free_the_line_runs_and_delivers() {
         let mut engine = started(false);
