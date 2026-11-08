@@ -7059,7 +7059,9 @@ dependencies = [
  "serde_json",
  "tauri",
  "tauri-build",
+ "tempfile",
  "trust-runtime",
+ "twinova-project",
  "webkit2gtk",
 ]
 

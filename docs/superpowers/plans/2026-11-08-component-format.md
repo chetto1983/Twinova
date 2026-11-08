@@ -122,7 +122,12 @@ the active document and last saved project unchanged; exact file transaction fol
 
   Keep project save separate from `save_state`.
 - [x] Export and Import the archive through the same validator; prove the same project gives the same bytes.
-- [ ] Register project commands and prove a failed open does not replace the current project. Commit.
+- [x] Register project commands and prove a failed open does not replace the current project. Commit.
+  - Delivered (2026-11-08) in `src/project_commands.rs`: `open_project`, `save_project` (save as, into a folder),
+    `export_project`, `import_project`.
+  - They keep a `ProjectState` apart from the M3 engine's, and return a read-only `ProjectView`: the name, the folder,
+    the instances, the files changed outside, and whether a save was recovered.
+  - Paths are strings for now; the dialogs come with the project panel in Task 4.
 - Delivered in `twinova-project` (2026-11-08): `storage::{open_folder, save_folder, read_folder}` and
   `archive::{export_archive, import_archive}`.
   - A save writes `.twinova/saving`, keeps the replaced files in `.twinova/previous/`, writes each file through a

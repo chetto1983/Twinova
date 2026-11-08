@@ -27,6 +27,8 @@ serde_json = "1"
 nexosim = "=1.0.0"
 # truST at the last commit read that still has its bytecode VM (deleted upstream on 2026-10-24):
 # docs/research/10-st-senza-compilazione.md. MIT OR Apache-2.0.
+# The project format (spec 2026-11-08-project-format-design.md), a crate of this workspace without Tauri.
+twinova-project = { path = "project" }
 trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }
 
 [dev-dependencies]
@@ -34,6 +36,8 @@ trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform"
 tauri = { version = "2", features = ["test"] }
 # Property tests of the event order (CLAUDE.md, "property-based tests for ... the event queue"). MIT OR Apache-2.0.
 proptest = "1.12"
+# Temporary project folders for the project command tests; the version the lockfile already has.
+tempfile = "=3.27.0"
 
 # The webview's language under a C locale (src/webview_locale.rs).
 [target.'cfg(target_os = "linux")'.dependencies]

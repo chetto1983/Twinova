@@ -3,6 +3,7 @@ pub mod bench;
 pub mod commands;
 pub mod engine;
 pub mod plc;
+pub mod project_commands;
 pub mod scene;
 pub mod webview_locale;
 
@@ -16,6 +17,7 @@ pub fn run() {
             Ok(())
         })
         .manage(commands::AppState::default())
+        .manage(project_commands::ProjectState::default())
         .invoke_handler(tauri::generate_handler![
             commands::default_program,
             commands::build,
@@ -27,6 +29,10 @@ pub fn run() {
             commands::run,
             commands::save_state,
             commands::restore_state,
+            project_commands::open_project,
+            project_commands::save_project,
+            project_commands::export_project,
+            project_commands::import_project,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Twinova");
