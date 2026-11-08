@@ -182,3 +182,39 @@ git add app/src/assets/twinova-mark.svg app/src/App.svelte app/src/lib/snapshot.
 git commit -m "feat: integrate Twinova brand mark"
 ```
 
+### Task 4: Refresh the project README around the new brand
+
+**Files:**
+- Modify: `README.md`
+
+**Interfaces:**
+- Consumes: final logo asset from Task 2, verified product facts and commands from the repository
+- Produces: an Aura-style project landing page with a centered brand hero, badges, navigation, product explanation, capabilities, architecture, quick start, documentation, development, and license sections
+
+- [ ] **Step 1: Capture a failing README contract**
+
+Extend `scripts/verify_brand_assets.mjs` to require the repository-relative logo, concise positioning, CI and license badges, anchor navigation, and links to the roadmap, research index, changelog, and engineering instructions.
+
+- [ ] **Step 2: Run the verifier to confirm the current README fails**
+
+Run: `node scripts/verify_brand_assets.mjs`
+
+Expected: FAIL on the missing centered brand hero and navigation contract.
+
+- [ ] **Step 3: Rewrite the README using Aura's information hierarchy**
+
+Keep Twinova's claims at early-prototype maturity while adding the centered logo/title/tagline, factual badges, anchor navigation, `What is Twinova?`, current capabilities, one-screen architecture, technical stack/status, quick start, documentation, development checks, roadmap, and license.
+
+- [ ] **Step 4: Verify README links and brand contract**
+
+Run: `node scripts/verify_brand_assets.mjs`
+
+Expected: PASS with every repository-relative README link resolving.
+
+- [ ] **Step 5: Commit the README refresh**
+
+```powershell
+git add README.md scripts/verify_brand_assets.mjs docs/superpowers/plans/2026-11-08-twinova-brand.md
+git commit -m "docs: refresh Twinova project overview"
+```
+
