@@ -34,6 +34,8 @@
   const parts = new Map<number, THREE.Mesh>();
   const partGeometry = new THREE.BoxGeometry(PART_LENGTH_M, PART_SIZE, PART_SIZE * 1.4);
   let beam: THREE.Mesh;
+  /** Renders on demand (three.js manual, "Rendering on demand"): a frame per change, none while nothing moves. */
+  let requestRender = () => {};
 
   /** Colours only from the Aura tokens (CLAUDE.md), read again when the theme changes. */
   function applyTokens(): void {
@@ -109,11 +111,13 @@
   $effect(() => {
     if (snapshot) syncParts(snapshot);
     paintBeam();
+    requestRender();
   });
 
   $effect(() => {
     void theme;
     applyTokens();
+    requestRender();
   });
 
   onMount(() => {
@@ -124,6 +128,14 @@
     controls.target.copy(TARGET);
     addStatic();
     applyTokens();
+    let frame = 0;
+    requestRender = () => {
+      frame ||= requestAnimationFrame(() => {
+        frame = 0;
+        renderer.render(scene, camera);
+      });
+    };
+    controls.addEventListener("change", requestRender);
     const resize = () => {
       const { clientWidth: w, clientHeight: h } = host;
       renderer.setSize(w, h);
@@ -133,13 +145,13 @@
       const distance = framingDistance(BELT_LENGTH_M / 2 + 0.4, 1.0, camera.fov, camera.aspect);
       camera.position.copy(TARGET).addScaledVector(VIEW_DIRECTION, distance);
       controls.update();
+      requestRender();
     };
     const observer = new ResizeObserver(resize);
     observer.observe(host);
-    renderer.setAnimationLoop(() => renderer.render(scene, camera));
     return () => {
       observer.disconnect();
-      renderer.setAnimationLoop(null);
+      cancelAnimationFrame(frame);
       controls.dispose();
       renderer.dispose();
     };
