@@ -1,0 +1,26 @@
+{
+  "app": "0.1.0",
+  "components": [
+    "components/twinova.belt@1.json",
+    "components/twinova.diverter@1.json",
+    "components/twinova.sensor_diffuse@1.json",
+    "components/twinova.sink@1.json",
+    "components/twinova.source@1.json"
+  ],
+  "files": {
+    "components/twinova.belt@1.json": "b14745359c4ff36867b04def0458c24977302819469f269da23786798f557e2a",
+    "components/twinova.diverter@1.json": "6f64e7e50fe16ecb744594a19a28a23f5af5932e62127971a89bebe685549178",
+    "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
+    "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
+    "components/twinova.source@1.json": "c41dfb89fd394067b9e71785f51d437262c4625afe95734049d3d75edac2e18e",
+    "plc/Main.st": "c83c68a490e4dbe059daae0678b1f444526c809781c89ee9b30a05a285889ded",
+    "scene.json": "9763b5dac44b37e1c1abc9eb95814086c09b3ff5c8e8ae0863dd5c618382b1ca"
+  },
+  "format": "twinova-project",
+  "name": "Two belts and a diverter",
+  "program": [
+    "plc/Main.st"
+  ],
+  "scene": "scene.json",
+  "version": 1
+}

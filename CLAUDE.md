@@ -154,11 +154,13 @@ Policy: `docs/superpowers/specs/2026-11-07-trust-upstream-policy-design.md`.
 The set comes from `chetto1983/ModbusTool`; CI runs it in `.github/workflows/ci.yml` and
 `mutation.yml`, and `lefthook.yml` runs the fast part as git hooks (`cd app && npm run hooks`).
 
-After every Rust edit, in `app/src-tauri`:
+After every Rust edit, in `app/src-tauri` (a workspace: the app and `project/`, the format crate):
 
-- `cargo fmt --check`
-- `cargo clippy --all-targets -- -D warnings`
-- `cargo test` (CI: `cargo llvm-cov --fail-under-lines 85`; Windows is covered by the E2E, not by `cargo test`)
+- `cargo fmt --all --check`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+- `cargo test --workspace` (CI: `cargo llvm-cov --workspace --fail-under-lines 85`). On Windows the app is covered by
+  the E2E, because its test binaries link Tauri and do not start there; `twinova-project` has no Tauri and CI tests it
+  on windows-2022.
 - engine core or protocol changes: `cargo mutants` (scope in `.cargo/mutants.toml`)
 
 After every TypeScript or Svelte edit, in `app`:

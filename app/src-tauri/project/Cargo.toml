@@ -1,0 +1,16 @@
+[package]
+name = "twinova-project"
+version = "0.1.0"
+description = "Twinova's project format: model, validation and codec, with no UI dependency"
+authors = ["The Twinova contributors"]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+# float_roundtrip: without it 8 575 of 200 000 random f64 did not come back bit-exact (spec
+# 2026-11-08-project-format-design.md, "Measured on Linux").
+serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = "=0.10.9"

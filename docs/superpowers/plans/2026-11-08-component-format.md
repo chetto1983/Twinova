@@ -88,15 +88,22 @@ a new geometry expression language is not required. These are assistant proposal
 
 ## Task 2 — Validated document and round-trip codec
 
-Produces `ProjectDocument`, `ValidatedProject` and structured `ProjectDiagnostic` values with document paths.
-Proposed boundary: `parse_project(bytes: &[u8]) -> Result<ValidatedProject, Vec<ProjectDiagnostic>>` and
-`encode_project(project: &ValidatedProject) -> Result<Vec<u8>, ProjectDiagnostic>`.
+Delivered in `twinova-project` (2026-11-08): `parse_project(&Files) -> Result<Project, Vec<Diagnostic>>` and
+`encode_project(&Project) -> Files`, where `Files` maps relative paths to bytes. `parse_project` validates everything
+before returning; `encode_project` writes canonical JSON (sorted keys, final newline) and the manifest's hashes.
+- A hash that differs is reported in `Opened::changed_outside`, not refused (decision 2 as amended after run
+  42510999331); the save marker that recognises an interrupted save is Task 3's.
+- Tests: 2 valid and 12 invalid fixtures, written by a script independent of the encoder, so the byte comparison
+  checks the encoder against another implementation; a rule-by-rule table; and unit tests.
+- Coverage of the crate: 98.8 % of lines.
+- `cargo mutants --in-place` on the crate: 189 mutants, 178 caught, 11 unviable, none missed.
 
-- [ ] Add failing corpus tests: round-trip retains identity, definitions, overrides and connections; duplicate IDs,
+- [x] Add failing corpus tests: round-trip retains identity, definitions, overrides and connections; duplicate IDs,
   parent cycles, missing endpoints, non-finite/out-of-range values and unsupported versions are rejected.
-- [ ] Implement with existing serde facilities and domain validation, then prove deterministic output ordering.
-- [ ] Add group-copy reference tests, including internal remapping and exclusion of external links.
-- [ ] Run Rust format/clippy/tests/coverage and the existing replay suite. Commit only after all pass.
+- [x] Implement with existing serde facilities and domain validation, then prove deterministic output ordering.
+- [ ] Add group-copy reference tests, including internal remapping and exclusion of external links. Open: copying a
+  group is an editing operation, which this crate does not have yet; it moves to Task 4 with the editor commands.
+- [x] Run Rust format/clippy/tests/coverage and the existing replay suite. Commit only after all pass.
 
 ## Task 3 — Project storage and Tauri boundary
 
