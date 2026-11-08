@@ -1,13 +1,19 @@
-//! One straight belt conveyor in closed form (spec 2026-11-07-tauri-shell-design.md, "The scene model").
-//! Positions are the front of each part along the belt, in metres; parts are ordered front first.
+//! M1's belt stepped by a fixed time step (spec 2026-11-07-tauri-shell-design.md, "The scene model"). The app now
+//! runs the closed-form belt (`belt.rs`); this one is the fixed-step reference it is benchmarked against
+//! (`examples/belt_benchmark.rs`, spec 2026-11-08-analytic-belt-design.md). Positions are the front of each part
+//! along the belt, in metres; parts are ordered front first.
 
 use serde::Serialize;
 
-pub const BELT_LENGTH_M: f64 = 3.0;
-pub const BELT_SPEED_M_S: f64 = 0.5;
-pub const PART_LENGTH_M: f64 = 0.30;
-pub const SPAWN_INTERVAL_S: f64 = 2.0;
-pub const PHOTOCELL_AT_M: f64 = 2.70;
+use crate::belt::{
+    ARRIVAL_INTERVAL_NS, LENGTH_NM, NM_PER_M, NS_PER_S, PART_NM, PHOTOCELL_NM, SPEED_NM_PER_S,
+};
+
+pub const BELT_LENGTH_M: f64 = LENGTH_NM as f64 / NM_PER_M as f64;
+pub const BELT_SPEED_M_S: f64 = SPEED_NM_PER_S as f64 / NM_PER_M as f64;
+pub const PART_LENGTH_M: f64 = PART_NM as f64 / NM_PER_M as f64;
+pub const SPAWN_INTERVAL_S: f64 = ARRIVAL_INTERVAL_NS as f64 / NS_PER_S as f64;
+pub const PHOTOCELL_AT_M: f64 = PHOTOCELL_NM as f64 / NM_PER_M as f64;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Part {
@@ -99,6 +105,20 @@ mod tests {
         for _ in 0..(seconds / DT).round() as u64 {
             scene.step(DT, motor);
         }
+    }
+
+    #[test]
+    fn the_metres_are_the_values_m1_used() {
+        assert_eq!(
+            (
+                BELT_LENGTH_M,
+                BELT_SPEED_M_S,
+                PART_LENGTH_M,
+                SPAWN_INTERVAL_S,
+                PHOTOCELL_AT_M
+            ),
+            (3.0, 0.5, 0.30, 2.0, 2.70)
+        );
     }
 
     #[test]

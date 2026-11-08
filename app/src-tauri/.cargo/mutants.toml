@@ -1,3 +1,3 @@
-# cargo mutants configuration (https://mutants.rs). Scope: the conveyor kinematics, the engine and its
-# nexosim bench (CLAUDE.md "MUTATION >=70%", ROADMAP 1.4 and 3.2).
-examine_globs = ["src/scene.rs", "src/engine.rs", "src/bench.rs"]
+# cargo mutants configuration (https://mutants.rs). Scope: the conveyor kinematics (closed-form and stepped), the
+# engine and its nexosim bench (CLAUDE.md "MUTATION >=70%", ROADMAP 1.4, 3.2 and 3.3).
+examine_globs = ["src/belt.rs", "src/scene.rs", "src/engine.rs", "src/bench.rs"]
