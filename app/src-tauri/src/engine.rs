@@ -1,12 +1,14 @@
-//! Lockstep of scene and program with a fixed scan of virtual time (spec 2026-11-07-tauri-shell-design.md,
-//! "The engine"): inputs, PLC time, one cycle, motor, scene.
+//! The run engine of the app: the nexosim bench (`bench.rs`) driven one scan of virtual time at a time, paced to the
+//! wall clock in Run. The public API is M1's (spec 2026-11-07-tauri-shell-design.md, "The engine"); the lockstep it
+//! used to compute by hand is now a same-instant message chain in the bench.
 
 use serde::Serialize;
 
-use crate::plc::{Inputs, Plc};
-use crate::scene::{Part, Scene};
+pub use crate::bench::SCAN_MS;
+use crate::bench::{BeltState, Bench, ControllerState};
+use crate::plc::Plc;
+use crate::scene::Part;
 
-pub const SCAN_MS: i64 = 10;
 /// At most this many scans per pacing tick, so a stalled UI thread cannot freeze the loop; the lag stays visible.
 pub const MAX_SCANS_PER_TICK: u64 = 100;
 
@@ -24,51 +26,44 @@ pub struct Snapshot {
 }
 
 pub struct Engine {
-    scene: Scene,
-    plc: Plc,
-    time_ms: i64,
-    motor: bool,
-    pulse: Inputs,
+    bench: Bench,
+    controller: ControllerState,
+    belt: BeltState,
     pub lag_ms: i64,
 }
 
 impl Engine {
-    pub fn new(plc: Plc) -> Self {
-        Self {
-            scene: Scene::default(),
-            plc,
-            time_ms: 0,
-            motor: false,
-            pulse: Inputs::default(),
+    pub fn new(plc: Plc) -> Result<Self, String> {
+        let (bench, controller, belt) = Bench::new(plc)?;
+        Ok(Self {
+            bench,
+            controller,
+            belt,
             lag_ms: 0,
-        }
+        })
     }
 
     /// Queues a start or stop button press; it is held for the next scan only.
-    pub fn press(&mut self, start: bool, stop: bool) {
-        self.pulse.start |= start;
-        self.pulse.stop |= stop;
+    pub fn press(&mut self, start: bool, stop: bool) -> Result<(), String> {
+        self.bench.press(start, stop)
     }
 
-    pub fn set_outlet_blocked(&mut self, blocked: bool) {
-        self.scene.outlet_blocked = blocked;
+    pub fn set_outlet_blocked(&mut self, blocked: bool) -> Result<(), String> {
+        self.bench.set_outlet_blocked(blocked)?;
+        self.refresh();
+        Ok(())
     }
 
     pub fn time_ms(&self) -> i64 {
-        self.time_ms
+        self.bench.time_ms()
     }
 
-    /// One scan of `SCAN_MS`.
+    /// One scan of `SCAN_MS`. A runtime fault of the program is returned, and every later step returns it again.
     pub fn step(&mut self) -> Result<(), String> {
-        let inputs = Inputs {
-            sensor: self.scene.photocell(),
-            ..self.pulse
-        };
-        self.motor = self.plc.scan(inputs, SCAN_MS)?;
-        self.pulse = Inputs::default();
-        self.scene.step(SCAN_MS as f64 / 1000.0, self.motor);
-        self.time_ms += SCAN_MS;
-        Ok(())
+        self.fault()?;
+        self.bench.advance_to(self.time_ms() + SCAN_MS)?;
+        self.refresh();
+        self.fault()
     }
 
     /// Runs the scans that wall-clock time `wall_ms` (since Run started at virtual `origin_ms`) asks for, capped at
@@ -76,161 +71,38 @@ impl Engine {
     pub fn catch_up(&mut self, origin_ms: i64, wall_ms: i64) -> Result<(), String> {
         let target = origin_ms + wall_ms;
         let mut done = 0;
-        while self.time_ms + SCAN_MS <= target && done < MAX_SCANS_PER_TICK {
+        while self.time_ms() + SCAN_MS <= target && done < MAX_SCANS_PER_TICK {
             self.step()?;
             done += 1;
         }
-        self.lag_ms = (target - self.time_ms - SCAN_MS).max(0);
+        self.lag_ms = (target - self.time_ms() - SCAN_MS).max(0);
         Ok(())
     }
 
     pub fn snapshot(&self) -> Snapshot {
         Snapshot {
-            time_ms: self.time_ms,
-            parts: self.scene.parts.clone(),
-            delivered: self.scene.delivered,
-            outlet_blocked: self.scene.outlet_blocked,
-            sensor: self.scene.photocell(),
-            motor: self.motor,
-            jam: self.plc.bool_var("jam"),
+            time_ms: self.time_ms(),
+            parts: self.belt.parts.clone(),
+            delivered: self.belt.delivered,
+            outlet_blocked: self.belt.outlet_blocked,
+            sensor: self.belt.sensor,
+            motor: self.controller.motor,
+            jam: self.controller.jam,
             lag_ms: self.lag_ms,
         }
+    }
+
+    fn refresh(&mut self) {
+        let (controller, belt) = self.bench.latest();
+        self.controller = controller.unwrap_or_else(|| self.controller.clone());
+        self.belt = belt.unwrap_or_else(|| self.belt.clone());
+    }
+
+    fn fault(&self) -> Result<(), String> {
+        self.controller.fault.clone().map_or(Ok(()), Err)
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::scene::{BELT_SPEED_M_S, PART_LENGTH_M};
-
-    const DEFAULT_PROGRAM: &str = include_str!("default_program.st");
-
-    fn started(outlet_blocked: bool) -> Engine {
-        let mut engine = Engine::new(Plc::build(DEFAULT_PROGRAM).expect("default program builds"));
-        engine.set_outlet_blocked(outlet_blocked);
-        engine.press(true, false);
-        engine
-    }
-
-    fn run_for(engine: &mut Engine, seconds: i64) -> Vec<Snapshot> {
-        (0..seconds * 1000 / SCAN_MS)
-            .map(|_| {
-                engine.step().expect("scan");
-                engine.snapshot()
-            })
-            .collect()
-    }
-
-    /// FNV-1a over an explicit byte layout of every scan, so the value is stable across Rust versions (unlike
-    /// `DefaultHasher`).
-    fn fingerprint(history: &[Snapshot]) -> u64 {
-        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-        let mut feed = |bytes: &[u8]| {
-            for byte in bytes {
-                hash = (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3);
-            }
-        };
-        for s in history {
-            feed(&s.time_ms.to_le_bytes());
-            feed(&[
-                u8::from(s.motor),
-                u8::from(s.sensor),
-                s.jam.map_or(2, u8::from),
-            ]);
-            feed(&s.delivered.to_le_bytes());
-            for part in &s.parts {
-                feed(&part.id.to_le_bytes());
-                feed(&part.front_m.to_bits().to_le_bytes());
-            }
-        }
-        hash
-    }
-
-    /// M1's results over 60 s, pinned before the engine moves onto nexosim (plan 2026-11-08-des-core-integration,
-    /// task 2): any engine must reproduce every scan of both scenarios exactly.
-    #[test]
-    fn every_scan_of_the_m1_scenarios_is_reproduced() {
-        assert_eq!(
-            fingerprint(&run_for(&mut started(false), 60)),
-            17_403_443_809_136_332_006,
-            "outlet free"
-        );
-        assert_eq!(
-            fingerprint(&run_for(&mut started(true), 60)),
-            9_118_810_849_520_154_159,
-            "outlet blocked"
-        );
-    }
-
-    #[test]
-    fn with_the_outlet_free_the_line_runs_and_delivers() {
-        let mut engine = started(false);
-        let history = run_for(&mut engine, 60);
-        let last = history.last().unwrap();
-        assert!(last.motor, "motor still on");
-        assert_eq!(last.jam, Some(false));
-        assert!(last.delivered >= 25, "delivered {}", last.delivered);
-    }
-
-    #[test]
-    fn with_the_outlet_blocked_a_covered_photocell_trips_the_jam_within_two_seconds() {
-        let mut engine = started(true);
-        let history = run_for(&mut engine, 60);
-        let covered_from = history
-            .windows(2)
-            .rposition(|w| !w[0].sensor && w[1].sensor)
-            .map_or(history[0].time_ms, |i| history[i + 1].time_ms);
-        let jam_at = history
-            .iter()
-            .find(|s| s.jam == Some(true))
-            .expect("a jam")
-            .time_ms;
-        let delay = jam_at - covered_from;
-        assert!(
-            (2000..=2000 + 2 * SCAN_MS).contains(&delay),
-            "jam {delay} ms after the photocell was covered"
-        );
-        let last = history.last().unwrap();
-        assert!(!last.motor && last.sensor && last.delivered == 0);
-    }
-
-    #[test]
-    fn each_scan_moves_the_belt_by_one_scan_of_virtual_time() {
-        let mut engine = started(false);
-        run_for(&mut engine, 1);
-        // The first scan latches the motor and the part enters after it moves: 99 scans of movement.
-        let travelled = BELT_SPEED_M_S * 99.0 * SCAN_MS as f64 / 1000.0;
-        let front = engine.snapshot().parts[0].front_m;
-        assert!(
-            (front - (PART_LENGTH_M + travelled)).abs() < 1e-9,
-            "front at {front} m"
-        );
-    }
-
-    #[test]
-    fn the_motor_waits_for_start() {
-        let mut engine = Engine::new(Plc::build(DEFAULT_PROGRAM).unwrap());
-        let history = run_for(&mut engine, 5);
-        assert!(history.iter().all(|s| !s.motor));
-    }
-
-    #[test]
-    fn stop_stops_the_line_on_the_next_scan() {
-        let mut engine = started(false);
-        run_for(&mut engine, 3);
-        engine.press(false, true);
-        engine.step().unwrap();
-        assert!(!engine.snapshot().motor);
-    }
-
-    #[test]
-    fn catch_up_follows_the_wall_clock_and_reports_what_it_could_not_do() {
-        let mut engine = started(false);
-        engine.catch_up(0, 250).unwrap();
-        assert_eq!(engine.time_ms(), 250);
-        assert_eq!(engine.lag_ms, 0);
-        engine.catch_up(0, 250 + 5000).unwrap();
-        assert_eq!(engine.time_ms(), 250 + MAX_SCANS_PER_TICK as i64 * SCAN_MS);
-        assert_eq!(engine.lag_ms, 5250 - engine.time_ms() - SCAN_MS);
-    }
-}
+#[path = "engine_tests.rs"]
+mod tests;

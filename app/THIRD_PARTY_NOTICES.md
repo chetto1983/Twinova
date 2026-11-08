@@ -34,6 +34,7 @@ Transitive dependencies carry their own licenses in their packages.
 |---|---|---|
 | trust-runtime (truST Platform) at `6405915973a77587748ffb061a61d37bb8a368b0` | MIT OR Apache-2.0 | <https://github.com/johannesPettersson80/trust-platform> |
 | tiverse-mmap, truST's patched copy (`third_party/tiverse-mmap`) at the same commit, through `[patch.crates-io]` | MIT OR Apache-2.0 | <https://github.com/johannesPettersson80/trust-platform> |
+| nexosim 1.0, from the fork <https://github.com/chetto1983/nexosim> at `480e7247` (its single-threaded executor made FIFO, proposed upstream) | MIT OR Apache-2.0 | <https://github.com/asynchronics/nexosim> |
 | tauri | MIT OR Apache-2.0 | <https://github.com/tauri-apps/tauri> |
 | serde, serde_json | MIT OR Apache-2.0 | <https://github.com/serde-rs> |
 | webkit2gtk (Linux) | MIT | <https://github.com/tauri-apps/webkit2gtk-rs> |
