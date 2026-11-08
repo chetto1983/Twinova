@@ -5,8 +5,9 @@ Guida per Claude Code su questo repository. Regole derivate da `chetto1983/Aura`
 messa in servizio virtuale, open source. Lo stack previsto, da confermare con le prove di
 `docs/research/08-inventario-rust.md`, è nucleo in **Rust**, editor in **TypeScript** e logica dei
 componenti in **IEC 61131-3** (Structured Text e Ladder), non Python: chi programma PLC non lo conosce
-(decisione dell'utente, 2026-11-07; `docs/research/09-iec61131-runtime.md`). Oggi il repository contiene la ricerca (`docs/research/00-indice.md`), la prima app desktop (`app/`, M1) e la
-fondazione di CI e release (M2); lo stato delle fasi è in `ROADMAP.md`.
+(decisione dell'utente, 2026-11-07; `docs/research/09-iec61131-runtime.md`). Oggi il repository contiene la ricerca (`docs/research/00-indice.md`), la prima app desktop (`app/`, M1),
+la fondazione di CI e release (M2) e il motore deterministico su nexosim (M3); lo stato delle fasi è in
+`ROADMAP.md`.
 
 ## Principio: misura, poi documenta, poi implementa
 
@@ -125,7 +126,9 @@ mai il loro materiale.
   TS: `vitest --coverage`). Report the combined figure, not a
   cherry-picked one.
 - **MUTATION ≥70%** on the critical files of each task (Rust: `cargo mutants`): event scheduler,
-  protocol codecs, data-type conversions, conveyor kinematics.
+  protocol codecs, data-type conversions, conveyor kinematics. The `cargo mutants` gate in
+  `mutation.yml` is stricter: no surviving mutant (user, 2026-11-08). A mutant shown to be equivalent
+  is excluded in `.cargo/mutants.toml`, with the reason next to it.
 - **BASELINE OR DROP.** Any heuristic or optimisation must be measured against the plain behaviour
   on a reference scene, or it is dropped.
 - **DEFINITION OF DONE.** A job is complete only when validated E2E on a real scenario: the scene
@@ -165,6 +168,8 @@ After every TypeScript or Svelte edit, in `app`:
 - `npm run coverage` (85 % thresholds in `vite.config.ts`) and `npm run build`
 - `src/lib` helpers: `npm run mutation` (Stryker, breaks below 70 %)
 - the real app: `npx tauri build --debug --no-bundle && npm run e2e` (tauri-driver; under `xvfb-run` on Linux)
+- CPU and memory of the production build, when a change can affect them: `npx tauri build --no-bundle && npm run soak`
+  (Linux, under `xvfb-run`; seconds per phase as argument)
 
 Repository-wide: `bash scripts/check-file-size.sh` (600-LOC cap, also in CI).
 

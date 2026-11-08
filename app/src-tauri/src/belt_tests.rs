@@ -191,3 +191,12 @@ proptest! {
         }
     }
 }
+
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "events by")]
+fn a_belt_asking_for_too_many_events_stops() {
+    let mut belt = running();
+    belt.wakes = 1_000;
+    belt.wake(belt.next_event().unwrap());
+}

@@ -101,7 +101,9 @@ mod tests {
 
     const DT: f64 = 0.01;
 
+    /// At most an hour: a longer request comes from a broken constant, and fails here at once.
     fn run(scene: &mut Scene, seconds: f64, motor: bool) {
+        assert!(seconds <= 3_600.0, "{seconds} s requested");
         for _ in 0..(seconds / DT).round() as u64 {
             scene.step(DT, motor);
         }
