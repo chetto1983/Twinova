@@ -8,7 +8,10 @@ export const backend = {
   build: (source: string) => invoke<Snapshot>("build", { source }),
   reset: () => invoke<Snapshot>("reset"),
   step: () => invoke<Snapshot>("step"),
-  run: () => invoke<void>("run"),
+  /** `speed` times the wall clock, or as fast as possible when null. */
+  run: (speed: number | null) => invoke<void>("run", { speed }),
+  saveState: () => invoke<void>("save_state"),
+  restoreState: () => invoke<Snapshot>("restore_state"),
   pause: () => invoke<void>("pause"),
   press: (start: boolean, stop: boolean) => invoke<void>("press", { start, stop }),
   setOutletBlocked: (blocked: boolean) => invoke<Snapshot>("set_outlet_blocked", { blocked }),

@@ -17,7 +17,10 @@ describe("backend bridge", () => {
     await backend.build("PROGRAM Main END_PROGRAM");
     await backend.reset();
     await backend.step();
-    await backend.run();
+    await backend.run(2);
+    await backend.run(null);
+    await backend.saveState();
+    await backend.restoreState();
     await backend.pause();
     await backend.press(true, false);
     await backend.setOutletBlocked(true);
@@ -26,7 +29,10 @@ describe("backend bridge", () => {
       ["build", { source: "PROGRAM Main END_PROGRAM" }],
       ["reset"],
       ["step"],
-      ["run"],
+      ["run", { speed: 2 }],
+      ["run", { speed: null }],
+      ["save_state"],
+      ["restore_state"],
       ["pause"],
       ["press", { start: true, stop: false }],
       ["set_outlet_blocked", { blocked: true }],

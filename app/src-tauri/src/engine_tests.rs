@@ -81,20 +81,11 @@ fn the_events_fall_at_their_closed_form_times() {
 
 /// The same inputs at the same scans give the same states: Start, a blocked outlet, Stop, a freed outlet, Start.
 fn scripted_run() -> u64 {
-    let mut engine = Engine::new(Plc::build(DEFAULT_PROGRAM).unwrap()).unwrap();
-    let mut history = Vec::new();
-    for scan in 0..3_000 {
-        match scan {
-            0 | 2_000 => engine.press(true, false).unwrap(),
-            700 => engine.set_outlet_blocked(true).unwrap(),
-            1_500 => engine.press(false, true).unwrap(),
-            1_900 => engine.set_outlet_blocked(false).unwrap(),
-            _ => {}
-        }
-        engine.step().unwrap();
-        history.push(engine.snapshot());
-    }
-    fingerprint(&history)
+    fingerprint(&script(
+        &mut Engine::new(Plc::build(DEFAULT_PROGRAM).unwrap()).unwrap(),
+        0,
+        3_000,
+    ))
 }
 
 #[test]
@@ -163,6 +154,50 @@ fn a_program_with_a_periodic_task_is_scanned_at_its_interval() {
     assert_eq!(scans, [(5, true), (10, false), (15, true), (20, false)]);
 }
 
+/// The scripted inputs of `scripted_run`, from scan `from` to scan `to`, on `engine`; the snapshots after each scan.
+fn script(engine: &mut Engine, from: usize, to: usize) -> Vec<Snapshot> {
+    (from..to)
+        .map(|scan| {
+            match scan {
+                0 | 2_000 => engine.press(true, false).unwrap(),
+                700 => engine.set_outlet_blocked(true).unwrap(),
+                1_500 => engine.press(false, true).unwrap(),
+                1_900 => engine.set_outlet_blocked(false).unwrap(),
+                _ => {}
+            }
+            engine.step().unwrap();
+            engine.snapshot()
+        })
+        .collect()
+}
+
+#[test]
+fn a_restored_state_continues_exactly_like_the_uninterrupted_run() {
+    let program = || Plc::build(DEFAULT_PROGRAM).unwrap();
+    let mut straight = Engine::new(program()).unwrap();
+    let uninterrupted = script(&mut straight, 0, 3_000);
+    // Saved after inputs at scans 0 and 700, before the ones at 1500, 1900 and 2000.
+    let mut first = Engine::new(program()).unwrap();
+    script(&mut first, 0, 1_200);
+    let mut restored = Engine::restore(program(), &first.save()).unwrap();
+    assert_eq!(
+        fingerprint(&[restored.snapshot()]),
+        fingerprint(&uninterrupted[1_199..1_200])
+    );
+    let resumed = script(&mut restored, 1_200, 3_000);
+    assert_eq!(fingerprint(&resumed), fingerprint(&uninterrupted[1_200..]));
+}
+
+#[test]
+fn catch_up_scales_the_wall_clock() {
+    let mut fast = started(false);
+    fast.catch_up(0, 500, 2.0).unwrap();
+    assert_eq!((fast.time_ms(), fast.lag_ms), (1_000, 0));
+    let mut slow = started(false);
+    slow.catch_up(0, 400, 0.5).unwrap();
+    assert_eq!((slow.time_ms(), slow.lag_ms), (200, 0));
+}
+
 #[test]
 fn the_motor_waits_for_start() {
     let mut engine = Engine::new(Plc::build(DEFAULT_PROGRAM).unwrap()).unwrap();
@@ -182,10 +217,10 @@ fn stop_stops_the_line_on_the_next_scan() {
 #[test]
 fn catch_up_follows_the_wall_clock_and_reports_what_it_could_not_do() {
     let mut engine = started(false);
-    engine.catch_up(0, 250).unwrap();
+    engine.catch_up(0, 250, 1.0).unwrap();
     assert_eq!(engine.time_ms(), 250);
     assert_eq!(engine.lag_ms, 0);
-    engine.catch_up(0, 250 + 5000).unwrap();
+    engine.catch_up(0, 250 + 5000, 1.0).unwrap();
     assert_eq!(engine.time_ms(), 250 + MAX_SCANS_PER_TICK as i64 * SCAN_MS);
     assert_eq!(engine.lag_ms, 5250 - engine.time_ms() - SCAN_MS);
 }

@@ -4,7 +4,7 @@
   import { currentLocale, languageName, locales, setLanguage, type Locale } from "./lib/i18n.svelte";
   import { readPreference, writePreference } from "./lib/preferences";
   import { backend, onEngineError, onSnapshot, onStopped } from "./lib/backend";
-  import type { Snapshot } from "./lib/snapshot";
+  import { SPEEDS, formatSpeed, type Snapshot } from "./lib/snapshot";
   import Editor from "./lib/Editor.svelte";
   import IoPanel from "./lib/IoPanel.svelte";
   import SceneView from "./lib/SceneView.svelte";
@@ -14,6 +14,7 @@
   let status = $state<"none" | "ok" | "failed">("none");
   let error = $state("");
   let running = $state(false);
+  let speed = $state<number | null>(1);
   let theme = $state(readPreference("theme") === "light" ? "light" : "dark");
 
   $effect(() => {
@@ -42,7 +43,7 @@
     if (running) {
       await backend.pause();
       running = false;
-    } else if (await attempt(() => backend.run()).then(() => !error)) {
+    } else if (await attempt(() => backend.run(speed)).then(() => !error)) {
       running = true;
     }
   }
@@ -78,6 +79,11 @@
       <button class="btn primary" disabled={status !== "ok"} onclick={toggleRun}>
         {running ? m.pause() : m.run()}
       </button>
+      <select class="speed" aria-label={m.speed()} bind:value={speed} disabled={running}>
+        {#each SPEEDS as option (option)}
+          <option value={option}>{formatSpeed(option, currentLocale(), m.speed_max())}</option>
+        {/each}
+      </select>
       <button
         class="btn"
         disabled={status !== "ok"}
@@ -91,6 +97,16 @@
         onclick={() => replace(backend.reset).then(() => (running = false))}
       >
         {m.reset()}
+      </button>
+      <button class="btn" disabled={status !== "ok"} onclick={() => attempt(backend.saveState)}>
+        {m.save_state()}
+      </button>
+      <button
+        class="btn"
+        disabled={status !== "ok"}
+        onclick={() => replace(backend.restoreState).then(() => (running = false))}
+      >
+        {m.restore_state()}
       </button>
       <span class="sep"></span>
       <button class="btn" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(true, false))}>
@@ -167,7 +183,8 @@
     height: 24px;
     background: var(--color-border);
   }
-  .lang {
+  .lang,
+  .speed {
     width: auto;
   }
   .grid {

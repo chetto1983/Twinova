@@ -1,4 +1,5 @@
 use super::*;
+use crate::engine::SCAN_MS;
 use std::sync::mpsc::{self, Receiver};
 use tauri::test::{MockRuntime, mock_app};
 use tauri::{App, Listener, Manager};
@@ -36,7 +37,7 @@ fn every_command_but_build_needs_a_built_program() {
     );
     assert!(press(app.state(), true, false).is_err());
     assert!(set_outlet_blocked(app.state(), true).is_err());
-    assert!(run(app.handle().clone(), app.state()).is_err());
+    assert!(run(app.handle().clone(), app.state(), Some(1.0)).is_err());
 }
 
 #[test]
@@ -71,8 +72,9 @@ fn run_emits_snapshots_until_paused() {
     let snapshots = events(&app, "snapshot");
     let stopped = events(&app, "stopped");
     build(app.state(), DEFAULT_PROGRAM.into()).unwrap();
-    run(app.handle().clone(), app.state()).unwrap();
-    run(app.handle().clone(), app.state()).expect("a second run while running does nothing");
+    run(app.handle().clone(), app.state(), Some(1.0)).unwrap();
+    run(app.handle().clone(), app.state(), Some(1.0))
+        .expect("a second run while running does nothing");
     snapshots.recv_timeout(WAIT).expect("a snapshot");
     pause(app.state());
     stopped.recv_timeout(WAIT).expect("the loop stops");
@@ -84,8 +86,47 @@ fn a_scan_error_stops_the_run_and_is_reported() {
     let errors = events(&app, "engine-error");
     let stopped = events(&app, "stopped");
     build(app.state(), FAULTING.into()).unwrap();
-    run(app.handle().clone(), app.state()).unwrap();
+    run(app.handle().clone(), app.state(), Some(1.0)).unwrap();
     let error = errors.recv_timeout(WAIT).expect("an engine error");
     assert!(error.to_lowercase().contains("division"), "{error}");
     stopped.recv_timeout(WAIT).expect("the loop stops");
+}
+
+#[test]
+fn a_saved_state_comes_back_on_restore() {
+    let app = app();
+    assert!(
+        save_state(app.state()).is_err(),
+        "nothing to save before a build"
+    );
+    assert!(restore_state(app.state()).is_err(), "nothing saved yet");
+    build(app.state(), DEFAULT_PROGRAM.into()).unwrap();
+    press(app.state(), true, false).unwrap();
+    for _ in 0..50 {
+        step(app.state()).unwrap();
+    }
+    save_state(app.state()).unwrap();
+    let saved = step(app.state()).unwrap();
+    for _ in 0..100 {
+        step(app.state()).unwrap();
+    }
+    let restored = restore_state(app.state()).unwrap();
+    assert_eq!(restored.time_ms, saved.time_ms - SCAN_MS);
+    assert!(restored.motor);
+    assert_eq!(step(app.state()).unwrap().time_ms, saved.time_ms);
+}
+
+#[test]
+fn run_as_fast_as_possible_outruns_the_wall_clock() {
+    let app = app();
+    let snapshots = events(&app, "snapshot");
+    let stopped = events(&app, "stopped");
+    build(app.state(), DEFAULT_PROGRAM.into()).unwrap();
+    run(app.handle().clone(), app.state(), None).unwrap();
+    let first = snapshots.recv_timeout(WAIT).expect("a snapshot");
+    pause(app.state());
+    stopped.recv_timeout(WAIT).expect("the loop stops");
+    let time: serde_json::Value = serde_json::from_str(&first).unwrap();
+    // One tick scans for 25 ms of wall time; the default scene does far more than 25 ms of virtual time in that.
+    assert!(time["time_ms"].as_i64().unwrap() > 25, "{first}");
 }

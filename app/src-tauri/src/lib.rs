@@ -25,6 +25,8 @@ pub fn run() {
             commands::set_outlet_blocked,
             commands::pause,
             commands::run,
+            commands::save_state,
+            commands::restore_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Twinova");

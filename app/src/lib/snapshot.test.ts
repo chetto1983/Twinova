@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { BELT_LENGTH_M, formatTime, framingDistance, isBehind, partCentreX, PART_LENGTH_M } from "./snapshot";
+import {
+  BELT_LENGTH_M,
+  formatSpeed,
+  formatTime,
+  framingDistance,
+  isBehind,
+  partCentreX,
+  PART_LENGTH_M,
+  SPEEDS,
+} from "./snapshot";
 
 describe("formatTime", () => {
   it("shows minutes, seconds and hundredths", () => {
@@ -40,5 +49,18 @@ describe("framingDistance", () => {
   });
   it("grows as the viewport narrows", () => {
     expect(framingDistance(1.8, 1, 40, 0.8)).toBeGreaterThan(framingDistance(1.8, 1, 40, 1.6));
+  });
+});
+
+describe("formatSpeed", () => {
+  it("writes the multiple in the locale's number format, and names the unpaced run", () => {
+    expect(formatSpeed(0.25, "en", "Max")).toBe("×0.25");
+    expect(formatSpeed(0.25, "it", "Max")).toBe("×0,25");
+    expect(formatSpeed(10, "it", "Max")).toBe("×10");
+    expect(formatSpeed(null, "en", "Max")).toBe("Max");
+  });
+  it("offers real time and an unpaced run", () => {
+    expect(SPEEDS).toContain(1);
+    expect(SPEEDS.at(-1)).toBeNull();
   });
 });

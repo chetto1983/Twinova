@@ -7,6 +7,9 @@ name: CI
 # (chetto1983/Aura ci.yml): `paths` with negations, where a file a test reads could be re-included.
 # Pushes run on main only; a working branch is checked by its pull_request run, so one SHA does not
 # run twice. No tag trigger here, so `paths` cannot swallow a tag push.
+#
+# No job waits for another (user, 2026-11-08): with `needs`, a pull request took rust (4 to 8 min)
+# plus the longest job after it. A failed rust job now costs the runner minutes of the others.
 on:
   push:
     branches: ["main"]
@@ -105,10 +108,12 @@ jobs:
           persist-credentials: false
       - run: bash scripts/check-file-size.sh
 
-  # The installers release.yml publishes, built and checked on every change (ROADMAP 2.4), as in
-  # ModbusTool: MSI on Windows, deb and AppImage on Linux. Built, not uploaded: the sizes are in the log.
+  # The installers release.yml publishes (ROADMAP 2.4): MSI on Windows, deb and AppImage on Linux.
+  # Built, not uploaded: the sizes are in the log. Unlike ModbusTool, only on main (user, 2026-11-08):
+  # the MSI was the longest job of a pull request (6 to 12 min), and the E2E already builds and drives
+  # the app on both platforms there.
   bundle:
-    needs: [rust, frontend, file-size]
+    if: github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -161,7 +166,6 @@ jobs:
   # Controls v6 manifest in binaries only, so a test binary that links tauri does not start there
   # (0xc0000139, measured on this repository's run 42378063592).
   e2e:
-    needs: [rust, frontend, file-size]
     strategy:
       fail-fast: false
       matrix:
