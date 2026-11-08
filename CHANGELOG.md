@@ -22,5 +22,8 @@ and build inside the app, on Windows and Linux.
 - Run against the wall clock, Pause, Step one 10 ms scan, Reset; the lag behind real time is
   shown, never hidden.
 - An outlet-blocked fault to toggle, and a default program with a 2 s jam detection.
+- Run speed: ×0.25 to ×10 the wall clock, or as fast as possible; Save state and Restore bring a
+  run back to a saved moment (replayed exactly).
+- The scan time comes from the program's IEC tasks (`TASK … (INTERVAL := T#5ms)`); 10 ms without one.
 - English and Italian, light and dark themes.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

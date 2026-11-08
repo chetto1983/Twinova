@@ -120,11 +120,7 @@ async function lineScenario() {
   await screenshot("running");
 
   await check("virtual time follows the wall clock in Run", async () => {
-    const [v0, t0] = [await virtualSeconds("Virtual time"), Date.now()];
-    await sleep(5000);
-    const [v1, t1] = [await virtualSeconds("Virtual time"), Date.now()];
-    const ratio = (v1 - v0) / ((t1 - t0) / 1000);
-    console.log(`      ${(v1 - v0).toFixed(2)} s virtual in ${((t1 - t0) / 1000).toFixed(2)} s wall`);
+    const ratio = await pace(5000);
     if (ratio < 0.9 || ratio > 1.1) throw new Error(`virtual/wall ratio ${ratio.toFixed(3)}`);
   });
 
@@ -140,6 +136,40 @@ async function lineScenario() {
     ),
   );
   await screenshot("jam");
+}
+
+/** Virtual seconds per wall second over `ms` of wall time. */
+async function pace(ms) {
+  const [v0, t0] = [await virtualSeconds("Virtual time"), Date.now()];
+  await sleep(ms);
+  const [v1, t1] = [await virtualSeconds("Virtual time"), Date.now()];
+  console.log(`      ${(v1 - v0).toFixed(2)} s virtual in ${((t1 - t0) / 1000).toFixed(2)} s wall`);
+  return (v1 - v0) / ((t1 - t0) / 1000);
+}
+
+async function runModesScenario() {
+  console.log("Run modes and saved states");
+  await click(button("Pause"));
+  await check("a saved state comes back on Restore", async () => {
+    await click(button("Save state"));
+    const saved = await virtualSeconds("Virtual time");
+    for (let i = 0; i < 5; i++) await click(button("Step"));
+    expectEqual((await virtualSeconds("Virtual time")) > saved, true, "stepped past the saved time");
+    await click(button("Restore"));
+    await eventually(
+      async () => expectEqual(await virtualSeconds("Virtual time"), saved, "virtual time"),
+      "restore",
+      5000,
+    );
+  });
+  await check("Run at ×2 runs virtual time twice as fast", async () => {
+    await (await browser.$(`//header//select[@aria-label="Speed"]`)).selectByVisibleText("×2");
+    await click(button("Run"));
+    const ratio = await pace(4000);
+    await click(button("Pause"));
+    if (ratio < 1.8 || ratio > 2.2) throw new Error(`virtual/wall ratio ${ratio.toFixed(3)} at ×2`);
+  });
+  await (await browser.$(`//header//select[@aria-label="Speed"]`)).selectByVisibleText("×1");
 }
 
 async function languageScenario() {
@@ -168,6 +198,7 @@ async function main() {
   try {
     await whenStarted();
     await lineScenario();
+    await runModesScenario();
     await languageScenario();
   } finally {
     await browser.deleteSession().catch(() => {});

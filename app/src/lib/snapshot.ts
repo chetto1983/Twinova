@@ -33,6 +33,13 @@ export function formatTime(ms: number): string {
 /** Centre of a part along the belt, with the belt centred on x = 0 in the 3D view. */
 export const partCentreX = (front_m: number): number => front_m - PART_LENGTH_M / 2 - BELT_LENGTH_M / 2;
 
+/** Run speeds, as multiples of the wall clock; null runs as fast as possible (spec 2026-11-08-run-modes-design.md). */
+export const SPEEDS: readonly (number | null)[] = [0.25, 0.5, 1, 2, 4, 10, null];
+
+/** "×0.5" in the locale's number format, or `max` for as fast as possible. */
+export const formatSpeed = (speed: number | null, locale: string, max: string): string =>
+  speed === null ? max : `×${new Intl.NumberFormat(locale).format(speed)}`;
+
 /** Lag worth showing: a frame or two of jitter is not "behind". */
 export const isBehind = (lag_ms: number): boolean => lag_ms > 100;
 
