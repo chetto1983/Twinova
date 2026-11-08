@@ -218,3 +218,38 @@ git add README.md scripts/verify_brand_assets.mjs docs/superpowers/plans/2026-11
 git commit -m "docs: refresh Twinova project overview"
 ```
 
+### Task 5: Replace the theme-inverting wordmark
+
+**Files:**
+- Modify: `app/src/App.svelte`
+- Modify: `app/src/lib/snapshot.test.ts`
+
+**Interfaces:**
+- Consumes: the approved blue/green mark palette and the bundled Atkinson Hyperlegible Next family
+- Produces: a fixed graphite brand plate and light industrial sans-serif wordmark that do not invert between light and dark themes
+
+- [ ] **Step 1: Add a failing rendered-DOM wordmark test**
+
+Mount `App.svelte`, assert the permanent brand plate and `Twinova` wordmark, and verify their computed foreground/background colours remain identical after switching `data-theme` between dark and light.
+
+- [ ] **Step 2: Run the focused test and observe the missing wordmark parts**
+
+Run: `npm.cmd test -- --run src/lib/snapshot.test.ts`
+
+Expected: FAIL because the current header has no permanent brand plate.
+
+- [ ] **Step 3: Implement the stable industrial wordmark**
+
+Use Atkinson Hyperlegible Next in a compact semibold treatment, a fixed light wordmark, and a permanent graphite capsule around the mark and name. Keep the full accessible text and compact header footprint.
+
+- [ ] **Step 4: Verify both themes and the frontend gate**
+
+Run the focused test, `npm.cmd run check`, `npm.cmd run lint`, `npm.cmd run coverage`, and `npm.cmd run build`; retain updated light/dark captures in the verification record.
+
+- [ ] **Step 5: Commit**
+
+```powershell
+git add app/src/App.svelte app/src/lib/snapshot.test.ts docs/superpowers/plans/2026-11-08-twinova-brand.md
+git commit -m "fix: stabilize Twinova wordmark across themes"
+```
+

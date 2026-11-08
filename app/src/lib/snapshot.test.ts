@@ -12,7 +12,7 @@ import {
   SPEEDS,
 } from "./snapshot";
 
-vi.mock("./SceneView.svelte", () => import("./__fixtures__/Empty.svelte"));
+vi.mock("./SceneView.svelte", () => ({ default: () => {} }));
 vi.mock("./backend", () => ({
   backend: {
     defaultProgram: vi.fn().mockResolvedValue(""),
@@ -103,5 +103,20 @@ describe("Twinova brand", () => {
     expect(mark?.getAttribute("src")).toMatch(/^(?:data:image\/svg\+xml|.*twinova-mark\.svg)/);
     expect(mark?.alt).toBe("");
     expect(document.querySelector(".brand circle")).toBeNull();
+  });
+
+  it("keeps the industrial brand lockup stable across themes", () => {
+    app = mount(App, { target: document.body });
+    const lockup = document.querySelector<HTMLElement>(".brand-lockup");
+    const name = lockup?.querySelector<HTMLElement>(".name");
+
+    expect(name?.textContent).toBe("Twinova");
+    document.documentElement.dataset.theme = "dark";
+    const darkColors = [getComputedStyle(lockup!).backgroundColor, getComputedStyle(name!).color];
+    document.documentElement.dataset.theme = "light";
+    const lightColors = [getComputedStyle(lockup!).backgroundColor, getComputedStyle(name!).color];
+
+    expect(lightColors).toEqual(darkColors);
+    expect(getComputedStyle(name!).fontFamily).toContain("Atkinson Hyperlegible Next");
   });
 });

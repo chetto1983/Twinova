@@ -71,8 +71,14 @@
 <div class="shell">
   <header class="top">
     <div class="brand">
-      <img src={twinovaMark} alt="" />
-      <span class="name">Twinova</span>
+      <span class="brand-lockup" style="background-color: #101214">
+        <img src={twinovaMark} alt="" />
+        <span
+          class="name"
+          style="color: #eef2f6; font-family: 'Atkinson Hyperlegible Next', ui-sans-serif, system-ui, sans-serif"
+          >Twinova</span
+        >
+      </span>
       <span class="muted">{m.app_tagline()}</span>
     </div>
     <div class="row actions">
@@ -163,15 +169,28 @@
     align-items: center;
     gap: 10px;
   }
+  .brand-lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 4px 10px 4px 6px;
+    border: 1px solid #343c46;
+    border-radius: 10px;
+    box-shadow: 0 5px 16px rgb(0 0 0 / 0.18);
+  }
   .brand img {
     width: 26px;
     height: 26px;
     object-fit: contain;
   }
   .name {
-    font-family: var(--font-display);
-    font-size: 20px;
-    font-weight: 600;
+    display: inline-flex;
+    align-items: baseline;
+    font-size: 18px;
+    font-weight: 720;
+    line-height: 1;
+    letter-spacing: -0.02em;
   }
   .actions {
     flex: 1;
