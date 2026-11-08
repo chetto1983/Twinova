@@ -206,6 +206,36 @@ for (const [, rawTarget] of readme.matchAll(
   );
 }
 
+const verificationDir = join(repoRoot, "docs", "superpowers", "verification");
+const verification = readFileSync(
+  required(join(verificationDir, "2026-11-08-twinova-brand.md")),
+  "utf8",
+);
+for (const filename of [
+  "2026-11-08-twinova-brand-dark.png",
+  "2026-11-08-twinova-brand-light.png",
+]) {
+  const bytes = readFileSync(required(join(verificationDir, "img", filename)));
+  assert.equal(
+    bytes.subarray(0, 8).toString("hex"),
+    "89504e470d0a1a0a",
+    `${filename} is not a PNG`,
+  );
+}
+for (const evidence of [
+  "578A92BA4020D8935F64E0437F3FB3B5C5DCA7AF3D8FC70EFFB9C7FD9BF9D283",
+  "codex mcp get vectorcraft",
+  "26 × 26",
+  "npm.cmd run coverage",
+  "npm.cmd run build",
+  "What this does not prove",
+]) {
+  assert.ok(
+    verification.includes(evidence),
+    `brand verification record is missing evidence: ${evidence}`,
+  );
+}
+
 console.log(
   `Brand verified: ${pngDimensions.size} PNGs, ICO, ICNS, SVG, editable VectorCraft master, UI asset, and README.`,
 );
