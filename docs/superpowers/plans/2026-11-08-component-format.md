@@ -110,10 +110,10 @@ before returning; `encode_project` writes canonical JSON (sorted keys, final new
 Consumes the validated document/codec. Produces candidate-open and safe-save operations whose failure leaves
 the active document and last saved project unchanged; exact file transaction follows Task 1's measured protocol.
 
-- [ ] Add failing tests for missing files, path escape, failed writes, unsupported assets, a hash mismatch (an
+- [x] Add failing tests for missing files, path escape, failed writes, unsupported assets, a hash mismatch (an
   interrupted save) and a file the manifest does not list.
-- [ ] Implement candidate validation before activation and save recovery. Expose typed errors, not panics.
-- [ ] Test interrupted-save recovery on both supported platforms, in `twinova-project`'s tests that CI runs on
+- [x] Implement candidate validation before activation and save recovery. Expose typed errors, not panics.
+- [x] Test interrupted-save recovery on both supported platforms, in `twinova-project`'s tests that CI runs on
   windows-2022:
   - rename over a read-only file;
   - rename over a file held open;
@@ -121,8 +121,17 @@ the active document and last saved project unchanged; exact file transaction fol
   - a second interruption during recovery.
 
   Keep project save separate from `save_state`.
-- [ ] Export and Import the archive through the same validator; prove the same project gives the same bytes.
+- [x] Export and Import the archive through the same validator; prove the same project gives the same bytes.
 - [ ] Register project commands and prove a failed open does not replace the current project. Commit.
+- Delivered in `twinova-project` (2026-11-08): `storage::{open_folder, save_folder, read_folder}` and
+  `archive::{export_archive, import_archive}`.
+  - A save writes `.twinova/saving`, keeps the replaced files in `.twinova/previous/`, writes each file through a
+    temporary file and a rename, writes the manifest last and removes the marker.
+  - A failed save rolls back at once; a marker found at open rolls back there, and that recovery can itself be
+    interrupted and rerun.
+  - The archive is byte-reproducible, and refuses unsafe names and more than 512 MiB unpacked.
+  - zip 9.4.2's reader indexes entries by name, so a name given twice reads as one entry (measured).
+  - `cargo mutants` on `storage.rs` and `archive.rs`: 213 mutants, 199 caught, 14 unviable, none missed.
 
 ## Task 4 — Visible project round-trip
 

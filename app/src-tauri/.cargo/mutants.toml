@@ -4,6 +4,7 @@
 examine_globs = [
   "src/belt.rs", "src/scene.rs", "src/engine.rs", "src/bench.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
+  "project/src/storage.rs", "project/src/archive.rs",
 ]
 
 # Equivalent mutant, excluded on purpose: the photocell sits exactly one part length before the end of the belt

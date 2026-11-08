@@ -2,9 +2,11 @@
 //! the document model, its validation, and the codec between a project and its files.
 
 pub mod address;
+pub mod archive;
 pub mod codec;
 pub mod diagnostic;
 pub mod model;
+pub mod storage;
 mod validate;
 mod validate_scene;
 

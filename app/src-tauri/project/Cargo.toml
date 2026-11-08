@@ -14,3 +14,7 @@ serde = { version = "1", features = ["derive"] }
 # 2026-11-08-project-format-design.md, "Measured on Linux").
 serde_json = { version = "1", features = ["float_roundtrip"] }
 sha2 = "=0.10.9"
+# Temporary file and rename for each write of a save (spec decision 2). MIT OR Apache-2.0.
+tempfile = "=3.27.0"
+# Export and Import of a project as one archive (spec decision 1). MIT; deflate only.
+zip = { version = "=9.4.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }

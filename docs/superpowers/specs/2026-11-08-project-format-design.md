@@ -100,10 +100,23 @@ Consequences for the implementation:
 - **Recovery must itself survive an interruption.** That is not measured yet: a second kill during the restore is a
   Task 3 test.
 
-Not measured, because this environment is Linux:
-- Windows rename over a read-only file and over a file open in another program (VS Code);
-- case-insensitive path collisions;
-- the whole protocol on NTFS.
+## Measured on Windows (2026-11-08, CI run 42514839589, windows-2022, NTFS)
+
+The storage tests of `twinova-project` ran on windows-2022:
+
+| Case | Expected | Measured |
+|---|---|---|
+| Save over a read-only `scene.json` | the rename is refused, the previous save survives | as expected: `save_folder` fails, and once the flag is cleared the folder opens as the previous save |
+| Save over `plc/Main.st` while another handle holds it open (`std::fs::File::open`) | the rename succeeds, because Rust opens with `FILE_SHARE_DELETE` | **refuted**: `MoveFileExW` fails with error 5, "Access is denied" |
+| All other storage, archive and codec tests | pass | pass |
+
+Consequence, the user's decision of 2026-11-08: a rename refused with `PermissionDenied` is retried for about 2 s with
+growing waits. A file held for a moment by an antivirus, an indexer or OneDrive is the common case, and Open Industry
+Project's desktop shell retries for the same reason (research 14, OF-10). A file still held after that fails the save,
+which names the file and rolls back. The retry is Windows-only: on Linux a refused rename is a permission, which
+waiting does not change.
+
+Still not measured: case-insensitive collisions on NTFS (the codec refuses them before any write), and network shares.
 
 Paths (traversal, absolute, drive letters, backslashes) are validation rules, and are tested with the codec in
 Task 2.
