@@ -68,9 +68,14 @@ tested fork pin stays in use. [Closure decision](docs/superpowers/specs/2026-11-
 Handoff to M4: measure multi-component scaling and investigate the webview memory growth recorded in the soak.
 Snapshots currently use one in-memory replay slot, for the same program. External PLC connectivity remains M5.
 
-## M4 — Component model and scene editor ⬜
+## M4 — Component model and scene editor 🔶
 
 The core of the product [02a, 06 #1–2].
+
+Started 2026-11-08: catalogue-first direction, source research and live Open Industry Project exploration.
+[M4.1 model draft](docs/superpowers/specs/2026-11-08-component-model-design.md) and
+[M4.2 planning draft](docs/superpowers/plans/2026-11-08-component-format.md) are recorded.
+The model is not yet an implemented format; 4.1 approval and the implementation acceptance below remain open.
 
 | Phase | Deliverable | Acceptance |
 |---|---|---|

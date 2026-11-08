@@ -51,6 +51,7 @@ WASM**. Le note che valutano il WASM (07, 08, 09, 10) restano come registro; non
 | [10](10-st-senza-compilazione.md) | ST e Ladder senza compilazione per il browser: il motore a bytecode tolto da truST compila in WASM (misurato); quattro strade | – |
 | [11](11-ecatalog-componenti.md) | eCatalog web di Visual Components (indice JSON pubblico, forum "eCat Updates"): 50 categorie e 4177 componenti contati, famiglie e varianti di nastri, sensori, feeder e sink, parametri e segnali citati pubblicamente, distribuzione per versione; ipotesi di parametri minimi per M4.4 | – |
 | [12](12-m4-componenti-editor-opensource.md) | Brainstorming M4: confronto mirato di simulatori industriali, codice OIP/realvirtual/JaamSim/Three.js letto a commit fissati, riuso disponibile e decisioni aperte sul modello e sull'editor | – |
+| [13](13-oip-app-comportamenti-live.md) | Esplorazione dell'app OIP reale: 37 famiglie censite, inspector, cronologia, demo, ST/Watch/forzature, Ladder, import/export e limiti browser; prove distinte da controlli soltanto esposti | – |
 | [benchmark/](benchmark/) | Schede prodotto con URL: virtual commissioning (g1), flusso/DES (g2), didattici e open source (g3) | – |
 | [ricerca/](ricerca/) | Note di ricerca con URL: eventi discreti (r1), passo fisso e fisica (r2), virtual commissioning e PLCSIM (r3) | – |
 
