@@ -49,6 +49,7 @@ WASM**. Le note che valutano il WASM (07, 08, 09, 10) restano come registro; non
 | [08](08-inventario-rust.md) | Strada C: inventario dei crate Rust (licenza, versione, download) per ogni bisogno, vuoti e prove | – |
 | [09](09-iec61131-runtime.md) | Logica dei componenti in IEC 61131-3 (non Python): runtime open source, truST in dettaglio | – |
 | [10](10-st-senza-compilazione.md) | ST e Ladder senza compilazione per il browser: il motore a bytecode tolto da truST compila in WASM (misurato); quattro strade | – |
+| [11](11-ecatalog-componenti.md) | eCatalog web di Visual Components (indice JSON pubblico, forum "eCat Updates"): 50 categorie e 4177 componenti contati, famiglie e varianti di nastri, sensori, feeder e sink, parametri e segnali citati pubblicamente, distribuzione per versione; ipotesi di parametri minimi per M4.4 | – |
 | [benchmark/](benchmark/) | Schede prodotto con URL: virtual commissioning (g1), flusso/DES (g2), didattici e open source (g3) | – |
 | [ricerca/](ricerca/) | Note di ricerca con URL: eventi discreti (r1), passo fisso e fisica (r2), virtual commissioning e PLCSIM (r3) | – |
 
