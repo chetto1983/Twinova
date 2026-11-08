@@ -88,14 +88,17 @@ jobs:
           path: app/src-tauri/mutants.out
           key: ${{ steps.results.outputs.cache-primary-key }}
 
-      # 0 = every mutant caught; 3 = only timeouts (mutants that make a loop endless, caught by
-      # the timeout); 2 = a mutant survived; anything else = the run did not complete.
+      # 0 = every mutant caught; 3 = timeouts (mutants that make a loop endless, caught by the
+      # timeout); 2 = a mutant survived; anything else = the run did not complete. Code 3 wins over 2
+      # (cargo-mutants 27.1.0, src/outcome.rs, Outcome::exit_code), so a run with timeouts and
+      # survivors exits 3: missed.txt is checked too. That let 7 survivors through on main
+      # (run 42467342248).
       - name: Mutation gate
         working-directory: app/src-tauri
         run: |
           code=$(cat mutants.out/exit-code)
-          if [ "$code" -ne 0 ] && [ "$code" -ne 3 ]; then
-            echo "cargo mutants exit code $code" >&2
+          if { [ "$code" -ne 0 ] && [ "$code" -ne 3 ]; } || [ -s mutants.out/missed.txt ]; then
+            echo "cargo mutants exit code $code; missed mutants:" >&2
             cat mutants.out/missed.txt >&2 || true
             exit 1
           fi

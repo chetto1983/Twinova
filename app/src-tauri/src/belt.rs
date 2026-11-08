@@ -129,6 +129,11 @@ impl Belt {
 
     /// Handles the event scheduled for `t` by `next_event`.
     pub fn wake(&mut self, t: i64) {
+        debug_assert_eq!(
+            self.next_event(),
+            Some(t),
+            "a wake-up at {t} that is not the belt's next event"
+        );
         self.rebase(t);
     }
 
@@ -144,19 +149,16 @@ impl Belt {
         if !self.motor {
             return next;
         }
-        let last = self.fronts.len().saturating_sub(1);
         let mut stop = if self.outlet_blocked {
             LENGTH_NM
         } else {
             i64::MAX
         };
-        for (i, f) in self.fronts.iter().enumerate() {
-            let mut targets = vec![PHOTOCELL_NM, PHOTOCELL_NM + PART_NM + 1];
+        for f in &self.fronts {
+            // 2 * PART_NM is where the entry frees: only the last part can be short of it.
+            let mut targets = vec![PHOTOCELL_NM, PHOTOCELL_NM + PART_NM + 1, 2 * PART_NM];
             if !self.outlet_blocked {
                 targets.push(LENGTH_NM);
-            }
-            if i == last && !entry_free {
-                targets.push(2 * PART_NM);
             }
             for to in targets {
                 if f.nm < to && to <= stop {
