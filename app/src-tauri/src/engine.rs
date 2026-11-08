@@ -4,11 +4,13 @@
 
 use serde::Serialize;
 
-pub use crate::bench::SCAN_MS;
 use crate::bench::{BeltState, Bench, ControllerState};
-use crate::plc::Plc;
+use crate::plc::{DEFAULT_SCAN_NS, Plc};
 use crate::scene::Part;
 
+const NS_PER_MS: i64 = 1_000_000;
+/// The scan period of a program without a periodic `TASK`, in ms.
+pub const SCAN_MS: i64 = DEFAULT_SCAN_NS / NS_PER_MS;
 /// At most this many scans per pacing tick, so a stalled UI thread cannot freeze the loop; the lag stays visible.
 pub const MAX_SCANS_PER_TICK: u64 = 100;
 
@@ -55,13 +57,15 @@ impl Engine {
     }
 
     pub fn time_ms(&self) -> i64 {
-        self.bench.time_ms()
+        self.bench.time_ns() / NS_PER_MS
     }
 
-    /// One scan of `SCAN_MS`. A runtime fault of the program is returned, and every later step returns it again.
+    /// One scan of the program's period. A runtime fault of the program is returned, and every later step returns it
+    /// again.
     pub fn step(&mut self) -> Result<(), String> {
         self.fault()?;
-        self.bench.advance_to(self.time_ms() + SCAN_MS)?;
+        self.bench
+            .advance_to(self.bench.time_ns() + self.bench.scan_ns())?;
         self.refresh();
         self.fault()
     }
@@ -69,13 +73,14 @@ impl Engine {
     /// Runs the scans that wall-clock time `wall_ms` (since Run started at virtual `origin_ms`) asks for, capped at
     /// `MAX_SCANS_PER_TICK`, and records the remaining lag.
     pub fn catch_up(&mut self, origin_ms: i64, wall_ms: i64) -> Result<(), String> {
-        let target = origin_ms + wall_ms;
+        let target = (origin_ms + wall_ms) * NS_PER_MS;
+        let scan = self.bench.scan_ns();
         let mut done = 0;
-        while self.time_ms() + SCAN_MS <= target && done < MAX_SCANS_PER_TICK {
+        while self.bench.time_ns() + scan <= target && done < MAX_SCANS_PER_TICK {
             self.step()?;
             done += 1;
         }
-        self.lag_ms = (target - self.time_ms() - SCAN_MS).max(0);
+        self.lag_ms = (target - self.bench.time_ns() - scan).max(0) / NS_PER_MS;
         Ok(())
     }
 

@@ -18,9 +18,6 @@ use crate::belt::Belt;
 use crate::plc::{Inputs, Plc};
 use crate::scene::Part;
 
-pub const SCAN_MS: i64 = 10;
-const SCAN: Duration = Duration::from_millis(SCAN_MS as u64);
-
 /// What the controller reports after each scan. A runtime fault stops the scans.
 #[derive(Debug, Clone, Default)]
 pub struct ControllerState {
@@ -66,18 +63,24 @@ pub struct PlcModel {
     start: bool,
     stop: bool,
     motor_on: bool,
+    /// The program's scan period (`Plc::scan_ns`).
+    scan_ns: i64,
 }
 
 #[Model(type Env = Plc)]
 impl PlcModel {
     #[nexosim(init)]
     async fn init(&mut self, cx: &Context<Self>, _: &mut Plc) {
-        cx.schedule_event(SCAN, schedulable!(Self::scan), ())
+        cx.schedule_event(self.period(), schedulable!(Self::scan), ())
             .unwrap();
     }
 
     pub fn sensor(&mut self, on: bool) {
         self.sensor = on;
+    }
+
+    fn period(&self) -> Duration {
+        Duration::from_nanos(self.scan_ns as u64)
     }
 
     /// A start or stop button press, held for the next scan only.
@@ -93,13 +96,13 @@ impl PlcModel {
             start: std::mem::take(&mut self.start),
             stop: std::mem::take(&mut self.stop),
         };
-        match plc.scan(inputs, SCAN_MS) {
+        match plc.scan(inputs) {
             Ok(motor) => {
                 self.motor_on = motor;
                 let state = self.state_of(plc, None);
                 self.state.send(state).await;
                 self.motor.send(motor).await;
-                cx.schedule_event(SCAN, schedulable!(Self::scan), ())
+                cx.schedule_event(self.period(), schedulable!(Self::scan), ())
                     .unwrap();
             }
             Err(fault) => {
@@ -137,6 +140,7 @@ impl ProtoModel for ProtoPlc {
             start: false,
             stop: false,
             motor_on: false,
+            scan_ns: self.plc.scan_ns(),
         };
         (model, self.plc)
     }
@@ -227,6 +231,7 @@ impl ProtoModel for ProtoBelt {
 /// The bench and its endpoints. States arrive in queues; the caller keeps the latest of each.
 pub struct Bench {
     simu: Simulation,
+    scan_ns: i64,
     press: EventId<(bool, bool)>,
     outlet: EventId<bool>,
     controller: EventQueueReader<ControllerState>,
@@ -241,6 +246,7 @@ impl Bench {
             jam: plc.bool_var("jam"),
             fault: None,
         };
+        let scan_ns = plc.scan_ns();
         let (plc_mbox, belt_mbox) = (Mailbox::new(), Mailbox::new());
         let (controller_sink, controller) = event_queue(SinkState::Enabled);
         let (belt_sink, belt) = event_queue(SinkState::Enabled);
@@ -272,6 +278,7 @@ impl Bench {
             .map_err(|e| e.to_string())?;
         let bench = Self {
             simu,
+            scan_ns,
             press,
             outlet,
             controller,
@@ -280,15 +287,18 @@ impl Bench {
         Ok((bench, first, BeltState::of(&Belt::default(), 0)))
     }
 
-    pub fn time_ms(&self) -> i64 {
-        let elapsed = self.simu.time().duration_since(MonotonicTime::EPOCH);
-        i64::try_from(elapsed.as_millis()).expect("virtual time fits in i64 ms")
+    pub fn time_ns(&self) -> i64 {
+        ns(self.simu.time())
     }
 
-    /// Runs every scan up to `time_ms`.
-    pub fn advance_to(&mut self, time_ms: i64) -> Result<(), String> {
-        let deadline = MonotonicTime::EPOCH + Duration::from_millis(time_ms as u64);
-        self.simu.step_until(deadline).map_err(|e| e.to_string())
+    /// The program's scan period.
+    pub fn scan_ns(&self) -> i64 {
+        self.scan_ns
+    }
+
+    /// Runs every event up to `time_ns`.
+    pub fn advance_to(&mut self, time_ns: i64) -> Result<(), String> {
+        self.simu.step_until(at(time_ns)).map_err(|e| e.to_string())
     }
 
     pub fn press(&mut self, start: bool, stop: bool) -> Result<(), String> {

@@ -148,6 +148,22 @@ fn each_scan_moves_the_belt_by_one_scan_of_virtual_time() {
 }
 
 #[test]
+fn a_program_with_a_periodic_task_is_scanned_at_its_interval() {
+    let source = "PROGRAM Main\nVAR sensor : BOOL; start : BOOL; stop : BOOL; motor : BOOL; END_VAR\n\
+        motor := NOT motor;\nEND_PROGRAM\nCONFIGURATION Cell\nRESOURCE CPU ON PLC\n\
+        TASK Fast(INTERVAL := T#5ms, PRIORITY := 1);\nPROGRAM P WITH Fast : Main;\nEND_RESOURCE\nEND_CONFIGURATION\n";
+    let mut engine = Engine::new(Plc::build(source).unwrap()).unwrap();
+    let scans: Vec<(i64, bool)> = (0..4)
+        .map(|_| {
+            engine.step().unwrap();
+            let s = engine.snapshot();
+            (s.time_ms, s.motor)
+        })
+        .collect();
+    assert_eq!(scans, [(5, true), (10, false), (15, true), (20, false)]);
+}
+
+#[test]
 fn the_motor_waits_for_start() {
     let mut engine = Engine::new(Plc::build(DEFAULT_PROGRAM).unwrap()).unwrap();
     let history = run_for(&mut engine, 5);

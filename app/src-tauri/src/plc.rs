@@ -8,6 +8,9 @@ use trust_runtime::value::{Duration, Value};
 /// The variables of `PROGRAM Main` that the scene and the UI exchange with the program.
 pub const CONTRACT: [&str; 4] = ["sensor", "start", "stop", "motor"];
 
+/// The scan period of a program that declares no periodic `TASK`: M1's 10 ms.
+pub const DEFAULT_SCAN_NS: i64 = 10_000_000;
+
 #[derive(Debug, Clone, Copy, Default, Serialize, PartialEq, Eq)]
 pub struct Inputs {
     pub sensor: bool,
@@ -17,6 +20,7 @@ pub struct Inputs {
 
 pub struct Plc {
     harness: TestHarness,
+    scan_ns: i64,
 }
 
 impl Plc {
@@ -29,7 +33,8 @@ impl Plc {
             .filter(|name| !matches!(harness.get_output(name), Some(Value::Bool(_))))
             .collect();
         if missing.is_empty() {
-            Ok(Self { harness })
+            let scan_ns = scan_period(&harness)?;
+            Ok(Self { harness, scan_ns })
         } else {
             Err(format!(
                 "PROGRAM Main must declare these BOOL variables: {}",
@@ -38,8 +43,15 @@ impl Plc {
         }
     }
 
-    /// One scan: writes the inputs, advances virtual time by `scan_ms`, runs a cycle, returns `motor`.
-    pub fn scan(&mut self, inputs: Inputs, scan_ms: i64) -> Result<bool, String> {
+    /// The period at which the program is scanned (ROADMAP 3.4): the greatest common divisor of the intervals of its
+    /// periodic `TASK`s, so that every task falls on a scan, or `DEFAULT_SCAN_NS` when it declares none. At each scan
+    /// truST runs only the tasks whose interval has elapsed (measured on the pinned truST, 2026-11-08).
+    pub fn scan_ns(&self) -> i64 {
+        self.scan_ns
+    }
+
+    /// One scan: writes the inputs, advances virtual time by the scan period, runs a cycle, returns `motor`.
+    pub fn scan(&mut self, inputs: Inputs) -> Result<bool, String> {
         for (name, value) in [
             ("sensor", inputs.sensor),
             ("start", inputs.start),
@@ -49,7 +61,8 @@ impl Plc {
                 .try_set_input(name, value)
                 .map_err(|e| e.to_string())?;
         }
-        self.harness.advance_time(Duration::from_millis(scan_ms));
+        self.harness
+            .advance_time(Duration::from_nanos(self.scan_ns));
         let cycle = self.harness.cycle();
         if let Some(error) = cycle.errors.first() {
             return Err(error.to_string());
@@ -69,12 +82,64 @@ impl Plc {
     }
 }
 
+fn scan_period(harness: &TestHarness) -> Result<i64, String> {
+    let tasks = harness.runtime().tasks();
+    if let Some(task) = tasks.iter().find(|t| t.single.is_some()) {
+        return Err(format!(
+            "TASK {} is started by SINGLE; only periodic tasks (INTERVAL) are supported",
+            task.name
+        ));
+    }
+    let gcd = |a: i64, b: i64| {
+        let (mut a, mut b) = (a, b);
+        while b != 0 {
+            (a, b) = (b, a % b);
+        }
+        a
+    };
+    Ok(tasks
+        .iter()
+        .map(|t| t.interval.as_nanos())
+        .filter(|ns| *ns > 0)
+        .reduce(gcd)
+        .unwrap_or(DEFAULT_SCAN_NS))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     const MINIMAL: &str = "PROGRAM Main\nVAR sensor : BOOL; start : BOOL; stop : BOOL; motor : BOOL; END_VAR\n\
         IF start THEN motor := TRUE; END_IF;\nIF stop THEN motor := FALSE; END_IF;\nEND_PROGRAM\n";
+
+    /// MINIMAL with a configuration whose tasks have the given `TASK` attributes.
+    fn with_tasks(tasks: &[&str]) -> String {
+        let declarations: String = tasks
+            .iter()
+            .enumerate()
+            .map(|(i, attrs)| format!("TASK T{i}({attrs});\n"))
+            .collect();
+        format!(
+            "{MINIMAL}CONFIGURATION Cell\nRESOURCE CPU ON PLC\n{declarations}PROGRAM P WITH T0 : Main;\nEND_RESOURCE\nEND_CONFIGURATION\n"
+        )
+    }
+
+    #[test]
+    fn the_scan_period_comes_from_the_program_tasks() {
+        let period = |tasks: &[&str]| Plc::build(&with_tasks(tasks)).map(|p| p.scan_ns());
+        assert_eq!(Plc::build(MINIMAL).unwrap().scan_ns(), DEFAULT_SCAN_NS);
+        assert_eq!(period(&["INTERVAL := T#5ms, PRIORITY := 1"]), Ok(5_000_000));
+        assert_eq!(
+            period(&[
+                "INTERVAL := T#4ms, PRIORITY := 1",
+                "INTERVAL := T#6ms, PRIORITY := 2"
+            ]),
+            Ok(2_000_000),
+            "the greatest common divisor, so every task falls on a scan"
+        );
+        let error = period(&["SINGLE := start, PRIORITY := 1"]).expect_err("refused");
+        assert!(error.contains("SINGLE"), "{error}");
+    }
 
     #[test]
     fn a_syntax_error_is_reported_as_text() {
@@ -104,36 +169,27 @@ mod tests {
         let source = "PROGRAM Main\nVAR sensor : BOOL; start : BOOL; stop : BOOL; motor : BOOL;\n\
             zero : INT; result : INT; END_VAR\nresult := 10 / zero;\nEND_PROGRAM\n";
         let mut plc = Plc::build(source).expect("builds");
-        let error = plc.scan(Inputs::default(), 10).expect_err("a fault");
+        let error = plc.scan(Inputs::default()).expect_err("a fault");
         assert!(error.to_lowercase().contains("division"), "{error}");
     }
 
     #[test]
     fn a_scan_applies_the_inputs_and_returns_the_motor() {
         let mut plc = Plc::build(MINIMAL).expect("builds");
-        assert!(!plc.scan(Inputs::default(), 10).unwrap());
+        assert!(!plc.scan(Inputs::default()).unwrap());
         assert!(
-            plc.scan(
-                Inputs {
-                    start: true,
-                    ..Inputs::default()
-                },
-                10
-            )
+            plc.scan(Inputs {
+                start: true,
+                ..Inputs::default()
+            })
             .unwrap()
         );
+        assert!(plc.scan(Inputs::default()).unwrap(), "the program latches");
         assert!(
-            plc.scan(Inputs::default(), 10).unwrap(),
-            "the program latches"
-        );
-        assert!(
-            !plc.scan(
-                Inputs {
-                    stop: true,
-                    ..Inputs::default()
-                },
-                10
-            )
+            !plc.scan(Inputs {
+                stop: true,
+                ..Inputs::default()
+            })
             .unwrap()
         );
         assert_eq!(plc.bool_var("motor"), Some(false));
