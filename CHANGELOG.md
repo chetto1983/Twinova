@@ -26,4 +26,5 @@ and build inside the app, on Windows and Linux.
   run back to a saved moment (replayed exactly).
 - The scan time comes from the program's IEC tasks (`TASK … (INTERVAL := T#5ms)`); 10 ms without one.
 - English and Italian, light and dark themes.
+- The 3D view draws only when something changes, so an idle or paused app uses no CPU to render it.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.
