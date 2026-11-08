@@ -1,0 +1,3 @@
+# The project corpus is a byte-for-byte reference (its manifests hold SHA-256 of the exact bytes): git must not
+# convert its line endings on Windows checkouts (autocrlf), as it did in run 42510999331.
+app/src-tauri/project/tests/fixtures/** -text

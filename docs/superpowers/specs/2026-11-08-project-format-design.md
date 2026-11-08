@@ -26,10 +26,21 @@ round-trip tests, and a corpus of saved scenes opens. The model it stores is the
    - **One validator** reads both forms, and any folder edited by hand.
 2. **The manifest is written last and checks every file by hash** (user).
    - **The manifest:** `twinova.json` lists every file of the project with its SHA-256.
-   - **A save** writes each changed file through a temporary file and a rename, then the manifest the same way.
-     Before that, it copies the files it replaces into `.twinova/previous/`.
-   - **On open**, a file whose hash does not match the manifest shows that a save was interrupted. The project
-     then opens from `.twinova/previous/`, and the user is told.
+   - **A save** proceeds in this order:
+     1. create the marker `.twinova/saving`;
+     2. copy the files it replaces into `.twinova/previous/`;
+     3. write each changed file through a temporary file and a rename;
+     4. write the manifest the same way;
+     5. delete the marker.
+   - **On open, the marker decides, not the hashes.** *Amended 2026-11-08, user's decision after a measurement.*
+     - **The marker is present:** a save was interrupted. The project opens from `.twinova/previous/`, and the user is
+       told.
+     - **The marker is absent but a hash differs:** the file was changed outside Twinova, by git, an editor or a
+       copy. It is validated like any other file and opened, the change is reported, and nothing is restored.
+   - **Why the amendment.** The first rule was "a hash that differs means an interrupted save". The Windows CI job
+     (run 42510999331) refuted it: git checked the fixtures out with `autocrlf`, every JSON and `.st` file changed
+     its line endings, and five intact files read as an interrupted save. In 4.6, VS Code editing a `.st` file would
+     have been undone in the same way.
    - **A file the manifest does not list is ignored, not an error.** The manifest decides what the project is
      (research 14, OF-09).
 3. **One format version per project, migrated on read.**
