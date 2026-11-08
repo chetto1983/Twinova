@@ -1,28 +1,16 @@
 <script lang="ts">
   // The 3D view of the belt. It only renders the backend snapshot: no physics here.
-  import { onMount } from "svelte";
   import * as THREE from "three";
-  import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-  import {
-    BELT_LENGTH_M,
-    PART_LENGTH_M,
-    PHOTOCELL_AT_M,
-    framingDistance,
-    partCentreX,
-    type Snapshot,
-  } from "./snapshot";
+  import { BELT_LENGTH_M, PART_LENGTH_M, PHOTOCELL_AT_M, partCentreX, type Snapshot } from "./snapshot";
+  import Viewport from "./Viewport.svelte";
 
   let { snapshot, theme }: { snapshot: Snapshot | null; theme: string } = $props();
 
-  let host: HTMLDivElement;
   const BELT_TOP = 0.8;
   const BELT_WIDTH = 0.6;
   const PART_SIZE = 0.25;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-  /** Viewing direction from the target: front, a little to the right and above. */
-  const VIEW_DIRECTION = new THREE.Vector3(0.35, 0.6, 1).normalize();
   const TARGET = new THREE.Vector3(0, BELT_TOP, 0);
   const materials = {
     belt: new THREE.MeshStandardMaterial({ roughness: 0.9 }),
@@ -34,8 +22,7 @@
   const parts = new Map<number, THREE.Mesh>();
   const partGeometry = new THREE.BoxGeometry(PART_LENGTH_M, PART_SIZE, PART_SIZE * 1.4);
   let beam: THREE.Mesh;
-  /** Renders on demand (three.js manual, "Rendering on demand"): a frame per change, none while nothing moves. */
-  let requestRender = () => {};
+  let requestRender = $state(() => {});
 
   /** Colours only from the Aura tokens (CLAUDE.md), read again when the theme changes. */
   function applyTokens(): void {
@@ -59,10 +46,6 @@
   }
 
   function addStatic(): void {
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2.2));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-    sun.position.set(3, 6, 4);
-    scene.add(sun);
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), materials.floor);
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
@@ -120,52 +103,8 @@
     requestRender();
   });
 
-  onMount(() => {
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    host.appendChild(renderer.domElement);
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.copy(TARGET);
-    addStatic();
-    applyTokens();
-    let frame = 0;
-    requestRender = () => {
-      frame ||= requestAnimationFrame(() => {
-        frame = 0;
-        renderer.render(scene, camera);
-      });
-    };
-    controls.addEventListener("change", requestRender);
-    const resize = () => {
-      const { clientWidth: w, clientHeight: h } = host;
-      renderer.setSize(w, h);
-      camera.aspect = w / Math.max(h, 1);
-      camera.updateProjectionMatrix();
-      // Fit the belt plus a margin whatever the panel's shape.
-      const distance = framingDistance(BELT_LENGTH_M / 2 + 0.4, 1.0, camera.fov, camera.aspect);
-      camera.position.copy(TARGET).addScaledVector(VIEW_DIRECTION, distance);
-      controls.update();
-      requestRender();
-    };
-    const observer = new ResizeObserver(resize);
-    observer.observe(host);
-    return () => {
-      observer.disconnect();
-      cancelAnimationFrame(frame);
-      controls.dispose();
-      renderer.dispose();
-    };
-  });
+  addStatic();
 </script>
 
-<div class="view" bind:this={host}></div>
-
-<style>
-  .view {
-    width: 100%;
-    height: 100%;
-    min-height: 320px;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
-</style>
+<!-- Fit the belt plus a margin whatever the panel's shape. -->
+<Viewport {scene} target={TARGET} halfWidth={BELT_LENGTH_M / 2 + 0.4} bind:requestRender />

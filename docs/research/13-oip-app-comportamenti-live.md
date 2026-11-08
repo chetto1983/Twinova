@@ -29,6 +29,26 @@ Le catture grezze non sono asset Twinova e non vengono incorporate nel prodotto.
 | UI-09 | Preset nastro e tabella segmenti; edit manuale produce Custom | Inspector dopo modifica della lunghezza | Provato |
 | UI-10 | Visible distingue visibilità da partecipazione a collisioni/simulazione | Tooltip Visible | Esposto; collisioni a oggetto nascosto non provate |
 
+## La scena demo e il menu del progetto (2026-11-08, per la 4.2)
+
+Fonte: `https://www.openindustryproject.org/app/?scene=demo`, aperta in Chromium headless a 1600 × 1000. Le schermate
+sono rimaste nello scratchpad della sessione, non nel repository.
+
+| ID | Comportamento | Stato |
+|---|---|---|
+| PRJ-01 | Il nome del progetto è un pulsante in alto a sinistra, con un'etichetta di stato (`EXAMPLE` per la demo). Apre il menu del progetto: Save (Ctrl+S), Save Project to Folder…, New Project… (Ctrl+N), Projects…, Rename Project…, Import Project… (Ctrl+O), Export Project (.oip)… | Provato (menu aperto) |
+| PRJ-02 | La demo incorporata è di sola lettura. L'inspector, senza selezione, lo spiega: per cambiarla bisogna prima farne un proprio progetto. Rename è disabilitato | Provato |
+| PRJ-03 | L'albero della scena ha un filtro e gruppi annidati. Ogni riga ha icona, nome, famiglia in grigio, lucchetto e visibilità | Provato |
+| PRJ-04 | L'inspector di una parte mostra in testa la famiglia e il nome, poi Transform (posizione in m, rotazione in °). I parametri hanno l'unità, una barra che mostra dove cade il valore nel suo intervallo e un ripristino del default per ogni campo; la sezione Comms ha il tag con un'etichetta di direzione e tipo (`READ BOOL`) | Provato (deviatore della demo) |
+| PRJ-05 | Run, Pause e Stop stanno al centro della barra, con la velocità accanto | Esposto |
+
+Per Twinova (ipotesi per il Task 4 della 4.2):
+- **Pulsante progetto:** nome del progetto ed etichetta di stato, con un menu che raccoglie apri, salva, salva con nome,
+  importa ed esporta.
+- **Inspector:** in sola lettura nella 4.2. Il segnale si mostra con il suo indirizzo e un'etichetta di direzione e tipo,
+  per esempio `%QX0.2 · PLC output BOOL`; l'indirizzo sostituisce il tag di OIP.
+- **Il caso "non si può eseguire":** si spiega come la demo di sola lettura di OIP, con una frase al posto dei controlli.
+
 ## Agganci e navigazione
 
 `oip-06-snap-options.png`: menu aperto; traslazione impostata a 1 m, rotazione a 15°, face snap On,

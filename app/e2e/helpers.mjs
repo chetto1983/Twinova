@@ -60,10 +60,14 @@ const text = async (selector) => (await browser.$(selector)).getText();
 export const bit = (name) =>
   text(`//li[contains(@class,"row")][.//span[starts-with(normalize-space(),"${name}")]]/span[last()]`);
 export const value = (term) => text(`//dt[normalize-space()="${term}"]/following-sibling::dd[1]`);
-/** Virtual time "m:ss.cc" in seconds. */
+/** Virtual time "m:ss.cc" in seconds. Text that is not a time throws: a NaN would make every comparison false and
+ * let a check pass on nothing (run 42524833751, where the cell read as empty). */
 export const virtualSeconds = async (term) => {
-  const [minutes, seconds] = (await value(term)).split(":");
-  return Number(minutes) * 60 + Number(seconds);
+  const shown = await value(term);
+  const [minutes, seconds] = shown.split(":");
+  const total = Number(minutes) * 60 + Number(seconds);
+  if (!/^\d+:\d\d\.\d\d$/.test(shown) || !Number.isFinite(total)) throw new Error(`"${shown}" is not a virtual time`);
+  return total;
 };
 /** A header select by its class, which does not change with the language (its aria-label does). */
 const choose = async (cls, label) =>
