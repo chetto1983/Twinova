@@ -13,6 +13,9 @@ and build inside the app, on Windows and Linux.
 
 - A desktop app (Tauri 2, Svelte 5) with a 3D belt conveyor: parts arrive every 2 s, ride the
   belt at 0.5 m/s, accumulate nose to tail and leave at the end; a photocell near the end.
+- The belt is computed in closed form: photocell edges and deliveries happen at their exact time,
+  to the nanosecond, instead of at the next 10 ms step. The program reads the photocell at its next
+  scan, and its outputs apply from that scan on, as on a real PLC.
 - Structured Text (IEC 61131-3) control: `PROGRAM Main` reads `sensor`, `start` and `stop` and
   writes `motor`. Build reports compile errors and missing contract variables; a runtime fault
   (such as a division by zero) stops the run with its message.
