@@ -128,7 +128,7 @@ What the discrete-event tools do [06 #14–17, 22].
 
 | Phase | Deliverable | Acceptance |
 |---|---|---|
-| 8.1 | Joints and servo controllers driven by signals; gantry, pick and place | a gantry cycle driven by ST |
+| 8.1 | Joints and servo controllers driven by signals; gantry, pick and place. Axes are commanded from ST with the PLCopen Motion Control Part 1 single-axis blocks (`MC_Power`, `MC_MoveAbsolute`/`Relative`/`Additive`/`Velocity`, `MC_Halt`, `MC_Stop`, `MC_Reset`, `MC_Read*`) and the PLCopen axis state diagram, as S7-1500 technology objects expose them. Reference: RTmotion ([leijian001/plcopen_motion_control](https://github.com/leijian001/plcopen_motion_control), Intel, Apache-2.0, C++17, last commit 2021-09), for its blocks, state machine, S-curve planners and tests, read as a reference rather than linked; jerk-limited trajectories through the `ruckig` crate (MIT, [08]) | a gantry cycle driven by ST through `MC_` blocks; every transition of the PLCopen axis state diagram tested, including errors and `MC_Reset` |
 | 8.2 | Six-axis robot with analytic IK (rs-opw-kinematics [08]) and joint/linear moves | reachability and cycle time on a reference cell |
 | 8.3 | Physics islands with Rapier for falls and tipping only [05 §6] | the deterministic replay stays green |
 | 8.4 | Interface to virtual robot controllers, instead of reimplementing them [06 #16] | one controller connected |
