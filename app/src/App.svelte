@@ -196,15 +196,19 @@
 </div>
 
 <style>
+  /* A column, so the optional status line does not shift the main grid into an auto-sized row, and min-width: 0 so the
+     header's buttons wrap instead of widening the page (the Windows E2E window is 1028 px wide, run 42524833751). */
   .shell {
-    display: grid;
-    grid-template-rows: auto auto 1fr;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
     height: 100%;
     gap: 12px;
     padding: 12px;
   }
   .top {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 16px;
   }
@@ -238,6 +242,7 @@
   }
   .actions {
     flex: 1;
+    flex-wrap: wrap;
     justify-content: center;
   }
   .sep {
@@ -250,6 +255,7 @@
     width: auto;
   }
   .grid {
+    flex: 1;
     display: grid;
     grid-template-columns: minmax(320px, 1fr) minmax(420px, 2fr) minmax(240px, 0.8fr);
     gap: 12px;
