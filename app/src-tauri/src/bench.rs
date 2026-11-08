@@ -1,8 +1,8 @@
-//! The scene and its controller as nexosim models on one thread (spec 2026-11-07-des-core-design.md, "Decision";
-//! plan 2026-11-08-des-core-integration.md). One scan is a same-instant message chain in M1's lockstep order:
-//! the controller scans with the last photocell value and sends `motor`, the belt steps and sends the photocell back.
-//! truST's harness and the belt are not serializable, so each lives in its model's environment (nexosim 1.0,
-//! model.rs "Model environment"); nexosim's save and restore do not cover them.
+//! The belt and its controller as nexosim models on one thread (spec 2026-11-07-des-core-design.md, "Decision").
+//! The controller scans every 10 ms with the photocell value it last received, as a CPU reads its process image,
+//! and its `motor` applies from that scan on. The belt is closed-form (`belt.rs`, spec
+//! 2026-11-08-analytic-belt-design.md) and wakes only at its own events. truST's harness and the belt live in their
+//! models' environments (nexosim 1.0, model.rs "Model environment"); nexosim's save and restore do not cover them.
 
 use std::time::Duration;
 
@@ -14,11 +14,9 @@ use nexosim::simulation::{EventId, Mailbox, SimInit, Simulation};
 use nexosim::time::MonotonicTime;
 use serde::{Deserialize, Serialize};
 
+use crate::belt::Belt;
 use crate::plc::{Inputs, Plc};
-use crate::scene::{Part, Scene};
-
-pub const SCAN_MS: i64 = 10;
-const SCAN: Duration = Duration::from_millis(SCAN_MS as u64);
+use crate::scene::Part;
 
 /// What the controller reports after each scan. A runtime fault stops the scans.
 #[derive(Debug, Clone, Default)]
@@ -38,14 +36,23 @@ pub struct BeltState {
 }
 
 impl BeltState {
-    fn of(scene: &Scene) -> Self {
+    fn of(belt: &Belt, t_ns: i64) -> Self {
         Self {
-            parts: scene.parts.clone(),
-            delivered: scene.delivered,
-            outlet_blocked: scene.outlet_blocked,
-            sensor: scene.photocell(),
+            parts: belt.parts_at(t_ns),
+            delivered: belt.delivered_at(t_ns),
+            outlet_blocked: belt.outlet_blocked(),
+            sensor: belt.photocell_at(t_ns),
         }
     }
+}
+
+fn ns(t: MonotonicTime) -> i64 {
+    let elapsed = t.duration_since(MonotonicTime::EPOCH);
+    i64::try_from(elapsed.as_nanos()).expect("virtual time fits in i64 ns")
+}
+
+fn at(t_ns: i64) -> MonotonicTime {
+    MonotonicTime::EPOCH + Duration::from_nanos(t_ns as u64)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -56,18 +63,24 @@ pub struct PlcModel {
     start: bool,
     stop: bool,
     motor_on: bool,
+    /// The program's scan period (`Plc::scan_ns`).
+    scan_ns: i64,
 }
 
 #[Model(type Env = Plc)]
 impl PlcModel {
     #[nexosim(init)]
     async fn init(&mut self, cx: &Context<Self>, _: &mut Plc) {
-        cx.schedule_event(SCAN, schedulable!(Self::scan), ())
+        cx.schedule_event(self.period(), schedulable!(Self::scan), ())
             .unwrap();
     }
 
     pub fn sensor(&mut self, on: bool) {
         self.sensor = on;
+    }
+
+    fn period(&self) -> Duration {
+        Duration::from_nanos(self.scan_ns as u64)
     }
 
     /// A start or stop button press, held for the next scan only.
@@ -83,13 +96,13 @@ impl PlcModel {
             start: std::mem::take(&mut self.start),
             stop: std::mem::take(&mut self.stop),
         };
-        match plc.scan(inputs, SCAN_MS) {
+        match plc.scan(inputs) {
             Ok(motor) => {
                 self.motor_on = motor;
                 let state = self.state_of(plc, None);
                 self.state.send(state).await;
                 self.motor.send(motor).await;
-                cx.schedule_event(SCAN, schedulable!(Self::scan), ())
+                cx.schedule_event(self.period(), schedulable!(Self::scan), ())
                     .unwrap();
             }
             Err(fault) => {
@@ -127,28 +140,72 @@ impl ProtoModel for ProtoPlc {
             start: false,
             stop: false,
             motor_on: false,
+            scan_ns: self.plc.scan_ns(),
         };
         (model, self.plc)
     }
 }
 
+/// The belt in closed form: it wakes only at its own events (an arrival, a part leaving, a photocell edge) and when
+/// the controller or the UI changes the motor or the outlet. It reports its state at every scan, and sends the
+/// photocell to the controller at the exact time of each edge; the controller reads it at its next scan.
 #[derive(Serialize, Deserialize)]
 pub struct BeltModel {
     sensor: Output<bool>,
     state: Output<BeltState>,
+    /// The pending wake-up carries this number; a change of motor or outlet bumps it, so a stale wake-up is ignored.
+    generation: u64,
+    photocell: bool,
 }
 
-#[Model(type Env = Scene)]
+#[Model(type Env = Belt)]
 impl BeltModel {
-    pub async fn motor(&mut self, on: bool, _: &Context<Self>, scene: &mut Scene) {
-        scene.step(SCAN.as_secs_f64(), on);
-        self.state.send(BeltState::of(scene)).await;
-        self.sensor.send(scene.photocell()).await;
+    #[nexosim(init)]
+    async fn init(&mut self, cx: &Context<Self>, belt: &mut Belt) {
+        self.schedule(cx, belt);
     }
 
-    pub async fn outlet_blocked(&mut self, blocked: bool, _: &Context<Self>, scene: &mut Scene) {
-        scene.outlet_blocked = blocked;
-        self.state.send(BeltState::of(scene)).await;
+    pub async fn motor(&mut self, on: bool, cx: &Context<Self>, belt: &mut Belt) {
+        let now = ns(cx.time());
+        if belt.motor_is(on) {
+            self.state.send(BeltState::of(belt, now)).await;
+            return;
+        }
+        belt.set_motor(now, on);
+        self.changed(cx, belt).await;
+    }
+
+    pub async fn outlet_blocked(&mut self, blocked: bool, cx: &Context<Self>, belt: &mut Belt) {
+        belt.set_outlet_blocked(ns(cx.time()), blocked);
+        self.changed(cx, belt).await;
+    }
+
+    #[nexosim(schedulable)]
+    async fn wake(&mut self, generation: u64, cx: &Context<Self>, belt: &mut Belt) {
+        if generation == self.generation {
+            belt.wake(ns(cx.time()));
+            self.changed(cx, belt).await;
+        }
+    }
+
+    /// After the belt handled an event at the current time: report, send an edge, schedule the next event.
+    async fn changed(&mut self, cx: &Context<Self>, belt: &mut Belt) {
+        let state = BeltState::of(belt, ns(cx.time()));
+        let edge = (state.sensor != self.photocell).then_some(state.sensor);
+        self.photocell = state.sensor;
+        self.schedule(cx, belt);
+        self.state.send(state).await;
+        if let Some(on) = edge {
+            self.sensor.send(on).await;
+        }
+    }
+
+    fn schedule(&mut self, cx: &Context<Self>, belt: &Belt) {
+        self.generation += 1;
+        if let Some(t) = belt.next_event() {
+            cx.schedule_event(at(t), schedulable!(Self::wake), self.generation)
+                .expect("the belt's next event lies in the future");
+        }
     }
 }
 
@@ -160,20 +217,21 @@ struct ProtoBelt {
 impl ProtoModel for ProtoBelt {
     type Model = BeltModel;
 
-    fn build(self, _: &mut BuildContext<Self>) -> (BeltModel, Scene) {
-        (
-            BeltModel {
-                sensor: self.sensor,
-                state: self.state,
-            },
-            Scene::default(),
-        )
+    fn build(self, _: &mut BuildContext<Self>) -> (BeltModel, Belt) {
+        let model = BeltModel {
+            sensor: self.sensor,
+            state: self.state,
+            generation: 0,
+            photocell: false,
+        };
+        (model, Belt::default())
     }
 }
 
 /// The bench and its endpoints. States arrive in queues; the caller keeps the latest of each.
 pub struct Bench {
     simu: Simulation,
+    scan_ns: i64,
     press: EventId<(bool, bool)>,
     outlet: EventId<bool>,
     controller: EventQueueReader<ControllerState>,
@@ -188,6 +246,7 @@ impl Bench {
             jam: plc.bool_var("jam"),
             fault: None,
         };
+        let scan_ns = plc.scan_ns();
         let (plc_mbox, belt_mbox) = (Mailbox::new(), Mailbox::new());
         let (controller_sink, controller) = event_queue(SinkState::Enabled);
         let (belt_sink, belt) = event_queue(SinkState::Enabled);
@@ -219,23 +278,27 @@ impl Bench {
             .map_err(|e| e.to_string())?;
         let bench = Self {
             simu,
+            scan_ns,
             press,
             outlet,
             controller,
             belt,
         };
-        Ok((bench, first, BeltState::of(&Scene::default())))
+        Ok((bench, first, BeltState::of(&Belt::default(), 0)))
     }
 
-    pub fn time_ms(&self) -> i64 {
-        let elapsed = self.simu.time().duration_since(MonotonicTime::EPOCH);
-        i64::try_from(elapsed.as_millis()).expect("virtual time fits in i64 ms")
+    pub fn time_ns(&self) -> i64 {
+        ns(self.simu.time())
     }
 
-    /// Runs every scan up to `time_ms`.
-    pub fn advance_to(&mut self, time_ms: i64) -> Result<(), String> {
-        let deadline = MonotonicTime::EPOCH + Duration::from_millis(time_ms as u64);
-        self.simu.step_until(deadline).map_err(|e| e.to_string())
+    /// The program's scan period.
+    pub fn scan_ns(&self) -> i64 {
+        self.scan_ns
+    }
+
+    /// Runs every event up to `time_ns`.
+    pub fn advance_to(&mut self, time_ns: i64) -> Result<(), String> {
+        self.simu.step_until(at(time_ns)).map_err(|e| e.to_string())
     }
 
     pub fn press(&mut self, start: bool, stop: bool) -> Result<(), String> {

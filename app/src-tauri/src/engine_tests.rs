@@ -45,20 +45,38 @@ fn fingerprint(history: &[Snapshot]) -> u64 {
     hash
 }
 
-/// M1's results over 60 s, pinned before the engine moves onto nexosim (plan 2026-11-08-des-core-integration,
-/// task 2): any engine must reproduce every scan of both scenarios exactly.
+/// Every scan of both 60 s scenarios, pinned on the closed-form belt (spec 2026-11-08-analytic-belt-design.md). They
+/// were first pinned on M1's stepped belt; the analytic belt moved M1's edges 10 ms earlier, which M1's floating-point
+/// sum had delayed, and changed the last bits of the positions. Any engine change must reproduce these exactly.
 #[test]
-fn every_scan_of_the_m1_scenarios_is_reproduced() {
+fn every_scan_of_the_reference_scenarios_is_reproduced() {
     assert_eq!(
         fingerprint(&run_for(&mut started(false), 60)),
-        17_403_443_809_136_332_006,
+        12_522_855_918_933_968_443,
         "outlet free"
     );
     assert_eq!(
         fingerprint(&run_for(&mut started(true), 60)),
-        9_118_810_849_520_154_159,
+        2_752_821_455_799_209_310,
         "outlet blocked"
     );
+}
+
+/// The events at their closed-form times, an independent check of the pinned scans: the first part arrives at 10 ms
+/// with its front at 0.30 m, so at 0.5 m/s it reaches the photocell (2.70 m) at 4.81 s and leaves (3.00 m) at
+/// 5.41 s; the jam trips 2 s after the photocell is covered.
+#[test]
+fn the_events_fall_at_their_closed_form_times() {
+    let first =
+        |h: &[Snapshot], f: &dyn Fn(&Snapshot) -> bool| h.iter().find(|s| f(s)).map(|s| s.time_ms);
+    let free = run_for(&mut started(false), 60);
+    assert_eq!(first(&free, &|s| s.sensor), Some(4_810));
+    assert_eq!(first(&free, &|s| s.delivered == 1), Some(5_410));
+    assert_eq!(free.last().unwrap().delivered, 28);
+    let blocked = run_for(&mut started(true), 60);
+    assert_eq!(first(&blocked, &|s| s.sensor), Some(4_810));
+    assert_eq!(first(&blocked, &|s| s.jam == Some(true)), Some(6_810));
+    assert_eq!(first(&blocked, &|s| !s.motor), Some(6_810));
 }
 
 /// The same inputs at the same scans give the same states: Start, a blocked outlet, Stop, a freed outlet, Start.
@@ -127,6 +145,22 @@ fn each_scan_moves_the_belt_by_one_scan_of_virtual_time() {
         (front - (PART_LENGTH_M + travelled)).abs() < 1e-9,
         "front at {front} m"
     );
+}
+
+#[test]
+fn a_program_with_a_periodic_task_is_scanned_at_its_interval() {
+    let source = "PROGRAM Main\nVAR sensor : BOOL; start : BOOL; stop : BOOL; motor : BOOL; END_VAR\n\
+        motor := NOT motor;\nEND_PROGRAM\nCONFIGURATION Cell\nRESOURCE CPU ON PLC\n\
+        TASK Fast(INTERVAL := T#5ms, PRIORITY := 1);\nPROGRAM P WITH Fast : Main;\nEND_RESOURCE\nEND_CONFIGURATION\n";
+    let mut engine = Engine::new(Plc::build(source).unwrap()).unwrap();
+    let scans: Vec<(i64, bool)> = (0..4)
+        .map(|_| {
+            engine.step().unwrap();
+            let s = engine.snapshot();
+            (s.time_ms, s.motor)
+        })
+        .collect();
+    assert_eq!(scans, [(5, true), (10, false), (15, true), (20, false)]);
 }
 
 #[test]

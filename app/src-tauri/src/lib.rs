@@ -1,3 +1,4 @@
+pub mod belt;
 pub mod bench;
 pub mod commands;
 pub mod engine;
