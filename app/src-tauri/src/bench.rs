@@ -51,8 +51,10 @@ fn ns(t: MonotonicTime) -> i64 {
     i64::try_from(elapsed.as_nanos()).expect("virtual time fits in i64 ns")
 }
 
+/// A negative time is a bug: `as u64` would turn -1 ns into 584 years, which nexosim would then simulate scan by scan.
 fn at(t_ns: i64) -> MonotonicTime {
-    MonotonicTime::EPOCH + Duration::from_nanos(t_ns as u64)
+    let t_ns = u64::try_from(t_ns).expect("virtual time is never negative");
+    MonotonicTime::EPOCH + Duration::from_nanos(t_ns)
 }
 
 #[derive(Serialize, Deserialize)]

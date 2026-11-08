@@ -34,6 +34,8 @@ pub struct Belt {
     delivered: u64,
     next_id: u64,
     next_arrival: i64,
+    /// Events handled so far, to catch a belt that asks for absurdly many (see `wake`).
+    wakes: u64,
 }
 
 impl Default for Belt {
@@ -46,6 +48,7 @@ impl Default for Belt {
             delivered: 0,
             next_id: 1,
             next_arrival: FIRST_ARRIVAL_NS,
+            wakes: 0,
         }
     }
 }
@@ -133,6 +136,14 @@ impl Belt {
             self.next_event(),
             Some(t),
             "a wake-up at {t} that is not the belt's next event"
+        );
+        // About 2 events per simulated second on the free belt (7 196 in an hour, examples/belt_benchmark.rs). A belt
+        // asking for thousands per second is broken, and stops here rather than running for hours of wall time.
+        self.wakes += 1;
+        debug_assert!(
+            self.wakes <= 1_000 + 10_000 * (t / NS_PER_S) as u64,
+            "{} events by {t} ns",
+            self.wakes
         );
         self.rebase(t);
     }
