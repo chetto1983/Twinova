@@ -107,10 +107,16 @@ No implicit numeric coercion; no competing writers. Invalid binding prevents Run
 controller's process image, and the ST program declares the variable at it, as on a real PLC:
 `sensor_a AT %IX0.0 : BOOL;`, `divert AT %QX0.1 : BOOL;`.
 
-- **V1 types:** BOOL on a bit address (`%IX`, `%QX`); DINT and REAL on a double word (`%ID`, `%QD`). STRING has no
-  direct address and is not a v1 signal type.
-- **The editor proposes addresses** and the user may change them. Two signals whose addresses overlap (for example
-  `%IX4.0` and `%ID4`) are a validation error.
+- **V1 types:** BOOL on a bit address (`%IX`, `%QX`); DINT and REAL on a double word (`%ID`, `%QD`). The other
+  sizes work in truST (table below) and are enabled when a family needs them; `STRING[n]`, for example, suits a
+  barcode reader.
+- **The editor proposes addresses** and the user may change them. Twinova validates what truST does not (table
+  below): the address size must match the type, two signals must not overlap (for example `%IX4.0` and `%ID4`),
+  and an output has one writer.
+- **Per-instance addresses through `VAR_CONFIG`.** A component's ST function block declares its I/O with an
+  incomplete address (`x AT %I* : BOOL`), and the project's configuration assigns each instance its own address
+  (`P1.belt_a.run AT %QX0.0 : BOOL`). An address fixed inside a function block is shared by every instance, so
+  component definitions never contain one. An instance left unmapped fails the build.
 - **Bound variables are written only through their addresses.** The input image is copied into the variables at each
   scan, so a write by name to an `AT` variable is lost (measured below).
 - **M5** maps the same image to S7, Modbus or PLCSIM Advanced. Siemens images are big-endian, and truST's is
@@ -125,15 +131,40 @@ declared `AT` variables, wrote the input image with `Runtime::write_io`, ran a c
 | Question | Result |
 |---|---|
 | `AT %IX0.0 : BOOL` and `AT %QX0.0 : BOOL` in a `PROGRAM` | compile; `motor := sensor` follows `%IX0.0` to `%QX0.0` scan by scan |
-| DINT and REAL at `%ID`/`%QD` | the image is bit-string typed: writing `Value::DInt` to `%ID4` is `TypeMismatch`, `Value::DWord(41)` works and the program reads DINT 41; REAL travels as its IEEE-754 bits (3.0 in, 1.5 out) |
-| Image size | allocated from the declarations: 12 bytes each way for the probe |
-| Byte order | little-endian: DINT 41 is `[41, 0, 0, 0]`, REAL 3.0 is `[0, 0, 64, 64]` |
+| BYTE/SINT on `%IB`, WORD/INT/UINT on `%IW` | work; signed values travel as two's-complement bits (INT -5 is `Word(65531)`) |
+| DINT and REAL on `%ID`/`%QD` | the image is bit-string typed: `Value::DInt` on `%ID4` is `TypeMismatch`, `Value::DWord(41)` works and the program reads DINT 41; REAL travels as its IEEE-754 bits (3.0 in, 1.5 out) |
+| LREAL and LINT on `%IL`/`%QL` | work through `LWord` (2.5 in, 5.0 out; 41 in, 42 out) |
+| ARRAY and STRUCT at an address | work, laid out contiguously: `ARRAY[0..3] OF INT` at `%IW10` covers `%IW10`–`%IW16` |
+| STRING | plain `STRING` is refused at build ("requires STRING[n]"); `STRING[8]` at `%IB0` maps 8 raw bytes |
+| Memory area `%M` | `%MX`/`%MW` work |
+| `AT %IX1.0` fixed inside a function block, two instances | both instances read the same `%IX1.0` |
+| `AT %I*` in the function block, `VAR_CONFIG P1.d1.x AT %IX2.0` and `P1.d2.x AT %IX2.1` | each instance follows its own address, with or without `RESOURCE`/`TASK`; the resource-prefixed path `R.P1.d1.x` is not resolved; an unmapped `%I*` fails the build ("unresolved wildcard I/O bindings") |
+| Overlap: `%IX4.0` and `%IB4` | allowed; they alias the same byte, as on S7 |
+| Two variables at the same `%QX0.0` | compiles silently; the variable published last wins |
+| INT declared at a bit address, BOOL at a word address | accepted silently: truST does not check that size and type match |
+| An address beyond the declared image | `write_io` returns `InvalidIoAddress` |
+| Image size and byte order | allocated from the declarations; little-endian: DINT 41 is `[41, 0, 0, 0]`, REAL 3.0 is `[0, 0, 64, 64]` |
 | Write by name to an `AT` input | `try_set_input` returns `Ok`, but the next input sampling overwrites it from the image |
+| Harness access by address | `set_direct_input("%IX2.0", …)` and `get_direct_output("%QX0.0")` exist alongside `Runtime::write_io` and `io().read` |
 | Drivers already in truST | `io/` holds Modbus, MQTT, EtherCAT, GPIO and loopback drivers behind `IoDriver` (`read_inputs`/`write_outputs` on byte images): an inventory item for M5, not yet exercised |
 
-What this does not prove: `%IW`/`%IB` and other sizes, LREAL and 64-bit addresses, arrays or structures at addresses,
-`AT` in function block instances, and what truST does with overlapping declarations. Each is probed before it is
-enabled.
+The probes were throwaway integration tests in a worktree outside the repository, three runs on 2026-11-08. A
+`TASK`'s program runs only once its interval has elapsed (`advance_time`, as Twinova's scan does); a first run
+without it read as a failed mapping and was repeated.
+
+**Parameters reach the component's function block the same way.** The generated `VAR_CONFIG` gives each instance
+the initial values of its `VAR_INPUT` parameters. This was measured with two instances of one block:
+- REAL speeds of 0.5 and 2.0, and DINT limits of 5 (the default) and 9, were read back per instance.
+- A `TIME` delay of 200 ms drove one instance's `TON` on after 400 ms, while the other kept the 1 s default.
+- A parameter of the wrong type fails the build (`E201`, "VAR_CONFIG type 'DINT' does not match target type 'REAL'"),
+  and so does a parameter that does not exist (`E202`).
+
+Initial values only: a parameter edited in the inspector takes effect at the next Build, which the run lifecycle
+below already requires.
+
+What this does not prove: `VAR_CONFIG` paths into nested function blocks or arrays of instances (Twinova can name
+each instance at the top of the controller program instead), the build time of a large generated configuration,
+and any external driver.
 
 **Decision components** (diverter, turntable, later shuttle) are commanded by the PLC only in v1 (user,
 2026-11-08): the component executes the commanded output and reports its position. A component-internal routing
@@ -235,6 +266,12 @@ Two sensors drive the ST controller. Acceptance is not a successful render alone
 - 4.4–4.5: ship the first complete line vertically, then expand to the roadmap's remaining component families.
 - 4.6–4.8: external ST files, diagnostics and debugger work remain their own integration gates.
 
-Not yet measured: general parameter binding to the pinned VM, product spanning semantics, multi-file atomic
-saves, catalogue scale, multi-component performance and editing ergonomics. These are named implementation
-probes, not completed capabilities. This draft will absorb the live OIP findings before approval of 4.1.
+Measured for 4.1 (2026-11-08): signal binding by direct address, per-instance addresses and parameters through
+`VAR_CONFIG`, and the validation truST leaves to Twinova (see "Binding to the controller").
+
+Not yet measured, and owned by the phase that implements them, because each needs the implementation to exist:
+- product spanning semantics across two conveyors, and same-timestamp ordering with several components (4.3);
+- the multi-file atomic save (4.2);
+- catalogue scale, multi-component performance and editing ergonomics (4.4–4.5).
+
+These are named probes with their phase, not completed capabilities.
