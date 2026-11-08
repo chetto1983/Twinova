@@ -67,7 +67,27 @@ Frames/s counts the `requestAnimationFrame` callbacks over 10 s, in a separate r
 - **Disturbance**: the phases ran 09:13–10:13 UTC. A local E2E with its own app process ran for one minute at 09:22
   (idle phase), and a low-priority (`nice 19`) release build for 5 min at 09:47 (as-fast-as-possible phase).
 
-## What this does not prove
+## After the industrial view (`f65572f`, PR #22), 45 s per phase
+
+The 3D view gained the lighting rig, soft shadows (a 2048 × 2048 map) and the floor after Open Industry Project's.
+Same machine and software GL as above. Frames/s counts the `requestAnimationFrame` callbacks over 10 s, as before.
+
+| Phase | twinova | WebKitWebProcess | Frames/s, before → now | RSS WebKitWebProcess |
+|---|---|---|---|---|
+| Idle | 0.0 % | 0.0 % | 0 → 0 | 442 → 440 MB (396 before) |
+| Run ×1 | 5.4 % | 282 % | 25.8 → 23.1 | 447 → 477 MB |
+| As fast as possible | 39.0 % | 217 % | 16.8 → 17.1 | 478 → 466 MB |
+| Paused | 0.0 % | 0.5 % | 0 → 0 | 466 → 465 MB |
+
+- **Shadows cost about 10 % of the frames in Run ×1 here.** The UI's CPU did not change, because the software
+  rasteriser was already the limit. On a GPU the cost is expected to be smaller; that is a hypothesis.
+- **The UI starts 46 MB higher.** The shadow map is part of it, and the rest is not broken down. A 1024 × 1024 map is
+  the first lever if it matters.
+- **Idle and paused stay at zero**: rendering on demand holds with shadows.
+- **The as-fast-as-possible phase overlapped** with a `git push` hook compiling Rust, so its CPU figure is disturbed.
+- **The engine is unchanged**: 175 MB, flat.
+
+
 
 - **A machine with a GPU, and Windows (WebView2).** The rendering cost here is llvmpipe's. On a GPU, the gain in
   Run is the drop from 60 to about 30 frames per second, which is a hypothesis, not measured.
