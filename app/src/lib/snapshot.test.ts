@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mount, unmount } from "svelte";
+import App from "../App.svelte";
 import {
   BELT_LENGTH_M,
   formatSpeed,
@@ -9,6 +11,25 @@ import {
   PART_LENGTH_M,
   SPEEDS,
 } from "./snapshot";
+
+vi.mock("./SceneView.svelte", () => import("./__fixtures__/Empty.svelte"));
+vi.mock("./backend", () => ({
+  backend: {
+    defaultProgram: vi.fn().mockResolvedValue(""),
+    build: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn().mockResolvedValue(undefined),
+    run: vi.fn().mockResolvedValue(undefined),
+    step: vi.fn().mockResolvedValue(undefined),
+    reset: vi.fn().mockResolvedValue(undefined),
+    saveState: vi.fn().mockResolvedValue(undefined),
+    restoreState: vi.fn().mockResolvedValue(undefined),
+    press: vi.fn().mockResolvedValue(undefined),
+    setOutletBlocked: vi.fn().mockResolvedValue(undefined),
+  },
+  onSnapshot: vi.fn().mockResolvedValue(() => {}),
+  onStopped: vi.fn().mockResolvedValue(() => {}),
+  onEngineError: vi.fn().mockResolvedValue(() => {}),
+}));
 
 describe("formatTime", () => {
   it("shows minutes, seconds and hundredths", () => {
@@ -62,5 +83,25 @@ describe("formatSpeed", () => {
   it("offers real time and an unpaced run", () => {
     expect(SPEEDS).toContain(1);
     expect(SPEEDS.at(-1)).toBeNull();
+  });
+});
+
+describe("Twinova brand", () => {
+  let app: ReturnType<typeof mount> | undefined;
+
+  afterEach(() => {
+    if (app) unmount(app);
+    document.body.replaceChildren();
+    app = undefined;
+  });
+
+  it("renders the shared mark as a decorative image", () => {
+    app = mount(App, { target: document.body });
+    const mark = document.querySelector<HTMLImageElement>(".brand img");
+
+    expect(mark).toBeInstanceOf(HTMLImageElement);
+    expect(mark?.getAttribute("src")).toMatch(/^(?:data:image\/svg\+xml|.*twinova-mark\.svg)/);
+    expect(mark?.alt).toBe("");
+    expect(document.querySelector(".brand circle")).toBeNull();
   });
 });

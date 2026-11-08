@@ -63,4 +63,35 @@ assert.ok(colors.has("#8AB4F8"), "logo.svg is missing Aura blue");
 assert.ok(colors.has("#81C995"), "logo.svg is missing Aura green");
 assert.deepEqual([...colors].filter((color) => !allowedColors.has(color)), [], "logo.svg uses colors outside the approved palette");
 
+function normalizedGeometry(source) {
+  const geometryAttributes = [
+    "points",
+    "x1",
+    "y1",
+    "x2",
+    "y2",
+    "fill",
+    "stroke",
+    "stroke-width",
+    "stroke-linejoin",
+    "stroke-linecap",
+  ];
+  return [...source.matchAll(/<(polygon|line)\b([^>]*)\/?\s*>/gi)].map(([, tag, rawAttributes]) => {
+    const attributes = Object.fromEntries(
+      geometryAttributes.flatMap((name) => {
+        const match = rawAttributes.match(new RegExp(`\\b${name}=["']([^"']*)["']`, "i"));
+        return match ? [[name, name === "stroke" ? match[1].toLowerCase() : match[1]]] : [];
+      }),
+    );
+    return { tag: tag.toLowerCase(), attributes };
+  });
+}
+
+const uiSvg = readFileSync(required(join(repoRoot, "app", "src", "assets", "twinova-mark.svg")), "utf8");
+assert.deepEqual(
+  normalizedGeometry(uiSvg),
+  normalizedGeometry(svg),
+  "packaged and in-app logos must use identical geometry and paint",
+);
+
 console.log(`Brand assets verified: ${pngDimensions.size} PNGs, ICO, ICNS, SVG, and editable VectorCraft master.`);

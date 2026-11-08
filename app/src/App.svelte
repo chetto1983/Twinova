@@ -8,6 +8,7 @@
   import Editor from "./lib/Editor.svelte";
   import IoPanel from "./lib/IoPanel.svelte";
   import SceneView from "./lib/SceneView.svelte";
+  import twinovaMark from "./assets/twinova-mark.svg";
 
   let source = $state("");
   let snapshot = $state<Snapshot | null>(null);
@@ -70,7 +71,7 @@
 <div class="shell">
   <header class="top">
     <div class="brand">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="12" r="5" /><circle cx="15" cy="12" r="5" /></svg>
+      <img src={twinovaMark} alt="" />
       <span class="name">Twinova</span>
       <span class="muted">{m.app_tagline()}</span>
     </div>
@@ -162,12 +163,10 @@
     align-items: center;
     gap: 10px;
   }
-  .brand svg {
+  .brand img {
     width: 26px;
     height: 26px;
-    fill: none;
-    stroke: var(--color-ring);
-    stroke-width: 2;
+    object-fit: contain;
   }
   .name {
     font-family: var(--font-display);

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Twinova</title>
+  <g id="twinova-mark">
+    <polygon points="276,220 456,220 584,348 584,676 456,804 276,804 148,676 148,348" fill="none" stroke="#8ab4f8" stroke-width="112" stroke-linejoin="bevel"/>
+    <polygon points="568,220 748,220 876,348 876,676 748,804 568,804 440,676 440,348" fill="none" stroke="#81c995" stroke-width="112" stroke-linejoin="bevel"/>
+    <line x1="456" y1="220" x2="584" y2="348" fill="none" stroke="#8ab4f8" stroke-width="112" stroke-linejoin="bevel"/>
+  </g>
+</svg>

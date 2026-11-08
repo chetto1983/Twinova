@@ -4,6 +4,8 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 
 // Tauri expects a fixed port and must see Rust compile errors in the terminal.
 export default defineConfig({
+  // Component tests run in Happy DOM and need Svelte's client entrypoint rather than its SSR fallback.
+  resolve: { conditions: ["browser"] },
   plugins: [
     paraglideVitePlugin({
       project: "./project.inlang",
