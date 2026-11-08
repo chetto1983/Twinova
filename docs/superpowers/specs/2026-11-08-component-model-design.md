@@ -1,7 +1,9 @@
 # M4.1 — Component model and editor foundation
 
-Status: **draft for technical review**, 2026-11-08. The user asked to start the recommended catalogue-first
-direction, then requested a live exploration of Open Industry Project before finalising M4.
+Status: **draft for approval**, 2026-11-08. The user asked to start the recommended catalogue-first
+direction, then requested a live exploration of Open Industry Project before finalising M4. Three decisions of
+2026-11-08 are recorded below: decisions are commanded by the PLC, signals bind to IEC direct addresses
+(measured on the pinned truST), and the document is Y up.
 This document records that direction and implementation proposals; it does not claim that M4 functionality exists.
 
 ## Intent and boundaries
@@ -21,6 +23,8 @@ silently run an unimplemented behaviour: a required unsupported capability preve
 ## Evidence and build/reuse inventory
 
 - [Research 12](../../research/12-m4-componenti-editor-opensource.md) records exact source revisions, licences and files read.
+- [Research 11](../../research/11-ecatalog-componenti.md) surveys the public Visual Components eCatalog: families,
+  variants and the parameters and signals named publicly (clean-room).
 - [Live OIP study](../../research/13-oip-app-comportamenti-live.md) records catalogue/inspector capture, actual editing,
   project round-trip, ST diagnostics, binding/force/release and Ladder authoring, with explicit evidence limits.
 - Existing `belt.rs` owns integer-nanometre analytic motion; `bench.rs` currently builds one belt and one PLC.
@@ -70,7 +74,8 @@ already placed groups automatically.
 
 ## Coordinates and parameters
 
-- Right-handed coordinates, Y up; metres and radians in document geometry, mm and degrees available in the UI.
+- Right-handed coordinates, Y up (user, 2026-11-08): the convention of glTF and three.js, so assets and the view
+  need no conversion. The UI may show Z-up coordinates to CAD users; importing CAD (STEP) converts once, later. Metres and radians in document geometry, mm and degrees available in the UI.
 - Poses are local to the parent. Matrices are derived; do not store competing local and world transforms.
 - A transport path is defined in component-local coordinates, independently of the mesh origin.
 - Parameters carry type, unit, default, valid range/choices and display grouping. Reject non-finite values,
@@ -95,9 +100,44 @@ multiple output ports, not an ambiguous multi-peer output. Unconnected exits blo
 explicit sink; products must never disappear merely because a connection is missing.
 
 **Signals:** IEC type, component-relative direction, initial value and endpoint ID. A sensor's output is a PLC
-input; an actuator's input is a PLC output. The editor must label that perspective. Initial binding types are
-BOOL, DINT, REAL and STRING; implementation must verify their exact truST representations before enabling them.
+input; an actuator's input is a PLC output. The editor must label that perspective.
 No implicit numeric coercion; no competing writers. Invalid binding prevents Run with a path to the offending endpoint.
+
+**Binding to the controller by IEC direct address** (user, 2026-11-08). Each bound signal has an address in the
+controller's process image, and the ST program declares the variable at it, as on a real PLC:
+`sensor_a AT %IX0.0 : BOOL;`, `divert AT %QX0.1 : BOOL;`.
+
+- **V1 types:** BOOL on a bit address (`%IX`, `%QX`); DINT and REAL on a double word (`%ID`, `%QD`). STRING has no
+  direct address and is not a v1 signal type.
+- **The editor proposes addresses** and the user may change them. Two signals whose addresses overlap (for example
+  `%IX4.0` and `%ID4`) are a validation error.
+- **Bound variables are written only through their addresses.** The input image is copied into the variables at each
+  scan, so a write by name to an `AT` variable is lost (measured below).
+- **M5** maps the same image to S7, Modbus or PLCSIM Advanced. Siemens images are big-endian, and truST's is
+  little-endian (measured below), so the M5 driver converts the byte order. The document stores addresses, not bytes.
+- **The M3 demo** binds by name (`sensor`, `start`, `stop`, `motor`). It is migrated to addresses when 4.3
+  generalises the bench; until then it keeps running unchanged.
+
+Measured on truST `6405915` (2026-11-08), through the `TestHarness` that Twinova uses: a throwaway integration test
+declared `AT` variables, wrote the input image with `Runtime::write_io`, ran a cycle, and read the output image with
+`runtime().io().read`.
+
+| Question | Result |
+|---|---|
+| `AT %IX0.0 : BOOL` and `AT %QX0.0 : BOOL` in a `PROGRAM` | compile; `motor := sensor` follows `%IX0.0` to `%QX0.0` scan by scan |
+| DINT and REAL at `%ID`/`%QD` | the image is bit-string typed: writing `Value::DInt` to `%ID4` is `TypeMismatch`, `Value::DWord(41)` works and the program reads DINT 41; REAL travels as its IEEE-754 bits (3.0 in, 1.5 out) |
+| Image size | allocated from the declarations: 12 bytes each way for the probe |
+| Byte order | little-endian: DINT 41 is `[41, 0, 0, 0]`, REAL 3.0 is `[0, 0, 64, 64]` |
+| Write by name to an `AT` input | `try_set_input` returns `Ok`, but the next input sampling overwrites it from the image |
+| Drivers already in truST | `io/` holds Modbus, MQTT, EtherCAT, GPIO and loopback drivers behind `IoDriver` (`read_inputs`/`write_outputs` on byte images): an inventory item for M5, not yet exercised |
+
+What this does not prove: `%IW`/`%IB` and other sizes, LREAL and 64-bit addresses, arrays or structures at addresses,
+`AT` in function block instances, and what truST does with overlapping declarations. Each is probed before it is
+enabled.
+
+**Decision components** (diverter, turntable, later shuttle) are commanded by the PLC only in v1 (user,
+2026-11-08): the component executes the commanded output and reports its position. A component-internal routing
+rule, as some commercial catalogues offer, is later work and is added without changing existing documents.
 
 A geometric snap may propose a transport connection, but only after compatibility validation and with a visible
 result. Two touching meshes alone do not establish a signal or material-flow connection.
@@ -153,6 +193,23 @@ assets relative to the project and validate paths; missing files must produce ac
 Open into a candidate document, validate completely, then replace the active document. Save through a temporary
 file/validated commit procedure appropriate to the target platform. A failed save cannot corrupt the previous one.
 The exact manifest and atomic multi-file save protocol belong to 4.2 and require a round-trip/failure probe.
+
+## First acceptance families
+
+The minimal set for the first acceptance scene, derived from research 11 §7 and from M3's belt. Units are those of
+the document; addresses are examples the editor would propose.
+
+| Family | Parameters | Signals (direction seen from the PLC) | Material-flow interfaces |
+|---|---|---|---|
+| Source | product type, interval (s), first arrival (s), maximum count (0 = unlimited) | none in v1 | one output |
+| Belt | length, width, height of the top (m), speed (m/s) | input `running` (BOOL); output `run` (BOOL) | one input, one output |
+| Diverter | length, width (m), switch time (s), default output | output `divert` (BOOL); input `in_position` (BOOL) | one input, two outputs |
+| Diffuse sensor | position along the host belt (m), range (m) | input `detected` (BOOL) | none; mounted on a belt |
+| Sink | none | input `count` (DINT) | one input |
+
+A belt's `run` is the actuator command (`%QX`), and its `running` the feedback (`%IX`). The sink's counter is a
+DINT on a double word (`%ID`), which exercises the measured DWORD path. Through-beam, colour and barcode sensors,
+the stopper, pusher and turntable belong to 4.4's later families.
 
 ## First acceptance scene and proof obligations
 
