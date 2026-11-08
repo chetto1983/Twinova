@@ -140,11 +140,24 @@ the active document and last saved project unchanged; exact file transaction fol
 
 ## Task 4 — Visible project round-trip
 
-- [ ] Mount the project panel and exercise open/cancel/error/status interactions with the actual command contract.
-- [ ] Render the validated scene with built-in generators and glTF loader. Use explicit placeholders for unsupported
+- [x] Mount the project panel and exercise open/cancel/error/status interactions with the actual command contract.
+- [x] Render the validated scene with built-in generators and glTF loader. Use explicit placeholders for unsupported
   visuals and explain why unsupported runtime capabilities disable Run.
-- [ ] Keep the M3 demo path runnable and covered by the existing E2E. Do not enable arbitrary scene simulation yet.
-- [ ] Run TypeScript/Svelte gates, translations, coverage and production build. Commit.
+- [x] Keep the M3 demo path runnable and covered by the existing E2E. Do not enable arbitrary scene simulation yet.
+- [x] Run TypeScript/Svelte gates, translations, coverage and production build. Commit.
+
+- Delivered (2026-11-08):
+  - **Project button and menu** (`ProjectMenu.svelte`), after OIP's (research 13, PRJ-01). Dialogs come from
+    `tauri-plugin-dialog` 2.8.4 (user's choice).
+  - **Scene tree** (`SceneTree.svelte`) and a read-only **inspector** (`Inspector.svelte`) that shows defaults,
+    overrides, and each signal's address with its direction and type.
+  - **3D view of the project** (`ProjectScene.svelte`). It draws each family's stand-in sized from its parameters
+    (`project.ts`, `shapeOf`), and frees the GPU objects at every rebuild.
+  - **`Viewport.svelte`**, shared with the M3 demo, now holds the renderer, the controls and on-demand rendering.
+  - **Euler angles** are shown in the order YXZ, so a rotation about Y, the common turn on the floor, stays regular.
+  - **Not run:** an opened project says so in a status line, and the demo's controls hide.
+  - **Checks:** frontend coverage 100 %; Stryker on `project.ts`: 162 killed, 2 ignored, one equivalent boundary,
+    with the reason in the code.
 
 ## Task 5 — Native acceptance and handoff
 

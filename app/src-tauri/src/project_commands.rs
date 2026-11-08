@@ -7,9 +7,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use serde::Serialize;
+use std::collections::BTreeMap;
 use tauri::State;
 use twinova_project::archive::{export_archive, import_archive};
-use twinova_project::model::Instance;
+use twinova_project::model::{Definition, Instance};
 use twinova_project::storage::{open_folder, save_folder};
 use twinova_project::{Opened, Project};
 
@@ -30,6 +31,8 @@ pub struct ProjectView {
     pub name: String,
     pub folder: Option<String>,
     pub instances: Vec<Instance>,
+    /// The pinned definitions by `id@version`, for units, defaults, ranges and signal directions.
+    pub definitions: BTreeMap<String, Definition>,
     /// Files changed outside Twinova since its last save (git, an editor); they were validated like any file.
     pub changed_outside: Vec<String>,
     /// An interrupted save was rolled back while opening.
@@ -41,6 +44,7 @@ fn view(current: &Current, changed_outside: Vec<String>, recovered: bool) -> Pro
         name: current.project.name.clone(),
         folder: current.folder.as_ref().map(|f| f.display().to_string()),
         instances: current.project.scene.instances.clone(),
+        definitions: current.project.definitions.clone(),
         changed_outside,
         recovered,
     }

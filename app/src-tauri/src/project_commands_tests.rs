@@ -27,6 +27,10 @@ fn a_project_opens_into_a_view_of_its_instances() {
     let view = open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
     assert_eq!(view.name, "Two belts and a diverter");
     assert_eq!(view.instances.len(), 8);
+    assert_eq!(
+        view.definitions["twinova.belt@1"].parameters[0].name,
+        "length"
+    );
     assert!(
         view.instances
             .iter()

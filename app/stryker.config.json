@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "vitest",
-  "mutate": ["src/lib/snapshot.ts"],
+  "mutate": ["src/lib/snapshot.ts", "src/lib/project.ts"],
   "reporters": ["clear-text", "progress", "json"],
   "thresholds": {
     "high": 90,
@@ -9,7 +9,17 @@
     "break": 70
   },
   "tempDirName": ".stryker-tmp",
-  "ignorePatterns": ["src-tauri", "dist", "coverage", "reports"],
+  "ignorePatterns": [
+    "src-tauri/*",
+    "!src-tauri/project",
+    "src-tauri/project/*",
+    "!src-tauri/project/tests",
+    "src-tauri/project/tests/*",
+    "!src-tauri/project/tests/fixtures",
+    "dist",
+    "coverage",
+    "reports"
+  ],
   "coverageAnalysis": "perTest",
   "jsonReporter": {
     "fileName": "reports/mutation/mutation.json"

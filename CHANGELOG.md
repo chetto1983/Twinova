@@ -29,4 +29,11 @@ and build inside the app, on Windows and Linux.
 - The Twinova mark: application icons on every platform, and the logo and wordmark in the app's
   header, legible in both themes.
 - The 3D view draws only when something changes, so an idle or paused app uses no CPU to render it.
+- Projects (ROADMAP 4.2): open a project folder, save it, save it to another folder, export it as one archive and
+  import one, through the system dialogs.
+  - An opened project shows its scene tree, a 3D view of its components sized from their parameters, and a read-only
+    inspector with each signal's IEC address.
+  - A save interrupted by a crash is rolled back when the project is next opened. Files changed outside Twinova are
+    opened and listed.
+  - Opened projects cannot run yet; the M3 demo still runs.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

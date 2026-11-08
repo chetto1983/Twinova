@@ -9,6 +9,7 @@ pub mod webview_locale;
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             #[cfg(target_os = "linux")]
             webview_locale::apply(app)?;

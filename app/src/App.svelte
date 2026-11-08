@@ -6,8 +6,13 @@
   import { backend, onEngineError, onSnapshot, onStopped } from "./lib/backend";
   import { SPEEDS, formatSpeed, type Snapshot } from "./lib/snapshot";
   import Editor from "./lib/Editor.svelte";
+  import Inspector from "./lib/Inspector.svelte";
   import IoPanel from "./lib/IoPanel.svelte";
+  import ProjectMenu from "./lib/ProjectMenu.svelte";
+  import ProjectScene from "./lib/ProjectScene.svelte";
+  import SceneTree from "./lib/SceneTree.svelte";
   import SceneView from "./lib/SceneView.svelte";
+  import type { ProjectView } from "./lib/project";
   import twinovaMark from "./assets/twinova-mark.svg";
 
   let source = $state("");
@@ -17,7 +22,22 @@
   let running = $state(false);
   let speed = $state<number | null>(1);
   let theme = $state(readPreference("theme") === "light" ? "light" : "dark");
+  /** An opened project is shown, not run (ROADMAP 4.2); null shows the M3 demo. */
+  let project = $state<ProjectView | null>(null);
+  let selected = $state<string | null>(null);
+  let notice = $state("");
 
+  async function showProject(next: ProjectView | null): Promise<void> {
+    if (running) await toggleRun();
+    project = next;
+    selected = null;
+    notice = next?.recovered ? m.project_recovered() : "";
+    if (next && next.changed_outside.length > 0) {
+      notice = [notice, m.project_changed_outside({ files: next.changed_outside.join(", ") })]
+        .filter(Boolean)
+        .join(" ");
+    }
+  }
   $effect(() => {
     document.documentElement.dataset.theme = theme;
     writePreference("theme", theme);
@@ -79,49 +99,56 @@
           >Twinova</span
         >
       </span>
-      <span class="muted">{m.app_tagline()}</span>
+      <ProjectMenu
+        {project}
+        onChange={showProject}
+        onNotice={(text) => (notice = text)}
+        onError={(text) => (error = text)}
+      />
     </div>
     <div class="row actions">
-      <button class="btn" onclick={build}>{m.build()}</button>
-      <button class="btn primary" disabled={status !== "ok"} onclick={toggleRun}>
-        {running ? m.pause() : m.run()}
-      </button>
-      <select class="speed" aria-label={m.speed()} bind:value={speed} disabled={running}>
-        {#each SPEEDS as option (option)}
-          <option value={option}>{formatSpeed(option, currentLocale(), m.speed_max())}</option>
-        {/each}
-      </select>
-      <button
-        class="btn"
-        disabled={status !== "ok"}
-        onclick={() => replace(backend.step).then(() => (running = false))}
-      >
-        {m.step()}
-      </button>
-      <button
-        class="btn"
-        disabled={status !== "ok"}
-        onclick={() => replace(backend.reset).then(() => (running = false))}
-      >
-        {m.reset()}
-      </button>
-      <button class="btn" disabled={status !== "ok"} onclick={() => attempt(backend.saveState)}>
-        {m.save_state()}
-      </button>
-      <button
-        class="btn"
-        disabled={status !== "ok"}
-        onclick={() => replace(backend.restoreState).then(() => (running = false))}
-      >
-        {m.restore_state()}
-      </button>
-      <span class="sep"></span>
-      <button class="btn" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(true, false))}>
-        {m.start()}
-      </button>
-      <button class="btn danger" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(false, true))}>
-        {m.stop()}
-      </button>
+      {#if !project}
+        <button class="btn" onclick={build}>{m.build()}</button>
+        <button class="btn primary" disabled={status !== "ok"} onclick={toggleRun}>
+          {running ? m.pause() : m.run()}
+        </button>
+        <select class="speed" aria-label={m.speed()} bind:value={speed} disabled={running}>
+          {#each SPEEDS as option (option)}
+            <option value={option}>{formatSpeed(option, currentLocale(), m.speed_max())}</option>
+          {/each}
+        </select>
+        <button
+          class="btn"
+          disabled={status !== "ok"}
+          onclick={() => replace(backend.step).then(() => (running = false))}
+        >
+          {m.step()}
+        </button>
+        <button
+          class="btn"
+          disabled={status !== "ok"}
+          onclick={() => replace(backend.reset).then(() => (running = false))}
+        >
+          {m.reset()}
+        </button>
+        <button class="btn" disabled={status !== "ok"} onclick={() => attempt(backend.saveState)}>
+          {m.save_state()}
+        </button>
+        <button
+          class="btn"
+          disabled={status !== "ok"}
+          onclick={() => replace(backend.restoreState).then(() => (running = false))}
+        >
+          {m.restore_state()}
+        </button>
+        <span class="sep"></span>
+        <button class="btn" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(true, false))}>
+          {m.start()}
+        </button>
+        <button class="btn danger" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(false, true))}>
+          {m.stop()}
+        </button>
+      {/if}
     </div>
     <div class="row">
       <select
@@ -141,20 +168,37 @@
       </button>
     </div>
   </header>
-  <main class="grid">
-    <Editor bind:source {status} {error} />
-    <section class="panel stage">
-      <header class="panel-head"><h2 class="panel-title">{m.scene_title()}</h2></header>
-      <div class="stage-body"><SceneView {snapshot} {theme} /></div>
-    </section>
-    <IoPanel {snapshot} onOutletBlocked={(b) => replace(() => backend.setOutletBlocked(b))} />
-  </main>
+  {#if project}
+    <p class="notice" role="status">
+      {m.project_not_runnable()}
+      {#if notice}<br />{notice}{/if}
+      {#if error}<br /><span class="err">{error}</span>{/if}
+    </p>
+    <main class="grid">
+      <SceneTree {project} bind:selected />
+      <section class="panel stage">
+        <header class="panel-head"><h2 class="panel-title">{project.name}</h2></header>
+        <div class="stage-body"><ProjectScene {project} {selected} {theme} /></div>
+      </section>
+      <Inspector {project} {selected} />
+    </main>
+  {:else}
+    {#if notice}<p class="notice" role="status">{notice}</p>{/if}
+    <main class="grid">
+      <Editor bind:source {status} {error} />
+      <section class="panel stage">
+        <header class="panel-head"><h2 class="panel-title">{m.scene_title()}</h2></header>
+        <div class="stage-body"><SceneView {snapshot} {theme} /></div>
+      </section>
+      <IoPanel {snapshot} onOutletBlocked={(b) => replace(() => backend.setOutletBlocked(b))} />
+    </main>
+  {/if}
 </div>
 
 <style>
   .shell {
     display: grid;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto 1fr;
     height: 100%;
     gap: 12px;
     padding: 12px;
@@ -210,6 +254,17 @@
     grid-template-columns: minmax(320px, 1fr) minmax(420px, 2fr) minmax(240px, 0.8fr);
     gap: 12px;
     min-height: 0;
+  }
+  .notice {
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-2);
+    color: var(--color-text-muted);
+  }
+  .err {
+    color: var(--color-danger);
   }
   .stage {
     display: flex;
