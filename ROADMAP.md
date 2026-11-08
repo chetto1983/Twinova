@@ -73,20 +73,20 @@ Snapshots currently use one in-memory replay slot, for the same program. Externa
 The core of the product [02a, 06 #1–2].
 
 Started 2026-11-08: catalogue-first direction, source research and live Open Industry Project exploration.
-[M4.1 model draft](docs/superpowers/specs/2026-11-08-component-model-design.md) and
-[M4.2 planning draft](docs/superpowers/plans/2026-11-08-component-format.md) are recorded.
-The model is not yet an implemented format; 4.1 approval and the implementation acceptance below remain open.
+The [M4.1 model](docs/superpowers/specs/2026-11-08-component-model-design.md) is approved, and the
+[M4.2 planning draft](docs/superpowers/plans/2026-11-08-component-format.md) is recorded.
+The model is not yet an implemented format; the implementation acceptance from 4.2 on remains open.
 
-| Phase | Deliverable | Acceptance |
-|---|---|---|
-| 4.1 | Spec of the component model: node tree, joints, properties, typed signals, behaviours, interfaces | spec approved |
-| 4.2 | Open scene and component format: JSON plus glTF geometry, versioned, with migrations | round-trip tests; a corpus of saved scenes opens |
-| 4.3 | Behaviours written as ST function blocks bound to component signals | a component's logic edited and rebuilt in the app |
-| 4.4 | Library v1: belt, roller and curved conveyors, diverter, stopper, pusher, turntable, sensors (diffuse, through-beam, colour, barcode), creator and sink | each component has an E2E scene |
-| 4.5 | Editor: catalogue, drag and drop, snapping by interfaces, move/rotate, signal wiring, undo | build a two-conveyor line with a diverter by hand |
-| 4.6 | **ST in VS Code**: the scene's programs are `.st` files in a project folder, rebuilt on save; VS Code with truST's `trust-lsp` extension (MIT OR Apache-2.0) is the external editor | edit in VS Code, save, the running scene picks up the new program |
-| 4.7 | **In-app ST editor** for who has no VS Code (classrooms): Monaco with diagnostics, hover and completion from truST's `BrowserAnalysisEngine` (`trust-wasm-analysis`, already in the dependency tree) through Tauri commands | the same diagnostics as `trust-lsp` on the default program and on a broken one; Monaco measured on WebKitGTK; the frontend `rev` moved as the 2.6 policy says |
-| 4.8 | Spike: truST's runtime control endpoint on Twinova's simulated PLC, so VS Code's Live Values and debugger attach to the scene | decision recorded: protocol inventory, and whether it fits the virtual-time harness |
+| Phase | Deliverable | Acceptance | Status |
+|---|---|---|---|
+| 4.1 | Spec of the component model: node tree, joints, properties, typed signals, behaviours, interfaces | spec approved | ✅ spec approved (user, 2026-11-08): `2026-11-08-component-model-design`; signals bind to IEC direct addresses, per instance through `VAR_CONFIG`, measured on the pinned truST (`verification/2026-11-08-component-model.md`) |
+| 4.2 | Open scene and component format: JSON plus glTF geometry, versioned, with migrations | round-trip tests; a corpus of saved scenes opens | ⬜ |
+| 4.3 | Behaviours written as ST function blocks bound to component signals | a component's logic edited and rebuilt in the app | ⬜ |
+| 4.4 | Library v1: belt, roller and curved conveyors, diverter, stopper, pusher, turntable, sensors (diffuse, through-beam, colour, barcode), creator and sink | each component has an E2E scene | ⬜ |
+| 4.5 | Editor: catalogue, drag and drop, snapping by interfaces, move/rotate, signal wiring, undo | build a two-conveyor line with a diverter by hand | ⬜ |
+| 4.6 | **ST in VS Code**: the scene's programs are `.st` files in a project folder, rebuilt on save; VS Code with truST's `trust-lsp` extension (MIT OR Apache-2.0) is the external editor | edit in VS Code, save, the running scene picks up the new program | ⬜ |
+| 4.7 | **In-app ST editor** for who has no VS Code (classrooms): Monaco with diagnostics, hover and completion from truST's `BrowserAnalysisEngine` (`trust-wasm-analysis`, already in the dependency tree) through Tauri commands | the same diagnostics as `trust-lsp` on the default program and on a broken one; Monaco measured on WebKitGTK; the frontend `rev` moved as the 2.6 policy says | ⬜ |
+| 4.8 | Spike: truST's runtime control endpoint on Twinova's simulated PLC, so VS Code's Live Values and debugger attach to the scene | decision recorded: protocol inventory, and whether it fits the virtual-time harness | ⬜ |
 
 ## M5 — PLC in the loop ⬜
 
