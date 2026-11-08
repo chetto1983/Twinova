@@ -104,6 +104,30 @@ fn a_blocked_outlet_fills_the_belt_nose_to_tail() {
 }
 
 #[test]
+fn a_due_part_waits_until_the_entry_is_free() {
+    // The first part stops 5 mm past the entry; the second is due at 2.01 s, but the entry only frees once the belt
+    // restarts at 2.5 s and the first front reaches 0.60 m: 295 mm at 0.5 m/s later, at 3.09 s.
+    let changes = [
+        (20 * MS, Change::Motor(false)),
+        (2_500 * MS, Change::Motor(true)),
+    ];
+    let parts_at = |until: i64| {
+        let mut belt = running();
+        drive(&mut belt, &changes, until);
+        belt.parts_at(until).len()
+    };
+    assert_eq!((parts_at(3_090 * MS - 1), parts_at(3_090 * MS)), (1, 2));
+}
+
+#[test]
+fn motor_is_tells_the_motor_state() {
+    let mut belt = Belt::default();
+    assert!(belt.motor_is(false) && !belt.motor_is(true));
+    belt.set_motor(0, true);
+    assert!(belt.motor_is(true) && !belt.motor_is(false));
+}
+
+#[test]
 fn a_stopped_belt_keeps_its_parts_and_admits_no_new_one() {
     let mut belt = Belt::default();
     drive(&mut belt, &[], 30 * S);

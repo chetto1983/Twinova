@@ -199,6 +199,21 @@ fn catch_up_scales_the_wall_clock() {
 }
 
 #[test]
+fn catch_up_counts_from_the_virtual_time_run_started_at() {
+    let mut engine = started(false);
+    run_for(&mut engine, 1);
+    engine.catch_up(1_000, 500, 2.0).unwrap();
+    assert_eq!((engine.time_ms(), engine.lag_ms), (2_000, 0));
+}
+
+#[test]
+fn parts_arrive_on_a_line_that_was_never_started() {
+    let mut engine = Engine::new(Plc::build(DEFAULT_PROGRAM).unwrap()).unwrap();
+    run_for(&mut engine, 1);
+    assert_eq!(engine.snapshot().parts.len(), 1);
+}
+
+#[test]
 fn the_motor_waits_for_start() {
     let mut engine = Engine::new(Plc::build(DEFAULT_PROGRAM).unwrap()).unwrap();
     let history = run_for(&mut engine, 5);
