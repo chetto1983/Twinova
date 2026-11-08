@@ -1,6 +1,6 @@
 # Spec: the project format (ROADMAP 4.2)
 
-Date: 2026-11-08. Status: **decided, to be measured** (user, 2026-11-08: a folder plus an archive; the manifest is
+Date: 2026-11-08. Status: **decided; Linux measured; schema frozen (annex)** (user, 2026-11-08: a folder plus an archive; the manifest is
 written last and checks the other files by hash). The concrete schema is an annex that Task 1 of the plan writes
 after the probes below.
 
@@ -96,6 +96,144 @@ Not measured, because this environment is Linux:
 
 Paths (traversal, absolute, drive letters, backslashes) are validation rules, and are tested with the codec in
 Task 2.
+
+## Annex: schema, format version 1
+
+Frozen for 4.2 on 2026-11-08. Names are snake_case. Lengths are metres and angles are radians, as `f64` written
+with `serde_json`'s `float_roundtrip`. Rotations are unit quaternions `[x, y, z, w]`, the glTF convention. Every
+identifier matches `^[a-z][a-z0-9_]*$`, and a definition id is a dotted name such as `twinova.belt`.
+
+### `twinova.json`, the manifest
+
+```json
+{
+  "format": "twinova-project",
+  "version": 1,
+  "name": "Two belts and a diverter",
+  "app": "0.1.0",
+  "scene": "scene.json",
+  "components": ["components/twinova.belt@1.json", "components/twinova.diverter@1.json"],
+  "program": ["plc/Main.st"],
+  "files": {
+    "scene.json": "<sha256 hex>",
+    "components/twinova.belt@1.json": "<sha256 hex>",
+    "components/twinova.diverter@1.json": "<sha256 hex>",
+    "plc/Main.st": "<sha256 hex>"
+  }
+}
+```
+
+- `files` lists every file of the project, and only those. `scene`, `components`, `program` and assets name files
+  listed there.
+- Paths are relative, use `/`, and contain no `..`, no drive letter and no leading `/`.
+- Two paths that differ only in case are an error, because they collide on Windows.
+- `version` greater than 1 is refused, with both versions named in the diagnostic.
+
+### `components/<id>@<version>.json`, a pinned definition
+
+```json
+{
+  "id": "twinova.belt",
+  "version": 1,
+  "origin": { "app": "0.1.0" },
+  "generator": "twinova.belt/1",
+  "parameters": [
+    { "name": "length", "type": "REAL", "unit": "m", "default": 3.0, "min": 0.3, "max": 50.0 },
+    { "name": "speed", "type": "REAL", "unit": "m/s", "default": 0.5, "min": 0.0, "max": 5.0 }
+  ],
+  "signals": [
+    { "name": "run", "type": "BOOL", "direction": "plc_output" },
+    { "name": "running", "type": "BOOL", "direction": "plc_input" }
+  ],
+  "ports": [
+    { "name": "in", "kind": "flow_in" },
+    { "name": "out", "kind": "flow_out" },
+    { "name": "rail", "kind": "mount_host" }
+  ],
+  "nodes": [ { "id": "root", "parent": null, "position": [0, 0, 0], "rotation": [0, 0, 0, 1], "asset": null } ],
+  "joints": [],
+  "behaviour": null
+}
+```
+
+- **`generator`** names a native, versioned family generator. It builds the geometry, the frames of the ports and the
+  transport path from the parameters. An unknown generator keeps the document and shows a bounding placeholder, but
+  blocks Run.
+- **Types.** `parameters[].type` is an IEC type. 4.2 accepts REAL, DINT, BOOL and TIME; TIME is written as integer
+  nanoseconds. `signals[].type` is BOOL, DINT or REAL, as decided in M4.1.
+- **`direction`** is seen from the PLC: `plc_input` is a component output, read by the program.
+- **`nodes`** form a tree rooted in one node with `parent: null`. A cycle is an error. `asset` names a listed
+  `assets/<sha256>.glb`, or is `null`.
+- **`joints`** are `{ "id", "kind": "fixed" | "revolute" | "prismatic", "parent", "child", "axis", "limits" }`, by
+  node id.
+- **`behaviour`** is `null` for a built-in whose logic is native. Otherwise it is `{ "function_block": "<name>" }`,
+  a block in the project's ST sources, whose I/O uses `AT %I*`/`%Q*` (4.3).
+
+### `scene.json`
+
+```json
+{
+  "instances": [
+    {
+      "id": "belt_a", "name": "Belt A", "definition": "twinova.belt@1",
+      "position": [0, 0, 0], "rotation": [0, 0, 0, 1],
+      "parameters": { "length": 3.0 },
+      "signals": { "run": "%QX0.0", "running": "%IX0.0" }
+    }
+  ],
+  "groups": [ { "id": "infeed", "name": "Infeed", "position": [0, 0, 0], "rotation": [0, 0, 0, 1], "children": ["belt_a"] } ],
+  "connections": [
+    { "kind": "flow", "from": ["source", "out"], "to": ["belt_a", "in"] },
+    { "kind": "mount", "host": ["belt_a", "rail"], "device": ["sensor_a", "mount"], "position": [2.7, 0, 0], "rotation": [0, 0, 0, 1] }
+  ],
+  "controller": { "program_instance": "p1" }
+}
+```
+
+- **`parameters`** holds overrides only. An override of a parameter the definition lacks is a diagnostic, never
+  silently dropped. A value out of range, or not finite, is an error.
+- **`signals`** maps each of the definition's signals to an IEC direct address. Every required signal must be bound
+  before Run.
+- **Address rules.** The size must match the type: `X` for BOOL, `D` for DINT and REAL. Addresses must not overlap,
+  and the direction must match the area (`%I` for `plc_input`, `%Q` for `plc_output`).
+- **Connections** reference `[instance, port]`, by id. A flow `from` is a `flow_out` and its `to` a `flow_in`; each
+  endpoint has at most one peer.
+- **`groups`** hold instance ids. A group id is unique among instances and groups; an instance belongs to at most one
+  group.
+- **`controller.program_instance`** is the name the generated `CONFIGURATION` gives the program. Build writes
+  `VAR_CONFIG <program_instance>.<instance>.<signal> AT <address>` for each binding, and initial values for the
+  overrides of behaviour parameters. These are not stored in the folder.
+
+### Order and identity
+
+- Arrays keep authored order.
+- JSON object keys are written sorted, so the same document always gives the same bytes and the same hashes.
+- The construction order of a scene follows instance ids, sorted, not file order, as M4.1 requires.
+
+### The two first fixtures
+
+- **`demo_m3`**: one source, one belt and one diffuse sensor.
+  - Belt: 3.0 m at 0.5 m/s. Sensor: 2.7 m.
+  - Signals at the addresses the migrated M3 program will use: `run` `%QX0.0`, `detected` `%IX0.0`.
+  - It opens and saves in 4.2. It runs only once 4.3 migrates the M3 program to addresses.
+- **`two_belts_diverter`**: the M4.1 acceptance line.
+  - Source → belt A → diverter → belt B → normal sink, and the second diverter output → reject sink.
+  - Two diffuse sensors.
+  - Addresses: `%IX0.0`–`%IX0.3`, `%QX0.0`–`%QX0.2`, and the two sinks' counters at `%ID4` and `%ID8`.
+
+Negative fixtures, one per rule above:
+- a version that is too new;
+- a hash mismatch;
+- a path with `..`;
+- a case collision;
+- a parent cycle;
+- a duplicate id;
+- an endpoint with two peers;
+- an unknown parameter override;
+- an out-of-range value;
+- overlapping addresses;
+- a BOOL bound to `%ID`;
+- a `plc_input` bound to `%Q`.
 
 ## What this will not prove
 

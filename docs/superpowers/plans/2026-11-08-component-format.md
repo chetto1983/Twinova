@@ -74,17 +74,17 @@ a new geometry expression language is not required. These are assistant proposal
 
 ## Task 1 — Freeze the format after bounded probes
 
-- [ ] Read installed serde/Tauri file-I/O and glTF APIs, plus existing repository patterns, before choosing a helper.
-- [ ] Write the concrete manifest, definition, assembly, connection and scene schemas as a spec annex; include one
+- [x] Read installed serde/Tauri file-I/O and glTF APIs, plus existing repository patterns, before choosing a helper.
+- [x] Write the concrete manifest, definition, assembly, connection and scene schemas as a spec annex; include one
   legacy-demo fixture and one two-belt/diverter fixture. List exact supported capability IDs and parameter fields.
 - [x] Linux probes measured 2026-11-08, recorded in the spec ("Measured on Linux"); the Windows cases move to Task 3's
   tests on windows-2022.
-- [ ] Measure, in a throwaway directory, the items of the spec's "To be measured" list: the manifest-last save under
+- [x] (Windows cases: Task 3.) Measure, in a throwaway directory, the items of the spec's "To be measured" list: the manifest-last save under
   a killed process, a read-only file and a full disk; rename over an existing and an open file on Windows; numeric
   round-trip at the limits; path traversal, absolute paths and case; zip reproducibility.
-- [ ] Record the findings in the spec, and amend decision 2 if a measurement contradicts it. No claim of recovery
+- [x] Record the findings in the spec, and amend decision 2 if a measurement contradicts it. No claim of recovery
   without a demonstrated interrupted save and reopen on Linux and Windows.
-- [ ] Update the remaining task interfaces with the final DTO field names and fixture paths. Commit the spec annex.
+- [x] Update the remaining task interfaces with the final DTO field names and fixture paths. Commit the spec annex.
 
 ## Task 2 — Validated document and round-trip codec
 
