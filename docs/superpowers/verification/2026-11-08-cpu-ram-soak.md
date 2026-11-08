@@ -87,7 +87,7 @@ Same machine and software GL as above. Frames/s counts the `requestAnimationFram
 - **The as-fast-as-possible phase overlapped** with a `git push` hook compiling Rust, so its CPU figure is disturbed.
 - **The engine is unchanged**: 175 MB, flat.
 
-
+## What this does not prove
 
 - **A machine with a GPU, and Windows (WebView2).** The rendering cost here is llvmpipe's. On a GPU, the gain in
   Run is the drop from 60 to about 30 frames per second, which is a hypothesis, not measured.
