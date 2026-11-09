@@ -1,0 +1,17 @@
+[package]
+name = "twinova-physics"
+version = "0.1.0"
+description = "Twinova's line physics: belts, cartons, sources, sinks and sensors on Rapier, with no UI dependency"
+authors = ["The Twinova contributors"]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+# Conveyors with physics, as Open Industry Project does (spec 2026-11-09-component-behaviour-design.md, "Transport with
+# physics"; research 15): the version truST already brings, Apache-2.0. enhanced-determinism gives the same bits on
+# every platform.
+rapier3d = { version = "=0.36.1", features = ["enhanced-determinism"] }
+serde = { version = "1", features = ["derive"] }
+twinova-project = { path = "../project" }

@@ -72,7 +72,7 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 | `app/src-tauri/project/tests/fixtures/**` | regenerated; `demo_m3` gains a sink, the panel and M3's program |
 | `app/src-tauri/src/field.rs` (+ `_tests`) | new |
 | `app/src-tauri/src/controller.rs` (+ `_tests`) | new; `plc.rs` removed in Task 5 |
-| `app/src-tauri/src/physics.rs` (+ `_tests`) | new: Rapier world, belts, boxes, sources, sinks, sensors |
+| `app/src-tauri/physics/` (crate `twinova-physics`) | new: Rapier world, belts, cartons, sources, sinks, sensors; layout from a project |
 | `app/src-tauri/src/line.rs` (+ `_tests`) | new; `bench.rs`, `belt.rs` and `scene.rs` removed in Task 5 |
 | `app/src-tauri/src/engine.rs`, `commands.rs`, `project_commands.rs` | run a project |
 | `app/src/App.svelte`, `lib/Editor.svelte`, `lib/IoPanel.svelte`, `lib/ProjectScene.svelte` | tabs, panel, parts on the belt |
@@ -126,17 +126,20 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 
 ### Task 4 — Transport with physics
 
-- [ ] Add `rapier3d = { version = "=0.36.1", features = ["enhanced-determinism"] }` (the version truST brings).
-- [ ] Tests first:
+- [x] Add `rapier3d = { version = "=0.36.1", features = ["enhanced-determinism"] }` (the version truST brings).
+- [x] Tests first:
   - one belt carries a box at its speed;
   - two belts at equal, lower, higher and zero speed: the box passes with no lift at the seam, or it is held;
   - five boxes accumulate against a stopped belt and all leave when it starts;
   - a source adds a box every interval when its exit is free, a sink removes what reaches it, a blocked sink holds;
   - a diffuse sensor sees a box crossing its beam, on the step it enters and the step it leaves;
   - two runs give the same bits, and a pinned fingerprint holds.
-- [ ] Implement `physics.rs` from a project: positions, lengths and speeds from the instances and the flow
+- [x] Implement `physics.rs` from a project: positions, lengths and speeds from the instances and the flow
   connections; sensors placed by their mount.
-- [ ] Verify: tests, clippy, mutants on `physics.rs`.
+- [x] Verify: tests, clippy, mutants on `physics.rs`.
+  - *Delivered:* the crate `twinova-physics` (no Tauri, so CI tests it on windows-2022 too), with 20 tests, 97.7 % of
+    lines, and 0 surviving mutants (123 tested). OIP's carton and deck replaced the seam gate, which was dropped
+    after the baseline (research 15). The fingerprint is pinned at `0x7ee1e6ce7ddf4a1f`.
 
 ### Task 5 — The line runs a project; the demo becomes `demo_m3`
 

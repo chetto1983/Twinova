@@ -85,3 +85,23 @@ singolo punto di contatto.
 
 **Decisione dell'utente (2026-11-09): Rapier.** Fa «come OIP» nel metodo, cioè velocità superficiale ai contatti e
 filtro sulle giunzioni, non nel motore.
+
+## I modelli di OIP in Rapier (Task 4, 2026-11-09)
+
+Il primo `physics.rs` aveva un cartone a spigolo vivo e un piano sottile da 5 cm. Anche con il filtro, sulla giunzione
+il cartone si inclinava di circa 1,4° e si sollevava di 3,6 mm, ma solo con un attrito di coppia alto (0,7); a 0,3 non
+succedeva. Variare lo spessore o la soglia del filtro non cambiava nulla.
+
+Su richiesta dell'utente («guarda i modelli di OIP che sono già fatti e funzionano») sono stati letti i modelli di OIP:
+
+| Cosa | OIP | File |
+|---|---|---|
+| Cartone | box con raggio convesso min(0,02, 0,4 × semi-dimensione minima); restituzione 0; smorzamento lineare 0; CCD `LinearCast`; massa esplicita (10 kg per il box 0,6 × 0,4 × 0,4) | `src/sim/bodyFactory.ts`, `examples/parts/box` |
+| Piano del nastro | un solido per tratto, profondo quanto il nastro (0,17 m), esteso sopra i tamburi di h/2 | `src/core/conveyor/beltPath.ts` `beltColliders`, `src/core/geometry/collisionShapes.ts` |
+| Mondo | `mPenetrationSlop` 0,005 | `src/sim/world.ts` |
+| Verifica | una «physics fidelity suite» che confronta il motore con risultati in forma chiusa (velocità di trasporto, presa limitata dall'attrito) | `src/sim/physicsFidelity.test.ts` |
+
+In Rapier, con il cartone arrotondato (`round_cuboid`, raggio 0,02), la CCD e il piano da 0,17 m, il sollevamento
+sulla giunzione scende a 0, cioè resta solo il millimetro della comparsa. Tutti i test di trasporto passano anche
+**senza** filtro, e il filtro è stato tolto. L'impronta di stato, `0x7ee1e6ce7ddf4a1f`, è uguale in dev e in release
+su Linux; Windows lo dirà la CI.

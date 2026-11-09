@@ -190,8 +190,9 @@ jobs:
           test -n "$installers"
           ls -l $installers
 
-  # The project format on Windows (spec 2026-11-08-project-format-design.md): twinova-project has no Tauri
-  # dependency, so its test binaries start there, unlike the app's (0xc0000139, below). Linux runs them in rust.
+  # The project format and the line physics on Windows: twinova-project and twinova-physics have no Tauri dependency,
+  # so their test binaries start there, unlike the app's (0xc0000139, below). Linux runs them in rust. The physics
+  # tests pin a state fingerprint that must match Linux's (spec 2026-11-09-component-behaviour-design.md).
   project-windows:
     runs-on: windows-2022
     defaults:
@@ -210,7 +211,7 @@ jobs:
           workspaces: app/src-tauri
           shared-key: project
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - run: cargo test -p twinova-project
+      - run: cargo test -p twinova-project -p twinova-physics
 
   # The real app through tauri-driver (npm run e2e: e2e/run.mjs, then e2e/project.mjs), on both desktop platforms Tauri can drive.
   # As in ModbusTool, Windows is tested here and not with cargo test: tauri-build embeds the Common

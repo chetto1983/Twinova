@@ -101,14 +101,20 @@ was being written, the user asked to do as Open Industry Project does, with phys
 were then measured on the same probe, and the user chose Rapier.*
 
 - **Products are rigid bodies in Rapier 0.36.1**, the version truST already brings, now a direct dependency with
-  `enhanced-determinism`. Belts are fixed boxes whose contacts get a tangent velocity in
+  `enhanced-determinism`, in the crate `twinova-physics`, which has no Tauri so its tests also run on Windows. Belts are fixed boxes whose contacts get a tangent velocity in
   `PhysicsHooks::modify_solver_contacts`, Rapier's documented mechanism for conveyor belts.
 - **No transfer rule.** A product passes from one belt to the next through its contacts and friction, as in OIP. A
   product spanning two belts moves at a speed between theirs; a stopped or full belt holds it; boxes accumulate by
   collision.
-- **Seam gate, as OIP's** (`conveyorContacts.ts`): on a belt contact, a contact whose normal is within 45° of the
-  horizontal and whose depth is at most 2 mm is dropped. Without it a box lifts 4–5 mm at a seam, slows down or
-  bounces back, and can stay stuck on the next belt's edge (measured).
+- **Cartons and decks as OIP builds them** (read in `src/sim/bodyFactory.ts` and `src/core/conveyor/beltPath.ts`;
+  amended in Task 4):
+  - a carton is a box with rounded edges, of radius min(0.02 m, 0.4 × its smallest half extent), restitution 0, and
+    continuous collision so a fast carton cannot tunnel through a wall;
+  - a belt's deck is one solid, 0.17 m deep, not a thin slab: a slab over a housing leaves a notch cargo catches on.
+- **No seam gate.** OIP filters shallow sideways contacts at junctions, and the first Rapier probe, with sharp boxes
+  and a thin deck, needed it (research 15). With OIP's carton and deck, the transport tests pass the same with and
+  without it, so it was dropped ("baseline or drop", 2026-11-09). This was measured on straight belts butted end to
+  end at 1 ms; curves and coarser steps may need it again.
 - **Friction as OIP declares it:** a belt's friction is the coefficient against a standard carton (0.5). Rapier has
   no geometric mean, so contacts use `Multiply`, and a belt's collider friction is μ / 0.5.
 - **A fixed step of 1 ms** (user), the field runtime's cycle. At each step:
