@@ -56,9 +56,9 @@ export function expectEqual(actual, expected, what) {
 export const button = (text) => `//header//button[normalize-space()="${text}"]`;
 export const click = async (selector) => (await browser.$(selector)).click();
 const text = async (selector) => (await browser.$(selector)).getText();
-/** The TRUE/FALSE cell of an I/O row, by its variable name (the rows start with it in every language). */
-export const bit = (name) =>
-  text(`//li[contains(@class,"row")][.//span[starts-with(normalize-space(),"${name}")]]/span[last()]`);
+/** The value cell of an I/O row, by its exact name: a scene signal (`belt_a.run`, the same in every language) or M3's
+ * jam. Exact, because `belt_a.run` is also the start of `belt_a.running`. */
+export const bit = (name) => text(`//li[contains(@class,"row")][.//span[normalize-space()="${name}"]]/span[last()]`);
 export const value = (term) => text(`//dt[normalize-space()="${term}"]/following-sibling::dd[1]`);
 /** Virtual time "m:ss.cc" in seconds. Text that is not a time throws: a NaN would make every comparison false and
  * let a check pass on nothing (run 42524833751, where the cell read as empty). */

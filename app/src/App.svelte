@@ -1,43 +1,36 @@
 <script lang="ts">
+  // The app on a project (spec 2026-11-09-component-behaviour-design.md, "The app"): the bundled M3 demo at start, or
+  // a project opened from the menu or the command line. Build runs its line with the editor's sources; the panel's
+  // buttons come from the project.
   import { onMount } from "svelte";
   import { m } from "./paraglide/messages.js";
   import { currentLocale, languageName, locales, setLanguage, type Locale } from "./lib/i18n.svelte";
   import { readPreference, writePreference } from "./lib/preferences";
   import { backend, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
   import { SPEEDS, formatSpeed, type Snapshot } from "./lib/snapshot";
+  import { buildArgs, sourcesOf, type Source } from "./lib/sources";
   import Editor from "./lib/Editor.svelte";
   import Inspector from "./lib/Inspector.svelte";
   import IoPanel from "./lib/IoPanel.svelte";
   import ProjectMenu from "./lib/ProjectMenu.svelte";
   import ProjectScene from "./lib/ProjectScene.svelte";
   import SceneTree from "./lib/SceneTree.svelte";
-  import SceneView from "./lib/SceneView.svelte";
   import type { ProjectView } from "./lib/project";
   import twinovaMark from "./assets/twinova-mark.svg";
 
-  let source = $state("");
+  let project = $state<ProjectView | null>(null);
+  let sources = $state<Source[]>([]);
   let snapshot = $state<Snapshot | null>(null);
   let status = $state<"none" | "ok" | "failed">("none");
   let error = $state("");
   let running = $state(false);
   let speed = $state<number | null>(1);
   let theme = $state(readPreference("theme") === "light" ? "light" : "dark");
-  /** An opened project is shown, not run (ROADMAP 4.2); null shows the M3 demo. */
-  let project = $state<ProjectView | null>(null);
   let selected = $state<string | null>(null);
+  /** What opening the project reported, and what the last Build warned about. */
   let notice = $state("");
+  let warnings = $state<string[]>([]);
 
-  async function showProject(next: ProjectView | null): Promise<void> {
-    if (running) await toggleRun();
-    project = next;
-    selected = null;
-    notice = next?.recovered ? m.project_recovered() : "";
-    if (next && next.changed_outside.length > 0) {
-      notice = [notice, m.project_changed_outside({ files: next.changed_outside.join(", ") })]
-        .filter(Boolean)
-        .join(" ");
-    }
-  }
   $effect(() => {
     document.documentElement.dataset.theme = theme;
     writePreference("theme", theme);
@@ -55,9 +48,31 @@
 
   async function build(): Promise<void> {
     running = false;
-    const built = await attempt(() => backend.build(source));
+    const built = await attempt(() => {
+      const { program, behaviours } = buildArgs(sources);
+      return backend.build(program, behaviours);
+    });
     status = built ? "ok" : "failed";
-    if (built) snapshot = built;
+    if (built) {
+      snapshot = built.snapshot;
+      warnings = built.warnings;
+    }
+  }
+
+  async function showProject(next: ProjectView): Promise<void> {
+    if (running) await toggleRun();
+    project = next;
+    sources = sourcesOf(next);
+    selected = null;
+    snapshot = null;
+    warnings = [];
+    notice = [
+      next.recovered ? m.project_recovered() : "",
+      next.changed_outside.length > 0 ? m.project_changed_outside({ files: next.changed_outside.join(", ") }) : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    await build();
   }
 
   async function toggleRun(): Promise<void> {
@@ -75,15 +90,13 @@
   }
 
   onMount(() => {
-    // The demo builds first, so a launch folder that fails to open leaves its diagnostics on a usable demo.
-    void backend
-      .defaultProgram()
-      .then((text) => {
-        source = text;
-        return build();
-      })
-      .then(() => attempt(projects.launch))
-      .then((launched) => launched && showProject(launched));
+    // A folder named on the command line opens directly; one that fails to open leaves its diagnostics on the demo,
+    // built and usable.
+    void attempt(projects.launch).then(async (launched) => {
+      const failed = error;
+      await showProject(launched ?? (await projects.current()));
+      if (failed) error = failed;
+    });
     const listeners = [
       onSnapshot((s) => (snapshot = s)),
       onStopped(() => (running = false)),
@@ -104,55 +117,56 @@
           >Twinova</span
         >
       </span>
-      <ProjectMenu
-        {project}
-        onChange={showProject}
-        onNotice={(text) => (notice = text)}
-        onError={(text) => (error = text)}
-      />
+      {#if project}
+        <ProjectMenu
+          {project}
+          onChange={showProject}
+          onNotice={(text) => (notice = text)}
+          onError={(text) => (error = text)}
+        />
+      {/if}
     </div>
     <div class="row actions">
-      {#if !project}
-        <button class="btn" onclick={build}>{m.build()}</button>
-        <button class="btn primary" disabled={status !== "ok"} onclick={toggleRun}>
-          {running ? m.pause() : m.run()}
-        </button>
-        <select class="speed" aria-label={m.speed()} bind:value={speed} disabled={running}>
-          {#each SPEEDS as option (option)}
-            <option value={option}>{formatSpeed(option, currentLocale(), m.speed_max())}</option>
-          {/each}
-        </select>
-        <button
-          class="btn"
-          disabled={status !== "ok"}
-          onclick={() => replace(backend.step).then(() => (running = false))}
-        >
-          {m.step()}
-        </button>
-        <button
-          class="btn"
-          disabled={status !== "ok"}
-          onclick={() => replace(backend.reset).then(() => (running = false))}
-        >
-          {m.reset()}
-        </button>
-        <button class="btn" disabled={status !== "ok"} onclick={() => attempt(backend.saveState)}>
-          {m.save_state()}
-        </button>
-        <button
-          class="btn"
-          disabled={status !== "ok"}
-          onclick={() => replace(backend.restoreState).then(() => (running = false))}
-        >
-          {m.restore_state()}
-        </button>
+      <button class="btn" onclick={build}>{m.build()}</button>
+      <button class="btn primary" disabled={status !== "ok"} onclick={toggleRun}>
+        {running ? m.pause() : m.run()}
+      </button>
+      <select class="speed" aria-label={m.speed()} bind:value={speed} disabled={running}>
+        {#each SPEEDS as option (option)}
+          <option value={option}>{formatSpeed(option, currentLocale(), m.speed_max())}</option>
+        {/each}
+      </select>
+      <button
+        class="btn"
+        disabled={status !== "ok"}
+        onclick={() => replace(backend.step).then(() => (running = false))}
+      >
+        {m.step()}
+      </button>
+      <button
+        class="btn"
+        disabled={status !== "ok"}
+        onclick={() => replace(backend.reset).then(() => (running = false))}
+      >
+        {m.reset()}
+      </button>
+      <button class="btn" disabled={status !== "ok"} onclick={() => attempt(backend.saveState)}>
+        {m.save_state()}
+      </button>
+      <button
+        class="btn"
+        disabled={status !== "ok"}
+        onclick={() => replace(backend.restoreState).then(() => (running = false))}
+      >
+        {m.restore_state()}
+      </button>
+      {#if project && project.panel.length > 0}
         <span class="sep"></span>
-        <button class="btn" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(true, false))}>
-          {m.start()}
-        </button>
-        <button class="btn danger" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(false, true))}>
-          {m.stop()}
-        </button>
+        {#each project.panel as button (button.address)}
+          <button class="btn" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(button.address))}>
+            {button.name}
+          </button>
+        {/each}
       {/if}
     </div>
     <div class="row">
@@ -173,29 +187,24 @@
       </button>
     </div>
   </header>
+  <p class="notice" role="status">
+    {notice}
+    {#each warnings as warning (warning)}<br />{m.build_warning({ warning })}{/each}
+  </p>
   {#if project}
-    <p class="notice" role="status">
-      {m.project_not_runnable()}
-      {#if notice}<br />{notice}{/if}
-      {#if error}<br /><span class="err">{error}</span>{/if}
-    </p>
     <main class="grid">
-      <SceneTree {project} bind:selected />
+      <Editor bind:sources {status} {error} />
       <section class="panel stage">
         <header class="panel-head"><h2 class="panel-title">{project.name}</h2></header>
-        <div class="stage-body"><ProjectScene {project} {selected} {theme} /></div>
+        <div class="stage-body">
+          <ProjectScene {project} {selected} {theme} cartons={snapshot?.cartons ?? []} />
+        </div>
       </section>
-      <Inspector {project} {selected} />
-    </main>
-  {:else}
-    {#if notice}<p class="notice" role="status">{notice}</p>{/if}
-    <main class="grid">
-      <Editor bind:source {status} {error} />
-      <section class="panel stage">
-        <header class="panel-head"><h2 class="panel-title">{m.scene_title()}</h2></header>
-        <div class="stage-body"><SceneView {snapshot} {theme} /></div>
-      </section>
-      <IoPanel {snapshot} onOutletBlocked={(b) => replace(() => backend.setOutletBlocked(b))} />
+      <div class="side">
+        <IoPanel {snapshot} onSinkBlocked={(sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked))} />
+        <SceneTree {project} bind:selected />
+        <Inspector {project} {selected} />
+      </div>
     </main>
   {/if}
 </div>
@@ -274,8 +283,15 @@
     background: var(--color-surface-2);
     color: var(--color-text-muted);
   }
-  .err {
-    color: var(--color-danger);
+  .notice:empty {
+    display: none;
+  }
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow: auto;
   }
   .stage {
     display: flex;

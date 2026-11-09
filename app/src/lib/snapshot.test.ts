@@ -1,22 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mount, unmount } from "svelte";
 import App from "../App.svelte";
-import {
-  BELT_LENGTH_M,
-  formatSpeed,
-  formatTime,
-  framingDistance,
-  isBehind,
-  partCentreX,
-  PART_LENGTH_M,
-  SPEEDS,
-} from "./snapshot";
+import { deliveredOf, formatSpeed, formatTime, framingDistance, isBehind, SPEEDS, type Snapshot } from "./snapshot";
 
-vi.mock("./SceneView.svelte", () => ({ default: () => {} }));
+vi.mock("./ProjectScene.svelte", () => ({ default: () => {} }));
 vi.mock("./backend", () => ({
   backend: {
-    defaultProgram: vi.fn().mockResolvedValue(""),
-    build: vi.fn().mockResolvedValue(undefined),
+    build: vi.fn().mockResolvedValue({ snapshot: null, warnings: [] }),
     pause: vi.fn().mockResolvedValue(undefined),
     run: vi.fn().mockResolvedValue(undefined),
     step: vi.fn().mockResolvedValue(undefined),
@@ -24,9 +14,22 @@ vi.mock("./backend", () => ({
     saveState: vi.fn().mockResolvedValue(undefined),
     restoreState: vi.fn().mockResolvedValue(undefined),
     press: vi.fn().mockResolvedValue(undefined),
-    setOutletBlocked: vi.fn().mockResolvedValue(undefined),
+    setSinkBlocked: vi.fn().mockResolvedValue(undefined),
   },
-  projects: { launch: vi.fn().mockResolvedValue(null) },
+  projects: {
+    current: vi.fn().mockResolvedValue({
+      name: "M3 demo",
+      folder: null,
+      instances: [],
+      definitions: {},
+      changed_outside: [],
+      recovered: false,
+      program: [["plc/Main.st", "PROGRAM Main END_PROGRAM"]],
+      behaviours: {},
+      panel: [{ name: "Start", address: "%IX1.0" }],
+    }),
+    launch: vi.fn().mockResolvedValue(null),
+  },
   onSnapshot: vi.fn().mockResolvedValue(() => {}),
   onStopped: vi.fn().mockResolvedValue(() => {}),
   onEngineError: vi.fn().mockResolvedValue(() => {}),
@@ -44,12 +47,16 @@ describe("formatTime", () => {
   });
 });
 
-describe("partCentreX", () => {
-  it("puts a part just entering at the left end of a centred belt", () => {
-    expect(partCentreX(PART_LENGTH_M)).toBeCloseTo(PART_LENGTH_M / 2 - BELT_LENGTH_M / 2);
-  });
-  it("puts a part at the outlet at the right end", () => {
-    expect(partCentreX(BELT_LENGTH_M)).toBeCloseTo(BELT_LENGTH_M / 2 - PART_LENGTH_M / 2);
+describe("deliveredOf", () => {
+  it("adds the deliveries of every sink, and none before a build", () => {
+    const snapshot = {
+      sinks: [
+        { id: "ok", delivered: 3, blocked: false },
+        { id: "reject", delivered: 2, blocked: true },
+      ],
+    } as Snapshot;
+    expect(deliveredOf(snapshot)).toBe(5);
+    expect(deliveredOf(null)).toBe(0);
   });
 });
 

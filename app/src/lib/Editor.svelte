@@ -1,11 +1,18 @@
 <script lang="ts">
+  // The ST sources of the project, one tab each: the line program's files, then the behaviour block of each
+  // definition that has one (spec 2026-11-09-component-behaviour-design.md, "The app"). A definition's block serves
+  // every instance of it. Build sends them all.
   import { m } from "../paraglide/messages.js";
+  import type { Source } from "./sources";
 
   let {
-    source = $bindable(),
+    sources = $bindable(),
     status,
     error,
-  }: { source: string; status: "none" | "ok" | "failed"; error: string } = $props();
+  }: { sources: Source[]; status: "none" | "ok" | "failed"; error: string } = $props();
+
+  let active = $state(0);
+  const current = $derived(sources[Math.min(active, sources.length - 1)]);
 </script>
 
 <section class="panel editor">
@@ -18,8 +25,17 @@
     </span>
   </header>
   <div class="panel-body body">
-    <p class="muted hint">{m.editor_hint()}</p>
-    <textarea class="data" spellcheck="false" bind:value={source} aria-label={m.editor_title()}></textarea>
+    <div class="tabs" role="tablist">
+      {#each sources as source, i (source.key)}
+        <button role="tab" class="tab" aria-selected={source === current} onclick={() => (active = i)}>
+          {source.label}
+        </button>
+      {/each}
+    </div>
+    <p class="muted hint">{current?.kind === "behaviour" ? m.editor_hint_behaviour() : m.editor_hint()}</p>
+    {#if current}
+      <textarea class="data" spellcheck="false" bind:value={current.text} aria-label={current.label}></textarea>
+    {/if}
     {#if error}<pre class="error-line">{error}</pre>{/if}
   </div>
 </section>
@@ -36,6 +52,24 @@
     flex-direction: column;
     gap: 10px;
     min-height: 0;
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tab {
+    padding: 4px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .tab[aria-selected="true"] {
+    background: var(--color-surface-3);
+    color: var(--color-text);
   }
   .hint {
     margin: 0;

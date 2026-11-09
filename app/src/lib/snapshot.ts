@@ -1,25 +1,45 @@
-// What the backend sends (src-tauri/src/engine.rs `Snapshot`) and the pure helpers the view needs.
+// What the backend sends (src-tauri/src/engine.rs `Snapshot`, commands.rs `Built`) and the pure helpers the view needs.
 
-export interface Part {
+export interface Carton {
   id: number;
-  front_m: number;
+  /** World position of its centre, m. */
+  position: [number, number, number];
+  rotation: [number, number, number, number];
+}
+
+export interface SinkState {
+  id: string;
+  delivered: number;
+  blocked: boolean;
+}
+
+/** A scene signal or a panel button, with its value in the controller's image. */
+export interface SignalState {
+  name: string;
+  address: string;
+  value: string;
 }
 
 export interface Snapshot {
   time_ms: number;
-  parts: Part[];
-  delivered: number;
-  outlet_blocked: boolean;
-  sensor: boolean;
-  motor: boolean;
+  cartons: Carton[];
+  sinks: SinkState[];
+  signals: SignalState[];
   jam: boolean | null;
   lag_ms: number;
 }
 
-/** Scene constants, the same as src-tauri/src/scene.rs. */
-export const BELT_LENGTH_M = 3.0;
-export const PART_LENGTH_M = 0.3;
-export const PHOTOCELL_AT_M = 2.7;
+/** What Build returns: the line at time zero and what the program leaves undeclared. */
+export interface Built {
+  snapshot: Snapshot;
+  warnings: string[];
+}
+
+/** The products of 4.3 (twinova-physics, CARTON_HALF): a 0.3 m carton. */
+export const CARTON_SIZE_M = 0.3;
+
+/** Every product the line's sinks have taken. */
+export const deliveredOf = (s: Snapshot | null): number => s?.sinks.reduce((n, sink) => n + sink.delivered, 0) ?? 0;
 
 /** Virtual time as m:ss.cc. */
 export function formatTime(ms: number): string {
@@ -29,9 +49,6 @@ export function formatTime(ms: number): string {
   const minutes = Math.floor(total / 6000);
   return `${minutes}:${String(seconds).padStart(2, "0")}.${String(centis).padStart(2, "0")}`;
 }
-
-/** Centre of a part along the belt, with the belt centred on x = 0 in the 3D view. */
-export const partCentreX = (front_m: number): number => front_m - PART_LENGTH_M / 2 - BELT_LENGTH_M / 2;
 
 /** Run speeds, as multiples of the wall clock; null runs as fast as possible (spec 2026-11-08-run-modes-design.md). */
 export const SPEEDS: readonly (number | null)[] = [0.25, 0.5, 1, 2, 4, 10, null];

@@ -1,15 +1,27 @@
 <script lang="ts">
-  // The 3D view of an opened project: each instance as its family's stand-in shape, sized from its parameters
-  // (project.ts, shapeOf), at its pose. Read-only in 4.2; the selected instance is highlighted.
+  // The 3D view of a project: each instance as its family's stand-in shape, sized from its parameters (project.ts,
+  // shapeOf), at its pose, the selected one highlighted; and the cartons of the running line, at the poses the physics
+  // gives them (engine.rs `Snapshot.cartons`).
   import * as THREE from "three";
   import { frame, shapeOf, type ProjectView } from "./project";
+  import { CARTON_SIZE_M, type Carton } from "./snapshot";
   import Viewport from "./Viewport.svelte";
 
-  let { project, selected, theme }: { project: ProjectView; selected: string | null; theme: string } = $props();
+  let {
+    project,
+    selected,
+    theme,
+    cartons,
+  }: { project: ProjectView; selected: string | null; theme: string; cartons: Carton[] } = $props();
 
   const scene = new THREE.Scene();
   const content = new THREE.Group();
-  scene.add(content);
+  const products = new THREE.Group();
+  scene.add(content, products);
+  const cartonGeometry = new THREE.BoxGeometry(CARTON_SIZE_M, CARTON_SIZE_M, CARTON_SIZE_M);
+  const cartonMaterial = new THREE.MeshStandardMaterial({ roughness: 0.9 });
+  /** One mesh per carton id, kept while the carton lives, so a snapshot moves meshes instead of rebuilding them. */
+  const meshes = new Map<number, THREE.Mesh>();
   let requestRender = $state(() => {});
   const view = $derived(frame(project.instances));
   const target = $derived(new THREE.Vector3(...view.centre));
@@ -61,10 +73,37 @@
   $effect(() => {
     void [project, selected, theme];
     build();
+    cartonMaterial.color = token("--scene-product");
     requestRender();
   });
 
-  $effect(() => dispose);
+  $effect(() => {
+    const live = new Set(cartons.map((c) => c.id));
+    for (const [id, mesh] of meshes) {
+      if (!live.has(id)) {
+        products.remove(mesh);
+        meshes.delete(id);
+      }
+    }
+    for (const c of cartons) {
+      let mesh = meshes.get(c.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(cartonGeometry, cartonMaterial);
+        mesh.castShadow = true;
+        meshes.set(c.id, mesh);
+        products.add(mesh);
+      }
+      mesh.position.set(...c.position);
+      mesh.quaternion.set(...c.rotation);
+    }
+    requestRender();
+  });
+
+  $effect(() => () => {
+    dispose();
+    cartonGeometry.dispose();
+    cartonMaterial.dispose();
+  });
 </script>
 
 <Viewport {scene} {theme} {target} halfWidth={view.radius} bind:requestRender />

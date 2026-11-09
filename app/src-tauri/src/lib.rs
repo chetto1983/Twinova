@@ -32,6 +32,7 @@ pub fn run() {
             commands::save_state,
             commands::restore_state,
             project_commands::current_project,
+            project_commands::open_demo,
             project_commands::open_project,
             project_commands::open_launch_project,
             project_commands::save_project,

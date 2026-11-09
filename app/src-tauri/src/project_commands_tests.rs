@@ -180,3 +180,15 @@ fn a_launch_folder_that_fails_reports_and_leaves_the_demo() {
     assert_eq!(current_project(app.state()).unwrap().name, "M3 demo");
     assert_eq!(open_launch_project(app.state()), Ok(None));
 }
+
+#[test]
+fn the_demo_comes_back_as_shipped() {
+    let app = app();
+    open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
+    let view = open_demo(app.state()).unwrap();
+    assert_eq!((view.name.as_str(), view.folder), ("M3 demo", None));
+    assert_eq!(
+        app.state::<ProjectState>().project().unwrap(),
+        crate::demo::demo()
+    );
+}

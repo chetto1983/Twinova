@@ -34,8 +34,8 @@ async function screenshot(name) {
 }
 
 async function lineScenario() {
-  console.log("The conveyor driven by the default program");
-  await check("the default program builds on start", () =>
+  console.log("The M3 demo project: a belt, its behaviour and the line program");
+  await check("the demo builds on start", () =>
     eventually(
       async () =>
         expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "status"),
@@ -46,10 +46,13 @@ async function lineScenario() {
 
   await click(button("Run"));
   await click(button("Start"));
-  await check("Start latches the motor", () =>
-    eventually(async () => expectEqual(await bit("motor"), "TRUE", "motor"), "motor", 5000),
+  await check("Start latches the belt's run command", () =>
+    eventually(async () => expectEqual(await bit("belt_a.run"), "TRUE", "run"), "run", 5000),
   );
-  await check("parts ride the belt and are delivered", () =>
+  await check("the belt's behaviour reports it running", () =>
+    eventually(async () => expectEqual(await bit("belt_a.running"), "TRUE", "running"), "running", 5000),
+  );
+  await check("cartons ride the belt and are delivered", () =>
     // The first part needs (3.0 - 0.3) / 0.5 = 5.4 s of virtual time to reach the end.
     eventually(
       async () => {
@@ -66,12 +69,16 @@ async function lineScenario() {
     if (ratio < 0.9 || ratio > 1.1) throw new Error(`virtual/wall ratio ${ratio.toFixed(3)}`);
   });
 
-  await click(`//label[normalize-space()="Outlet blocked"]/input`);
-  await check("a part held at a blocked outlet covers the photocell, trips the jam and stops the motor", () =>
-    // The leading part stops under the photocell; the timeout leaves room for a part still entering.
+  await click(`//label[normalize-space()="sink blocked"]/input`);
+  await check("a carton held at a blocked sink covers the photocell, trips the jam and stops the belt", () =>
+    // The leading carton stops under the photocell; the timeout leaves room for one still entering.
     eventually(
       async () => {
-        expectEqual([await bit("sensor"), await bit("jam"), await bit("motor")], ["TRUE", "TRUE", "FALSE"], "I/O");
+        expectEqual(
+          [await bit("sensor_a.detected"), await bit("jam"), await bit("belt_a.run")],
+          ["TRUE", "TRUE", "FALSE"],
+          "I/O",
+        );
       },
       "jam",
       40_000,

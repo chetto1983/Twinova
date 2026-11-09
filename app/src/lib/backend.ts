@@ -3,11 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type { ProjectView } from "./project";
-import type { Snapshot } from "./snapshot";
+import type { Built, Snapshot } from "./snapshot";
 
 export const backend = {
-  defaultProgram: () => invoke<string>("default_program"),
-  build: (source: string) => invoke<Snapshot>("build", { source }),
+  /** Builds the current project with the editor's sources (commands.rs `build`). */
+  build: (program: [string, string][], behaviours: Record<string, string>) =>
+    invoke<Built>("build", { program, behaviours }),
   reset: () => invoke<Snapshot>("reset"),
   step: () => invoke<Snapshot>("step"),
   /** `speed` times the wall clock, or as fast as possible when null. */
@@ -15,8 +16,9 @@ export const backend = {
   saveState: () => invoke<void>("save_state"),
   restoreState: () => invoke<Snapshot>("restore_state"),
   pause: () => invoke<void>("pause"),
-  press: (start: boolean, stop: boolean) => invoke<void>("press", { start, stop }),
-  setOutletBlocked: (blocked: boolean) => invoke<Snapshot>("set_outlet_blocked", { blocked }),
+  /** A panel button, by its input address: held for the next scan. */
+  press: (address: string) => invoke<void>("press", { address }),
+  setSinkBlocked: (sink: number, blocked: boolean) => invoke<Snapshot>("set_sink_blocked", { sink, blocked }),
 };
 
 export const onSnapshot = (f: (s: Snapshot) => void): Promise<UnlistenFn> =>
@@ -34,6 +36,9 @@ export const projects = {
     const folder = await open({ directory: true });
     return folder === null ? null : invoke<ProjectView>("open_project", { folder });
   },
+  /** The project the app shows: the bundled demo at start. */
+  current: () => invoke<ProjectView>("current_project"),
+  demo: () => invoke<ProjectView>("open_demo"),
   /** The folder named on the command line (spec 2026-11-08-project-format-design.md, decision 8), or null. */
   launch: () => invoke<ProjectView | null>("open_launch_project"),
   save: (folder: string) => invoke<ProjectView>("save_project", { folder }),

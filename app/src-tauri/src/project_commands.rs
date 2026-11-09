@@ -153,6 +153,16 @@ pub fn current_project(state: State<'_, ProjectState>) -> Result<ProjectView, St
     Ok(view(&*state.lock()?, Vec::new(), false))
 }
 
+/// Back to the bundled demo, as it was shipped.
+#[tauri::command]
+pub fn open_demo(state: State<'_, ProjectState>) -> Result<ProjectView, String> {
+    let current = Current {
+        project: crate::demo::demo(),
+        folder: None,
+    };
+    replace(&state, current, Vec::new(), false)
+}
+
 #[tauri::command]
 pub fn open_project(state: State<'_, ProjectState>, folder: String) -> Result<ProjectView, String> {
     open(&state, PathBuf::from(folder))

@@ -1,6 +1,6 @@
 <script lang="ts">
   // The project button and its menu (research 13, PRJ-01): open, save, save to a folder, import, export, and back to
-  // the M3 demo. Each action reports through onChange, onNotice or onError.
+  // the bundled M3 demo. Each action reports through onChange, onNotice or onError.
   import { m } from "../paraglide/messages.js";
   import { projects } from "./backend";
   import type { ProjectView } from "./project";
@@ -11,8 +11,8 @@
     onNotice,
     onError,
   }: {
-    project: ProjectView | null;
-    onChange: (next: ProjectView | null) => void;
+    project: ProjectView;
+    onChange: (next: ProjectView) => void;
     onNotice: (text: string) => void;
     onError: (text: string) => void;
   } = $props();
@@ -53,22 +53,17 @@
 
   const items = $derived([
     { label: m.project_open(), run: openFolder },
-    ...(project?.folder ? [{ label: m.project_save(), run: () => saveTo(projects.save(project!.folder!)) }] : []),
-    ...(project
-      ? [
-          { label: m.project_save_as(), run: () => saveTo(projects.saveAs()) },
-          { label: m.project_export(), run: exportArchive },
-        ]
-      : []),
+    ...(project.folder ? [{ label: m.project_save(), run: () => saveTo(projects.save(project.folder!)) }] : []),
+    { label: m.project_save_as(), run: () => saveTo(projects.saveAs()) },
+    { label: m.project_export(), run: exportArchive },
     { label: m.project_import(), run: importArchive },
-    ...(project ? [{ label: m.project_back_to_demo(), run: async () => onChange(null) }] : []),
+    { label: m.project_back_to_demo(), run: async () => onChange(await projects.demo()) },
   ]);
 </script>
 
 <div class="menu">
   <button class="btn project" aria-haspopup="menu" aria-expanded={open} onclick={() => (open = !open)}>
-    <span>{project?.name ?? m.demo_name()}</span>
-    <span class="badge">{project ? m.badge_view_only() : m.badge_demo()}</span>
+    <span>{project.name}</span>
     <span aria-hidden="true">▾</span>
   </button>
   {#if open}
@@ -88,15 +83,6 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-  }
-  .badge {
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: var(--color-surface-3);
-    color: var(--color-text-muted);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
   }
   .items {
     position: absolute;
