@@ -2,6 +2,7 @@ pub mod belt;
 pub mod bench;
 pub mod commands;
 pub mod engine;
+pub mod field;
 pub mod plc;
 pub mod project_commands;
 pub mod scene;

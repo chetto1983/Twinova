@@ -29,7 +29,8 @@ Two throwaway tests, in a worktree outside the repository, built against the app
 | A field runtime beside the controller, in one process | works: two `TestHarness`, the field one with a `CONFIGURATION`, a 1 ms `TASK` and `VAR_CONFIG` |
 | Two instances of one behaviour block | independent: `d1` took `switch_time := T#200ms` from `VAR_CONFIG`, `d2` kept its 300 ms default |
 | Signals across the two | copied per address, `%QXn.m` of the controller to `%IXn.m` of the field and back: the controller's command at 50 ms gave its feedback at 250 ms (200 ms), the second at 200 → 500 ms (300 ms) |
-| A TON in the field | its `Q` comes one cycle early: `IN` first seen at the 2 ms cycle, `Q` at the 301 ms cycle with PT 300 ms. A device delay is accurate to 1 ms, from below |
+| A TON in the field | its `Q` comes one cycle before PT when `IN` rises on its own: `IN` first seen at the 2 ms cycle, `Q` at the 301 ms cycle with PT 300 ms. A TON called with `IN := FALSE` and then `TRUE` in the cycle of the command gives exactly PT (the diverter's block, Task 2). A device delay is accurate to 1 ms |
+| A block compiled alone | refused when it uses `AT %I*`: "direct address '%I*' requires VAR_CONFIG mapping" (E202), so the field compiles as one source, and Build rewrites truST's byte ranges (`at 385..386`) as the behaviour file and line |
 | The native side reading and writing a block's variables | by path, with no address: `get_output("F.b0.motor")` reads a `VAR_OUTPUT`; `try_set_input("F.b0.fault", true)` writes a `VAR_INPUT`, and the value stays |
 | Cost of a 1 ms field cycle (release build) | 2 devices 7.7 µs; 20 devices 0.10 ms; 100 devices 0.74 ms. About 7 µs per device |
 

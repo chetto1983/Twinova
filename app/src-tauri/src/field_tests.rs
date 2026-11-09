@@ -1,0 +1,255 @@
+use super::*;
+use std::path::Path;
+use twinova_project::model::ParamValue;
+use twinova_project::storage::open_folder;
+
+fn fixture(name: &str) -> Project {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("project/tests/fixtures/valid")
+        .join(name);
+    open_folder(&dir).unwrap().opened.project
+}
+
+fn instance<'a>(project: &'a mut Project, id: &str) -> &'a mut Instance {
+    project
+        .scene
+        .instances
+        .iter_mut()
+        .find(|i| i.id == id)
+        .unwrap()
+}
+
+fn bool_at(field: &Field, address: &str) -> bool {
+    field.feedback_value(address).unwrap() == Value::Bool(true)
+}
+
+/// Cycles until the controller input at `address` reads true; the number of cycles, in ms.
+fn ms_until(field: &mut Field, address: &str, limit: i64) -> Option<i64> {
+    (1..=limit).find(|_| {
+        field.cycle().unwrap();
+        bool_at(field, address)
+    })
+}
+
+#[test]
+fn the_mirror_swaps_inputs_and_outputs() {
+    assert_eq!(mirror("%QX0.0").unwrap(), "%IX0.0");
+    assert_eq!(mirror("%IX1.7").unwrap(), "%QX1.7");
+    assert_eq!(mirror("%ID4").unwrap(), "%QD4");
+    assert!(
+        mirror("%MX0.0")
+            .unwrap_err()
+            .contains("not an input or an output")
+    );
+    assert!(mirror("QX0.0").is_err());
+}
+
+#[test]
+fn the_demo_field_holds_the_belt_and_its_mirrored_signals() {
+    let (text, _) = generate(&fixture("demo_m3")).unwrap();
+    let generated = &text[text.find("PROGRAM Field").unwrap()..];
+    assert_eq!(
+        generated,
+        "PROGRAM Field\nVAR\n    belt_a : BeltBehaviour;\nEND_VAR\nbelt_a();\nEND_PROGRAM\n\n\
+         CONFIGURATION Twinova\nRESOURCE Devices ON PLC\n    TASK Cycle (INTERVAL := T#1ms, PRIORITY := 1);\n    \
+         PROGRAM F WITH Cycle : Field;\nEND_RESOURCE\nVAR_CONFIG\n    F.belt_a.run AT %IX0.0 : BOOL;\n    \
+         F.belt_a.running AT %QX0.1 : BOOL;\nEND_VAR\nEND_CONFIGURATION\n"
+    );
+    assert!(text.starts_with("(* Twinova belt conveyor"));
+}
+
+#[test]
+fn a_line_without_behaviours_has_no_field() {
+    let mut project = fixture("demo_m3");
+    for def in project.definitions.values_mut() {
+        def.behaviour = None;
+    }
+    assert!(Field::build(&project).unwrap().is_none());
+}
+
+#[test]
+fn the_belt_runs_at_once_and_reports_running_after_its_start_delay() {
+    let mut project = fixture("demo_m3");
+    instance(&mut project, "belt_a")
+        .parameters
+        .insert("start_delay".into(), ParamValue::Int(500_000_000));
+    let mut field = Field::build(&project).unwrap().unwrap();
+    assert_eq!(field.commands(), ["%QX0.0"]);
+    assert_eq!(field.feedback(), ["%IX0.1"]);
+    field.cycle().unwrap();
+    assert_eq!(field.native("belt_a", "motor"), Some(Value::Bool(false)));
+    field.set_command("%QX0.0", Value::Bool(true)).unwrap();
+    field.cycle().unwrap();
+    assert_eq!(field.native("belt_a", "motor"), Some(Value::Bool(true)));
+    // truST's TON reaches Q one cycle before PT (spec 2026-11-09, "Measured"): 500 ms after the cycle that saw run,
+    // less one.
+    assert_eq!(ms_until(&mut field, "%IX0.1", 1000), Some(499));
+}
+
+#[test]
+fn the_belt_without_a_delay_reports_running_in_the_cycle_that_sees_run() {
+    let mut field = Field::build(&fixture("demo_m3")).unwrap().unwrap();
+    field.set_command("%QX0.0", Value::Bool(true)).unwrap();
+    assert_eq!(ms_until(&mut field, "%IX0.1", 10), Some(1));
+}
+
+#[test]
+fn each_diverter_takes_its_own_switch_time_and_reports_its_position() {
+    let mut project = fixture("two_belts_diverter");
+    project.scene.instances.push(Instance {
+        id: "diverter_2".into(),
+        name: "Second diverter".into(),
+        definition: "twinova.diverter@1".into(),
+        position: [8.0, 0.0, 0.0],
+        rotation: [0.0, 0.0, 0.0, 1.0],
+        parameters: [("switch_time".to_string(), ParamValue::Int(100_000_000))].into(),
+        signals: [
+            ("divert".to_string(), "%QX2.0".to_string()),
+            ("in_position".to_string(), "%IX2.0".to_string()),
+        ]
+        .into(),
+    });
+    let divert = instance(&mut project, "diverter").signals.clone();
+    let mut field = Field::build(&project).unwrap().unwrap();
+    field.cycle().unwrap();
+    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(0)));
+    assert!(bool_at(&field, &divert["in_position"]));
+    field
+        .set_command(&divert["divert"], Value::Bool(true))
+        .unwrap();
+    field.set_command("%QX2.0", Value::Bool(true)).unwrap();
+    field.cycle().unwrap();
+    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(-1)));
+    assert!(!bool_at(&field, &divert["in_position"]));
+    // A command restarts the flap's timer in the cycle that sees it, so the move lasts switch_time exactly
+    // (counted from that cycle, which already ran above).
+    assert_eq!(ms_until(&mut field, "%IX2.0", 1000), Some(100), "100 ms");
+    assert_eq!(
+        ms_until(&mut field, &divert["in_position"], 1000),
+        Some(200),
+        "the default 300 ms, 100 of them already run"
+    );
+    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(1)));
+    // Back to A in the cycle after the flap reached B.
+    field
+        .set_command(&divert["divert"], Value::Bool(false))
+        .unwrap();
+    field.cycle().unwrap();
+    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(-1)));
+    assert_eq!(
+        ms_until(&mut field, &divert["in_position"], 1000),
+        Some(300)
+    );
+    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(0)));
+}
+
+#[test]
+fn a_diverter_starts_at_its_default_output() {
+    let mut project = fixture("two_belts_diverter");
+    instance(&mut project, "diverter")
+        .parameters
+        .insert("default_output".into(), ParamValue::Int(1));
+    let mut field = Field::build(&project).unwrap().unwrap();
+    field.cycle().unwrap();
+    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(-1)));
+}
+
+fn with_belt_source(edit: impl FnOnce(&str) -> String) -> Result<Option<Field>, String> {
+    let mut project = fixture("demo_m3");
+    let source = project.behaviours.get_mut("twinova.belt@1").unwrap();
+    *source = edit(source);
+    Field::build(&project)
+}
+
+#[test]
+fn a_block_without_its_native_variable_is_refused() {
+    let error = with_belt_source(|s| {
+        s.replace("motor : BOOL;", "engine : BOOL;")
+            .replace("motor :=", "engine :=")
+    })
+    .err()
+    .unwrap();
+    assert_eq!(
+        error,
+        "components/twinova.belt@1.st: BeltBehaviour must declare motor : BOOL, which the native twinova.belt/1 uses"
+    );
+    let error = with_belt_source(|s| {
+        s.replace("motor : BOOL;", "motor : DINT;")
+            .replace("motor := run;", "motor := 1;")
+    })
+    .err()
+    .unwrap();
+    assert!(
+        error.ends_with("which the native twinova.belt/1 uses (it is DINT)"),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_parameter_of_another_type_is_refused() {
+    let error = with_belt_source(|s| {
+        s.replace("start_delay : TIME;", "start_delay : DINT;")
+            .replace("PT := start_delay", "PT := T#0ms")
+    })
+    .err()
+    .unwrap();
+    assert_eq!(
+        error,
+        "components/twinova.belt@1.st: BeltBehaviour.start_delay must be TIME like the parameter, not DINT"
+    );
+}
+
+#[test]
+fn a_mistake_in_a_block_is_reported_against_its_file_and_line() {
+    let error = with_belt_source(|s| s.replace("motor := run;", "motor := ;"))
+        .err()
+        .unwrap();
+    assert_eq!(
+        error,
+        "field runtime: expected expression at components/twinova.belt@1.st:15\n\
+         expected ';' at components/twinova.belt@1.st:16"
+    );
+}
+
+#[test]
+fn a_location_outside_the_blocks_is_the_generated_program() {
+    let spans = vec![(0, 5, "components/a.st".to_string())];
+    assert_eq!(
+        locate("e (at 2..3) f at 9..10 g", "ab\ncd\nefghijk", &spans),
+        "e (at components/a.st:1) f at the generated field program g"
+    );
+    assert_eq!(
+        locate("x at 4..5", "ab\ncdefg", &spans),
+        "x at components/a.st:2"
+    );
+    for unchanged in ["no place at what", "at 12", "at 1..x", "seat ..2"] {
+        assert_eq!(locate(unchanged, "", &spans), unchanged);
+    }
+}
+
+#[test]
+fn a_diverter_without_its_position_is_refused() {
+    let mut project = fixture("two_belts_diverter");
+    let source = project.behaviours.get_mut("twinova.diverter@1").unwrap();
+    *source = source
+        .replace("in_position", "IN_POSITION")
+        .replace("position", "flap")
+        .replace("IN_POSITION", "in_position");
+    let error = Field::build(&project).err().unwrap();
+    assert!(
+        error.contains("DiverterBehaviour must declare position : DINT, which the native twinova.diverter/1 uses"),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_real_parameter_reaches_the_block() {
+    let mut project = fixture("demo_m3");
+    let source = project.behaviours.get_mut("twinova.belt@1").unwrap();
+    *source = source.replace(
+        "    start_delay : TIME;",
+        "    start_delay : TIME;\n    speed : REAL;",
+    );
+    let field = Field::build(&project).unwrap().unwrap();
+    assert_eq!(field.native("belt_a", "speed"), Some(Value::Real(0.5)));
+}

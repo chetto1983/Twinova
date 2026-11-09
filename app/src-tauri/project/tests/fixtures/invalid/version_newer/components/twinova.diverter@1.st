@@ -28,8 +28,10 @@ ELSE
     target := 0;
 END_IF;
 IF target <> heading THEN
+    (* A new command restarts the move, even one that comes in the cycle after the flap arrived. *)
     heading := target;
     position := -1;
+    moving(IN := FALSE, PT := switch_time);
 END_IF;
 moving(IN := position = -1, PT := switch_time);
 IF moving.Q THEN

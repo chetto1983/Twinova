@@ -100,15 +100,18 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 
 ### Task 2 — The field runtime
 
-- [ ] Tests first:
+- [x] Tests first:
   - the generated source for `demo_m3` and for `two_belts_diverter`;
   - the mirror of addresses;
   - each contract failure with its diagnostic;
   - the diverter's behaviour with a controller program: both directions, `switch_time` per instance;
   - the belt's start delay, to the measured bound;
   - an ST keyword as an instance id.
-- [ ] Implement `field.rs`.
-- [ ] Verify: tests, clippy, mutants on `field.rs`.
+- [x] Implement `field.rs`.
+- [x] Verify: tests, clippy, mutants on `field.rs`.
+  - *Delivered:* the diverter block restarts its timer on a new command (a reversal in the cycle after arrival
+    ended the move at once); parameters are written by path before the first cycle instead of `VAR_CONFIG` initial
+    values, which works for parameters the block declares and skips the rest. 0 surviving mutants on `field.rs`.
 
 ### Task 3 — The controller by address
 
