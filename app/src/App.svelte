@@ -3,7 +3,7 @@
   import { m } from "./paraglide/messages.js";
   import { currentLocale, languageName, locales, setLanguage, type Locale } from "./lib/i18n.svelte";
   import { readPreference, writePreference } from "./lib/preferences";
-  import { backend, onEngineError, onSnapshot, onStopped } from "./lib/backend";
+  import { backend, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
   import { SPEEDS, formatSpeed, type Snapshot } from "./lib/snapshot";
   import Editor from "./lib/Editor.svelte";
   import Inspector from "./lib/Inspector.svelte";
@@ -75,10 +75,15 @@
   }
 
   onMount(() => {
-    void backend.defaultProgram().then((text) => {
-      source = text;
-      void build();
-    });
+    // The demo builds first, so a launch folder that fails to open leaves its diagnostics on a usable demo.
+    void backend
+      .defaultProgram()
+      .then((text) => {
+        source = text;
+        return build();
+      })
+      .then(() => attempt(projects.launch))
+      .then((launched) => launched && showProject(launched));
     const listeners = [
       onSnapshot((s) => (snapshot = s)),
       onStopped(() => (running = false)),

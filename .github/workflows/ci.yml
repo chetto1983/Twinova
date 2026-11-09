@@ -212,7 +212,7 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo test -p twinova-project
 
-  # The real app through tauri-driver (e2e/run.mjs), on both desktop platforms Tauri can drive.
+  # The real app through tauri-driver (npm run e2e: e2e/run.mjs, then e2e/project.mjs), on both desktop platforms Tauri can drive.
   # As in ModbusTool, Windows is tested here and not with cargo test: tauri-build embeds the Common
   # Controls v6 manifest in binaries only, so a test binary that links tauri does not start there
   # (0xc0000139, measured on this repository's run 42378063592).
@@ -272,14 +272,14 @@ jobs:
       # Software GL and no DMA-BUF renderer: the three.js view under Xvfb, as measured for M1.
       - name: E2E (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -a -s "-screen 0 1440x900x24" node e2e/run.mjs
+        run: xvfb-run -a -s "-screen 0 1440x900x24" npm run e2e
         env:
           E2E_OUT: ${{ runner.temp }}/e2e
           LIBGL_ALWAYS_SOFTWARE: "1"
           WEBKIT_DISABLE_DMABUF_RENDERER: "1"
       - name: E2E (Windows)
         if: runner.os == 'Windows'
-        run: node e2e/run.mjs
+        run: npm run e2e
         env:
           E2E_OUT: ${{ runner.temp }}/e2e
       # Failure screenshots and the driver's log, to read a failure without guessing.

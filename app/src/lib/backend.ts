@@ -34,6 +34,8 @@ export const projects = {
     const folder = await open({ directory: true });
     return folder === null ? null : invoke<ProjectView>("open_project", { folder });
   },
+  /** The folder named on the command line (spec 2026-11-08-project-format-design.md, decision 8), or null. */
+  launch: () => invoke<ProjectView | null>("open_launch_project"),
   save: (folder: string) => invoke<ProjectView>("save_project", { folder }),
   saveAs: async (): Promise<ProjectView | null> => {
     const folder = await open({ directory: true });

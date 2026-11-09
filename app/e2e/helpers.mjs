@@ -87,24 +87,36 @@ async function whenStarted() {
   }
 }
 
-/** Starts the app built in `profile` (debug or release) under tauri-driver, runs `body`, and exits 1 on a failed check. */
-export async function session(profile, body) {
+/** Starts tauri-driver, runs `body`, which starts the app with `app` as often as it needs, and exits 1 on a failed
+ * check. */
+export async function sessions(body) {
   const driver = spawn("tauri-driver", [], { stdio: ["ignore", openSync(driverLog, "w"), openSync(driverLog, "a")] });
   await sleep(2000);
-  browser = await remote({
-    hostname: "127.0.0.1",
-    port: 4444,
-    logLevel: "error",
-    capabilities: { "tauri:options": { application: join(root, "src-tauri/target", profile, APP) } },
-  });
   try {
-    await whenStarted();
     await body();
   } finally {
-    await browser.deleteSession().catch(() => {});
     driver.kill();
   }
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
   process.exit(failed.length ? 1 : 0);
 }
+
+/** Starts the app built in `profile` (debug or release) with the command-line `args`, runs `body` and closes it. */
+export async function app(profile, args, body) {
+  browser = await remote({
+    hostname: "127.0.0.1",
+    port: 4444,
+    logLevel: "error",
+    capabilities: { "tauri:options": { application: join(root, "src-tauri/target", profile, APP), args } },
+  });
+  try {
+    await whenStarted();
+    await body();
+  } finally {
+    await browser.deleteSession().catch(() => {});
+  }
+}
+
+/** One run of the app without arguments. */
+export const session = (profile, body) => sessions(() => app(profile, [], body));
