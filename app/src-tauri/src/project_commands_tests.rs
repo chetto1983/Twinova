@@ -140,6 +140,15 @@ fn the_launch_folder_is_the_first_argument_that_is_not_a_switch() {
         None,
         "the program itself is never the folder"
     );
+    assert_eq!(
+        launch_folder(args(&["twinova", "/p/line", "--project=/p/named"])),
+        Some(PathBuf::from("/p/named")),
+        "the switch wins, as msedgedriver can pass only switches"
+    );
+    assert_eq!(
+        launch_folder(args(&["twinova", "--projects=/p/x", "--project"])),
+        None
+    );
 }
 
 #[test]

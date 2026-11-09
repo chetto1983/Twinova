@@ -31,13 +31,20 @@ impl ProjectState {
     }
 }
 
-/// The project folder in a process's arguments (spec, decision 8): the first one after the program that is not a
-/// switch. Switches are skipped because a launcher may add its own, as a WebDriver may.
+/// The project folder in a process's arguments (spec, decision 8): the value of `--project=<folder>`, or else the
+/// first argument after the program that is not a switch. msedgedriver passes every WebDriver argument as a switch
+/// (`[--]name[=value]`, chromedriver's `capabilities.h`), so the E2E names the folder with `--project=` (run
+/// 42572872545). A `--project=` value that is not valid UTF-8 is not recognised.
 pub fn launch_folder(args: impl IntoIterator<Item = OsString>) -> Option<PathBuf> {
-    args.into_iter()
-        .skip(1)
-        .find(|arg| !arg.to_string_lossy().starts_with('-'))
-        .map(PathBuf::from)
+    let args: Vec<OsString> = args.into_iter().skip(1).collect();
+    let switch = args
+        .iter()
+        .find_map(|arg| arg.to_str()?.strip_prefix("--project=").map(PathBuf::from));
+    switch.or_else(|| {
+        args.iter()
+            .find(|arg| !arg.to_string_lossy().starts_with('-'))
+            .map(PathBuf::from)
+    })
 }
 
 struct Current {

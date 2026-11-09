@@ -64,7 +64,7 @@ async function roundTrip(name) {
   );
   const scene = JSON.parse(authored);
 
-  await app("debug", [folder], async () => {
+  await app("debug", [`--project=${folder}`], async () => {
     await inspectsTheScene(scene);
     await check("the hand edit is reported as changed outside Twinova", async () => {
       const text = await notice();
@@ -97,7 +97,7 @@ async function roundTrip(name) {
       }
     });
   }
-  await app("debug", [folder], async () => {
+  await app("debug", [`--project=${folder}`], async () => {
     await inspectsTheScene(scene);
     await check("the saved folder reopens with nothing changed outside", async () => {
       const text = await notice();
@@ -108,7 +108,7 @@ async function roundTrip(name) {
 
 async function refused(name, diagnostic) {
   console.log(`Start on ${name}`);
-  await app("debug", [join(fixtures, "invalid", name)], async () => {
+  await app("debug", [`--project=${join(fixtures, "invalid", name)}`], async () => {
     await check(`${name} is refused with its diagnostic`, () =>
       eventually(
         async () => {
