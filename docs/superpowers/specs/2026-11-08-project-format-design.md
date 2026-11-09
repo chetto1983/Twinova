@@ -60,6 +60,19 @@ round-trip tests, and a corpus of saved scenes opens. The model it stores is the
    - Every build must keep opening them, or keep rejecting them with the same diagnostic.
    - This is 4.2's acceptance corpus (research 14, OF-15).
 7. **The validator also runs outside the app**, as a command that CI calls on the corpus (research 14, OF-16).
+8. **A folder named on the command line opens at start**, as in OIP (user, 2026-11-09).
+   - `twinova <folder>` opens the folder as the menu's Open does: the same validation, the same notices, and a folder
+     that fails to open shows its diagnostics and leaves the M3 demo current.
+   - **The rule:** the first argument that does not start with `-` is the folder. Arguments that start with `-` are
+     switches and are ignored, so a launcher that adds its own does not hide the folder.
+   - It opens once per process: a reload of the webview does not open it again.
+   - **Why now.** The native dialogs cannot be driven by tauri-driver, so this is how the E2E opens and saves a real
+     project (plan Task 5). It is also a feature on its own: a file manager or a script can open a project.
+   - **Measured on Linux (2026-11-09):** tauri-driver 2.1.0 passes `tauri:options.args` to the application through
+     `webkitgtk:browserOptions.args`; a probe binary received them unchanged and in order, with no switch added.
+   - **Not measured on Windows.** Microsoft's WebDriver page says that for a WebView2 app the `args` "are passed to
+     your app instead of the underlying Microsoft Edge browser process"; it does not say whether msedgedriver adds
+     switches of its own. The windows-2022 E2E decides.
 
 ## To be measured in Task 1, before the schema is frozen
 

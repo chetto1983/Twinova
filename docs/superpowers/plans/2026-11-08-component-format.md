@@ -163,6 +163,11 @@ the active document and last saved project unchanged; exact file transaction fol
 
 - [ ] Through the actual Tauri app, open each positive fixture, inspect the scene, save and reopen; compare authored
   content and references. Attempt each negative fixture and verify the previous project remains usable.
+  - *Approach (user, 2026-11-09):* the native dialogs cannot be driven by tauri-driver, so the app opens a folder
+    named on the command line (spec, decision 8) and the E2E saves through the menu's Save, which needs no dialog.
+    `e2e/project.mjs` starts one app per fixture; the expected diagnostics live once, in
+    `project/tests/fixtures/invalid.json`, read by `tests/corpus.rs` and by the E2E. Save as, Export and Import go
+    through a dialog and stay covered by the command tests.
 - [ ] Re-run existing Windows/Linux E2E and appropriate mutation gates on new validation/storage logic.
 - [ ] Record results and limits in dated verification; update ROADMAP 4.2 only after the acceptance is met.
 - [ ] Commit, push and check applicable CI for that revision. The next plan addresses ST bindings and transport probes.
