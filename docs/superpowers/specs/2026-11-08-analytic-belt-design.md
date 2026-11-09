@@ -1,5 +1,8 @@
 # Spec: an analytic belt with exact sensor edges (ROADMAP 3.3)
 
+> **Superseded 2026-11-09** (user): belts are simulated with physics (Rapier), as Open Industry Project does. See spec
+> `2026-11-09-component-behaviour-design.md`, "Transport with physics", and research 15. This spec is kept as history.
+
 Date: 2026-11-08. Status: **approved** (user, 2026-11-08), decision 3 amended after measurement (below).
 
 M1's belt (`scene.rs`) is stepped by the PLC scan: every 10 ms it moves every part by v·dt, and the photocell is

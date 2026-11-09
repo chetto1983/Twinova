@@ -222,3 +222,25 @@ pub(crate) fn ports(def: &Definition) -> BTreeMap<&str, PortKind> {
 #[cfg(test)]
 #[path = "validate_tests.rs"]
 mod tests;
+
+/// Whether an ST source declares `FUNCTION_BLOCK <name>`, ignoring case, comments and layout. truST checks the
+/// source itself at Build; this only catches a behaviour file that does not hold the block its definition names.
+pub(crate) fn declares_block(source: &str, name: &str) -> bool {
+    let mut code = String::with_capacity(source.len());
+    let mut rest = source;
+    while let Some(start) = rest.find("(*") {
+        code.push_str(&rest[..start]);
+        code.push(' ');
+        rest = rest[start + 2..]
+            .split_once("*)")
+            .map_or("", |(_, after)| after);
+    }
+    code.push_str(rest);
+    let words: Vec<&str> = code
+        .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+        .filter(|w| !w.is_empty())
+        .collect();
+    words
+        .windows(2)
+        .any(|w| w[0].eq_ignore_ascii_case("FUNCTION_BLOCK") && w[1].eq_ignore_ascii_case(name))
+}

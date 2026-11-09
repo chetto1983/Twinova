@@ -10,7 +10,7 @@ rust-version = "1.99"
 # The project format is its own crate without Tauri, so its tests also run on Windows, where a test binary that links
 # Tauri does not start (0xc0000139, run 42378063592).
 [workspace]
-members = ["project"]
+members = ["project", "physics"]
 
 [lib]
 name = "twinova_lib"
@@ -31,6 +31,7 @@ nexosim = "=1.0.0"
 tauri-plugin-dialog = "=2.8.4"
 # The project format (spec 2026-11-08-project-format-design.md), a crate of this workspace without Tauri.
 twinova-project = { path = "project" }
+twinova-physics = { path = "physics" }
 trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }
 
 [dev-dependencies]
@@ -44,6 +45,12 @@ tempfile = "=3.27.0"
 # The webview's language under a C locale (src/webview_locale.rs).
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
+
+# Rapier and its geometry crate optimised in dev builds too: the physics tests step thousands of 1 ms frames.
+[profile.dev.package.rapier3d]
+opt-level = 3
+[profile.dev.package.parry3d]
+opt-level = 3
 
 [profile.release]
 codegen-units = 1

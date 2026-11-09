@@ -9,18 +9,16 @@ use twinova_project::{Files, parse_project};
 fn reference() -> Files {
     let root =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/valid/two_belts_diverter");
-    let mut files = Files::new();
-    for path in ["twinova.json", "scene.json", "plc/Main.st"]
-        .into_iter()
-        .map(String::from)
-        .chain(
-            ["source", "belt", "diverter", "sensor_diffuse", "sink"]
-                .map(|d| format!("components/twinova.{d}@1.json")),
-        )
-    {
-        files.insert(path.clone(), std::fs::read(root.join(&path)).unwrap());
-    }
-    files
+    let manifest: Value =
+        serde_json::from_slice(&std::fs::read(root.join(MANIFEST)).unwrap()).unwrap();
+    let listed = manifest["files"].as_object().unwrap().keys().cloned();
+    std::iter::once(MANIFEST.to_string())
+        .chain(listed)
+        .map(|path| {
+            let bytes = std::fs::read(root.join(&path)).unwrap();
+            (path, bytes)
+        })
+        .collect()
 }
 
 fn edit(files: &mut Files, path: &str, f: impl FnOnce(&mut Value)) {
@@ -146,6 +144,39 @@ fn file_level_rules() {
             });
         },
     );
+    const BELT_ST: &str = "components/twinova.belt@1.st";
+    expect(
+        "behaviour not listed",
+        "'components/twinova.belt@1.st', the behaviour of twinova.belt@1, is not listed",
+        |f| {
+            edit(f, MANIFEST, |m| {
+                m["files"].as_object_mut().unwrap().remove(BELT_ST);
+            })
+        },
+    );
+    expect(
+        "behaviour without a block",
+        "does not declare FUNCTION_BLOCK BeltBehaviour, the behaviour twinova.belt@1 names",
+        |f| {
+            f.insert(
+                BELT_ST.into(),
+                b"(* FUNCTION_BLOCK BeltBehaviour *)\nFUNCTION_BLOCK Other\nEND_FUNCTION_BLOCK\n"
+                    .to_vec(),
+            );
+        },
+    );
+    expect(
+        "behaviour not UTF-8",
+        "components/twinova.belt@1.st: is not UTF-8 text",
+        |f| {
+            f.insert(BELT_ST.into(), vec![0xff]);
+        },
+    );
+    expect(
+        "behaviour file without a behaviour",
+        "is listed, but twinova.belt@1 has no behaviour",
+        |f| edit(f, BELT, |d| d["behaviour"] = Value::Null),
+    );
     expect("asset named wrongly", "named after the SHA-256", |f| {
         f.insert("assets/wrong.glb".into(), b"glb".to_vec());
         edit(f, MANIFEST, |m| m["files"]["assets/wrong.glb"] = json!("0"));
@@ -223,10 +254,63 @@ fn scene_rules() {
     expect("bad instance id", "'Belt_A': is not a lowercase id", |f| {
         scene(f, |s| instance(s, "belt_a")["id"] = json!("Belt_A"))
     });
+    let button = |name: &str, address: &str| json!({ "name": name, "address": address });
+    expect("unnamed button", "controller.panel[0]: needs a name", |f| {
+        edit(f, "scene.json", |s| {
+            s["controller"]["panel"] = json!([button(" ", "%IX20.0")])
+        })
+    });
     expect(
-        "bad program instance",
-        "controller.program_instance: is not a lowercase id",
-        |f| scene(f, |s| s["controller"]["program_instance"] = json!("P1")),
+        "button on an output",
+        "a button needs an input bit (%IX), not %QX20.0",
+        |f| {
+            edit(f, "scene.json", |s| {
+                s["controller"]["panel"] = json!([button("Start", "%QX20.0")])
+            })
+        },
+    );
+    expect(
+        "button on a word",
+        "a button needs an input bit (%IX), not %IW20",
+        |f| {
+            edit(f, "scene.json", |s| {
+                s["controller"]["panel"] = json!([button("Start", "%IW20")])
+            })
+        },
+    );
+    expect("button address", "controller.panel[0]: ", |f| {
+        edit(f, "scene.json", |s| {
+            s["controller"]["panel"] = json!([button("Start", "IX9")])
+        })
+    });
+    expect(
+        "button over a signal",
+        "%IX0.0 overlaps the address of sensor_a.detected",
+        |f| {
+            edit(f, "scene.json", |s| {
+                s["controller"]["panel"] = json!([button("Start", "%IX0.0")])
+            })
+        },
+    );
+    expect(
+        "two buttons at one bit",
+        "%IX20.0 overlaps the address of the button 'Start'",
+        |f| {
+            edit(f, "scene.json", |s| {
+                s["controller"]["panel"] =
+                    json!([button("Start", "%IX20.0"), button("Stop", "%IX20.0")])
+            })
+        },
+    );
+    expect(
+        "two buttons, one name",
+        "two buttons are named 'Start'",
+        |f| {
+            edit(f, "scene.json", |s| {
+                s["controller"]["panel"] =
+                    json!([button("Start", "%IX20.0"), button("Start", "%IX20.1")])
+            })
+        },
     );
     expect(
         "bad instance pose",

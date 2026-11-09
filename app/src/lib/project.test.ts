@@ -63,6 +63,7 @@ describe("inspector rows", () => {
       { name: "width", text: "0.6 m", overridden: false },
       { name: "height", text: "0.8 m", overridden: false },
       { name: "speed", text: "0.5 m/s", overridden: false },
+      { name: "start_delay", text: "0 ns", overridden: false },
     ]);
   });
 

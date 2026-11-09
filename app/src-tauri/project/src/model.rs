@@ -18,6 +18,8 @@ pub struct Project {
     pub definitions: BTreeMap<String, Definition>,
     /// ST sources, in the order the controller program is assembled: (path, text).
     pub program: Vec<(String, String)>,
+    /// The behaviour block of each definition that has one, by `id@version`; stored as `components/<key>.st`.
+    pub behaviours: BTreeMap<String, String>,
     /// Assets, by path (`assets/<sha256>.glb`).
     pub assets: BTreeMap<String, Vec<u8>>,
 }
@@ -54,6 +56,11 @@ impl Definition {
     /// The key a scene names it by, and the stem of its file.
     pub fn key(&self) -> String {
         format!("{}@{}", self.id, self.version)
+    }
+
+    /// Where its behaviour block is stored, when it has one.
+    pub fn behaviour_path(&self) -> String {
+        format!("components/{}.st", self.key())
     }
 }
 
@@ -223,5 +230,14 @@ pub enum Connection {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Controller {
-    pub program_instance: String,
+    /// The operator's buttons; a press holds its input bit for one controller scan.
+    pub panel: Vec<PanelButton>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PanelButton {
+    pub name: String,
+    /// A Bit address in the input area, as the controller sees it.
+    pub address: String,
 }
