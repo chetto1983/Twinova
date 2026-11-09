@@ -185,3 +185,19 @@ were then measured on the same probe, and the user chose Rapier.*
 - **The diverter's native variable is `position`,** not `drive` and `at_b`. With `at_b` the flap's timing would sit
   both in the block and in the native model, and no native diverter writes it before 4.4. The block owns
   `switch_time`, and its `default_output` is the flap's position at start.
+
+## Amended after the acceptance (2026-11-09, ROADMAP 4.3a, user)
+
+- **A native model reads a block's variable through the block instance resolved at Build,** not by path.
+  - **Measured.** A read by path (`TestHarness::get_output("F.belt_a.motor")`) parses the path as an ST expression on
+    every call. truST's fast paths match `F.` against the program's type name, `Field`, so they miss it
+    (`host/boundary/resolver.rs`, read at `6405915`). Read every millisecond for every belt, it was 31 % of a run
+    (callgrind, `verification/2026-11-09-component-behaviour.md`).
+  - **How it works now.** Build resolves each instance's block once, from the global `F` to the member `<instance id>`,
+    through `VariableStorage` (`trust_runtime::memory`, the hosted storage API). A read is then
+    `get_instance_var(block, "motor")`.
+  - **Name matching is unchanged.** Both reads are case-sensitive: a block that declares `Motor` was and is refused at
+    Build (probe, 2026-11-09).
+  - **Alternative measured, not taken:** a generated `VAR_ACCESS` alias per native variable,
+    read with `get_access`. It was as fast, but a block without its native variable then fails to compile with
+    truST's "unknown instance field" instead of Build's own message.
