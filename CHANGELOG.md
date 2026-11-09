@@ -11,17 +11,20 @@ and build inside the app, on Windows and Linux.
 
 ### Added
 
-- A desktop app (Tauri 2, Svelte 5) with a 3D belt conveyor: parts arrive every 2 s, ride the
-  belt at 0.5 m/s, accumulate nose to tail and leave at the end; a photocell near the end.
-- The belt is computed in closed form: photocell edges and deliveries happen at their exact time,
-  to the nanosecond, instead of at the next 10 ms step. The program reads the photocell at its next
-  scan, and its outputs apply from that scan on, as on a real PLC.
-- Structured Text (IEC 61131-3) control: `PROGRAM Main` reads `sensor`, `start` and `stop` and
-  writes `motor`. Build reports compile errors and missing contract variables; a runtime fault
-  (such as a division by zero) stops the run with its message.
+- A desktop app (Tauri 2, Svelte 5) with a 3D belt conveyor: cartons arrive every 2 s, ride the
+  belt at 0.5 m/s, accumulate and leave into a sink at the end; a photocell near the end.
+- Transport is rigid-body physics (Rapier, deterministic across Linux and Windows): the belt moves
+  cartons by friction, as in Open Industry Project, stepped every millisecond.
+- Structured Text (IEC 61131-3) control: the line program reads and writes the scene's signals and
+  the panel's buttons by IEC address (`sensor AT %IX0.0`). Build reports compile errors and warns
+  about addresses no signal has; a runtime fault (such as a division by zero) stops the run with
+  its message.
+- Component behaviours (ROADMAP 4.3): each component's logic is an ST function block, edited in its
+  own tab and rebuilt with the line. The belt's block drives its motor and reports `running`. A
+  broken block fails Build with its file and line, and the line keeps running on the last good build.
 - Run against the wall clock, Pause, Step one 10 ms scan, Reset; the lag behind real time is
   shown, never hidden.
-- An outlet-blocked fault to toggle, and a default program with a 2 s jam detection.
+- A blocked-sink fault to toggle, and a starter program with a 2 s jam detection.
 - Run speed: ×0.25 to ×10 the wall clock, or as fast as possible; Save state and Restore bring a
   run back to a saved moment (replayed exactly).
 - The scan time comes from the program's IEC tasks (`TASK … (INTERVAL := T#5ms)`); 10 ms without one.
@@ -37,5 +40,5 @@ and build inside the app, on Windows and Linux.
     inspector with each signal's IEC address.
   - A save interrupted by a crash is rolled back when the project is next opened. Files changed outside Twinova are
     opened and listed.
-  - Opened projects cannot run yet; the M3 demo still runs.
+  - An opened project builds and runs; the app starts on the bundled demo project.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

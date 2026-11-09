@@ -143,29 +143,29 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 
 ### Task 5 — The line runs a project; the demo becomes `demo_m3`
 
-- [ ] Tests first:
+- [x] Tests first:
   - the step order on one instant: physics, native models, field, controller;
   - M3's behaviours on the project: deliveries, Start/Stop, jam on a blocked sink;
   - replay from logged inputs gives the same state;
   - a project with a family the build cannot run (the diverter) is refused with what is missing.
-- [ ] Implement `line.rs` and move the engine and the commands to a project. Build builds both runtimes and the world.
-- [ ] Remove `bench.rs`, `belt.rs`, `scene.rs`, `plc.rs`, `default_program.st` and the demo-only commands; drop nexosim if
+- [x] Implement `line.rs` and move the engine and the commands to a project. Build builds both runtimes and the world.
+- [x] Remove `bench.rs`, `belt.rs`, `scene.rs`, `plc.rs`, `default_program.st` and the demo-only commands; drop nexosim if
   nothing else uses it.
-- [ ] Verify: all Rust gates and mutants.
+- [x] Verify: all Rust gates and mutants.
 
 ### Task 6 — The app
 
-- [ ] Editor tabs: the program, and each definition with a behaviour.
-- [ ] Panel buttons from the project; the I/O panel by signal.
-- [ ] Parts drawn on the belt of the project view.
-- [ ] The app opens the bundled `demo_m3` at start.
-- [ ] Verify: frontend gates, Stryker on changed helpers.
+- [x] Editor tabs: the program, and each definition with a behaviour.
+- [x] Panel buttons from the project; the I/O panel by signal.
+- [x] Parts drawn on the belt of the project view.
+- [x] The app opens the bundled `demo_m3` at start.
+- [x] Verify: frontend gates, Stryker on changed helpers.
 
 ### Task 7 — Acceptance
 
-- [ ] E2E on Linux and Windows:
+- [x] E2E on Linux and Windows:
   - `demo_m3` runs as M3 did;
   - the belt's start delay set to 500 ms, then Build: `running` follows `run` by 500 ms within the bound;
   - a broken behaviour fails Build with its diagnostic, and the line keeps running.
-- [ ] Soak on the release build against M3's numbers.
-- [ ] Write the verification file; ROADMAP 4.3 ✅; CHANGELOG.
+- [x] Soak on the release build against M3's numbers.
+- [x] Write the verification file; ROADMAP 4.3 ✅; CHANGELOG.
