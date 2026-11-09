@@ -57,9 +57,7 @@ The M3 E2E (`e2e/run.mjs`) stays 8/8 on both platforms.
 - **Rust:** fmt; clippy `-D warnings`, on the workspace and with `--target x86_64-pc-windows-gnu` for the project
   crate; tests; `cargo llvm-cov` 97.25 % of lines.
 - **Frontend:** svelte-check, oxlint, prettier, i18n, knip, jscpd; vitest coverage 100 %.
-- **CI run 42574552486:** the Windows E2E (40/40), `project-windows`, `rust`, `frontend` and `file-size` are green; the
-  Ubuntu E2E was still running when this was written. The Linux 42/42 above is local. The same suite was 42/42 on
-  the CI's Ubuntu runner in run 42572872545, with the positional folder.
+- **CI run 42574552486** (`e7e8088`): every job green, both E2E included.
 
 ## What this does not prove
 
