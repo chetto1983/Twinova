@@ -46,14 +46,15 @@
     }
   }
 
+  /** A Build that fails leaves the running line as it was (commands.rs `build`), so only a success stops Run here. */
   async function build(): Promise<void> {
-    running = false;
     const built = await attempt(() => {
       const { program, behaviours } = buildArgs(sources);
       return backend.build(program, behaviours);
     });
     status = built ? "ok" : "failed";
     if (built) {
+      running = false;
       snapshot = built.snapshot;
       warnings = built.warnings;
     }

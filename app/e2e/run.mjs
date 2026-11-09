@@ -135,10 +135,59 @@ async function languageScenario() {
   await selectLanguage("English");
 }
 
+/** The text of the editor's open tab, and a replacement for it that Svelte sees (an input event). */
+const editorText = () => browser.execute(() => document.querySelector("textarea").value);
+const setEditorText = (text) =>
+  browser.execute((t) => {
+    const area = document.querySelector("textarea");
+    area.value = t;
+    area.dispatchEvent(new Event("input", { bubbles: true }));
+  }, text);
+
+async function behaviourScenario() {
+  console.log("A component's behaviour edited and rebuilt (ROADMAP 4.3)");
+  await click(`//button[@role="tab"][normalize-space()="twinova.belt@1"]`);
+  const original = await editorText();
+  await check("the belt's behaviour, edited to a 500 ms start delay, reports running 500 ms after run", async () => {
+    await setEditorText(original.replace("PT := start_delay", "PT := T#500ms"));
+    await click(button("Build"));
+    await browser.$("//*[normalize-space()='Built: ready to run']").waitForExist({ timeout: 10_000 });
+    await click(button("Start"));
+    let run = null;
+    let running = null;
+    for (let scan = 0; scan < 80 && running === null; scan++) {
+      await click(button("Step"));
+      const time = await virtualSeconds("Virtual time");
+      if (run === null && (await bit("belt_a.run")) === "TRUE") run = time;
+      if (running === null && (await bit("belt_a.running")) === "TRUE") running = time;
+    }
+    // run is scanned at 10 ms; the field sees it at 11 ms, and truST's TON reaches Q one cycle before PT (spec
+    // 2026-11-09, "Measured"): running at 510 ms, read at the 510 ms scan.
+    expectEqual([run, running], [0.01, 0.51], "run, running (s)");
+  });
+  await screenshot("behaviour-edited");
+  await check("a broken behaviour fails Build with its file and line, and the line keeps running", async () => {
+    await click(button("Run"));
+    await setEditorText(original.replace("motor := run;", "motor := ;"));
+    const before = await virtualSeconds("Virtual time");
+    await click(button("Build"));
+    await browser.$("//*[normalize-space()='Build failed']").waitForExist({ timeout: 10_000 });
+    const shown = await (await browser.$(`//pre[contains(@class,"error-line")]`)).getText();
+    if (!shown.includes("components/twinova.belt@1.st:")) throw new Error(`no location in "${shown}"`);
+    await sleep(1000);
+    const after = await virtualSeconds("Virtual time");
+    if (!(after > before)) throw new Error(`virtual time stopped: ${before} -> ${after}`);
+    await click(button("Pause"));
+  });
+  await setEditorText(original);
+  await click(button("Build"));
+}
+
 session("debug", async () => {
   await lineScenario();
   await runModesScenario();
   await languageScenario();
+  await behaviourScenario();
 }).catch((e) => {
   console.error(e);
   process.exit(1);
