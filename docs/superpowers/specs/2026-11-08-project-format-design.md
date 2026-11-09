@@ -209,7 +209,8 @@ identifier matches `^[a-z][a-z0-9_]*$`, and a definition id is a dotted name suc
 - **`joints`** are `{ "id", "kind": "fixed" | "revolute" | "prismatic", "parent", "child", "axis", "limits" }`, by
   node id.
 - **`behaviour`** is `null` for a built-in whose logic is native. Otherwise it is `{ "function_block": "<name>" }`,
-  a block in the project's ST sources, whose I/O uses `AT %I*`/`%Q*` (4.3).
+  and `components/<id>@<version>.st` holds that block, listed in the manifest. The block runs in the field runtime,
+  not in the line program (amended 2026-11-09, spec `2026-11-09-component-behaviour-design.md`).
 
 ### `scene.json`
 
@@ -228,7 +229,7 @@ identifier matches `^[a-z][a-z0-9_]*$`, and a definition id is a dotted name suc
     { "kind": "flow", "from": ["source", "out"], "to": ["belt_a", "in"] },
     { "kind": "mount", "host": ["belt_a", "rail"], "device": ["sensor_a", "mount"], "position": [2.7, 0, 0], "rotation": [0, 0, 0, 1] }
   ],
-  "controller": { "program_instance": "p1" }
+  "controller": { "panel": [ { "name": "Start", "address": "%IX1.0" } ] }
 }
 ```
 
@@ -243,9 +244,9 @@ identifier matches `^[a-z][a-z0-9_]*$`, and a definition id is a dotted name suc
   on one belt.
 - **`groups`** hold instance ids. A group id is unique among instances and groups; an instance belongs to at most one
   group.
-- **`controller.program_instance`** is the name the generated `CONFIGURATION` gives the program. Build writes
-  `VAR_CONFIG <program_instance>.<instance>.<signal> AT <address>` for each binding, and initial values for the
-  overrides of behaviour parameters. These are not stored in the folder.
+- **`controller.panel`** lists the operator's buttons: a name, unique, and an input bit (`%IX`) that overlaps no
+  signal. A press holds the bit for one controller scan (amended 2026-11-09; it replaces `program_instance`, which the
+  field runtime made unnecessary).
 
 ### Order and identity
 
@@ -255,10 +256,10 @@ identifier matches `^[a-z][a-z0-9_]*$`, and a definition id is a dotted name suc
 
 ### The two first fixtures
 
-- **`demo_m3`**: one source, one belt and one diffuse sensor.
+- **`demo_m3`**: one source, one belt, one diffuse sensor and a sink (the sink added 2026-11-09).
   - Belt: 3.0 m at 0.5 m/s. Sensor: 2.7 m.
-  - Signals at the addresses the migrated M3 program will use: `run` `%QX0.0`, `detected` `%IX0.0`.
-  - It opens and saves in 4.2. It runs only once 4.3 migrates the M3 program to addresses.
+  - Signals: `run` `%QX0.0`, `running` `%IX0.1`, `detected` `%IX0.0`, the sink's `count` `%ID4`; the panel's Start
+    and Stop at `%IX1.0` and `%IX1.1`. Its program is M3's at those addresses.
 - **`two_belts_diverter`**: the M4.1 acceptance line.
   - Source → belt A → diverter → belt B → normal sink, and the second diverter output → reject sink.
   - Two diffuse sensors.

@@ -1,5 +1,7 @@
 {
-  "behaviour": null,
+  "behaviour": {
+    "function_block": "BeltBehaviour"
+  },
   "generator": "twinova.belt/1",
   "id": "twinova.belt",
   "joints": [],
@@ -56,6 +58,14 @@
       "name": "speed",
       "type": "REAL",
       "unit": "m/s"
+    },
+    {
+      "default": 0,
+      "max": null,
+      "min": 0.0,
+      "name": "start_delay",
+      "type": "TIME",
+      "unit": "ns"
     }
   ],
   "ports": [

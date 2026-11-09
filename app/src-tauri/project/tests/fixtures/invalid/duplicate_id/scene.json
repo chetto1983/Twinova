@@ -101,7 +101,7 @@
     }
   ],
   "controller": {
-    "program_instance": "p1"
+    "panel": []
   },
   "groups": [
     {

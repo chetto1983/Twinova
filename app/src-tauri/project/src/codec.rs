@@ -111,9 +111,43 @@ pub fn parse_project(files: &Files) -> Result<Opened, Vec<Diagnostic>> {
     }
     let mut program = Vec::new();
     for path in &manifest.program {
-        match String::from_utf8(listed(path).to_vec()) {
+        match text(path, listed(path)) {
             Ok(text) => program.push((path.clone(), text)),
-            Err(_) => diags.push(Diagnostic::new(path, "", "is not UTF-8 text")),
+            Err(d) => diags.push(d),
+        }
+    }
+    let mut behaviours = BTreeMap::new();
+    for def in definitions.values() {
+        let path = def.behaviour_path();
+        match (&def.behaviour, manifest.files.contains_key(&path)) {
+            (None, false) => {}
+            (None, true) => diags.push(Diagnostic::new(
+                &path,
+                "",
+                format!("is listed, but {} has no behaviour", def.key()),
+            )),
+            (Some(_), false) => diags.push(Diagnostic::new(
+                MANIFEST,
+                "files",
+                format!("'{path}', the behaviour of {}, is not listed", def.key()),
+            )),
+            (Some(behaviour), true) => match text(&path, listed(&path)) {
+                Err(d) => diags.push(d),
+                Ok(source) => {
+                    if !validate::declares_block(&source, &behaviour.function_block) {
+                        diags.push(Diagnostic::new(
+                            &path,
+                            "",
+                            format!(
+                                "does not declare FUNCTION_BLOCK {}, the behaviour {} names",
+                                behaviour.function_block,
+                                def.key()
+                            ),
+                        ));
+                    }
+                    behaviours.insert(def.key(), source);
+                }
+            },
         }
     }
     match scene {
@@ -124,6 +158,7 @@ pub fn parse_project(files: &Files) -> Result<Opened, Vec<Diagnostic>> {
                 scene,
                 definitions,
                 program,
+                behaviours,
                 assets,
             },
             changed_outside,
@@ -144,6 +179,9 @@ pub fn encode_project(project: &Project) -> Files {
     }
     for (path, text) in &project.program {
         files.insert(path.clone(), text.clone().into_bytes());
+    }
+    for (key, source) in &project.behaviours {
+        files.insert(format!("components/{key}.st"), source.clone().into_bytes());
     }
     for (path, bytes) in &project.assets {
         files.insert(path.clone(), bytes.clone());
@@ -186,6 +224,10 @@ pub fn canonical<T: Serialize>(value: &T) -> Vec<u8> {
     let mut bytes = serde_json::to_vec_pretty(&value).expect("a JSON value serialises");
     bytes.push(b'\n');
     bytes
+}
+
+fn text(file: &str, bytes: &[u8]) -> Result<String, Diagnostic> {
+    String::from_utf8(bytes.to_vec()).map_err(|_| Diagnostic::new(file, "", "is not UTF-8 text"))
 }
 
 fn json<T: DeserializeOwned>(file: &str, bytes: &[u8]) -> Result<T, Diagnostic> {

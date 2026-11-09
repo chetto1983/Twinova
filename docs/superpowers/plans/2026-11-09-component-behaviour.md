@@ -84,16 +84,19 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 
 ### Task 1 — Format amendments
 
-- [ ] Tests first:
+- [x] Tests first:
   - a definition with a behaviour lists `components/<key>.st` in the manifest, and the codec reads and writes it;
   - a missing behaviour file is refused, and so is a block whose name differs from `behaviour.function_block`;
   - a panel button needs a Bit address in `%I` that overlaps no signal.
-- [ ] Implement in the crate. `controller.program_instance` goes.
-- [ ] Regenerate the fixtures with the script:
+- [x] Implement in the crate. `controller.program_instance` goes.
+- [x] Regenerate the fixtures with the script:
   - `demo_m3` gains a sink and the panel, and its program becomes M3's at addresses;
   - the belt definition gains `start_delay` and its behaviour;
   - the diverter gains its behaviour.
-- [ ] Verify: `cargo test -p twinova-project`, corpus, mutants on the crate's changed files.
+- [x] Verify: `cargo test -p twinova-project`, corpus, mutants on the crate's changed files.
+  - *Delivered:* `migrate_fixtures_4_3.py` (scratchpad, independent of the encoder) migrated every fixture; the
+    corpus test confirms the encoder writes the same bytes. The diverter's native variable became `position`
+    (spec, amended while planning). 0 surviving mutants in the crate.
 
 ### Task 2 — The field runtime
 

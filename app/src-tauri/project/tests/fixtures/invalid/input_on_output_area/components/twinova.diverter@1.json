@@ -1,5 +1,7 @@
 {
-  "behaviour": null,
+  "behaviour": {
+    "function_block": "DiverterBehaviour"
+  },
   "generator": "twinova.diverter/1",
   "id": "twinova.diverter",
   "joints": [],

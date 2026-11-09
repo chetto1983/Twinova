@@ -32,10 +32,30 @@
         0.0,
         1.0
       ]
+    },
+    {
+      "from": [
+        "belt_a",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "sink",
+        "in"
+      ]
     }
   ],
   "controller": {
-    "program_instance": "p1"
+    "panel": [
+      {
+        "address": "%IX1.0",
+        "name": "Start"
+      },
+      {
+        "address": "%IX1.1",
+        "name": "Stop"
+      }
+    ]
   },
   "groups": [],
   "instances": [
@@ -99,6 +119,26 @@
       ],
       "signals": {
         "detected": "%IX0.0"
+      }
+    },
+    {
+      "definition": "twinova.sink@1",
+      "id": "sink",
+      "name": "Sink",
+      "parameters": {},
+      "position": [
+        3.5,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "count": "%ID4"
       }
     }
   ]

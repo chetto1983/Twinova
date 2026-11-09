@@ -26,12 +26,6 @@ pub(crate) fn scene(scene: &Scene, definitions: &BTreeMap<String, Definition>) -
             "is used by two instances or groups".into(),
         );
     }
-    if !is_id(&scene.controller.program_instance) {
-        err(
-            "controller.program_instance".into(),
-            "is not a lowercase id".into(),
-        );
-    }
     let mut bound: Vec<(String, Address)> = Vec::new();
     for inst in &scene.instances {
         let at = |what: &str| format!("instances.{}.{what}", inst.id);
@@ -83,6 +77,36 @@ pub(crate) fn scene(scene: &Scene, definitions: &BTreeMap<String, Definition>) -
                 }
             }
         }
+    }
+    for (i, button) in scene.controller.panel.iter().enumerate() {
+        let path = format!("controller.panel[{i}]");
+        if button.name.trim().is_empty() {
+            err(path.clone(), "needs a name".into());
+        }
+        match Address::parse(&button.address) {
+            Err(problem) => err(path, problem),
+            Ok(address) => {
+                if address.size != Size::Bit || address.area != Area::Input {
+                    err(
+                        path.clone(),
+                        format!("a button needs an input bit (%IX), not {address}"),
+                    );
+                }
+                if let Some((other, _)) = bound.iter().find(|(_, a)| a.overlaps(address)) {
+                    err(
+                        path.clone(),
+                        format!("{address} overlaps the address of {other}"),
+                    );
+                }
+                bound.push((format!("the button '{}'", button.name), address));
+            }
+        }
+    }
+    for name in duplicates(scene.controller.panel.iter().map(|b| b.name.as_str())) {
+        err(
+            "controller.panel".into(),
+            format!("two buttons are named '{name}'"),
+        );
     }
     let instances: BTreeMap<&str, &Definition> = scene
         .instances

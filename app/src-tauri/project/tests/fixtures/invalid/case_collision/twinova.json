@@ -8,14 +8,16 @@
     "components/twinova.source@1.json"
   ],
   "files": {
-    "components/twinova.belt@1.json": "b14745359c4ff36867b04def0458c24977302819469f269da23786798f557e2a",
-    "components/twinova.diverter@1.json": "6f64e7e50fe16ecb744594a19a28a23f5af5932e62127971a89bebe685549178",
+    "components/twinova.belt@1.json": "67525523241fa95b5f2a151342bdae2fda66ca49812112e0bfad2d33a554f72f",
+    "components/twinova.belt@1.st": "7391e9875329cecc61f3faab03d592188253f9793443a4a8f6fe73807245559c",
+    "components/twinova.diverter@1.json": "f68e011be3e4f8fcef21577c39d9b58c7e3cb3597bab2f40469bc8e8479d8bd1",
+    "components/twinova.diverter@1.st": "0531087f70f2bdaa14bc3125ca36bbee94fe1f54721aa425c6a01f068d0cf6d1",
     "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
     "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
     "components/twinova.source@1.json": "c41dfb89fd394067b9e71785f51d437262c4625afe95734049d3d75edac2e18e",
     "plc/MAIN.st": "c83c68a490e4dbe059daae0678b1f444526c809781c89ee9b30a05a285889ded",
     "plc/Main.st": "c83c68a490e4dbe059daae0678b1f444526c809781c89ee9b30a05a285889ded",
-    "scene.json": "9763b5dac44b37e1c1abc9eb95814086c09b3ff5c8e8ae0863dd5c618382b1ca"
+    "scene.json": "583bf4e366c81e7a455e56d0714b93d728a959250d823fb562b1660e590caa23"
   },
   "format": "twinova-project",
   "name": "Negative: case_collision",

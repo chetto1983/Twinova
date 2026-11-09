@@ -157,3 +157,24 @@ fn a_cycle_is_found_from_any_of_its_nodes_only() {
     );
     assert!(!in_cycle(&parents, "d") && !in_cycle(&parents, "root"));
 }
+
+#[test]
+fn a_block_is_found_outside_comments_and_in_any_case() {
+    assert!(declares_block(
+        "function_block Wanted\nEND_FUNCTION_BLOCK",
+        "WANTED"
+    ));
+    assert!(declares_block(
+        "VAR x : BOOL; END_VAR (*c*) FUNCTION_BLOCK Wanted (* tail *)",
+        "Wanted"
+    ));
+    assert!(!declares_block(
+        "(* FUNCTION_BLOCK Wanted *) FUNCTION_BLOCK Other",
+        "Wanted"
+    ));
+    assert!(!declares_block("FUNCTION_BLOCK WantedToo", "Wanted"));
+    assert!(!declares_block(
+        "FUNCTION_BLOCK (* unclosed Wanted",
+        "Wanted"
+    ));
+}

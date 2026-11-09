@@ -17,7 +17,7 @@ conveyors. The format is 4.2's (`2026-11-08-project-format-design.md`), which th
    - This replaces the 4.2 schema's reading, in which a component's block sat inside the line program.
 2. **The belt and the diverter have ST behaviours in 4.3** (user). Source, diffuse sensor and sink stay native.
    - Belt: `run` → motor → `running` after a start delay.
-   - Diverter: `divert` → drive → `in_position` after `switch_time`.
+   - Diverter: `divert` → the flap moves for `switch_time` → `in_position`.
 3. **The field runtime scans every 1 ms, fixed** (user), whatever the controller's period.
 
 ## Measured (truST `6405915`, 2026-11-09)
@@ -58,7 +58,7 @@ possible later, under the rule "baseline or drop".
 | Family | Native variables (the native model reads ← / writes →) |
 |---|---|
 | Belt | ← `motor : BOOL` (`VAR_OUTPUT`): the belt moves while it is true |
-| Diverter | ← `drive : BOOL` (`VAR_OUTPUT`): the flap moves toward output B while true, toward A while false; → `at_b : BOOL` (`VAR_INPUT`): the flap has reached B |
+| Diverter | ← `position : DINT` (`VAR_OUTPUT`): 0 at output A, 1 at output B, −1 while the flap moves. The block owns `switch_time`; the native model of 4.4 routes by `position` |
 
 - **A native component** (no behaviour) writes its `plc_input` signals straight into the controller's image, and
   reads its `plc_output` signals from it.
@@ -158,3 +158,6 @@ both directions, with a replay fingerprint.
   declares only the parameters it uses.
 - **The 4.3 bench runs one line shape:** source → belt → sink, with sensors on the belt. The belt's dimensions, speed
   and photocell positions, and the source's interval, come from the project instead of `belt.rs`'s constants.
+- **The diverter's native variable is `position`,** not `drive` and `at_b`. With `at_b` the flap's timing would sit
+  both in the block and in the native model, and no native diverter writes it before 4.4. The block owns
+  `switch_time`, and its `default_output` is the flap's position at start.
