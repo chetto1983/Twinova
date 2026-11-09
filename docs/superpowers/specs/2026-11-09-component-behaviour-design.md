@@ -1,6 +1,7 @@
 # Spec: component behaviours in ST and the field runtime (ROADMAP 4.3)
 
-Date: 2026-11-09. Status: **approved** (user, 2026-11-09). Three decisions were the user's choices and are marked
+Date: 2026-11-09. Status: **approved** (user, 2026-11-09); transport amended to physics the same day (user, research
+15). Three decisions were the user's choices and are marked
 (user); the user approved the rest as proposed, with the precisions of "Amended while planning".
 
 ROADMAP 4.3: behaviours written as ST function blocks bound to component signals. Acceptance: a component's logic
@@ -93,40 +94,46 @@ possible later, under the rule "baseline or drop".
   cycle later, plus the start delay (default 0). The replay fingerprints are recorded again in that commit, with
   the reason. The M3 scan behaviour, deliveries and jam detection must hold, and the E2E checks them.
 
-## Order at the same virtual time (proposal, to be measured in Task 1)
+## Transport with physics (amended 2026-11-09, user; research 15)
 
-At an instant where several things fall:
-1. the native models' events: belt edges, arrivals, deliveries, ordered by instance id;
-2. the field cycle, when the instant is a whole millisecond. It reads the controller's outputs as last applied and
-   the native variables, and writes the native commands and the controller's inputs;
-3. the controller's scan, when it is due. It reads its image, which includes what step 2 wrote.
+*This section replaces the analytic transfer rule and the event order proposed in the approved draft. While the plan
+was being written, the user asked to do as Open Industry Project does, with physics. Rapier and Jolt (via jolt-rust)
+were then measured on the same probe, and the user chose Rapier.*
 
-So a field response reaches the controller in the same instant, and a controller command reaches the field at the
-next millisecond. Task 1 tests this with two belts, a diverter and the controller on equal instants, in
-both directions, with a replay fingerprint.
+- **Products are rigid bodies in Rapier 0.36.1**, the version truST already brings, now a direct dependency with
+  `enhanced-determinism`. Belts are fixed boxes whose contacts get a tangent velocity in
+  `PhysicsHooks::modify_solver_contacts`, Rapier's documented mechanism for conveyor belts.
+- **No transfer rule.** A product passes from one belt to the next through its contacts and friction, as in OIP. A
+  product spanning two belts moves at a speed between theirs; a stopped or full belt holds it; boxes accumulate by
+  collision.
+- **Seam gate, as OIP's** (`conveyorContacts.ts`): on a belt contact, a contact whose normal is within 45° of the
+  horizontal and whose depth is at most 2 mm is dropped. Without it a box lifts 4–5 mm at a seam, slows down or
+  bounces back, and can stay stuck on the next belt's edge (measured).
+- **Friction as OIP declares it:** a belt's friction is the coefficient against a standard carton (0.5). Rapier has
+  no geometric mean, so contacts use `Multiply`, and a belt's collider friction is μ / 0.5.
+- **A fixed step of 1 ms** (user), the field runtime's cycle. At each step:
+  1. the physics step;
+  2. the native models read it: the diffuse sensors cast a ray across the belt, a sink removes the boxes it holds,
+     a source adds a box when its interval has passed and its exit is free;
+  3. the field cycle;
+  4. the controller's scan, when it is due.
 
-## A product spanning two conveyors (proposal, implemented and tested in 4.3, used by 4.4)
-
-- **One owner at a time.** The upstream conveyor owns a product until the product's front reaches its end.
-- **Transfer at the front.** At that instant the downstream conveyor accepts if its entry has free length for the
-  whole product. If so, ownership moves atomically. If not, the product stops at the upstream end and parts behind
-  it accumulate. The downstream conveyor reports when space frees, and the transfer is retried at that instant.
-- **While spanning,** the product moves at the downstream speed, and its rear still occupies the end of the upstream
-  conveyor until it leaves. Parts behind it accumulate against that rear. A downstream stop stops the product.
-- **Tests** cover:
-  - downstream faster and slower than upstream, and unequal product lengths;
-  - a blocked downstream, released later;
-  - no product lost or duplicated, with times exact to the nanosecond, as `belt.rs` is.
+  A sensor edge and a delivery therefore fall on a millisecond, not on a nanosecond as in M3.
+- **M3's analytic belt is replaced** (user). `belt.rs`, `scene.rs` and spec `2026-11-08-analytic-belt-design.md` stay
+  in git history only. nexosim no longer drives the line: with one fixed step the line is a loop, not a discrete-event
+  model. Replay is unchanged, because the inputs are logged with their time.
+- **Determinism:** the same inputs give the same bits; a test pins a state fingerprint that must hold on Linux and on
+  Windows (CI). Same process measured; across platforms promised by `enhanced-determinism`, to be measured.
+- **Cost (measured, release, `enhanced-determinism`):** 3.7 / 22 / 98 µs per 1 ms step for 1 / 20 / 100 boxes.
 
 ## The app
 
 - **Editing a behaviour:** the editor has one tab for the controller program and one per definition that has a
   behaviour. A definition's block serves every instance of it, as its pinned copy does. Build checks and builds
   both runtimes. A failure keeps the running line and shows the diagnostic for the tab and the line.
-- **Running a project:** Run is enabled for a project whose components all have a native model in this build, and
-  whose line is one the 4.3 bench runs: a source, one belt and a sink in a row, with diffuse sensors mounted on the
-  belt. Otherwise Run stays disabled and the UI names what is missing, as 4.2 requires. Two belts and the diverter
-  run from 4.4, with the line engine and the transfer rule.
+- **Running a project:** Run is enabled for a project whose components all have a model in this build: sources,
+  belts, diffuse sensors and sinks in 4.3, in any arrangement physics allows. Otherwise Run stays disabled and the UI
+  names what is missing, as 4.2 requires. The diverter runs from 4.4, with its physical flap.
 
 ## Format amendments (format 1, not yet released, amended in place)
 
@@ -144,7 +151,8 @@ both directions, with a replay fingerprint.
    - break the block: Build fails with its diagnostic and the line keeps running.
 2. The diverter's behaviour, with a controller program, in field-runtime tests: both directions, `switch_time` per
    instance.
-3. The order and the spanning rule, as above, with property tests and a replay fingerprint.
+3. Transport with physics: two belts at unequal speeds, a stopped belt, accumulation and release, no box lost; the
+   step order; a pinned state fingerprint, equal on Linux and Windows.
 4. Coverage, mutation (the field runtime's generator and the transfer rule join `mutants.toml`) and the soak on the
    project demo against M3's numbers.
 
@@ -162,8 +170,8 @@ both directions, with a replay fingerprint.
   input recorded for replay as before.
 - **The belt definition gains `start_delay`** (TIME, default 0), the parameter its behaviour uses. A behaviour block
   declares only the parameters it uses.
-- **The 4.3 bench runs one line shape:** source → belt → sink, with sensors on the belt. The belt's dimensions, speed
-  and photocell positions, and the source's interval, come from the project instead of `belt.rs`'s constants.
+- **The 4.3 bench runs one line shape:** source → belt → sink, with sensors on the belt. *Superseded by "Transport
+  with physics": any arrangement of sources, belts, sensors and sinks runs.*
 - **The diverter's native variable is `position`,** not `drive` and `at_b`. With `at_b` the flap's timing would sit
   both in the block and in the native model, and no native diverter writes it before 4.4. The block owns
   `switch_time`, and its `default_output` is the flap's position at start.

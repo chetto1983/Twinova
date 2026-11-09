@@ -53,6 +53,7 @@ WASM**. Le note che valutano il WASM (07, 08, 09, 10) restano come registro; non
 | [12](12-m4-componenti-editor-opensource.md) | Brainstorming M4: confronto mirato di simulatori industriali, codice OIP/realvirtual/JaamSim/Three.js letto a commit fissati, riuso disponibile e decisioni aperte sul modello e sull'editor | – |
 | [13](13-oip-app-comportamenti-live.md) | Esplorazione dell'app OIP reale: 37 famiglie censite, inspector, cronologia, demo, ST/Watch/forzature, Ladder, import/export e limiti browser; prove distinte da controlli soltanto esposti | – |
 | [14](14-oip-formato-progetto.md) | Il formato di progetto di OIP per la 4.2: versione unica e migrazioni in lettura, riparazioni dichiarate, definizioni copiate, cartella con manifest sottile, asset per hash, scritture condizionate, corpus di regressione; dove Twinova diverge (indirizzi, atomicità su più file) | – |
+| [15](15-fisica-nastri-oip-rapier.md) | Nastri con la fisica: come fa OIP (Jolt, velocità superficiale, filtri sulle giunzioni, letto il sorgente), Rapier e Jolt via jolt-rust misurati sulla stessa sonda; scelta di Rapier | – |
 | [benchmark/](benchmark/) | Schede prodotto con URL: virtual commissioning (g1), flusso/DES (g2), didattici e open source (g3) | – |
 | [ricerca/](ricerca/) | Note di ricerca con URL: eventi discreti (r1), passo fisso e fisica (r2), virtual commissioning e PLCSIM (r3) | – |
 

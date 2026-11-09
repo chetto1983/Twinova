@@ -14,18 +14,18 @@ tested, ready for 4.4.
   contract, and exchanges by path with the native models.
 - **`controller.rs`** replaces `plc.rs`: the line program, scanned with its image read and written by address, and
   its panel.
-- **`line.rs`** replaces the fixed bench: it builds the nexosim models of a supported line from a project, in the
-  order the spec fixes:
-  - a source, a belt and a sink, with the belt parametrised;
-  - the field runtime, every 1 ms;
-  - the controller, at its scan period.
-- **`transfer.rs`:** the spanning rule, as a pure library over integer nm and ns.
+- **`physics.rs`** (amended 2026-11-09, user: physics as OIP, Rapier; research 15): the Rapier world of a line.
+  - belts are fixed boxes with a tangent velocity and the seam gate;
+  - boxes are dynamic bodies;
+  - sources add boxes, sinks remove them, and diffuse sensors cast rays.
+- **`line.rs`** replaces the fixed bench and nexosim's role for the line. It is a fixed-step loop of 1 ms: physics,
+  native models, field, then the controller when its scan is due.
 - **The engine, commands and UI** run a project instead of the demo. The editor has tabs for the program and for
   each behaviour; the panel buttons come from the project.
 
 ## Tech Stack
 
-Rust (nexosim, truST `6405915` through `TestHarness`), Tauri 2, Svelte 5, three.js; tests with cargo test,
+Rust (Rapier 0.36.1 with `enhanced-determinism`, truST `6405915` through `TestHarness`), Tauri 2, Svelte 5, three.js; tests with cargo test,
 proptest, vitest; E2E with tauri-driver on Linux and Windows.
 
 ## Spec
@@ -42,8 +42,8 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 - **Gates:**
   - no file over 600 LOC;
   - coverage ≥ 85 %;
-  - zero surviving mutants on the files in `mutants.toml`: `field.rs`, `controller.rs`, `line.rs` and
-    `transfer.rs` join it.
+  - zero surviving mutants on the files in `mutants.toml`: `field.rs`, `controller.rs`, `physics.rs` and
+    `line.rs` join it.
 - **The app works at every commit.** The demo keeps running until Task 5 swaps it for the project.
 - **Fixtures** are written by a script independent of the Rust encoder, as `tests/corpus.rs` requires.
 
@@ -52,16 +52,15 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 - The same-instant order: native events, then the field, then the controller.
 - The mirror of addresses, and the build-time contract checks with diagnostics that name the definition and the
   variable.
-- The transfer rule's invariants: one owner, no loss or duplicate, exact times.
+- Physics: the seam gate, no box lost or duplicated, the step order, and the fingerprint equal on both platforms.
 - Replays after the switch to the project.
 
 ## Decisions taken while writing this plan
 
-- **The belt's native model stays `belt.rs`'s closed form, parametrised.** It already holds the arrivals, the
-  accumulation and the outlet. In 4.3 the source feeds it and the sink is its outlet. `transfer.rs` is the piece
-  4.4 uses to chain belts.
-- **Field cycles are scheduled by the line model at whole milliseconds** on the nexosim clock, so a run without a
-  behaviour has no field events at all.
+- **~~The belt's native model stays `belt.rs`'s closed form~~** — superseded the same day: belts are physical
+  (spec, "Transport with physics").
+- **The line is a fixed-step loop of 1 ms,** no longer nexosim models: physics fixes the step, and a discrete-event
+  kernel adds nothing to it.
 - **The UI's I/O panel lists the scene's signals and the panel buttons by name and address,** read from the
   controller's image.
 
@@ -73,9 +72,8 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 | `app/src-tauri/project/tests/fixtures/**` | regenerated; `demo_m3` gains a sink, the panel and M3's program |
 | `app/src-tauri/src/field.rs` (+ `_tests`) | new |
 | `app/src-tauri/src/controller.rs` (+ `_tests`) | new; `plc.rs` removed in Task 5 |
-| `app/src-tauri/src/transfer.rs` (+ `_tests`) | new |
-| `app/src-tauri/src/line.rs` (+ `_tests`) | new; `bench.rs` and `scene.rs` removed in Task 5 |
-| `app/src-tauri/src/belt.rs` | parametrised |
+| `app/src-tauri/src/physics.rs` (+ `_tests`) | new: Rapier world, belts, boxes, sources, sinks, sensors |
+| `app/src-tauri/src/line.rs` (+ `_tests`) | new; `bench.rs`, `belt.rs` and `scene.rs` removed in Task 5 |
 | `app/src-tauri/src/engine.rs`, `commands.rs`, `project_commands.rs` | run a project |
 | `app/src/App.svelte`, `lib/Editor.svelte`, `lib/IoPanel.svelte`, `lib/ProjectScene.svelte` | tabs, panel, parts on the belt |
 | `app/e2e/run.mjs`, `project.mjs` | the demo as a project; the behaviour edit |
@@ -126,24 +124,30 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
     a line program through the mirror (in_position read at 360 and 810 ms, as computed). 0 surviving mutants on
     `controller.rs`.
 
-### Task 4 — The transfer rule
+### Task 4 — Transport with physics
 
-- [ ] Property tests first, with unequal speeds and lengths, and a blocked downstream released later. Each case
-  checks one owner, conservation of products, exact times, and accumulation against a spanning rear.
-- [ ] Implement `transfer.rs`.
-- [ ] Verify: tests, mutants.
+- [ ] Add `rapier3d = { version = "=0.36.1", features = ["enhanced-determinism"] }` (the version truST brings).
+- [ ] Tests first:
+  - one belt carries a box at its speed;
+  - two belts at equal, lower, higher and zero speed: the box passes with no lift at the seam, or it is held;
+  - five boxes accumulate against a stopped belt and all leave when it starts;
+  - a source adds a box every interval when its exit is free, a sink removes what reaches it, a blocked sink holds;
+  - a diffuse sensor sees a box crossing its beam, on the step it enters and the step it leaves;
+  - two runs give the same bits, and a pinned fingerprint holds.
+- [ ] Implement `physics.rs` from a project: positions, lengths and speeds from the instances and the flow
+  connections; sensors placed by their mount.
+- [ ] Verify: tests, clippy, mutants on `physics.rs`.
 
-### Task 5 — The line bench runs a project; the demo becomes `demo_m3`
+### Task 5 — The line runs a project; the demo becomes `demo_m3`
 
 - [ ] Tests first:
-  - the same-instant order, with a belt, the field and the controller on equal instants;
-  - a replay fingerprint for `demo_m3`;
+  - the step order on one instant: physics, native models, field, controller;
   - M3's behaviours on the project: deliveries, Start/Stop, jam on a blocked sink;
-  - a project whose line is not supported is refused with what is missing.
-- [ ] Parametrise `belt.rs`. Implement `line.rs`, and move the engine and the commands to a project; Build builds
-  both runtimes.
-- [ ] Remove `bench.rs`, `scene.rs`, `plc.rs`, `default_program.st` and the demo-only commands. Record the
-  fingerprints again with the reason.
+  - replay from logged inputs gives the same state;
+  - a project with a family the build cannot run (the diverter) is refused with what is missing.
+- [ ] Implement `line.rs` and move the engine and the commands to a project. Build builds both runtimes and the world.
+- [ ] Remove `bench.rs`, `belt.rs`, `scene.rs`, `plc.rs`, `default_program.st` and the demo-only commands; drop nexosim if
+  nothing else uses it.
 - [ ] Verify: all Rust gates and mutants.
 
 ### Task 6 — The app
