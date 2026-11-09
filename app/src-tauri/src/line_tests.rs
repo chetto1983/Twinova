@@ -152,3 +152,22 @@ fn equal_inputs_give_equal_lines() {
     };
     assert_eq!(script(), script());
 }
+
+#[test]
+fn a_belt_without_a_behaviour_follows_the_controller_and_reports_running_itself() {
+    let mut project = fixture("demo_m3");
+    project
+        .definitions
+        .get_mut("twinova.belt@1")
+        .unwrap()
+        .behaviour = None;
+    let (mut line, _) = Line::build(&project).unwrap();
+    run_ms(&mut line, 8000);
+    assert_eq!(line.world().delivered(0), 0, "the belt waits for Start");
+    assert!(!bit(&line, "%IX0.1"));
+    line.press("%IX1.0");
+    run_ms(&mut line, 20);
+    assert!(bit(&line, "%QX0.0") && bit(&line, "%IX0.1"));
+    run_ms(&mut line, 8000);
+    assert!(line.world().delivered(0) > 0);
+}
