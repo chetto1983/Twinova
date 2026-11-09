@@ -119,6 +119,10 @@ were then measured on the same probe, and the user chose Rapier.*
   4. the controller's scan, when it is due.
 
   A sensor edge and a delivery therefore fall on a millisecond, not on a nanosecond as in M3.
+- **Why a fixed-step loop and not discrete events** (research 16): the most industrial virtual-commissioning setup, NX
+  MCD with SIMIT's "bus synchronous" mode and PLCSIM Advanced, is physics with transport surfaces in lockstep on a
+  fixed time slice (≥ 1 ms) of virtual time. A fixed-step loop is that lockstep; in M5 the same loop drives PLCSIM
+  Advanced through its sync points (TimespanSynchronized, `RunToNextSyncPoint`).
 - **M3's analytic belt is replaced** (user). `belt.rs`, `scene.rs` and spec `2026-11-08-analytic-belt-design.md` stay
   in git history only. nexosim no longer drives the line: with one fixed step the line is a loop, not a discrete-event
   model. Replay is unchanged, because the inputs are logged with their time.
