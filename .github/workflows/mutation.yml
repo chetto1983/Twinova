@@ -10,6 +10,7 @@ on:
     paths:
       - "app/src-tauri/src/**"
       - "app/src-tauri/project/src/**"
+      - "app/src-tauri/physics/src/**"
       - "app/src/lib/**"
       - "app/stryker.config.json"
       - "app/src-tauri/.cargo/mutants.toml"

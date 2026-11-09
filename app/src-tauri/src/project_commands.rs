@@ -1,7 +1,7 @@
 //! Tauri commands over the project format (ROADMAP 4.2, spec 2026-11-08-project-format-design.md). The webview
-//! receives a read-only view; the validated project stays here. A project that fails to open never replaces the
-//! current one, and nothing here runs a project: running a line belongs to 4.3–4.5, and the M3 demo keeps its own
-//! commands.
+//! receives a view; the validated project stays here. The app starts on the bundled M3 demo (spec
+//! 2026-11-09-component-behaviour-design.md), and a project that fails to open never replaces the current one. Build
+//! (commands.rs) puts edited ST sources back into the current project, so Save writes them.
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -11,23 +11,49 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use tauri::State;
 use twinova_project::archive::{export_archive, import_archive};
-use twinova_project::model::{Definition, Instance};
+use twinova_project::model::{Definition, Instance, PanelButton};
 use twinova_project::storage::{open_folder, save_folder};
 use twinova_project::{Opened, Project};
 
-#[derive(Default)]
 pub struct ProjectState {
-    current: Mutex<Option<Current>>,
+    current: Mutex<Current>,
     /// The folder named on the command line, until the webview asks for it.
     launch: Mutex<Option<PathBuf>>,
+}
+
+impl Default for ProjectState {
+    fn default() -> Self {
+        Self::launching(None)
+    }
 }
 
 impl ProjectState {
     pub fn launching(folder: Option<PathBuf>) -> Self {
         Self {
+            current: Mutex::new(Current {
+                project: crate::demo::demo(),
+                folder: None,
+            }),
             launch: Mutex::new(folder),
-            ..Self::default()
         }
+    }
+
+    pub(crate) fn project(&self) -> Result<Project, String> {
+        Ok(self.lock()?.project.clone())
+    }
+
+    /// The ST sources a Build accepted: they become the project's, for Save.
+    pub(crate) fn set_sources(&self, from: &Project) -> Result<(), String> {
+        let mut current = self.lock()?;
+        current.project.program = from.program.clone();
+        current.project.behaviours = from.behaviours.clone();
+        Ok(())
+    }
+
+    fn lock(&self) -> Result<std::sync::MutexGuard<'_, Current>, String> {
+        self.current
+            .lock()
+            .map_err(|_| "project lock poisoned".to_string())
     }
 }
 
@@ -65,6 +91,11 @@ pub struct ProjectView {
     pub changed_outside: Vec<String>,
     /// An interrupted save was rolled back while opening.
     pub recovered: bool,
+    /// The line program's sources, (path, text), for the editor.
+    pub program: Vec<(String, String)>,
+    /// The behaviour block of each definition that has one, by `id@version`, for the editor.
+    pub behaviours: BTreeMap<String, String>,
+    pub panel: Vec<PanelButton>,
 }
 
 fn view(current: &Current, changed_outside: Vec<String>, recovered: bool) -> ProjectView {
@@ -75,6 +106,9 @@ fn view(current: &Current, changed_outside: Vec<String>, recovered: bool) -> Pro
         definitions: current.project.definitions.clone(),
         changed_outside,
         recovered,
+        program: current.project.program.clone(),
+        behaviours: current.project.behaviours.clone(),
+        panel: current.project.scene.controller.panel.clone(),
     }
 }
 
@@ -85,7 +119,7 @@ fn replace(
     recovered: bool,
 ) -> Result<ProjectView, String> {
     let shown = view(&current, changed, recovered);
-    *state.current.lock().map_err(|_| "project lock poisoned")? = Some(current);
+    *state.lock()? = current;
     Ok(shown)
 }
 
@@ -99,7 +133,7 @@ fn opened(folder: Option<PathBuf>, opened: Opened) -> (Current, Vec<String>) {
     )
 }
 
-fn lines(diagnostics: &[twinova_project::Diagnostic]) -> String {
+pub(crate) fn lines(diagnostics: &[twinova_project::Diagnostic]) -> String {
     diagnostics
         .iter()
         .map(ToString::to_string)
@@ -111,6 +145,12 @@ fn open(state: &ProjectState, folder: PathBuf) -> Result<ProjectView, String> {
     let result = open_folder(&folder).map_err(|e| e.to_string())?;
     let (current, changed) = opened(Some(folder), result.opened);
     replace(state, current, changed, result.recovered)
+}
+
+/// The project the app shows: the demo at start, else the last one opened or imported.
+#[tauri::command]
+pub fn current_project(state: State<'_, ProjectState>) -> Result<ProjectView, String> {
+    Ok(view(&*state.lock()?, Vec::new(), false))
 }
 
 #[tauri::command]
@@ -132,18 +172,16 @@ pub fn open_launch_project(state: State<'_, ProjectState>) -> Result<Option<Proj
 /// Saves the current project into `folder`, which becomes its folder.
 #[tauri::command]
 pub fn save_project(state: State<'_, ProjectState>, folder: String) -> Result<ProjectView, String> {
-    let mut guard = state.current.lock().map_err(|_| "project lock poisoned")?;
-    let current = guard.as_mut().ok_or("open or import a project first")?;
+    let mut current = state.lock()?;
     let folder = PathBuf::from(folder);
     save_folder(&folder, &current.project).map_err(|e| e.to_string())?;
     current.folder = Some(folder);
-    Ok(view(current, Vec::new(), false))
+    Ok(view(&current, Vec::new(), false))
 }
 
 #[tauri::command]
 pub fn export_project(state: State<'_, ProjectState>, file: String) -> Result<(), String> {
-    let guard = state.current.lock().map_err(|_| "project lock poisoned")?;
-    let current = guard.as_ref().ok_or("open or import a project first")?;
+    let current = state.lock()?;
     std::fs::write(Path::new(&file), export_archive(&current.project))
         .map_err(|e| format!("{file}: {e}"))
 }

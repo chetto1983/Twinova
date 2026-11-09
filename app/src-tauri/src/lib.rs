@@ -1,13 +1,10 @@
-pub mod belt;
-pub mod bench;
 pub mod commands;
 pub mod controller;
+pub mod demo;
 pub mod engine;
 pub mod field;
 pub mod line;
-pub mod plc;
 pub mod project_commands;
-pub mod scene;
 pub mod webview_locale;
 
 pub fn run() {
@@ -25,16 +22,16 @@ pub fn run() {
             project_commands::launch_folder(std::env::args_os()),
         ))
         .invoke_handler(tauri::generate_handler![
-            commands::default_program,
             commands::build,
             commands::reset,
             commands::step,
             commands::press,
-            commands::set_outlet_blocked,
+            commands::set_sink_blocked,
             commands::pause,
             commands::run,
             commands::save_state,
             commands::restore_state,
+            project_commands::current_project,
             project_commands::open_project,
             project_commands::open_launch_project,
             project_commands::save_project,

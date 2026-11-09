@@ -23,8 +23,6 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# The discrete-event core (spec 2026-11-07-des-core-design.md), MIT OR Apache-2.0; patched below.
-nexosim = "=1.0.0"
 # truST at the last commit read that still has its bytecode VM (deleted upstream on 2026-10-24):
 # docs/research/10-st-senza-compilazione.md. MIT OR Apache-2.0.
 # Native dialogs to pick project folders and archives (ROADMAP 4.2), the official plugin. MIT OR Apache-2.0.
@@ -62,7 +60,4 @@ strip = true
 # take typed flags in windows 0.52). truST's workspace patches it with its fixed copy (trust-platform
 # Cargo.toml, [patch.crates-io]), but a patch does not reach dependents, so it is repeated here.
 [patch.crates-io]
-# nexosim with its single-threaded executor made FIFO, so that same-time events follow the scheduler key
-# (spec 2026-11-07-des-core-design.md, section E). The user's fork, until the upstream PR is merged.
-nexosim = { git = "https://github.com/chetto1983/nexosim", rev = "480e72471ec3f9f64833bfbb925a1d67d3711ce6" }
 tiverse-mmap = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0" }
