@@ -19,8 +19,7 @@ describe("backend bridge", () => {
   });
 
   it("calls the Rust commands registered in lib.rs with their argument names", async () => {
-    await backend.defaultProgram();
-    await backend.build("PROGRAM Main END_PROGRAM");
+    await backend.build([["plc/Main.st", "PROGRAM Main END_PROGRAM"]], { "twinova.belt@1": "FUNCTION_BLOCK B" });
     await backend.reset();
     await backend.step();
     await backend.run(2);
@@ -28,11 +27,16 @@ describe("backend bridge", () => {
     await backend.saveState();
     await backend.restoreState();
     await backend.pause();
-    await backend.press(true, false);
-    await backend.setOutletBlocked(true);
+    await backend.press("%IX1.0");
+    await backend.setSinkBlocked(0, true);
     expect(invoke.mock.calls).toEqual([
-      ["default_program"],
-      ["build", { source: "PROGRAM Main END_PROGRAM" }],
+      [
+        "build",
+        {
+          program: [["plc/Main.st", "PROGRAM Main END_PROGRAM"]],
+          behaviours: { "twinova.belt@1": "FUNCTION_BLOCK B" },
+        },
+      ],
       ["reset"],
       ["step"],
       ["run", { speed: 2 }],
@@ -40,8 +44,8 @@ describe("backend bridge", () => {
       ["save_state"],
       ["restore_state"],
       ["pause"],
-      ["press", { start: true, stop: false }],
-      ["set_outlet_blocked", { blocked: true }],
+      ["press", { address: "%IX1.0" }],
+      ["set_sink_blocked", { sink: 0, blocked: true }],
     ]);
   });
 
@@ -75,6 +79,8 @@ describe("project bridge", () => {
     expect(await projects.exportArchive()).toBe("/p/out.zip");
     await projects.save("/p/line");
     expect(await projects.launch()).toEqual({ name: "view" });
+    expect(await projects.current()).toEqual({ name: "view" });
+    expect(await projects.demo()).toEqual({ name: "view" });
     expect(open.mock.calls).toEqual([[{ directory: true }], [{ directory: true }], [{ filters: ARCHIVE }]]);
     expect(save.mock.calls).toEqual([[{ filters: ARCHIVE }]]);
     expect(invoke.mock.calls).toEqual([
@@ -84,6 +90,8 @@ describe("project bridge", () => {
       ["export_project", { file: "/p/out.zip" }],
       ["save_project", { folder: "/p/line" }],
       ["open_launch_project"],
+      ["current_project"],
+      ["open_demo"],
     ]);
   });
 

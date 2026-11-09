@@ -1,14 +1,10 @@
-# cargo mutants configuration (https://mutants.rs). Scope: the conveyor kinematics (closed-form and stepped), the
-# engine and its nexosim bench (CLAUDE.md "MUTATION >=70%", ROADMAP 1.4, 3.2 and 3.3), the field runtime, the controller and the line physics (4.3), and the project format's
-# address parser, validation and codec (ROADMAP 4.2). mutation.yml runs it with --workspace.
+# cargo mutants configuration (https://mutants.rs). Scope (CLAUDE.md "MUTATION >=70%"; the gate in mutation.yml
+# allows no survivor): the run engine and the line loop, the field runtime and the controller (4.3), the line physics
+# (crate twinova-physics), and the project format's address parser, validation, codec and storage (4.2).
+# mutation.yml runs it with --workspace.
 examine_globs = [
-  "src/belt.rs", "src/scene.rs", "src/engine.rs", "src/bench.rs", "src/field.rs", "src/controller.rs",
+  "src/engine.rs", "src/line.rs", "src/field.rs", "src/controller.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs",
   "physics/src/world.rs", "physics/src/layout.rs",
 ]
-
-# Equivalent mutant, excluded on purpose: the photocell sits exactly one part length before the end of the belt
-# (PHOTOCELL_NM + PART_NM == LENGTH_NM; the scene tests pin 3.0, 0.30 and 2.70 m), so a part's rear passes it when
-# the part leaves, and the rear test in photocell_at cannot change the result for any reachable state.
-exclude_re = ['replace - with / in Belt::photocell_at']

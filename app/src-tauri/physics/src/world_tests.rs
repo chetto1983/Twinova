@@ -156,6 +156,7 @@ fn a_full_entry_delays_the_next_carton() {
 #[test]
 fn a_blocked_sink_holds_and_a_free_one_delivers() {
     let mut w = two_belts(0.5, 2);
+    assert_eq!((w.sinks(), w.sink_id(0)), (1, "sink"));
     w.set_sink_blocked(0, true);
     assert!(w.sink_blocked(0));
     run(&mut w, 15_000);

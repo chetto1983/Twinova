@@ -1,17 +1,20 @@
 //! Tauri commands and the Run loop. The engine lives behind one mutex; Run is a thread that paces it to the wall
-//! clock and emits a `snapshot` event about 30 times a second.
+//! clock and emits a `snapshot` event about 30 times a second. Build runs the current project (project_commands.rs)
+//! with the ST sources the editor holds (spec 2026-11-09-component-behaviour-design.md, "The app").
 
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, Runtime, State};
+use twinova_project::{Project, encode_project, parse_project};
 
 use crate::engine::{Engine, Saved, Snapshot};
-use crate::plc::Plc;
+use crate::project_commands::{ProjectState, lines};
 
-pub const DEFAULT_PROGRAM: &str = include_str!("default_program.st");
 const FRAME: Duration = Duration::from_millis(33);
 /// Wall time spent scanning per tick when running as fast as possible; the rest of the frame lets the UI draw.
 const FAST_BUDGET: Duration = Duration::from_millis(25);
@@ -19,49 +22,73 @@ const FAST_BUDGET: Duration = Duration::from_millis(25);
 #[derive(Default)]
 pub struct AppState {
     engine: Arc<Mutex<Option<Engine>>>,
-    source: Mutex<String>,
+    /// The project the engine was last built from, for Reset.
+    built: Mutex<Option<Project>>,
     running: Arc<AtomicBool>,
-    /// One saved state per session, with the program it was taken on (spec 2026-11-08-run-modes-design.md).
-    saved: Mutex<Option<(String, Saved)>>,
+    /// One saved state per session, with the project it was taken on (spec 2026-11-08-run-modes-design.md).
+    saved: Mutex<Option<(Project, Saved)>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Built {
+    pub snapshot: Snapshot,
+    pub warnings: Vec<String>,
+}
+
+fn poisoned<T>(_: T) -> String {
+    "a lock is poisoned".to_string()
 }
 
 fn with_engine<T>(
     state: &AppState,
     f: impl FnOnce(&mut Engine) -> Result<T, String>,
 ) -> Result<T, String> {
-    let mut guard = state
-        .engine
-        .lock()
-        .map_err(|_| "engine lock poisoned".to_string())?;
-    let engine = guard.as_mut().ok_or("build a program first")?;
+    let mut guard = state.engine.lock().map_err(poisoned)?;
+    let engine = guard.as_mut().ok_or("build the project first")?;
     f(engine)
 }
 
-#[tauri::command]
-pub fn default_program() -> String {
-    DEFAULT_PROGRAM.to_string()
-}
-
-/// Compiles `source` and replaces the engine with a fresh one at time zero.
-#[tauri::command]
-pub fn build(state: State<'_, AppState>, source: String) -> Result<Snapshot, String> {
+/// Puts `engine` in place of the current one, stopped, for `project`.
+fn install(state: &AppState, project: Project, engine: Engine) -> Result<Snapshot, String> {
     state.running.store(false, Ordering::SeqCst);
-    let engine = Engine::new(Plc::build(&source)?)?;
     let snapshot = engine.snapshot();
-    *state.engine.lock().map_err(|_| "engine lock poisoned")? = Some(engine);
-    *state.source.lock().map_err(|_| "source lock poisoned")? = source;
+    *state.engine.lock().map_err(poisoned)? = Some(engine);
+    *state.built.lock().map_err(poisoned)? = Some(project);
     Ok(snapshot)
 }
 
-/// Back to time zero with the last built program.
+/// Checks the current project with `program` and `behaviours` as the format does on open, then replaces the engine
+/// with a fresh one at time zero. On success the sources become the project's; on failure the running line stays.
+#[tauri::command]
+pub fn build(
+    state: State<'_, AppState>,
+    projects: State<'_, ProjectState>,
+    program: Vec<(String, String)>,
+    behaviours: BTreeMap<String, String>,
+) -> Result<Built, String> {
+    let mut project = projects.project()?;
+    project.program = program;
+    project.behaviours = behaviours;
+    let project = parse_project(&encode_project(&project))
+        .map_err(|d| lines(&d))?
+        .project;
+    let (engine, warnings) = Engine::new(&project)?;
+    projects.set_sources(&project)?;
+    let snapshot = install(&state, project, engine)?;
+    Ok(Built { snapshot, warnings })
+}
+
+/// Back to time zero with the last built project.
 #[tauri::command]
 pub fn reset(state: State<'_, AppState>) -> Result<Snapshot, String> {
-    let source = state
-        .source
+    let project = state
+        .built
         .lock()
-        .map_err(|_| "source lock poisoned")?
-        .clone();
-    build(state, source)
+        .map_err(poisoned)?
+        .clone()
+        .ok_or("build the project first")?;
+    let (engine, _) = Engine::new(&project)?;
+    install(&state, project, engine)
 }
 
 #[tauri::command]
@@ -74,15 +101,23 @@ pub fn step(state: State<'_, AppState>) -> Result<Snapshot, String> {
     })
 }
 
+/// A panel button, by its input address.
 #[tauri::command]
-pub fn press(state: State<'_, AppState>, start: bool, stop: bool) -> Result<(), String> {
-    with_engine(&state, |e| e.press(start, stop))
+pub fn press(state: State<'_, AppState>, address: String) -> Result<(), String> {
+    with_engine(&state, |e| {
+        e.press(&address);
+        Ok(())
+    })
 }
 
 #[tauri::command]
-pub fn set_outlet_blocked(state: State<'_, AppState>, blocked: bool) -> Result<Snapshot, String> {
+pub fn set_sink_blocked(
+    state: State<'_, AppState>,
+    sink: usize,
+    blocked: bool,
+) -> Result<Snapshot, String> {
     with_engine(&state, |e| {
-        e.set_outlet_blocked(blocked)?;
+        e.set_sink_blocked(sink, blocked);
         Ok(e.snapshot())
     })
 }
@@ -96,30 +131,27 @@ pub fn pause(state: State<'_, AppState>) {
 #[tauri::command]
 pub fn save_state(state: State<'_, AppState>) -> Result<(), String> {
     let saved = with_engine(&state, |e| Ok(e.save()))?;
-    let source = state
-        .source
+    let project = state
+        .built
         .lock()
-        .map_err(|_| "source lock poisoned")?
-        .clone();
-    *state.saved.lock().map_err(|_| "saved lock poisoned")? = Some((source, saved));
+        .map_err(poisoned)?
+        .clone()
+        .ok_or("build the project first")?;
+    *state.saved.lock().map_err(poisoned)? = Some((project, saved));
     Ok(())
 }
 
-/// Replays the saved state on a fresh engine built from the program it was taken on.
+/// Replays the saved state on a fresh engine built from the project it was taken on.
 #[tauri::command]
 pub fn restore_state(state: State<'_, AppState>) -> Result<Snapshot, String> {
-    state.running.store(false, Ordering::SeqCst);
-    let (source, saved) = state
+    let (project, saved) = state
         .saved
         .lock()
-        .map_err(|_| "saved lock poisoned")?
+        .map_err(poisoned)?
         .clone()
         .ok_or("save a state first")?;
-    let engine = Engine::restore(Plc::build(&source)?, &saved)?;
-    let snapshot = engine.snapshot();
-    *state.engine.lock().map_err(|_| "engine lock poisoned")? = Some(engine);
-    *state.source.lock().map_err(|_| "source lock poisoned")? = source;
-    Ok(snapshot)
+    let engine = Engine::restore(&project, &saved)?;
+    install(&state, project, engine)
 }
 
 /// Starts the Run loop at `speed` times the wall clock, or as fast as possible when `speed` is `None`; a second call
@@ -139,23 +171,20 @@ pub fn run<R: Runtime>(
         let started = Instant::now();
         while running.load(Ordering::SeqCst) {
             let wall_ms = i64::try_from(started.elapsed().as_millis()).unwrap_or(i64::MAX);
-            let tick = engine
-                .lock()
-                .map_err(|_| "engine lock poisoned".to_string())
-                .and_then(|mut guard| {
-                    let e = guard.as_mut().ok_or("no engine")?;
-                    match speed {
-                        Some(scale) => e.catch_up(origin_ms, wall_ms, scale)?,
-                        None => {
-                            let tick = Instant::now();
-                            e.lag_ms = 0;
-                            while tick.elapsed() < FAST_BUDGET {
-                                e.step()?;
-                            }
+            let tick = engine.lock().map_err(poisoned).and_then(|mut guard| {
+                let e = guard.as_mut().ok_or("no engine")?;
+                match speed {
+                    Some(scale) => e.catch_up(origin_ms, wall_ms, scale)?,
+                    None => {
+                        let tick = Instant::now();
+                        e.lag_ms = 0;
+                        while tick.elapsed() < FAST_BUDGET {
+                            e.step()?;
                         }
                     }
-                    Ok(e.snapshot())
-                });
+                }
+                Ok(e.snapshot())
+            });
             match tick {
                 Ok(snapshot) => {
                     let _ = app.emit("snapshot", snapshot);

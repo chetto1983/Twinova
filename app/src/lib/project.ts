@@ -45,6 +45,11 @@ export interface ProjectView {
   definitions: Record<string, Definition>;
   changed_outside: string[];
   recovered: boolean;
+  /** The line program's sources, [path, text]. */
+  program: [string, string][];
+  /** The behaviour block of each definition that has one, by `id@version`. */
+  behaviours: Record<string, string>;
+  panel: { name: string; address: string }[];
 }
 
 export interface ParameterRow {

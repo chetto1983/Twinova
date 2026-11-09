@@ -171,6 +171,14 @@ impl World {
         }
     }
 
+    pub fn sinks(&self) -> usize {
+        self.layout.sinks.len()
+    }
+
+    pub fn sink_id(&self, sink: usize) -> &str {
+        &self.layout.sinks[sink].id
+    }
+
     pub fn sink_blocked(&self, sink: usize) -> bool {
         self.sink_walls[sink].is_some()
     }

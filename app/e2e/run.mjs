@@ -34,8 +34,8 @@ async function screenshot(name) {
 }
 
 async function lineScenario() {
-  console.log("The conveyor driven by the default program");
-  await check("the default program builds on start", () =>
+  console.log("The M3 demo project: a belt, its behaviour and the line program");
+  await check("the demo builds on start", () =>
     eventually(
       async () =>
         expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "status"),
@@ -46,10 +46,13 @@ async function lineScenario() {
 
   await click(button("Run"));
   await click(button("Start"));
-  await check("Start latches the motor", () =>
-    eventually(async () => expectEqual(await bit("motor"), "TRUE", "motor"), "motor", 5000),
+  await check("Start latches the belt's run command", () =>
+    eventually(async () => expectEqual(await bit("belt_a.run"), "TRUE", "run"), "run", 5000),
   );
-  await check("parts ride the belt and are delivered", () =>
+  await check("the belt's behaviour reports it running", () =>
+    eventually(async () => expectEqual(await bit("belt_a.running"), "TRUE", "running"), "running", 5000),
+  );
+  await check("cartons ride the belt and are delivered", () =>
     // The first part needs (3.0 - 0.3) / 0.5 = 5.4 s of virtual time to reach the end.
     eventually(
       async () => {
@@ -66,12 +69,16 @@ async function lineScenario() {
     if (ratio < 0.9 || ratio > 1.1) throw new Error(`virtual/wall ratio ${ratio.toFixed(3)}`);
   });
 
-  await click(`//label[normalize-space()="Outlet blocked"]/input`);
-  await check("a part held at a blocked outlet covers the photocell, trips the jam and stops the motor", () =>
-    // The leading part stops under the photocell; the timeout leaves room for a part still entering.
+  await click(`//label[normalize-space()="sink blocked"]/input`);
+  await check("a carton held at a blocked sink covers the photocell, trips the jam and stops the belt", () =>
+    // The leading carton stops under the photocell; the timeout leaves room for one still entering.
     eventually(
       async () => {
-        expectEqual([await bit("sensor"), await bit("jam"), await bit("motor")], ["TRUE", "TRUE", "FALSE"], "I/O");
+        expectEqual(
+          [await bit("sensor_a.detected"), await bit("jam"), await bit("belt_a.run")],
+          ["TRUE", "TRUE", "FALSE"],
+          "I/O",
+        );
       },
       "jam",
       40_000,
@@ -128,10 +135,59 @@ async function languageScenario() {
   await selectLanguage("English");
 }
 
+/** The text of the editor's open tab, and a replacement for it that Svelte sees (an input event). */
+const editorText = () => browser.execute(() => document.querySelector("textarea").value);
+const setEditorText = (text) =>
+  browser.execute((t) => {
+    const area = document.querySelector("textarea");
+    area.value = t;
+    area.dispatchEvent(new Event("input", { bubbles: true }));
+  }, text);
+
+async function behaviourScenario() {
+  console.log("A component's behaviour edited and rebuilt (ROADMAP 4.3)");
+  await click(`//button[@role="tab"][normalize-space()="twinova.belt@1"]`);
+  const original = await editorText();
+  await check("the belt's behaviour, edited to a 500 ms start delay, reports running 500 ms after run", async () => {
+    await setEditorText(original.replace("PT := start_delay", "PT := T#500ms"));
+    await click(button("Build"));
+    await browser.$("//*[normalize-space()='Built: ready to run']").waitForExist({ timeout: 10_000 });
+    await click(button("Start"));
+    let run = null;
+    let running = null;
+    for (let scan = 0; scan < 80 && running === null; scan++) {
+      await click(button("Step"));
+      const time = await virtualSeconds("Virtual time");
+      if (run === null && (await bit("belt_a.run")) === "TRUE") run = time;
+      if (running === null && (await bit("belt_a.running")) === "TRUE") running = time;
+    }
+    // run is scanned at 10 ms; the field sees it at 11 ms, and truST's TON reaches Q one cycle before PT (spec
+    // 2026-11-09, "Measured"): running at 510 ms, read at the 510 ms scan.
+    expectEqual([run, running], [0.01, 0.51], "run, running (s)");
+  });
+  await screenshot("behaviour-edited");
+  await check("a broken behaviour fails Build with its file and line, and the line keeps running", async () => {
+    await click(button("Run"));
+    await setEditorText(original.replace("motor := run;", "motor := ;"));
+    const before = await virtualSeconds("Virtual time");
+    await click(button("Build"));
+    await browser.$("//*[normalize-space()='Build failed']").waitForExist({ timeout: 10_000 });
+    const shown = await (await browser.$(`//pre[contains(@class,"error-line")]`)).getText();
+    if (!shown.includes("components/twinova.belt@1.st:")) throw new Error(`no location in "${shown}"`);
+    await sleep(1000);
+    const after = await virtualSeconds("Virtual time");
+    if (!(after > before)) throw new Error(`virtual time stopped: ${before} -> ${after}`);
+    await click(button("Pause"));
+  });
+  await setEditorText(original);
+  await click(button("Build"));
+}
+
 session("debug", async () => {
   await lineScenario();
   await runModesScenario();
   await languageScenario();
+  await behaviourScenario();
 }).catch((e) => {
   console.error(e);
   process.exit(1);

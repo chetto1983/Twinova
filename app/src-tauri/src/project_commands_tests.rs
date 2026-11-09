@@ -92,17 +92,24 @@ fn an_exported_archive_imports_back_without_a_folder() {
 }
 
 #[test]
-fn nothing_saves_or_exports_before_a_project_is_open() {
+fn the_app_starts_on_the_bundled_demo_with_its_sources_and_panel() {
     let app = app();
+    let view = current_project(app.state()).unwrap();
+    assert_eq!((view.name.as_str(), view.folder.clone()), ("M3 demo", None));
+    assert_eq!(view.program[0].0, "plc/Main.st");
+    assert!(view.behaviours["twinova.belt@1"].contains("FUNCTION_BLOCK BeltBehaviour"));
+    let panel: Vec<(&str, &str)> = view
+        .panel
+        .iter()
+        .map(|b| (b.name.as_str(), b.address.as_str()))
+        .collect();
+    assert_eq!(panel, [("Start", "%IX1.0"), ("Stop", "%IX1.1")]);
     let dir = tempfile::tempdir().unwrap();
-    let message = "open or import a project first";
+    let saved = save_project(app.state(), path(&dir, "demo")).unwrap();
     assert_eq!(
-        save_project(app.state(), path(&dir, "x")).unwrap_err(),
-        message
-    );
-    assert_eq!(
-        export_project(app.state(), path(&dir, "x.zip")).unwrap_err(),
-        message
+        saved.folder,
+        Some(path(&dir, "demo")),
+        "the demo saves like any project"
     );
 }
 
@@ -163,17 +170,25 @@ fn the_launch_folder_opens_once() {
 }
 
 #[test]
-fn a_launch_folder_that_fails_reports_and_leaves_no_project() {
+fn a_launch_folder_that_fails_reports_and_leaves_the_demo() {
     let app = mock_app();
     app.manage(ProjectState::launching(Some(
         fixture("invalid", "overlapping_addresses").into(),
     )));
     let error = open_launch_project(app.state()).unwrap_err();
     assert!(error.contains("overlaps the address of"), "{error}");
-    let dir = tempfile::tempdir().unwrap();
-    assert_eq!(
-        save_project(app.state(), path(&dir, "x")).unwrap_err(),
-        "open or import a project first"
-    );
+    assert_eq!(current_project(app.state()).unwrap().name, "M3 demo");
     assert_eq!(open_launch_project(app.state()), Ok(None));
+}
+
+#[test]
+fn the_demo_comes_back_as_shipped() {
+    let app = app();
+    open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
+    let view = open_demo(app.state()).unwrap();
+    assert_eq!((view.name.as_str(), view.folder), ("M3 demo", None));
+    assert_eq!(
+        app.state::<ProjectState>().project().unwrap(),
+        crate::demo::demo()
+    );
 }
