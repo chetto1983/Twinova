@@ -31,6 +31,8 @@ and build inside the app, on Windows and Linux.
 - The 3D view draws only when something changes, so an idle or paused app uses no CPU to render it.
 - Projects (ROADMAP 4.2): open a project folder, save it, save it to another folder, export it as one archive and
   import one, through the system dialogs.
+  - `twinova <folder>` opens a project folder at start, from a file manager or a script.
+  - A save keeps each file's permissions, and gives a new file the usual ones.
   - An opened project shows its scene tree, a 3D view of its components sized from their parameters, and a read-only
     inspector with each signal's IEC address.
   - A save interrupted by a crash is rolled back when the project is next opened. Files changed outside Twinova are

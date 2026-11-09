@@ -118,3 +118,62 @@ fn an_export_to_an_unwritable_path_says_where() {
             .starts_with(&target)
     );
 }
+
+fn args(list: &[&str]) -> Vec<std::ffi::OsString> {
+    list.iter().map(Into::into).collect()
+}
+
+#[test]
+fn the_launch_folder_is_the_first_argument_that_is_not_a_switch() {
+    assert_eq!(launch_folder(args(&["twinova"])), None);
+    assert_eq!(
+        launch_folder(args(&[
+            "twinova",
+            "--remote-debugging-port=0",
+            "/p/line",
+            "/p/other"
+        ])),
+        Some(PathBuf::from("/p/line"))
+    );
+    assert_eq!(
+        launch_folder(args(&["/p/twinova", "-v"])),
+        None,
+        "the program itself is never the folder"
+    );
+    assert_eq!(
+        launch_folder(args(&["twinova", "/p/line", "--project=/p/named"])),
+        Some(PathBuf::from("/p/named")),
+        "the switch wins, as msedgedriver can pass only switches"
+    );
+    assert_eq!(
+        launch_folder(args(&["twinova", "--projects=/p/x", "--project"])),
+        None
+    );
+}
+
+#[test]
+fn the_launch_folder_opens_once() {
+    let app = mock_app();
+    app.manage(ProjectState::launching(Some(
+        fixture("valid", "demo_m3").into(),
+    )));
+    let view = open_launch_project(app.state()).unwrap().unwrap();
+    assert_eq!(view.name, "M3 demo");
+    assert_eq!(open_launch_project(app.state()), Ok(None));
+}
+
+#[test]
+fn a_launch_folder_that_fails_reports_and_leaves_no_project() {
+    let app = mock_app();
+    app.manage(ProjectState::launching(Some(
+        fixture("invalid", "overlapping_addresses").into(),
+    )));
+    let error = open_launch_project(app.state()).unwrap_err();
+    assert!(error.contains("overlaps the address of"), "{error}");
+    let dir = tempfile::tempdir().unwrap();
+    assert_eq!(
+        save_project(app.state(), path(&dir, "x")).unwrap_err(),
+        "open or import a project first"
+    );
+    assert_eq!(open_launch_project(app.state()), Ok(None));
+}

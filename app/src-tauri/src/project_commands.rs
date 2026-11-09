@@ -3,6 +3,7 @@
 //! current one, and nothing here runs a project: running a line belongs to 4.3–4.5, and the M3 demo keeps its own
 //! commands.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -17,6 +18,33 @@ use twinova_project::{Opened, Project};
 #[derive(Default)]
 pub struct ProjectState {
     current: Mutex<Option<Current>>,
+    /// The folder named on the command line, until the webview asks for it.
+    launch: Mutex<Option<PathBuf>>,
+}
+
+impl ProjectState {
+    pub fn launching(folder: Option<PathBuf>) -> Self {
+        Self {
+            launch: Mutex::new(folder),
+            ..Self::default()
+        }
+    }
+}
+
+/// The project folder in a process's arguments (spec, decision 8): the value of `--project=<folder>`, or else the
+/// first argument after the program that is not a switch. msedgedriver passes every WebDriver argument as a switch
+/// (`[--]name[=value]`, chromedriver's `capabilities.h`), so the E2E names the folder with `--project=` (run
+/// 42572872545). A `--project=` value that is not valid UTF-8 is not recognised.
+pub fn launch_folder(args: impl IntoIterator<Item = OsString>) -> Option<PathBuf> {
+    let args: Vec<OsString> = args.into_iter().skip(1).collect();
+    let switch = args
+        .iter()
+        .find_map(|arg| arg.to_str()?.strip_prefix("--project=").map(PathBuf::from));
+    switch.or_else(|| {
+        args.iter()
+            .find(|arg| !arg.to_string_lossy().starts_with('-'))
+            .map(PathBuf::from)
+    })
 }
 
 struct Current {
@@ -79,12 +107,26 @@ fn lines(diagnostics: &[twinova_project::Diagnostic]) -> String {
         .join("\n")
 }
 
-#[tauri::command]
-pub fn open_project(state: State<'_, ProjectState>, folder: String) -> Result<ProjectView, String> {
-    let folder = PathBuf::from(folder);
+fn open(state: &ProjectState, folder: PathBuf) -> Result<ProjectView, String> {
     let result = open_folder(&folder).map_err(|e| e.to_string())?;
     let (current, changed) = opened(Some(folder), result.opened);
-    replace(&state, current, changed, result.recovered)
+    replace(state, current, changed, result.recovered)
+}
+
+#[tauri::command]
+pub fn open_project(state: State<'_, ProjectState>, folder: String) -> Result<ProjectView, String> {
+    open(&state, PathBuf::from(folder))
+}
+
+/// Opens the folder named on the command line, once: a reload of the webview finds nothing to open.
+#[tauri::command]
+pub fn open_launch_project(state: State<'_, ProjectState>) -> Result<Option<ProjectView>, String> {
+    let folder = state
+        .launch
+        .lock()
+        .map_err(|_| "project lock poisoned")?
+        .take();
+    folder.map(|folder| open(&state, folder)).transpose()
 }
 
 /// Saves the current project into `folder`, which becomes its folder.

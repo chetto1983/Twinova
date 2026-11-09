@@ -74,6 +74,7 @@ describe("project bridge", () => {
     expect(await projects.importArchive()).toEqual({ name: "view" });
     expect(await projects.exportArchive()).toBe("/p/out.zip");
     await projects.save("/p/line");
+    expect(await projects.launch()).toEqual({ name: "view" });
     expect(open.mock.calls).toEqual([[{ directory: true }], [{ directory: true }], [{ filters: ARCHIVE }]]);
     expect(save.mock.calls).toEqual([[{ filters: ARCHIVE }]]);
     expect(invoke.mock.calls).toEqual([
@@ -82,6 +83,7 @@ describe("project bridge", () => {
       ["import_project", { file: "/p/line.zip" }],
       ["export_project", { file: "/p/out.zip" }],
       ["save_project", { folder: "/p/line" }],
+      ["open_launch_project"],
     ]);
   });
 

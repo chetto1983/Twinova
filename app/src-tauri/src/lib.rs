@@ -18,7 +18,9 @@ pub fn run() {
             Ok(())
         })
         .manage(commands::AppState::default())
-        .manage(project_commands::ProjectState::default())
+        .manage(project_commands::ProjectState::launching(
+            project_commands::launch_folder(std::env::args_os()),
+        ))
         .invoke_handler(tauri::generate_handler![
             commands::default_program,
             commands::build,
@@ -31,6 +33,7 @@ pub fn run() {
             commands::save_state,
             commands::restore_state,
             project_commands::open_project,
+            project_commands::open_launch_project,
             project_commands::save_project,
             project_commands::export_project,
             project_commands::import_project,

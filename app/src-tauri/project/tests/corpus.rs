@@ -2,6 +2,7 @@
 //! valid fixtures and rejecting the invalid ones with the same diagnostic. The fixtures were written by a separate
 //! script, not by `encode_project`, so the byte comparison checks the encoder against an independent reference.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use twinova_project::{Files, encode_project, parse_project};
@@ -63,45 +64,16 @@ fn every_valid_fixture_opens_and_is_written_back_byte_for_byte() {
 
 #[test]
 fn every_invalid_fixture_is_refused_with_its_diagnostic() {
-    let expected = [
-        ("version_newer", "saved by a newer Twinova (format 2)"),
-        (
-            "path_traversal",
-            "'../outside.st' must not contain empty, '.' or '..' parts",
-        ),
-        ("case_collision", "differ only in case"),
-        ("parent_cycle", "nodes.a.parent: is part of a parent cycle"),
-        (
-            "duplicate_id",
-            "'belt_a': is used by two instances or groups",
-        ),
-        ("two_peers", "belt_a.out has 2 peers"),
-        (
-            "unknown_override",
-            "instances.belt_a.parameters.colour: twinova.belt@1 has no such parameter",
-        ),
-        (
-            "out_of_range",
-            "instances.belt_a.parameters.length: 100 is outside [0.3, 50]",
-        ),
-        ("overlapping_addresses", "%IB0 overlaps the address of"),
-        (
-            "bool_on_double_word",
-            "a BOOL signal needs a Bit address, not %ID0",
-        ),
-        (
-            "input_on_output_area",
-            "a PlcInput signal needs a Input address, not %QX0.5",
-        ),
-        ("unknown_field", "unknown field `colour`"),
-    ];
+    // The same table drives the real-app E2E (e2e/project.mjs).
+    let table = fs::read(fixtures("invalid.json")).unwrap();
+    let expected: BTreeMap<String, String> = serde_json::from_slice(&table).unwrap();
     let on_disk = fs::read_dir(fixtures("invalid")).unwrap().count();
     assert_eq!(
         on_disk,
         expected.len(),
         "every invalid fixture has an expectation"
     );
-    for (name, message) in expected {
+    for (name, message) in &expected {
         let files = read_folder(&fixtures("invalid").join(name));
         let diagnostics = parse_project(&files).expect_err(name);
         let text: Vec<String> = diagnostics.iter().map(ToString::to_string).collect();

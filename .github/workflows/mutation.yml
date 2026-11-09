@@ -7,7 +7,12 @@ name: Mutation
 on:
   push:
     branches: ["main"]
-    paths: ["app/src-tauri/src/**", "app/src/lib/**", "app/stryker.config.json", "app/src-tauri/.cargo/mutants.toml"]
+    paths:
+      - "app/src-tauri/src/**"
+      - "app/src-tauri/project/src/**"
+      - "app/src/lib/**"
+      - "app/stryker.config.json"
+      - "app/src-tauri/.cargo/mutants.toml"
   schedule:
     - cron: "13 5 * * 1"
   workflow_dispatch:

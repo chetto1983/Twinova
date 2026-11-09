@@ -1,0 +1,14 @@
+{
+  "version_newer": "saved by a newer Twinova (format 2)",
+  "path_traversal": "'../outside.st' must not contain empty, '.' or '..' parts",
+  "case_collision": "differ only in case",
+  "parent_cycle": "nodes.a.parent: is part of a parent cycle",
+  "duplicate_id": "'belt_a': is used by two instances or groups",
+  "two_peers": "belt_a.out has 2 peers",
+  "unknown_override": "instances.belt_a.parameters.colour: twinova.belt@1 has no such parameter",
+  "out_of_range": "instances.belt_a.parameters.length: 100 is outside [0.3, 50]",
+  "overlapping_addresses": "%IB0 overlaps the address of",
+  "bool_on_double_word": "a BOOL signal needs a Bit address, not %ID0",
+  "input_on_output_area": "a PlcInput signal needs a Input address, not %QX0.5",
+  "unknown_field": "unknown field `colour`"
+}

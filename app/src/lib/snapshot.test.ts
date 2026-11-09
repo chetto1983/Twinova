@@ -26,6 +26,7 @@ vi.mock("./backend", () => ({
     press: vi.fn().mockResolvedValue(undefined),
     setOutletBlocked: vi.fn().mockResolvedValue(undefined),
   },
+  projects: { launch: vi.fn().mockResolvedValue(null) },
   onSnapshot: vi.fn().mockResolvedValue(() => {}),
   onStopped: vi.fn().mockResolvedValue(() => {}),
   onEngineError: vi.fn().mockResolvedValue(() => {}),

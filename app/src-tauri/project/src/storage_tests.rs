@@ -230,3 +230,94 @@ fn a_file_held_for_a_moment_is_saved() {
     release.join().unwrap();
     assert_eq!(open(dir.path()).opened.project, p2);
 }
+
+/// A saved file gets the mode `fs::write` would give it, and a replaced one keeps its own (found by the 4.2 E2E,
+/// where tempfile's 0o600 made a saved project readable by its owner only).
+#[cfg(unix)]
+#[test]
+fn saved_files_get_the_mode_a_plain_write_gives_and_keep_their_own() {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = |path: &Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
+    let dir = tempfile::tempdir().unwrap();
+    let plain = dir.path().join("plain");
+    fs::write(&plain, b"").unwrap();
+    let p1 = reference();
+    save_folder(&dir.path().join("p"), &p1).unwrap();
+    let scene = dir.path().join("p/scene.json");
+    assert_eq!(mode(&scene), mode(&plain));
+    assert_eq!(mode(&dir.path().join("p").join(MANIFEST)), mode(&plain));
+    fs::set_permissions(&scene, fs::Permissions::from_mode(0o640)).unwrap();
+    save_folder(&dir.path().join("p"), &renamed(&p1, "Kept mode")).unwrap();
+    assert_eq!(mode(&scene), 0o640);
+}
+
+#[test]
+fn a_storage_error_says_what_and_where() {
+    let io = StorageError::Io {
+        path: PathBuf::from("p/scene.json"),
+        error: io::Error::other("disk full"),
+    };
+    assert_eq!(
+        io.to_string(),
+        format!("{}: disk full", Path::new("p/scene.json").display())
+    );
+    assert_eq!(
+        StorageError::Interrupted.to_string(),
+        "a save was interrupted; open the project to recover it"
+    );
+    let invalid = open_folder(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/invalid/two_peers"),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(invalid.contains("belt_a.out has 2 peers"), "{invalid}");
+}
+
+/// A rename that fails `refusals` times with `kind`, then succeeds; it counts its calls.
+fn flaky(
+    refusals: usize,
+    kind: io::ErrorKind,
+    calls: &std::cell::Cell<usize>,
+) -> impl Fn(tempfile::NamedTempFile, &Path) -> Result<(), tempfile::PersistError> + '_ {
+    move |file, _| {
+        calls.set(calls.get() + 1);
+        if calls.get() <= refusals {
+            Err(tempfile::PersistError {
+                error: io::Error::from(kind),
+                file,
+            })
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[test]
+fn a_rename_refused_as_held_is_retried_once_per_wait() {
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("f");
+    let temp = || tempfile::NamedTempFile::new_in(dir.path()).unwrap();
+    let calls = std::cell::Cell::new(0);
+    let held = io::ErrorKind::PermissionDenied;
+    persist_retrying(temp(), &target, &[0, 0], flaky(2, held, &calls)).unwrap();
+    assert_eq!(calls.get(), 3, "two refusals, then the rename");
+    calls.set(0);
+    let error = persist_retrying(temp(), &target, &[0, 0], flaky(3, held, &calls)).unwrap_err();
+    assert_eq!((error.kind(), calls.get()), (held, 3), "out of waits");
+    calls.set(0);
+    let missing = io::ErrorKind::NotFound;
+    let error = persist_retrying(temp(), &target, &[0, 0], flaky(1, missing, &calls)).unwrap_err();
+    assert_eq!(
+        (error.kind(), calls.get()),
+        (missing, 1),
+        "only a held file is retried"
+    );
+}
+
+#[test]
+fn only_windows_waits_for_a_held_file() {
+    assert_eq!(HELD_RETRY_MS.is_empty(), !cfg!(windows));
+    if cfg!(windows) {
+        assert_eq!(HELD_RETRY_MS.iter().sum::<u64>(), 2000, "about 2 s in all");
+    }
+}
