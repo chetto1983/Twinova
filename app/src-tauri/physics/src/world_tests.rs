@@ -179,6 +179,7 @@ fn a_closed_exit_holds_products_instead_of_dropping_them() {
         sinks: vec![],
         sensors: vec![],
     });
+    assert_eq!(w.sinks(), 0);
     w.set_belt_running(0, true);
     run(&mut w, 10_000);
     let front = x(&w, 0) + CARTON_HALF;
