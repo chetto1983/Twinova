@@ -146,8 +146,8 @@ fn write_files(dir: &Path, files: &Files) -> Result<(), StorageError> {
     write_atomic(&dir.join(MANIFEST), manifest)
 }
 
-/// Puts back every file `previous` holds, then removes the marker. Running it again after an interruption gives the
-/// same result, because `previous` is only read.
+/// Puts back every file `previous` holds, then removes the marker, which both callers know exists. Running it again
+/// after an interruption gives the same result, because `previous` is only read.
 fn restore_previous(dir: &Path) -> Result<(), StorageError> {
     let previous = dir.join(PREVIOUS);
     if previous.is_dir() {
@@ -156,40 +156,67 @@ fn restore_previous(dir: &Path) -> Result<(), StorageError> {
         }
     }
     let marker = dir.join(MARKER);
-    fs::remove_file(&marker)
-        .or_else(|e| {
-            if e.kind() == io::ErrorKind::NotFound {
-                Ok(())
-            } else {
-                Err(e)
-            }
-        })
-        .map_err(io_at(&marker))
+    fs::remove_file(&marker).map_err(io_at(&marker))
 }
 
 /// A temporary file in the same directory, flushed to disk, then renamed over `path`: a reader never sees half a file.
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), StorageError> {
     let parent = path.parent().expect("a project file has a parent");
     fs::create_dir_all(parent).map_err(io_at(parent))?;
-    let mut file = tempfile::NamedTempFile::new_in(parent).map_err(io_at(parent))?;
+    let mut file = temp_beside(path, parent).map_err(io_at(parent))?;
     file.write_all(bytes).map_err(io_at(path))?;
     file.as_file().sync_all().map_err(io_at(path))?;
     persist(file, path).map_err(io_at(path))
 }
 
-/// Waits between renames refused because another process holds the file, about 2 s in all.
-#[cfg(windows)]
-const HELD_RETRY_MS: [u64; 8] = [10, 20, 40, 80, 160, 320, 640, 730];
+/// tempfile creates its files with mode 0o600 (tempfile 3.27, `Builder::permissions`), and the rename keeps it, so a
+/// saved project would be readable by its owner only (found by the 4.2 E2E). On unix a replaced file keeps its mode
+/// and a new one gets what `fs::write` gives, 0o666 less the umask. On Windows a renamed file takes the folder's
+/// inherited ACL, so there is no mode to carry.
+fn temp_beside(path: &Path, parent: &Path) -> io::Result<tempfile::NamedTempFile> {
+    #[cfg_attr(not(unix), allow(unused_mut))] // only unix sets a mode
+    let mut builder = tempfile::Builder::new();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        builder.permissions(
+            fs::metadata(path)
+                .map(|m| m.permissions())
+                .unwrap_or_else(|_| fs::Permissions::from_mode(0o666)),
+        );
+    }
+    #[cfg(not(unix))]
+    let _ = path;
+    builder.tempfile_in(parent)
+}
 
-/// On Windows a rename over a file another process holds open is refused with "Access is denied", even when Rust
-/// opened it (measured on windows-2022, run 42514839589): an antivirus, an indexer or OneDrive holds files for a
-/// moment, so a refusal is retried before the save fails and rolls back.
-#[cfg(windows)]
-fn persist(mut file: tempfile::NamedTempFile, path: &Path) -> io::Result<()> {
-    let mut waits = HELD_RETRY_MS.iter();
+/// Waits between renames refused because another process holds the file, about 2 s in all. On Windows a rename over
+/// a file another process holds open is refused with "Access is denied", even when Rust opened it (measured on
+/// windows-2022, run 42514839589): an antivirus, an indexer or OneDrive holds files for a moment. Elsewhere a refused
+/// rename is a permission, which waiting does not change.
+const HELD_RETRY_MS: &[u64] = if cfg!(windows) {
+    &[10, 20, 40, 80, 160, 320, 640, 730]
+} else {
+    &[]
+};
+
+fn persist(file: tempfile::NamedTempFile, path: &Path) -> io::Result<()> {
+    persist_retrying(file, path, HELD_RETRY_MS, |file, path| {
+        file.persist(path).map(drop)
+    })
+}
+
+/// Renames with `rename`, waiting each of `waits` in turn while the rename is refused with `PermissionDenied`.
+fn persist_retrying(
+    mut file: tempfile::NamedTempFile,
+    path: &Path,
+    waits: &[u64],
+    rename: impl Fn(tempfile::NamedTempFile, &Path) -> Result<(), tempfile::PersistError>,
+) -> io::Result<()> {
+    let mut waits = waits.iter();
     loop {
-        match file.persist(path) {
-            Ok(_) => return Ok(()),
+        match rename(file, path) {
+            Ok(()) => return Ok(()),
             Err(e) => match waits.next() {
                 Some(ms) if e.error.kind() == io::ErrorKind::PermissionDenied => {
                     file = e.file;
@@ -199,12 +226,6 @@ fn persist(mut file: tempfile::NamedTempFile, path: &Path) -> io::Result<()> {
             },
         }
     }
-}
-
-/// Elsewhere a refused rename is a permission, which waiting does not change.
-#[cfg(not(windows))]
-fn persist(file: tempfile::NamedTempFile, path: &Path) -> io::Result<()> {
-    file.persist(path).map(drop).map_err(|e| e.error)
 }
 
 /// The files an existing manifest lists, to remove the ones a save no longer writes.
