@@ -1,7 +1,7 @@
 # Spec: component behaviours in ST and the field runtime (ROADMAP 4.3)
 
-Date: 2026-11-09. Status: **draft, for approval**. Three decisions by the user, 2026-11-09, are marked (user); the
-rest are proposals.
+Date: 2026-11-09. Status: **approved** (user, 2026-11-09). Three decisions were the user's choices and are marked
+(user); the user approved the rest as proposed, with the precisions of "Amended while planning".
 
 ROADMAP 4.3: behaviours written as ST function blocks bound to component signals. Acceptance: a component's logic
 edited and rebuilt in the app. The model is the approved M4.1 spec (`2026-11-08-component-model-design.md`), which
@@ -51,7 +51,8 @@ possible later, under the rule "baseline or drop".
 - **A behaviour block's contract**, checked at Build with a diagnostic that names the definition and the variable:
   - each signal of the definition is declared under its name: `AT %I*` for a `plc_output` (a command the device
     receives), `AT %Q*` for a `plc_input`;
-  - each parameter is a `VAR_INPUT` of the same name and IEC type;
+  - a parameter the block uses is a `VAR_INPUT` of the same name and IEC type, and gets the instance's value. A
+    parameter the block does not declare is not passed;
   - its family's native variables, with the types below. The Rust model of the family reads and writes them by path.
 
 | Family | Native variables (the native model reads ← / writes →) |
@@ -116,9 +117,10 @@ both directions, with a replay fingerprint.
 - **Editing a behaviour:** the editor has one tab for the controller program and one per definition that has a
   behaviour. A definition's block serves every instance of it, as its pinned copy does. Build checks and builds
   both runtimes. A failure keeps the running line and shows the diagnostic for the tab and the line.
-- **Running a project:** Run is enabled for a project whose components all have a native model in this build: the
-  source, the belt and the diffuse sensor in 4.3. Otherwise Run stays disabled and the UI names the missing family,
-  as 4.2 requires. The diverter runs from 4.4, with the line engine.
+- **Running a project:** Run is enabled for a project whose components all have a native model in this build, and
+  whose line is one the 4.3 bench runs: a source, one belt and a sink in a row, with diffuse sensors mounted on the
+  belt. Otherwise Run stays disabled and the UI names what is missing, as 4.2 requires. Two belts and the diverter
+  run from 4.4, with the line engine and the transfer rule.
 
 ## Format amendments (format 1, not yet released, amended in place)
 
@@ -146,3 +148,13 @@ both directions, with a replay fingerprint.
 - **A real PLC on the controller side**, which is M5.
 - **Field-runtime cost beyond the measured 100 devices**, and any optimisation of idle cycles.
 - **User-defined families.** Only the built-in definitions' behaviours are edited.
+
+## Amended while planning (2026-11-09)
+
+- **`demo_m3` gains a sink.** M4.1 makes an unconnected exit block, so without a sink the demo would deliver
+  nothing. The sink is native and runs in 4.3. M3's "outlet blocked" toggle becomes the sink's runtime fault, an
+  input recorded for replay as before.
+- **The belt definition gains `start_delay`** (TIME, default 0), the parameter its behaviour uses. A behaviour block
+  declares only the parameters it uses.
+- **The 4.3 bench runs one line shape:** source → belt → sink, with sensors on the belt. The belt's dimensions, speed
+  and photocell positions, and the source's interval, come from the project instead of `belt.rs`'s constants.
