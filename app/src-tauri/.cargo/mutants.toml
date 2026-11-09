@@ -1,8 +1,8 @@
 # cargo mutants configuration (https://mutants.rs). Scope: the conveyor kinematics (closed-form and stepped), the
-# engine and its nexosim bench (CLAUDE.md "MUTATION >=70%", ROADMAP 1.4, 3.2 and 3.3), the field runtime (4.3), and the project format's
+# engine and its nexosim bench (CLAUDE.md "MUTATION >=70%", ROADMAP 1.4, 3.2 and 3.3), the field runtime and the controller (4.3), and the project format's
 # address parser, validation and codec (ROADMAP 4.2). mutation.yml runs it with --workspace.
 examine_globs = [
-  "src/belt.rs", "src/scene.rs", "src/engine.rs", "src/bench.rs", "src/field.rs",
+  "src/belt.rs", "src/scene.rs", "src/engine.rs", "src/bench.rs", "src/field.rs", "src/controller.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs",
 ]

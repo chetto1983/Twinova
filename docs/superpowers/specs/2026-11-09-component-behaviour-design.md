@@ -72,8 +72,13 @@ possible later, under the rule "baseline or drop".
   writes and reads the controller's image by address, never by name; the M3 contract `sensor/start/stop/motor`
   goes.
 - **Build checks the scene against the program:** a scene signal whose address the program does not declare is a
-  warning, not an error, because a real line can leave a signal unused. A type that does not match the address
-  size is an error, as 4.1 decided.
+  warning, not an error, because a real line can leave a signal unused. The variable the program declares at a
+  scene signal or a panel button must have that signal's type (BOOL for a button), or Build fails.
+  - *Amended in Task 3:* truST sizes a binding from the variable's type, not from the address in the source:
+    `a AT %ID8 : BOOL` becomes a bit at byte 8 (measured 2026-11-09). So the check cannot be "the type fits the
+    written size". It is done where Twinova and the program meet: the scene's address, matched by area, byte and
+    (for a bit) bit, against the declared variable's type.
+  - An address outside the image reads as zero; writing one is an error.
 - **Operator buttons (proposal):** `scene.controller.panel` lists `{ "name": "Start", "address": "%IX1.0" }`. The UI
   shows one button per entry, and a press holds the bit for one controller scan, as M3's Start and Stop do today.
   `controller.program_instance` is no longer used and is removed.

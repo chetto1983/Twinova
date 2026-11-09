@@ -115,13 +115,16 @@ proptest, vitest; E2E with tauri-driver on Linux and Windows.
 
 ### Task 3 — The controller by address
 
-- [ ] Tests first:
+- [x] Tests first:
   - a scan reads its inputs from and writes its outputs to the image by address;
   - a panel press holds for one scan;
   - a scene signal the program does not declare is a warning; a type that does not match its address is an error;
   - the scan period from `TASK`s is kept.
-- [ ] Implement `controller.rs`, beside `plc.rs` until Task 5.
-- [ ] Verify: tests, mutants.
+- [x] Implement `controller.rs`, beside `plc.rs` until Task 5.
+- [x] Verify: tests, mutants.
+  - *Delivered:* the type check is against the scene (spec, amended); a test drives the diverter's behaviour from
+    a line program through the mirror (in_position read at 360 and 810 ms, as computed). 0 surviving mutants on
+    `controller.rs`.
 
 ### Task 4 — The transfer rule
 

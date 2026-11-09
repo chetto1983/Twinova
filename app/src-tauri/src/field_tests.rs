@@ -253,3 +253,48 @@ fn a_real_parameter_reaches_the_block() {
     let field = Field::build(&project).unwrap().unwrap();
     assert_eq!(field.native("belt_a", "speed"), Some(Value::Real(0.5)));
 }
+
+/// The diverter's behaviour driven by a line program (spec 2026-11-09, acceptance 2): each millisecond the field reads
+/// the controller's outputs and writes its inputs; every 10 ms the controller scans.
+#[test]
+fn a_line_program_commands_the_diverter_and_reads_its_position() {
+    use crate::controller::Controller;
+    let mut project = fixture("two_belts_diverter");
+    let d = instance(&mut project, "diverter").signals.clone();
+    project.program = vec![(
+        "plc/Main.st".into(),
+        format!(
+            "PROGRAM Main\nVAR\n  divert AT {} : BOOL;\n  in_position AT {} : BOOL;\n  n : DINT;\nEND_VAR\n\
+             n := n + 1;\ndivert := n >= 5 AND n < 50;\nEND_PROGRAM\n",
+            d["divert"], d["in_position"]
+        ),
+    )];
+    let (mut controller, _) = Controller::build(&project).unwrap();
+    let mut field = Field::build(&project).unwrap().unwrap();
+    let mut rises = Vec::new();
+    let mut settled = true;
+    for ms in 1..=1000 {
+        for address in field.commands().to_vec() {
+            field
+                .set_command(&address, controller.read(&address).unwrap())
+                .unwrap();
+        }
+        field.cycle().unwrap();
+        for address in field.feedback().to_vec() {
+            controller
+                .write(&address, field.feedback_value(&address).unwrap())
+                .unwrap();
+        }
+        if ms % 10 == 0 {
+            controller.scan().unwrap();
+            let now = controller.read(&d["in_position"]).unwrap() == Value::Bool(true);
+            if now && !settled {
+                rises.push(ms);
+            }
+            settled = now;
+        }
+    }
+    // divert rises at the 50 ms scan; the field sees it at 51 ms and settles 300 ms later, at 351 ms; the
+    // controller reads it at its 360 ms scan. divert falls at the 500 ms scan: settled at 801, read at 810.
+    assert_eq!(rises, [360, 810]);
+}

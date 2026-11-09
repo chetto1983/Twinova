@@ -5,11 +5,11 @@ use serde::Serialize;
 use trust_runtime::harness::TestHarness;
 use trust_runtime::value::{Duration, Value};
 
+pub use crate::controller::DEFAULT_SCAN_NS;
+use crate::controller::scan_period;
+
 /// The variables of `PROGRAM Main` that the scene and the UI exchange with the program.
 pub const CONTRACT: [&str; 4] = ["sensor", "start", "stop", "motor"];
-
-/// The scan period of a program that declares no periodic `TASK`: M1's 10 ms.
-pub const DEFAULT_SCAN_NS: i64 = 10_000_000;
 
 #[derive(Debug, Clone, Copy, Default, Serialize, PartialEq, Eq)]
 pub struct Inputs {
@@ -80,29 +80,6 @@ impl Plc {
             _ => None,
         }
     }
-}
-
-fn scan_period(harness: &TestHarness) -> Result<i64, String> {
-    let tasks = harness.runtime().tasks();
-    if let Some(task) = tasks.iter().find(|t| t.single.is_some()) {
-        return Err(format!(
-            "TASK {} is started by SINGLE; only periodic tasks (INTERVAL) are supported",
-            task.name
-        ));
-    }
-    let gcd = |a: i64, b: i64| {
-        let (mut a, mut b) = (a, b);
-        while b != 0 {
-            (a, b) = (b, a % b);
-        }
-        a
-    };
-    Ok(tasks
-        .iter()
-        .map(|t| t.interval.as_nanos())
-        .filter(|ns| *ns > 0)
-        .reduce(gcd)
-        .unwrap_or(DEFAULT_SCAN_NS))
 }
 
 #[cfg(test)]
