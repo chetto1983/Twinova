@@ -1,9 +1,9 @@
 use super::*;
-use crate::layout::{Belt, Sensor, Sink, Source, layout};
+use crate::layout::{BELT_GRIP, Belt, Exit, Sensor, Sink, Source, layout};
 use std::path::Path;
 use twinova_project::storage::open_folder;
 
-fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bool) -> Belt {
+pub(super) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bool) -> Belt {
     Belt {
         id: id.into(),
         pose: Pose::from_translation(Vector::new(x, 0.0, 0.0)),
@@ -11,11 +11,12 @@ fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bool) -> Belt
         width: 0.6,
         height: 0.8,
         speed,
+        grip: BELT_GRIP,
         closed_exit,
     }
 }
 
-fn source(belt: usize, first_ns: i64, interval_ns: i64, max_count: i64) -> Source {
+pub(super) fn source(belt: usize, first_ns: i64, interval_ns: i64, max_count: i64) -> Source {
     Source {
         id: "source".into(),
         belt,
@@ -32,10 +33,11 @@ fn two_belts(speed_b: Real, cartons: i64) -> World {
             belt("a", 0.0, 3.0, 0.5, false),
             belt("b", 3.0, 2.0, speed_b, false),
         ],
+        transfers: vec![],
         sources: vec![source(0, 1_000_000, 1_000_000_000, cartons)],
         sinks: vec![Sink {
             id: "sink".into(),
-            belt: 1,
+            exit: Exit::End(1),
         }],
         sensors: vec![],
     });
@@ -44,7 +46,7 @@ fn two_belts(speed_b: Real, cartons: i64) -> World {
     w
 }
 
-fn run(w: &mut World, ms: usize) {
+pub(super) fn run(w: &mut World, ms: usize) {
     for _ in 0..ms {
         w.step();
     }
@@ -175,6 +177,7 @@ fn a_blocked_sink_holds_and_a_free_one_delivers() {
 fn a_closed_exit_holds_products_instead_of_dropping_them() {
     let mut w = World::new(Layout {
         belts: vec![belt("a", 0.0, 3.0, 0.5, true)],
+        transfers: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![],
         sensors: vec![],
@@ -190,10 +193,11 @@ fn a_closed_exit_holds_products_instead_of_dropping_them() {
 fn a_sensor_sees_a_carton_while_it_crosses_the_beam() {
     let mut w = World::new(Layout {
         belts: vec![belt("a", 0.0, 3.0, 0.5, false)],
+        transfers: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![Sink {
             id: "sink".into(),
-            belt: 0,
+            exit: Exit::End(0),
         }],
         sensors: vec![Sensor {
             id: "eye".into(),
@@ -241,7 +245,7 @@ fn equal_runs_give_equal_bits_on_every_platform() {
     assert_eq!(first, 0x7ee1_e6ce_7ddf_4a1f, "{first:#018x}");
 }
 
-fn fixture(name: &str) -> twinova_project::Project {
+pub(super) fn fixture(name: &str) -> twinova_project::Project {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../project/tests/fixtures/valid")
         .join(name);
@@ -275,7 +279,7 @@ fn the_demo_lays_out_its_belt_source_sink_and_sensor() {
         l.sinks,
         [Sink {
             id: "sink".into(),
-            belt: 0
+            exit: Exit::End(0)
         }]
     );
     assert_eq!(
@@ -291,11 +295,15 @@ fn the_demo_lays_out_its_belt_source_sink_and_sensor() {
 
 #[test]
 fn a_family_without_a_model_makes_the_line_unrunnable() {
-    let error = layout(&fixture("two_belts_diverter")).unwrap_err();
+    let mut project = fixture("demo_m3");
+    project
+        .definitions
+        .get_mut("twinova.belt@1")
+        .unwrap()
+        .generator = "twinova.turntable/1".into();
     assert_eq!(
-        error,
-        "this build cannot run chain_transfer (twinova.chain_transfer), roller_r (twinova.roller): their families have no \
-         model yet (ROADMAP 4.4)"
+        layout(&project).unwrap_err(),
+        "this build cannot run belt_a (twinova.belt): their families have no model yet (ROADMAP 4.4)"
     );
 }
 
@@ -316,15 +324,18 @@ fn unconnected_ends_are_named() {
 
 #[test]
 fn the_belt_of_a_pair_and_its_side() {
-    assert_eq!(belt_of_pair(0, 0), None, "two cartons");
-    assert_eq!(belt_of_pair(2, 0), Some((1, false)));
-    assert_eq!(belt_of_pair(0, 3), Some((2, true)));
+    assert_eq!(surface_of_pair(0, 0), None, "two cartons");
+    assert_eq!(surface_of_pair(2, 0), Some((1, false)));
+    assert_eq!(surface_of_pair(0, 3), Some((2, true)));
 }
 
 #[test]
 fn a_wall_closes_the_exit_across_the_belt() {
-    let b = belt("a", 1.0, 3.0, 0.5, true);
-    let wall = wall(&b).build();
+    let line = Layout {
+        belts: vec![belt("a", 1.0, 3.0, 0.5, true)],
+        ..Layout::default()
+    };
+    let wall = exit_wall(&line, Exit::End(0)).build();
     let aabb = wall.compute_aabb();
     let (lo, hi) = (aabb.mins, aabb.maxs);
     let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
@@ -367,6 +378,7 @@ fn a_carton_is_delivered_when_its_front_reaches_the_exit() {
 fn a_sensor_reaches_as_far_as_its_range() {
     let mut w = World::new(Layout {
         belts: vec![belt("a", 0.0, 3.0, 0.0, false)],
+        transfers: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![],
         sensors: vec![
@@ -450,13 +462,13 @@ fn a_belt_carries_the_same_way_whichever_collider_it_is() {
     world.insert_collider(
         ColliderBuilder::cuboid(1.5, 0.05, 0.3)
             .translation(Vector::new(1.5, 0.75, 0.0))
-            .friction(BELT_FRICTION / CARTON_FRICTION)
+            .friction(BELT_GRIP / CARTON_FRICTION)
             .friction_combine_rule(CoefficientCombineRule::Multiply)
             .user_data(1)
             .active_hooks(ActiveHooks::MODIFY_SOLVER_CONTACTS),
         None,
     );
-    let hooks = Belts {
+    let hooks = Surfaces {
         surface: vec![Vector::new(0.5, 0.0, 0.0)],
     };
     for _ in 0..1000 {
@@ -473,10 +485,11 @@ fn a_sink_takes_only_what_reaches_its_own_belt() {
     beside.pose = Pose::from_translation(Vector::new(0.0, 0.0, 0.5));
     let mut w = World::new(Layout {
         belts: vec![belt("a", 0.0, 3.0, 0.0, false), beside],
+        transfers: vec![],
         sources: vec![source(1, 1_000_000, 0, 1)],
         sinks: vec![Sink {
             id: "sink".into(),
-            belt: 0,
+            exit: Exit::End(0),
         }],
         sensors: vec![],
     });

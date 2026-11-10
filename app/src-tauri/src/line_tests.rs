@@ -35,12 +35,18 @@ fn the_demo_builds_and_warns_about_the_unused_counter() {
 }
 
 #[test]
-fn a_line_with_rollers_and_a_chain_transfer_cannot_run_yet() {
-    let error = Line::build(&fixture("two_belts_diverter")).err().unwrap();
-    assert!(
-        error.contains("chain_transfer (twinova.chain_transfer), roller_r (twinova.roller)"),
-        "{error}"
-    );
+fn the_roller_conveyor_runs_on_its_behaviour_and_carries_onto_belt_b() {
+    let (mut line, _) = Line::build(&fixture("two_belts_diverter")).unwrap();
+    // From the entry to past belt B's start: 5 m at 0.5 m/s.
+    run_ms(&mut line, 12_000);
+    assert!(bit(&line, "%QX0.3"), "the program's roller_run");
+    // The roller's motor is its block's: a carton past the roller shows the block turned it on.
+    let on_b = line
+        .world()
+        .cartons()
+        .iter()
+        .any(|c| c.position[0] > 5.0 + 0.15);
+    assert!(on_b, "the first carton crossed the roller onto belt B");
 }
 
 #[test]

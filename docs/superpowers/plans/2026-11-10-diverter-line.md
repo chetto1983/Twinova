@@ -105,16 +105,22 @@ vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and Windows.
 
 ### Task 2 — Rollers, the kinematic deck and exits in the world
 
-- [ ] Tests first, translated from OIP's `physicsFidelity.test.ts` where it applies:
+- [x] Tests first, translated from OIP's `physicsFidelity.test.ts` where it applies:
   - a carton reaches the roller's surface speed;
   - the lift throws a carton v²/2g;
   - a raised transfer carries it out by the side square (yaw < 1°) into the sink;
   - an unconnected side exit holds it;
   - a blocked side sink holds it;
   - no carton is lost or duplicated.
-- [ ] Implement `layout.rs` and `world.rs` (translated from `conveyorContacts.ts`, `deckDrive.ts` and the
+- [x] Implement `layout.rs` and `world.rs` (translated from `conveyorContacts.ts`, `deckDrive.ts` and the
   kinematic link of `rigDriver.ts`).
-- [ ] Verify: the fingerprint test on both platforms (CI), mutants on `world.rs` and `layout.rs`.
+- [x] Verify: the fingerprint test on both platforms (CI), mutants on `world.rs` and `layout.rs`.
+  - *Delivered:*
+    - the fingerprint of a line with a transfer diverting is `0x1d2b5c376203c6a1`, equal in dev and release; the demo's
+      fingerprint is unchanged;
+    - the lift throws a carton within 4 mm of v²/2g;
+    - 211 mutants were tested. The first run left 6 that a single, left-hand transfer could not tell apart; a
+      two-transfer test now catches them.
 
 ### Task 3 — The chain transfer's behaviour and the line
 
