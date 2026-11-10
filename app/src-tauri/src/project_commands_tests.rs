@@ -25,8 +25,8 @@ fn path(dir: &tempfile::TempDir, name: &str) -> String {
 fn a_project_opens_into_a_view_of_its_instances() {
     let app = app();
     let view = open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
-    assert_eq!(view.name, "Two belts and a diverter");
-    assert_eq!(view.instances.len(), 8);
+    assert_eq!(view.name, "Two belts and a chain transfer");
+    assert_eq!(view.instances.len(), 9);
     assert_eq!(
         view.definitions["twinova.belt@1"].parameters[0].name,
         "length"
@@ -34,7 +34,7 @@ fn a_project_opens_into_a_view_of_its_instances() {
     assert!(
         view.instances
             .iter()
-            .any(|i| i.id == "diverter" && i.signals["divert"] == "%QX0.2")
+            .any(|i| i.id == "chain_transfer" && i.signals["popup"] == "%QX0.2")
     );
     assert_eq!(view.folder, Some(fixture("valid", "two_belts_diverter")));
     assert!(view.changed_outside.is_empty() && !view.recovered);

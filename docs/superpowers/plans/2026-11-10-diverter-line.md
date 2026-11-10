@@ -86,16 +86,22 @@ vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and Windows.
 
 ### Task 1 — The families in the format
 
-- [ ] Write `migrate_fixtures_4_4a.py`, independent of the encoder:
+- [x] Write `migrate_fixtures_4_4a.py`, independent of the encoder:
   - `two_belts_diverter` gets `roller_r` and `chain_transfer`;
   - the reject sink moves to the transfer's `out`;
   - the program follows the spec;
   - the diverter's files go;
   - the invalid variants are rebuilt from the new valid tree with their one fault.
-- [ ] Run it; `cargo test -p twinova-project` (corpus, rules) must pass, with the diagnostics in `invalid.json`
+- [x] Run it; `cargo test -p twinova-project` (corpus, rules) must pass, with the diagnostics in `invalid.json`
   unchanged.
-- [ ] Frontend: `project.ts` knows the two generators; `project.test.ts` adapted.
-- [ ] Verify: Rust and frontend gates, and `e2e/project.mjs` against the new fixture.
+- [x] Frontend: `project.ts` knows the two generators; `project.test.ts` adapted.
+- [x] Verify: Rust and frontend gates, and `e2e/project.mjs` against the new fixture.
+  - *Delivered:*
+    - `migrate_fixtures_4_4a.py` (scratchpad) wrote every fixture, and the corpus test confirms the encoder writes the
+      same bytes;
+    - the chain transfer's block landed here with its field tests, because the fixtures carry it; its stroke counts
+      whole milliseconds, so a ramp ends on its millisecond (spec amended);
+    - E2E 11/11 and 42/42 on Linux.
 
 ### Task 2 — Rollers, the kinematic deck and exits in the world
 

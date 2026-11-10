@@ -140,6 +140,8 @@ export interface Shape {
 }
 
 const DECK_M = 0.08;
+/** OIP's chain-transfer deck: 0.06 m deep (examples/parts/chain-transfer/rig.json at 1e7488c). */
+const CHAIN_DECK_M = 0.06;
 
 function real(instance: Instance, def: Definition, name: string, fallback: number): number {
   const p = def.parameters.find((q) => q.name === name);
@@ -154,13 +156,24 @@ export function shapeOf(instance: Instance, def: Definition): Shape {
   const top = real(instance, def, "height", 0.8);
   switch (def.generator) {
     case "twinova.belt/1":
-    case "twinova.diverter/1":
+    case "twinova.roller/1":
       return {
         kind: "box",
         size: [length, DECK_M, width],
         centre: [length / 2, top - DECK_M / 2, 0],
         token: "--scene-belt",
       };
+    case "twinova.chain_transfer/1": {
+      // Its deck sits 3 cm under its host's rollers (OIP's chain transfer); the host's height is the default top.
+      const along = real(instance, def, "chains", 2) * real(instance, def, "distance", 0.33);
+      const across = real(instance, def, "lane_length", 0.6);
+      return {
+        kind: "box",
+        size: [along, CHAIN_DECK_M, across],
+        centre: [0, top - 0.03 - CHAIN_DECK_M / 2, 0],
+        token: "--scene-device",
+      };
+    }
     case "twinova.sensor_diffuse/1":
       return { kind: "cylinder", size: [0.06, 0.3, 0.06], centre: [0, top + 0.15, 0], token: "--scene-sensor" };
     case "twinova.source/1":

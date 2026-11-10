@@ -132,7 +132,6 @@ What this does not prove:
 | `distance` | REAL, m | 0.33 | `distance` |
 | `lane_length` | REAL, m | 0.6 | `laneLength`, set to the host's width |
 | `speed` | REAL, m/s | 0.5 | `speed` (OIP 2) |
-| `raised` | BOOL | FALSE | `raised` (start state) |
 | `raise_time` | TIME | 150 ms | `raiseTime` |
 | `out_right` | BOOL | FALSE | sign of OIP's negative `speed`: carries to +Z instead of −Z |
 
@@ -145,10 +144,15 @@ What this does not prove:
     of a program.
 - **Behaviour block `ChainTransferBehaviour`** re-expresses OIP's `step()`:
   - `popup` drives `raised` at once;
-  - `lift` (REAL, m) ramps towards 0.095 or 0 at 0.095/`raise_time` per second;
-  - `raised_fb` is set when `lift` reaches 0.095.
-  - Its native variables are `lift : REAL` and `raised : BOOL`.
-- **Native model:** the deck is a kinematic position-based body at the host's height − 0.03 + `lift`. Its surface
+  - the stroke is counted in whole milliseconds, one per field cycle (1 ms). `lift` (REAL) is the fraction done,
+    0 down to 1 up, so a stroke of `raise_time` ends exactly on its millisecond;
+  - `raised_fb` is set while `raised` and the stroke is complete.
+  - Its native variables are `lift : REAL` and `raised : BOOL`. The 0.095 m stroke is OIP's `RAISE`, held by the
+    native model.
+  - **OIP's `raised` start state and hand latch are not translated.** In OIP they apply only while no program drives
+    the tag. In Twinova the PLC always owns `popup`, because an unmapped signal fails Build, so a start state would
+    last one scan (amended while implementing, 2026-11-10).
+- **Native model:** the deck is a kinematic position-based body at the host's height − 0.03 + 0.095 × `lift`. Its surface
   velocity is sideways at `speed` while `raised`, otherwise forward at the host's speed.
 - **Without its block,** Build fails: "twinova.chain_transfer needs its behaviour".
 

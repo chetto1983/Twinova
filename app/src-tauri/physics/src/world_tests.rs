@@ -294,7 +294,8 @@ fn a_family_without_a_model_makes_the_line_unrunnable() {
     let error = layout(&fixture("two_belts_diverter")).unwrap_err();
     assert_eq!(
         error,
-        "this build cannot run diverter (twinova.diverter): their families have no model yet (ROADMAP 4.4)"
+        "this build cannot run chain_transfer (twinova.chain_transfer), roller_r (twinova.roller): their families have no \
+         model yet (ROADMAP 4.4)"
     );
 }
 

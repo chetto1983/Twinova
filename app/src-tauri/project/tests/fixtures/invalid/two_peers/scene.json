@@ -18,14 +18,14 @@
       ],
       "kind": "flow",
       "to": [
-        "diverter",
+        "roller_r",
         "in"
       ]
     },
     {
       "from": [
-        "diverter",
-        "out_a"
+        "roller_r",
+        "out"
       ],
       "kind": "flow",
       "to": [
@@ -46,8 +46,8 @@
     },
     {
       "from": [
-        "diverter",
-        "out_b"
+        "chain_transfer",
+        "out"
       ],
       "kind": "flow",
       "to": [
@@ -61,12 +61,12 @@
         "mount"
       ],
       "host": [
-        "belt_a",
+        "roller_r",
         "rail"
       ],
       "kind": "mount",
       "position": [
-        2.5,
+        1.0,
         0.0,
         0.0
       ],
@@ -108,6 +108,28 @@
       "to": [
         "sink_reject",
         "in"
+      ]
+    },
+    {
+      "device": [
+        "chain_transfer",
+        "mount"
+      ],
+      "host": [
+        "roller_r",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
       ]
     }
   ],
@@ -177,9 +199,9 @@
       }
     },
     {
-      "definition": "twinova.diverter@1",
-      "id": "diverter",
-      "name": "Diverter",
+      "definition": "twinova.roller@1",
+      "id": "roller_r",
+      "name": "Roller R",
       "parameters": {},
       "position": [
         3.0,
@@ -193,8 +215,29 @@
         1.0
       ],
       "signals": {
-        "divert": "%QX0.2",
-        "in_position": "%IX0.4"
+        "run": "%QX0.3",
+        "running": "%IX0.5"
+      }
+    },
+    {
+      "definition": "twinova.chain_transfer@1",
+      "id": "chain_transfer",
+      "name": "Chain transfer",
+      "parameters": {},
+      "position": [
+        4.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "popup": "%QX0.2",
+        "raised_fb": "%IX0.4"
       }
     },
     {
@@ -205,7 +248,7 @@
         "length": 2.0
       },
       "position": [
-        4.0,
+        5.0,
         0.0,
         0.0
       ],
@@ -226,7 +269,7 @@
       "name": "Normal sink",
       "parameters": {},
       "position": [
-        6.0,
+        7.0,
         0.0,
         0.0
       ],
@@ -248,7 +291,7 @@
       "position": [
         4.0,
         0.0,
-        0.0
+        -0.6
       ],
       "rotation": [
         0.0,
@@ -266,7 +309,7 @@
       "name": "Sensor a",
       "parameters": {},
       "position": [
-        2.5,
+        4.0,
         0.0,
         0.0
       ],
