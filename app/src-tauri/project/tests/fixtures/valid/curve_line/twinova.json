@@ -1,0 +1,31 @@
+{
+  "app": "0.1.0",
+  "components": [
+    "components/twinova.belt@1.json",
+    "components/twinova.belt_curve@1.json",
+    "components/twinova.roller_curve@1.json",
+    "components/twinova.sensor_diffuse@1.json",
+    "components/twinova.sink@1.json",
+    "components/twinova.source@1.json"
+  ],
+  "files": {
+    "components/twinova.belt@1.json": "b40d975f9c630790149a5915b682267ccca543fe3cdc165283703aacf74e92c5",
+    "components/twinova.belt@1.st": "7391e9875329cecc61f3faab03d592188253f9793443a4a8f6fe73807245559c",
+    "components/twinova.belt_curve@1.json": "61f1aa6f50cbbfdc682c9709a0be7769f8a73d18dfa10e7212ae9c13a3d3db74",
+    "components/twinova.belt_curve@1.st": "c0e053a09d50274381b360257b28897ca6fbfc90ac89e58b32524a801ce0b830",
+    "components/twinova.roller_curve@1.json": "89f1ab6cf1dca30aac4d3e4bf272ee1d2f58096388e0f7264f67b43203ce0724",
+    "components/twinova.roller_curve@1.st": "e1307feb3d64aaa1e0f2dc8d804b8afd1965e6242e1c0f5df3809387e7d6023b",
+    "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
+    "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
+    "components/twinova.source@1.json": "c41dfb89fd394067b9e71785f51d437262c4625afe95734049d3d75edac2e18e",
+    "plc/Main.st": "d899b73b67d4f90544b4027a6d1cf55ff631e7b7a59de947c89eccb6a6ff8dc0",
+    "scene.json": "87c8bf31be328331898cedc7703e2f8cd7a6c86781a5dfc1f5ef90921a592d4a"
+  },
+  "format": "twinova-project",
+  "name": "A line with two curves",
+  "program": [
+    "plc/Main.st"
+  ],
+  "scene": "scene.json",
+  "version": 1
+}

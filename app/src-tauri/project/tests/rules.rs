@@ -469,3 +469,27 @@ fn a_newer_manifest_with_new_fields_says_it_is_newer() {
         },
     );
 }
+
+#[test]
+fn an_optional_signal_may_stay_unbound_and_a_required_one_may_not() {
+    let unbind = |f: &mut Files| {
+        edit(f, "scene.json", |s| {
+            instance(s, "belt_a")["signals"]
+                .as_object_mut()
+                .unwrap()
+                .remove("running");
+        })
+    };
+    expect(
+        "required signal unbound",
+        "instances.belt_a.signals.running: twinova.belt@1 needs it bound to an address",
+        unbind,
+    );
+    let mut files = reference();
+    unbind(&mut files);
+    edit(&mut files, BELT, |d| {
+        d["signals"][1]["optional"] = json!(true)
+    });
+    rehash(&mut files);
+    parse_project(&files).expect("an optional signal left unbound");
+}

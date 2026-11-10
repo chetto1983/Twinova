@@ -122,6 +122,11 @@ pub struct SignalDef {
     #[serde(rename = "type")]
     pub ty: SignalType,
     pub direction: Direction,
+    /// An optional signal may stay unbound: the field then gives it a private address and its block a default (spec
+    /// 2026-11-10-curves-belt-options-design.md, decision 5). Written only when true, so format 1 files stay as they
+    /// were.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

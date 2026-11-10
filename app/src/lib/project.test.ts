@@ -64,6 +64,13 @@ describe("inspector rows", () => {
       { name: "height", text: "0.8 m", overridden: false },
       { name: "speed", text: "0.5 m/s", overridden: false },
       { name: "start_delay", text: "0 ns", overridden: false },
+      { name: "left_guard", text: "TRUE", overridden: false },
+      { name: "right_guard", text: "TRUE", overridden: false },
+      { name: "incline", text: "0 deg", overridden: false },
+      { name: "accel_time", text: "0 ns", overridden: false },
+      { name: "decel_time", text: "0 ns", overridden: false },
+      { name: "speed_at_30", text: "0.5 m/s", overridden: false },
+      { name: "pulse_pitch", text: "0.0254 m", overridden: false },
     ]);
   });
 
@@ -73,7 +80,7 @@ describe("inspector rows", () => {
       { name: "raised_fb", type: "BOOL", direction: "plc_input", address: "%IX0.4" },
     ]);
     const unbound = { ...instance("belt_a"), signals: {} };
-    expect(signalRows(unbound, definition("belt")).map((r) => r.address)).toEqual([null, null]);
+    expect(signalRows(unbound, definition("belt")).map((r) => r.address)).toEqual(Array(6).fill(null));
   });
 });
 

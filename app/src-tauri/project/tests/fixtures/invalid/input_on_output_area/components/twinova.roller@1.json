@@ -82,6 +82,70 @@
       "name": "start_delay",
       "type": "TIME",
       "unit": "ns"
+    },
+    {
+      "default": true,
+      "max": null,
+      "min": null,
+      "name": "left_guard",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": true,
+      "max": null,
+      "min": null,
+      "name": "right_guard",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": 0.0,
+      "max": 30.0,
+      "min": -30.0,
+      "name": "incline",
+      "type": "REAL",
+      "unit": "deg"
+    },
+    {
+      "default": 0.0,
+      "max": 60.0,
+      "min": -60.0,
+      "name": "skew",
+      "type": "REAL",
+      "unit": "deg"
+    },
+    {
+      "default": 0,
+      "max": 30000000000.0,
+      "min": 0.0,
+      "name": "accel_time",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": 0,
+      "max": 30000000000.0,
+      "min": 0.0,
+      "name": "decel_time",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": 0.5,
+      "max": 10.0,
+      "min": 0.01,
+      "name": "speed_at_30",
+      "type": "REAL",
+      "unit": "m/s"
+    },
+    {
+      "default": 0.0254,
+      "max": 2.54,
+      "min": 0.00127,
+      "name": "pulse_pitch",
+      "type": "REAL",
+      "unit": "m"
     }
   ],
   "ports": [
@@ -107,6 +171,30 @@
     {
       "direction": "plc_input",
       "name": "running",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_output",
+      "name": "speed_ref",
+      "optional": true,
+      "type": "REAL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "velocity",
+      "optional": true,
+      "type": "REAL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "encoder",
+      "optional": true,
+      "type": "REAL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "pulse",
+      "optional": true,
       "type": "BOOL"
     }
   ],
