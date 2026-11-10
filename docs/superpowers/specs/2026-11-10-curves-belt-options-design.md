@@ -96,8 +96,8 @@ What this does not prove:
      - `encoder` (PLC input, REAL m): the surface travel;
      - `pulse` (PLC input, BOOL): one field cycle each `pulse_pitch` metres.
    - **A signal may be optional** (format 1 amended: `optional: true` on the definition's signal). An optional signal
-     left unbound is given a field-private `%M` address at Build, so the block still compiles. Its value is then the
-     block's default: an unbound `speed_ref` reads 0 and means "use `speed`".
+     left unbound is given a field-private address at Build, so the block still compiles; it reads its fallback
+     parameter (amended in Task 4: not `%M`, and an unbound `speed_ref` reads `speed`).
    - **Roller skew** (OIP `skew`, ±60°): the surface velocity turned by the skew with magnitude s/cos(skew), as in
      OIP, so throughput stays s while the product drifts sideways at s·tan(skew) towards a guard.
 6. **3D:**
@@ -149,6 +149,12 @@ What this does not prove:
   `"fallback": "speed"`. Left unbound, it is given its private `%M` address, and the field writes the instance's
   value of that parameter there at Build. The block then always uses `speed_ref`: bound and set to 0 by the PLC, it
   stops the deck with `run` still TRUE; unbound, it reads `speed`. Without a fallback, an unbound signal reads 0.
+- **The private address is in the field's own image, not `%M`** (measured 2026-11-10, truST `6405915`). A block's
+  `AT %I*` configured at `%MD0` fails to compile with "VAR_CONFIG address area mismatch", as IEC 61131-3 requires. So
+  an unbound optional signal is configured in the field's own input or output area, past the last byte any bound
+  signal uses there. The line copies only bound addresses between the field and the controller, so the controller
+  never sees it. A value written once at Build stays for every cycle (measured over 50 cycles), and a REAL travels as
+  the DWord of its bits.
 
 ## Acceptance of 4.4b
 
