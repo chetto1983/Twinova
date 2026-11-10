@@ -168,7 +168,7 @@ async function behaviourScenario() {
   await screenshot("behaviour-edited");
   await check("a broken behaviour fails Build with its file and line, and the line keeps running", async () => {
     await click(button("Run"));
-    await setEditorText(original.replace("motor := run;", "motor := ;"));
+    await setEditorText(original.replace("    target := speed_ref;", "    target := ;"));
     const before = await virtualSeconds("Virtual time");
     await click(button("Build"));
     await browser.$("//*[normalize-space()='Build failed']").waitForExist({ timeout: 10_000 });
