@@ -200,3 +200,41 @@ fn curve_guards_follow_the_arc_inside_and_outside() {
         }
     }
 }
+
+/// A curve's guard leaves no gap: the entry stub's wall runs from the entry to the arc, and each chord's wall
+/// overlaps the next past their shared corner.
+#[test]
+fn curve_guards_run_without_gaps() {
+    let belt = conveyor(Some(arc(90.0, false)), [true, false]);
+    let walls = guards(&belt);
+    let origin = Pose::from_translation(belt.pose.translation);
+    let ends = |piece: &Piece| {
+        let at = |x: Real| {
+            (origin.inverse() * piece.pose * Pose::from_translation(Vector::new(x, 0.0, 0.0)))
+                .translation
+        };
+        (at(-piece.half.x), at(piece.half.x))
+    };
+    let (start, end) = ends(&walls[0]);
+    assert!(near(start.x, 0.0) && near(end.x, STUB), "{start:?} {end:?}");
+    for pair in walls[1..10].windows(2) {
+        let ((_, end), (start, _)) = (ends(&pair[0]), ends(&pair[1]));
+        let flow =
+            (pair[0].pose.rotation * Vector::X + pair[1].pose.rotation * Vector::X).normalize();
+        assert!(
+            (end - start).dot(flow) > 0.008,
+            "overlap {}",
+            (end - start).dot(flow)
+        );
+    }
+    let exit = belt.pose * arc(90.0, false).end(0.6);
+    let last = &walls[10];
+    let at = |x: Real| {
+        (exit.inverse() * last.pose * Pose::from_translation(Vector::new(x, 0.0, 0.0))).translation
+    };
+    let (start, end) = (at(-last.half.x), at(last.half.x));
+    assert!(
+        near(start.x, -STUB) && near(end.x, 0.0),
+        "exit stub: {start:?} {end:?}"
+    );
+}
