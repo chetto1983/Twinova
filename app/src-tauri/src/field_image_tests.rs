@@ -11,8 +11,8 @@ fn fixture(name: &str) -> Project {
     open_folder(&dir).unwrap().opened.project
 }
 
-/// Review focus: a private address never collides with a bound one, nor with another private one. The curve line
-/// binds curve A's velocity and encoder in the middle of the other devices' signals.
+/// Review focus: a private address never collides with a bound one, nor with another private one; and a signal the
+/// native model writes (the curve line binds curve A's velocity and encoder) is not the field's at all.
 #[test]
 fn private_addresses_lie_past_every_bound_byte_and_never_overlap() {
     let mut project = fixture("curve_line");
@@ -26,12 +26,15 @@ fn private_addresses_lie_past_every_bound_byte_and_never_overlap() {
         .insert("speed".into(), ParamValue::Real(0.75));
     let devices = behaving(&project);
     let placed = place(&devices).unwrap();
-    let signals: usize = devices.iter().map(|(_, d)| d.signals.len()).sum();
-    assert_eq!(
-        placed.len(),
-        signals,
-        "every signal of every device is configured"
-    );
+    // Five conveyors, each with run, running and speed_ref; their velocity, encoder and pulse are native.
+    let names: Vec<String> = placed
+        .iter()
+        .map(|p| format!("{}.{}", p.instance.id, p.signal.name))
+        .collect();
+    assert_eq!(placed.len(), 5 * 3, "{names:?}");
+    for native in ["velocity", "encoder", "pulse"] {
+        assert!(placed.iter().all(|p| p.signal.name != native), "{native}");
+    }
     for (i, a) in placed.iter().enumerate() {
         for b in &placed[i + 1..] {
             assert!(
@@ -42,51 +45,75 @@ fn private_addresses_lie_past_every_bound_byte_and_never_overlap() {
             );
         }
     }
-    let bound_end = |area: Area| {
-        placed
-            .iter()
-            .filter(|p| p.instance.signals.contains_key(&p.signal.name) && p.address.area == area)
-            .map(|p| p.address.span().1)
-            .max()
-            .unwrap()
-    };
-    for p in placed
+    let bound = |p: &&Placed| p.instance.signals.contains_key(&p.signal.name);
+    let bound_end = placed
         .iter()
-        .filter(|p| !p.instance.signals.contains_key(&p.signal.name))
-    {
-        assert!(p.signal.optional, "{}.{}", p.instance.id, p.signal.name);
-        assert!(
-            p.address.span().0 >= bound_end(p.address.area),
-            "{}",
-            p.address
+        .filter(bound)
+        .filter(|p| p.address.area == Area::Input)
+        .map(|p| p.address.span().1)
+        .max()
+        .unwrap();
+    let private: Vec<&Placed> = placed.iter().filter(|p| !bound(p)).collect();
+    assert_eq!(private.len(), 5, "each conveyor's speed_ref");
+    for p in &private {
+        assert_eq!(
+            (p.signal.name.as_str(), p.signal.optional, p.address.area),
+            ("speed_ref", true, Area::Input)
         );
-        let fallback = match p.signal.name.as_str() {
-            "speed_ref" if p.instance.id == "belt_c" => Some(Value::DWord(0.75_f32.to_bits())),
-            "speed_ref" => Some(Value::DWord(0.5_f32.to_bits())),
-            _ => None,
-        };
-        assert_eq!(p.fallback, fallback, "{}.{}", p.instance.id, p.signal.name);
+        assert!(p.address.span().0 >= bound_end, "{}", p.address);
+        let speed: f32 = if p.instance.id == "belt_c" { 0.75 } else { 0.5 };
+        assert_eq!(
+            p.fallback,
+            Some(Value::DWord(speed.to_bits())),
+            "{}",
+            p.instance.id
+        );
     }
-    let velocity = placed
+    // The controller's outputs end at byte 1 of the field's inputs: the first private input is %ID1.
+    assert_eq!(private[0].address.to_string(), "%ID1");
+    let running = placed
         .iter()
-        .find(|p| p.instance.id == "curve_a" && p.signal.name == "velocity")
+        .find(|p| p.instance.id == "curve_a" && p.signal.name == "running")
         .unwrap();
     assert_eq!(
-        velocity.address.to_string(),
-        "%QD8",
+        running.address.to_string(),
+        "%QX0.2",
         "a bound signal at its mirror"
     );
-    // Each area keeps its own count: the controller's outputs end at byte 1 of the field's inputs, its inputs at byte
-    // 16 of the field's outputs (%ID12), so the first private input is %ID1 and the first private output byte 16.
-    let first = |area: Area| {
-        placed
-            .iter()
-            .find(|p| p.address.area == area && !p.instance.signals.contains_key(&p.signal.name))
-            .map(|p| p.address.to_string())
-            .unwrap()
-    };
-    assert_eq!(first(Area::Input), "%ID1");
-    assert_eq!(first(Area::Output), "%QD16");
+}
+
+/// An unbound optional output of a block gets a private address in the field's output area, past its bound outputs:
+/// the chain transfer's raised_fb, made optional and left unbound.
+#[test]
+fn a_private_output_lies_past_the_bound_outputs() {
+    let mut project = fixture("two_belts_diverter");
+    let def = project
+        .definitions
+        .get_mut("twinova.chain_transfer@1")
+        .unwrap();
+    def.signals
+        .iter_mut()
+        .find(|s| s.name == "raised_fb")
+        .unwrap()
+        .optional = true;
+    let transfer = project
+        .scene
+        .instances
+        .iter_mut()
+        .find(|i| i.id == "chain_transfer")
+        .unwrap();
+    transfer.signals.remove("raised_fb");
+    let devices = behaving(&project);
+    let placed = place(&devices).unwrap();
+    let raised = placed
+        .iter()
+        .find(|p| p.signal.name == "raised_fb")
+        .unwrap();
+    // The controller's inputs the blocks write end with roller_r.running at %IX0.5: byte 1 is free.
+    assert_eq!(
+        (raised.address.to_string(), &raised.fallback),
+        ("%QX1.0".to_string(), &None)
+    );
 }
 
 #[test]

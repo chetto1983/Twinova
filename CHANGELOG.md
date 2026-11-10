@@ -59,4 +59,8 @@ and build inside the app, on Windows and Linux.
   - the friction model is Coulomb, which changes every run's numbers slightly; the M3 demo's photocell moves to
     2.75 m.
 - The I/O panel shows a REAL signal as its number.
+- Run as fast as possible uses its whole frame: about 30 snapshots a second instead of 17, and about twice the
+  simulated time per second (ROADMAP 4.4b1). A conveyor's `velocity`, `encoder` and `pulse` are computed by the
+  conveyor itself, not by its ST block, which makes every simulated millisecond about a fifth cheaper; the block keeps
+  the ramp, `running` and `speed_ref`.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

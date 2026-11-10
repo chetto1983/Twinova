@@ -3,7 +3,7 @@
 # (crate twinova-physics), and the project format's address parser, validation, codec and storage (4.2).
 # mutation.yml runs it with --workspace.
 examine_globs = [
-  "src/engine.rs", "src/line.rs", "src/field.rs", "src/field_image.rs", "src/controller.rs",
+  "src/engine.rs", "src/line.rs", "src/drive.rs", "src/field.rs", "src/field_image.rs", "src/controller.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs",
   "physics/src/world.rs", "physics/src/layout.rs", "physics/src/path.rs", "physics/src/surfaces.rs",

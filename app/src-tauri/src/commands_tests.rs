@@ -64,7 +64,7 @@ fn a_failed_build_keeps_the_running_line_and_the_project_sources() {
     let belt = behaviours.get_mut("twinova.belt@1").unwrap();
     *belt = belt.replace("    target := speed_ref;", "    target := ;");
     let error = build(app.state(), app.state(), program.clone(), behaviours).unwrap_err();
-    assert!(error.contains("components/twinova.belt@1.st:37"), "{error}");
+    assert!(error.contains("components/twinova.belt@1.st:30"), "{error}");
     assert_eq!(
         step(app.state()).unwrap().time_ms,
         20,
@@ -184,4 +184,33 @@ fn run_as_fast_as_possible_outruns_the_wall_clock() {
     let time: serde_json::Value = serde_json::from_str(&first).unwrap();
     // One tick scans for 25 ms of wall time; the demo does more than 25 ms of virtual time in that.
     assert!(time["time_ms"].as_i64().unwrap() > 25, "{first}");
+}
+
+/// A tick takes one frame: the loop sleeps what its work left of it, and not at all after an overrun.
+#[test]
+fn the_loop_rests_what_is_left_of_its_frame() {
+    assert_eq!(rest(Duration::from_millis(25)), Duration::from_millis(8));
+    assert_eq!(rest(Duration::ZERO), FRAME);
+    assert_eq!(rest(Duration::from_millis(40)), Duration::ZERO);
+}
+
+/// As fast as possible publishes about 30 snapshots a second (spec 2026-11-08-run-modes-design.md): with a whole
+/// frame slept after each 25 ms of scans it published 17.
+#[test]
+fn run_as_fast_as_possible_publishes_a_snapshot_a_frame() {
+    let app = app();
+    let snapshots = events(&app, "snapshot");
+    let stopped = events(&app, "stopped");
+    build_demo(&app);
+    run(app.handle().clone(), app.state(), None).unwrap();
+    snapshots.recv_timeout(WAIT).expect("a snapshot");
+    let started = Instant::now();
+    for _ in 0..10 {
+        snapshots.recv_timeout(WAIT).expect("a snapshot");
+    }
+    let frame = started.elapsed() / 10;
+    pause(app.state());
+    stopped.recv_timeout(WAIT).expect("the loop stops");
+    // 33 ms, with room for a loaded machine; a frame slept whole gives 58 ms.
+    assert!(frame < Duration::from_millis(48), "{frame:?} a snapshot");
 }

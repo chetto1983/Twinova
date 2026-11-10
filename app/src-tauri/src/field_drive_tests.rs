@@ -1,5 +1,6 @@
-//! The conveyor drive, OIP's `conveyorDrive.js` in ST (spec 2026-11-10-curves-belt-options-design.md, decision 5 and
-//! acceptance 3): the ramp, the encoder and the pulse, the velocity feedback, and `speed_ref`, bound or not.
+//! The conveyor drive's logic, OIP's `conveyorDrive.js` in ST (spec 2026-11-10-curves-belt-options-design.md, decision 5
+//! and acceptance 3): the ramp, and `speed_ref`, bound or not. Its feedback is the native model's (`drive_tests.rs`,
+//! `line_tests.rs`; spec 2026-11-10-run-pace-native-feedback-design.md).
 
 use super::*;
 use std::path::Path;
@@ -66,43 +67,6 @@ fn the_ramp_reaches_rated_speed_in_accel_time_and_stops_in_decel_time() {
     assert!(up[248] < 0.25 && up[249] == 0.25, "{} {}", up[248], up[249]);
     let mut instant = demo(&[]);
     assert_eq!(ramp(&mut instant, 1), [0.5]);
-}
-
-/// Acceptance 3: the encoder reads the travel within one millisecond's travel, and the pulse comes once per pitch.
-#[test]
-fn the_encoder_and_the_pulse_follow_the_travel() {
-    let mut field = demo(&[("accel_time", ms(400))]);
-    let (mut travel, mut pulses) = (0.0_f64, 0);
-    for _ in 0..10_000 {
-        field.cycle().unwrap();
-        travel += f64::from(real(&field, "surface_speed")) * 0.001;
-        pulses += usize::from(field.native("belt_a", "pulse") == Some(Value::Bool(true)));
-    }
-    let encoder = f64::from(real(&field, "encoder"));
-    assert!(
-        (encoder - travel).abs() < 0.5 * 0.001,
-        "{encoder} m against {travel} m"
-    );
-    assert_eq!(
-        pulses,
-        (travel / 0.0254).floor() as usize,
-        "one pulse per inch of {travel} m"
-    );
-}
-
-/// OIP's VFD scale: the velocity reads 30 at `speed_at_30`, in proportion below it.
-#[test]
-fn the_velocity_reads_thirty_at_speed_at_30() {
-    let mut field = demo(&[]);
-    field.cycle().unwrap();
-    assert_eq!(real(&field, "velocity"), 30.0);
-    let mut field = demo(&[("speed_at_30", ParamValue::Real(1.0))]);
-    field.cycle().unwrap();
-    assert_eq!(real(&field, "velocity"), 15.0);
-    let mut field = demo(&[("speed_at_30", ParamValue::Real(1.0))]);
-    field.set_command("%QX0.0", Value::Bool(false)).unwrap();
-    field.cycle().unwrap();
-    assert_eq!(real(&field, "velocity"), 0.0);
 }
 
 /// Acceptance 3: a bound `speed_ref` sets the speed, and at 0 stops the deck with run on (spec, amended in Task 4).

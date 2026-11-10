@@ -8,7 +8,7 @@ use trust_runtime::value::Value;
 use twinova_project::address::{Address, Area, Size};
 use twinova_project::model::{Definition, Direction, Instance, ParamValue, SignalDef, SignalType};
 
-use crate::field::mirror;
+use crate::field::{block_signals, mirror};
 
 /// A device's signal and the field address it is configured at.
 pub struct Placed<'a> {
@@ -41,15 +41,15 @@ fn fallback_value(inst: &Instance, def: &Definition, signal: &SignalDef) -> Opti
     })
 }
 
-/// Every signal of `devices` the field configures: the bound ones, then the unbound optional ones at private
-/// addresses. A required signal is always bound: the format refuses one that is not.
+/// Every signal of `devices` their blocks declare, as the field configures it: the bound ones, then the unbound
+/// optional ones at private addresses. A required signal is always bound: the format refuses one that is not.
 pub fn place<'a>(devices: &[(&'a Instance, &'a Definition)]) -> Result<Vec<Placed<'a>>, String> {
     let mut out = Vec::new();
     // The first byte past every bound signal, in the field's input and output areas.
     let mut free = [0u32; 2];
     let slot = |area: Area| usize::from(area == Area::Output);
     for (inst, def) in devices {
-        for signal in &def.signals {
+        for signal in block_signals(def) {
             if let Some(text) = inst.signals.get(&signal.name) {
                 let address = Address::parse(&mirror(text)?)?;
                 let end = address.span().1.div_ceil(8) as u32;
@@ -64,10 +64,8 @@ pub fn place<'a>(devices: &[(&'a Instance, &'a Definition)]) -> Result<Vec<Place
         }
     }
     for (inst, def) in devices {
-        for signal in def
-            .signals
-            .iter()
-            .filter(|s| s.optional && !inst.signals.contains_key(&s.name))
+        for signal in
+            block_signals(def).filter(|s| s.optional && !inst.signals.contains_key(&s.name))
         {
             let area = area(signal.direction);
             let size = if signal.ty == SignalType::BOOL {

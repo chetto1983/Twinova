@@ -1,8 +1,9 @@
 //! A project's line, run in lockstep on virtual time (spec 2026-11-09-component-behaviour-design.md, "Transport with
 //! physics"; research 16: the fixed-slice lockstep of SIMIT's bus-synchronous mode). Every millisecond:
 //! 1. the physics step (`twinova_physics::World`);
-//! 2. the native models write the controller's inputs: diffuse sensors, sink counters, the feedback of a belt
-//!    without a behaviour;
+//! 2. the native models write the controller's inputs: diffuse sensors, sink counters, each conveyor's drive feedback
+//!    (`drive.rs`: velocity, encoder and pulse of the millisecond just stepped), the `running` of a belt without a
+//!    behaviour;
 //! 3. the field cycle, which reads the controller's outputs and writes its inputs, the conveyors' surface speeds
 //!    (spec 2026-11-10-curves-belt-options-design.md) and the chain transfers' lift (spec
 //!    2026-11-10-diverter-line-design.md);
@@ -13,6 +14,7 @@ use twinova_physics::{STEP_NS, World, layout};
 use twinova_project::Project;
 
 use crate::controller::Controller;
+use crate::drive::Feedback;
 use crate::field::Field;
 
 /// A conveyor's signals, and whether its speed comes from its behaviour or its motor straight from the controller.
@@ -21,6 +23,11 @@ struct BeltIo {
     run: Option<String>,
     running: Option<String>,
     behaviour: bool,
+    /// The controller inputs its drive feedback is bound to, and the feedback's state.
+    velocity: Option<String>,
+    encoder: Option<String>,
+    pulse: Option<String>,
+    feedback: Feedback,
 }
 
 pub struct Line {
@@ -45,6 +52,23 @@ fn signal(project: &Project, instance: &str, name: &str) -> Option<String> {
         .iter()
         .find(|i| i.id == instance)
         .and_then(|i| i.signals.get(name).cloned())
+}
+
+/// Writes a bound input the program declares; one it does not is skipped, as Build warned.
+fn input(
+    controller: &mut Controller,
+    address: &Option<String>,
+    value: Value,
+) -> Result<(), String> {
+    match address {
+        Some(a) if controller.declares(a) => controller.write(a, value),
+        _ => Ok(()),
+    }
+}
+
+/// A REAL as the image carries it at `%ID`: the double word of its bits (measured 2026-11-10).
+fn real(x: f32) -> Value {
+    Value::DWord(x.to_bits())
 }
 
 fn is_true(value: &Value) -> bool {
@@ -74,6 +98,10 @@ impl Line {
                 run: signal(project, &b.id, "run"),
                 running: signal(project, &b.id, "running"),
                 behaviour: has_behaviour(project, &b.id),
+                velocity: signal(project, &b.id, "velocity"),
+                encoder: signal(project, &b.id, "encoder"),
+                pulse: signal(project, &b.id, "pulse"),
+                feedback: Feedback::of(project, &b.id),
             })
             .collect();
         // Its change-over is its block's, so a chain transfer has no native fallback (spec, "The families").
@@ -131,14 +159,6 @@ impl Line {
         self.world.set_sink_blocked(sink, blocked);
     }
 
-    /// Writes an input the program declares; one it does not is skipped, as Build warned.
-    fn input(&mut self, address: &Option<String>, value: Value) -> Result<(), String> {
-        match address {
-            Some(a) if self.controller.declares(a) => self.controller.write(a, value),
-            _ => Ok(()),
-        }
-    }
-
     fn output(&self, address: &Option<String>) -> Result<bool, String> {
         match address {
             Some(a) => self.controller.read(a).map(|v| is_true(&v)),
@@ -150,14 +170,34 @@ impl Line {
     pub fn step_ms(&mut self) -> Result<(), String> {
         self.world.step();
         self.t_ns += STEP_NS;
-        for (k, address) in self.sensors.clone().iter().enumerate() {
-            let seen = self.world.sensor(k);
-            self.input(address, Value::Bool(seen))?;
+        let controller = &mut self.controller;
+        for (k, address) in self.sensors.iter().enumerate() {
+            input(controller, address, Value::Bool(self.world.sensor(k)))?;
         }
-        for (k, address) in self.sinks.clone().iter().enumerate() {
+        for (k, address) in self.sinks.iter().enumerate() {
             // The image is bit-string typed: a DINT at %ID travels as a DWORD (measured 2026-11-08).
             let count = u32::try_from(self.world.delivered(k)).unwrap_or(u32::MAX);
-            self.input(address, Value::DWord(count))?;
+            input(controller, address, Value::DWord(count))?;
+        }
+        for (k, belt) in self.belts.iter_mut().enumerate() {
+            let speed = self.world.belt_speed(k);
+            input(
+                controller,
+                &belt.velocity,
+                real(belt.feedback.velocity(speed)),
+            )?;
+            input(
+                controller,
+                &belt.encoder,
+                real(self.world.belt_travel(k) as f32),
+            )?;
+            if belt.pulse.is_some() {
+                input(
+                    controller,
+                    &belt.pulse,
+                    Value::Bool(belt.feedback.pulse(speed)),
+                )?;
+            }
         }
         if let Some(field) = self.field.as_mut() {
             for address in field.commands().to_vec() {
@@ -182,9 +222,8 @@ impl Line {
                     self.world.set_belt_speed(k, speed);
                 }
                 _ => {
-                    let (run, running) = (belt.run.clone(), belt.running.clone());
-                    let motor = self.output(&run)?;
-                    self.input(&running, Value::Bool(motor))?;
+                    let motor = self.output(&belt.run)?;
+                    input(&mut self.controller, &belt.running, Value::Bool(motor))?;
                     self.world.set_belt_running(k, motor);
                 }
             }
@@ -211,3 +250,7 @@ impl Line {
 #[cfg(test)]
 #[path = "line_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "line_drive_tests.rs"]
+mod drive_tests;

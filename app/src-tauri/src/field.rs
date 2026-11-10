@@ -11,7 +11,9 @@ use trust_runtime::memory::InstanceId;
 use trust_runtime::value::{Duration, Value};
 use twinova_project::Project;
 use twinova_project::address::{Address, Area};
-use twinova_project::model::{Definition, Direction, Instance, ParamType, ParamValue, SignalType};
+use twinova_project::model::{
+    Definition, Direction, Instance, ParamType, ParamValue, SignalDef, SignalType,
+};
 
 use crate::field_image::place;
 
@@ -31,6 +33,24 @@ fn natives(generator: &str) -> &'static [(&'static str, &'static str)] {
         "twinova.chain_transfer/1" => &[("lift", "REAL"), ("raised", "BOOL")],
         _ => &[],
     }
+}
+
+/// The signals a family's native model writes itself (drive.rs): its block does not declare them, so the field neither
+/// places nor copies them (spec 2026-11-10-run-pace-native-feedback-design.md, decision 2).
+const DRIVE_FEEDBACK: [&str; 3] = ["velocity", "encoder", "pulse"];
+
+/// The signals of `def` its behaviour block declares: all but those its native model writes.
+pub(crate) fn block_signals(def: &Definition) -> impl Iterator<Item = &SignalDef> {
+    let native: &[&str] = match def.generator.as_str() {
+        "twinova.belt/1"
+        | "twinova.roller/1"
+        | "twinova.belt_curve/1"
+        | "twinova.roller_curve/1" => &DRIVE_FEEDBACK,
+        _ => &[],
+    };
+    def.signals
+        .iter()
+        .filter(move |s| !native.contains(&s.name.as_str()))
 }
 
 pub struct Field {
@@ -263,7 +283,7 @@ impl Field {
                     .try_set_input(&path(&p.name), param_value(p.ty, value))
                     .map_err(|e| format!("{}.{}: {e}", inst.id, p.name))?;
             }
-            for signal in &def.signals {
+            for signal in block_signals(def) {
                 if let Some(address) = inst.signals.get(&signal.name) {
                     match signal.direction {
                         Direction::PlcOutput => commands.push(address.clone()),
