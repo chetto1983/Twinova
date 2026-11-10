@@ -164,8 +164,8 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
     `families.ts` and 96–100 % on the other helpers.
   - *Test changed:* `families.test.ts` asserted that the belt had no generator yet (4.4a deferred it to 4.4b); the
     stand-in case now checks the source.
-  - *Open:* `project.ts` `shapeOf` keeps its belt/roller stand-in branch, which no drawn family reaches any more.
-    Removing it removes 4.x tests: asked of the user.
+  - *Dead code removed (user):* `shapeOf`'s belt and roller stand-in, which no drawn family reaches any more, with
+    three unused scene tokens. Its three tests now size the live stand-ins.
 
 ### Task 6 — Acceptance
 
