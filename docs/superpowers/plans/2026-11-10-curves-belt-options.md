@@ -148,10 +148,24 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
 
 ### Task 5 — View
 
-- [ ] Copy OIP's straight belt, curved belt and curved roller generators, and the kernel's `sweep`, `fillet` and
+- [x] Copy OIP's straight belt, curved belt and curved roller generators, and the kernel's `sweep`, `fillet` and
   `arc`; draw the guards.
-- [ ] Tests: bounds against OIP's figures; the fabric's scroll from the snapshot.
-- [ ] Verify: frontend gates, Stryker.
+- [x] Tests: bounds against OIP's figures; the fabric's scroll from the snapshot.
+- [x] Verify: frontend gates, Stryker.
+  - *Delivered:*
+    - `belt.ts`, `beltCurve.ts`, `rollerCurve.ts` and `curve.ts` are copied from OIP; the floor stand is shared in
+      `legs.ts` (out of `roller.ts`);
+    - `sweep` and `arc` are in the kernel, `fillet` is left out (see the spec's Task 5 amendment);
+    - the guards of belts, rollers and curves follow `left_guard`/`right_guard`, and a photo eye hangs on a curve at
+      its angle;
+    - the snapshot carries each conveyor's travel, and the view scrolls the fabric by it.
+  - *Measured:* the belt's bounds match OIP's: drums at ±h/2, guard top 0.15, foot plates 3 mm off the floor. Curves
+    enter at their origin and leave at (0.985, ±0.985). Frontend: 80 tests, 98.7 % of lines, Stryker 85.1 % on
+    `families.ts` and 96–100 % on the other helpers.
+  - *Test changed:* `families.test.ts` asserted that the belt had no generator yet (4.4a deferred it to 4.4b); the
+    stand-in case now checks the source.
+  - *Open:* `project.ts` `shapeOf` keeps its belt/roller stand-in branch, which no drawn family reaches any more.
+    Removing it removes 4.x tests: asked of the user.
 
 ### Task 6 — Acceptance
 

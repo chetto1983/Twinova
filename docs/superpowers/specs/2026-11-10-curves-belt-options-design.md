@@ -156,6 +156,21 @@ What this does not prove:
   never sees it. A value written once at Build stays for every cycle (measured over 50 cycles), and a REAL travels as
   the DWord of its bits.
 
+## Amended while drawing (Task 5, 2026-11-10)
+
+- **The belt's band is OIP's general loop** (its bent-path branch), even on a straight belt: one surface over both
+  drums with u in metres. OIP's straight branch instances unit templates whose u a per-instance attribute rebuilds in
+  a shader; with the loop, the fabric scrolls by a plain texture offset. So the kernel gains `arc`, and `fillet` stays
+  out, since only a bent path uses it.
+- **A right curve is OIP's left curve run backwards** (turned π/2 − sweep), never mirrored, so its faces keep their
+  winding. Its fabric scrolls back, and its guards map left/right to outer/inner.
+- **The roller curve leads in and out over 0.085 m**, the physics' stub, where Twinova hands over. OIP draws its
+  2 mm snap stub (`CURVED_ROLLER_END_EXT`), which would leave an 8 cm visual gap at each end. It draws no drive
+  bands, as OIP.
+- **A skewed roller bed is drawn square:** its skew is physics only.
+- **The fabric scrolls by the snapshot's travel:** the world integrates each conveyor's speed every millisecond, and
+  the view sets the texture offset to −travel (OIP `functionMesh.ts`).
+
 ## Acceptance of 4.4b
 
 1. **Curves:**
