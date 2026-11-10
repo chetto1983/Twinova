@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mount, unmount } from "svelte";
 import App from "../App.svelte";
-import { deliveredOf, formatSpeed, formatTime, framingDistance, isBehind, SPEEDS, type Snapshot } from "./snapshot";
+import {
+  deliveredOf,
+  formatSpeed,
+  formatTime,
+  framingDistance,
+  isBehind,
+  scrollOffset,
+  SPEEDS,
+  type Snapshot,
+} from "./snapshot";
 
 vi.mock("./ProjectScene.svelte", () => ({ default: () => {} }));
 vi.mock("./backend", () => ({
@@ -126,5 +135,16 @@ describe("Twinova brand", () => {
 
     expect(lightColors).toEqual(darkColors);
     expect(getComputedStyle(name!).fontFamily).toContain("Atkinson Hyperlegible Next");
+  });
+});
+
+describe("a scrolling fabric", () => {
+  it("walks its offset back by the travel, in tiles, within one tile", () => {
+    expect(scrollOffset(0, 1)).toBe(-0);
+    expect(scrollOffset(0.25, 1)).toBe(-0.25);
+    expect(scrollOffset(2.75, 1)).toBeCloseTo(-0.75, 12);
+    expect(scrollOffset(0.25, 2)).toBe(-0.5);
+    // a right curve's fabric runs backwards: a negative rate walks the offset forward
+    expect(scrollOffset(0.25, -1)).toBe(0.25);
   });
 });

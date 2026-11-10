@@ -204,6 +204,7 @@
             {theme}
             cartons={snapshot?.cartons ?? []}
             transfers={snapshot?.transfers ?? []}
+            conveyors={snapshot?.conveyors ?? []}
           />
         </div>
       </section>
