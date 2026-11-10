@@ -121,6 +121,26 @@ What this does not prove:
 - **Until Task 4, the curves' blocks are the straight conveyor's** (`motor : BOOL`), and the optional drive signals
   stay unbound in the fixtures.
 
+## Amended while building the physics (Task 3, 2026-11-10)
+
+- **Breakaway on an incline (user, 2026-11-10).** Measured in Rapier with `Coulomb` friction, a carton on a stopped
+  deck gives way 1–1.8° below atan(μ):
+  - rollers, μ 0.42 (atan 22.78°): holds at 21.0°, slides from 21.78°;
+  - belts, μ 0.7 (atan 34.99°): holds at 33.2°, slides from 34.0°.
+
+  The effective μ is about 5.6 % low for both. More solver iterations (16, or 8 internal PGS), no warm start, and
+  contact softness ×4 or ×0.25 leave it unchanged. Rapier clamps the friction impulse to a disc of radius μλ
+  (`contact_constraint_element.rs`, `simd_cap_magnitude`), so the cause is not the cone; it is not explained.
+  Acceptance 4's first item becomes: **a carton holds 2° below atan(μ) and slides 1° above it, for rollers and
+  belts**. OIP's own test is looser: it holds at 20° and slides at 40°, around 30.6°.
+  - *Not proved:* why Rapier's effective μ is low, and whether it holds for other carton sizes.
+- **Guards on a curve are chords whose ends lie on the arc,** as OIP sweeps its guard along a polyline
+  (`_shared/guardArc.js`). A 10° chord bows into the lane by up to 4.7 mm on the default curve's outer guard.
+- **A chain transfer's host** must be a straight roller conveyor that is level and unskewed, with no guard on the
+  transfer's exit side; Build names the problem.
+- **A sensor on a curve** mounts at an angle in degrees from the arc's start, after the entry stub. Its beam is
+  radial, so a passing carton's outer corner reaches it about 3 cm early.
+
 ## Acceptance of 4.4b
 
 1. **Curves:**
@@ -138,7 +158,7 @@ What this does not prove:
    - `velocity` reads 30 at `speed_at_30`;
    - a bound `speed_ref` sets the speed.
 4. **Fidelity, after OIP's `physicsFidelity.test.ts`:**
-   - breakaway on an incline within 1° of atan(μ);
+   - breakaway on an incline: holds 2° below atan(μ), slides 1° above (amended in Task 3);
    - a skewed bed's throughput s and lateral speed s·tan(skew).
 5. **Determinism and gates:**
    - fingerprints are equal in dev, release and on windows-2022;
