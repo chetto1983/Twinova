@@ -290,6 +290,7 @@ fn a_conveyor_counts_its_surface_travel() {
     w.set_belt_speed(0, 0.5);
     run(&mut w, 1000);
     w.set_belt_speed(0, -0.25);
+    assert_eq!((w.belt_speed(0), w.belt_speed(1)), (-0.25, 0.0));
     run(&mut w, 400);
     assert!(
         (w.belt_travel(0) - 0.4).abs() < 1e-9,

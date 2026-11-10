@@ -53,9 +53,8 @@ fn the_demo_field_holds_the_belt_and_its_mirrored_signals() {
         "PROGRAM Field\nVAR\n    belt_a : BeltBehaviour;\nEND_VAR\nbelt_a();\nEND_PROGRAM\n\n\
          CONFIGURATION Twinova\nRESOURCE Devices ON PLC\n    TASK Cycle (INTERVAL := T#1ms, PRIORITY := 1);\n    \
          PROGRAM F WITH Cycle : Field;\nEND_RESOURCE\nVAR_CONFIG\n    F.belt_a.run AT %IX0.0 : BOOL;\n    \
-         F.belt_a.running AT %QX0.1 : BOOL;\n    F.belt_a.speed_ref AT %ID1 : REAL;\n    \
-         F.belt_a.velocity AT %QD1 : REAL;\n    F.belt_a.encoder AT %QD5 : REAL;\n    \
-         F.belt_a.pulse AT %QX9.0 : BOOL;\nEND_VAR\nEND_CONFIGURATION\n"
+         F.belt_a.running AT %QX0.1 : BOOL;\n    F.belt_a.speed_ref AT %ID1 : REAL;\n\
+         END_VAR\nEND_CONFIGURATION\n"
     );
     assert!(text.starts_with("(* Twinova belt conveyor"));
 }
@@ -221,8 +220,8 @@ fn a_mistake_in_a_block_is_reported_against_its_file_and_line() {
         .unwrap();
     assert_eq!(
         error,
-        "field runtime: expected expression at components/twinova.belt@1.st:37\n\
-         expected ';' at components/twinova.belt@1.st:38"
+        "field runtime: expected expression at components/twinova.belt@1.st:30\n\
+         expected ';' at components/twinova.belt@1.st:31"
     );
 }
 

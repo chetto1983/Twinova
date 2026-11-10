@@ -231,6 +231,11 @@ impl World {
         &self.layout.belts[belt].id
     }
 
+    /// A conveyor's surface speed as last set, m/s: the speed it ran at during the last step.
+    pub fn belt_speed(&self, belt: usize) -> Real {
+        self.speeds[belt]
+    }
+
     /// How far a conveyor's surface has run along its flow, m: back for a negative speed.
     pub fn belt_travel(&self, belt: usize) -> f64 {
         self.travels[belt]
