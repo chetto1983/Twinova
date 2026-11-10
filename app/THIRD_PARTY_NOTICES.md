@@ -26,7 +26,8 @@
 | `src/app.css` (component classes) | chetto1983/ModbusTool `src/app.css` | MIT |
 | `e2e/run.mjs` (structure and helpers) | chetto1983/ModbusTool `e2e/run.mjs`, `e2e/helpers.mjs` | MIT |
 | `src/lib/oip/geometry/`, `src/lib/oip/parts/`, `src/lib/materials.ts` (values), `src/assets/oip/` | Open Industry Project at `1e7488c` (`src/core/geometry/`, `examples/parts/`, `public/textures/`); notice in the repository's `THIRD_PARTY_NOTICES.md` | MIT |
-| `src-tauri/physics/src/world.rs` (surface velocity, the chain transfer's deck and lift, translated) | Open Industry Project at `1e7488c` (`src/sim/conveyorContacts.ts`, `src/sim/deckDrive.ts`, `src/sim/rigDriver.ts`) | MIT |
+| `src-tauri/physics/src/world.rs`, `path.rs`, `surfaces.rs` (surface velocity, a curve's deck and rotating field, the guards, a skewed roller's drive, the chain transfer's deck and lift, translated) | Open Industry Project at `1e7488c` (`src/sim/conveyorContacts.ts`, `src/sim/deckDrive.ts`, `src/sim/rigDriver.ts`, `src/core/geometry/collisionShapes.ts`, `examples/parts/roller-conveyor/behavior.ts`) | MIT |
+| `src-tauri/project/tests/fixtures/**/twinova.*.st` (the conveyor drive and the chain transfer, re-expressed in ST) | Open Industry Project at `1e7488c` (`examples/parts/_shared/conveyorDrive.js`, `examples/parts/chain-transfer/behavior.ts`) | MIT |
 
 ## Direct runtime dependencies
 
