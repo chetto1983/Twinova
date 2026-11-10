@@ -63,4 +63,7 @@ and build inside the app, on Windows and Linux.
   simulated time per second (ROADMAP 4.4b1). A conveyor's `velocity`, `encoder` and `pulse` are computed by the
   conveyor itself, not by its ST block, which makes every simulated millisecond about a fifth cheaper; the block keeps
   the ramp, `running` and `speed_ref`.
+- The physics solves once per millisecond instead of four times, and the line parses its I/O addresses once at Build
+  (ROADMAP 4.4b2): a simulated millisecond costs about 28 % less again, and as fast as possible runs the example
+  lines at 16× and 11× real time. Every run's numbers change slightly.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

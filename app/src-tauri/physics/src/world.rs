@@ -148,6 +148,9 @@ impl World {
         // load with it. Rapier's default (Simplified) adds a twist constraint with no target velocity that holds the
         // load's yaw (spec 2026-11-10-curves-belt-options-design.md, measured).
         world.integration_parameters.friction_model = FrictionModel::Coulomb;
+        // One solver iteration per step: Rapier's default of 4 is for steps of 16 ms, and at a millisecond it is 70 %
+        // of the step for no measured gain in fidelity (spec 2026-11-10-solver-substeps-io-links-design.md).
+        world.integration_parameters.num_solver_iterations = 1;
         world.insert_collider(
             // The floor, for what falls off a belt.
             ColliderBuilder::cuboid(500.0, 0.05, 500.0)

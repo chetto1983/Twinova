@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 use trust_runtime::harness::TestHarness;
+use trust_runtime::io::IoAddress;
 use trust_runtime::memory::InstanceId;
 use trust_runtime::value::{Duration, Value};
 use twinova_project::Project;
@@ -62,6 +63,10 @@ pub struct Field {
     commands: Vec<String>,
     /// The controller's input addresses the field writes.
     feedback: Vec<String>,
+    /// The field's own address of each command and feedback, by the controller's: its mirror, parsed at Build.
+    /// Mirroring and parsing one at every copy of every millisecond cost 3 µs of a line's 50 (spec
+    /// 2026-11-10-solver-substeps-io-links-design.md, measured).
+    mirrors: BTreeMap<String, IoAddress>,
 }
 
 /// The same byte and bit seen from the other runtime: input and output swap.
@@ -73,6 +78,16 @@ pub fn mirror(address: &str) -> Result<String, String> {
         Area::Memory => return Err(format!("{address} is not an input or an output")),
     };
     Ok(a.to_string())
+}
+
+/// The field's address of the command or feedback the controller has at `address`.
+fn mirrored<'a>(
+    mirrors: &'a BTreeMap<String, IoAddress>,
+    address: &str,
+) -> Result<&'a IoAddress, String> {
+    mirrors
+        .get(address)
+        .ok_or_else(|| format!("{address}: the field has no signal there"))
 }
 
 pub(crate) fn behaving(project: &Project) -> Vec<(&Instance, &Definition)> {
@@ -293,11 +308,17 @@ impl Field {
             }
         }
         let blocks = resolve_blocks(&harness, &devices);
+        let mut mirrors = BTreeMap::new();
+        for address in commands.iter().chain(&feedback) {
+            let at = IoAddress::parse(&mirror(address)?).map_err(|e| format!("{address}: {e}"))?;
+            mirrors.insert(address.clone(), at);
+        }
         Ok(Some(Self {
             harness,
             blocks,
             commands,
             feedback,
+            mirrors,
         }))
     }
 
@@ -311,15 +332,20 @@ impl Field {
 
     /// Writes a command the controller output at `address` (its `%Q`), into the field's mirrored input.
     pub fn set_command(&mut self, address: &str, value: Value) -> Result<(), String> {
+        let at = mirrored(&self.mirrors, address)?;
         self.harness
-            .set_direct_input(&mirror(address)?, value)
+            .runtime_mut()
+            .write_io(at, value)
             .map_err(|e| format!("{address}: {e}"))
     }
 
     /// The value the field gives the controller input at `address` (its `%I`).
     pub fn feedback_value(&self, address: &str) -> Result<Value, String> {
+        let at = mirrored(&self.mirrors, address)?;
         self.harness
-            .get_direct_output(&mirror(address)?)
+            .runtime()
+            .io()
+            .read(at)
             .map_err(|e| format!("{address}: {e}"))
     }
 

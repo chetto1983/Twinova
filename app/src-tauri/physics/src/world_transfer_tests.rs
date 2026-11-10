@@ -329,8 +329,9 @@ fn a_line_with_a_transfer_gives_equal_bits_on_every_platform() {
     };
     let first = fingerprint();
     assert_eq!(first, fingerprint());
-    // Pinned on Linux x86-64 (2026-11-10, Coulomb friction), equal in dev and release; the windows-2022 CI job runs this test too.
-    assert_eq!(first, 0x88a2_f689_560c_76e4, "{first:#018x}");
+    // Pinned on Linux x86-64 (2026-11-10, Coulomb friction, one solver iteration), equal in dev and release; the
+    // windows-2022 CI job runs this test too.
+    assert_eq!(first, 0x2c22_4abf_a5e9_0d6c, "{first:#018x}");
 }
 
 /// Two transfers on one roller conveyor, the second carrying to the right: only the raised one takes the carton, at

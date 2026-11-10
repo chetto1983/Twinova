@@ -19,6 +19,24 @@ struct Declared {
     type_name: String,
 }
 
+/// A direct address parsed once, with its text for messages: parsing one at every read and write of every millisecond
+/// cost 5 µs of a line's 50 (spec 2026-11-10-solver-substeps-io-links-design.md, measured).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Port {
+    text: String,
+    at: IoAddress,
+}
+
+impl Port {
+    pub fn parse(address: &str) -> Result<Self, String> {
+        let at = IoAddress::parse(address).map_err(|e| format!("{address}: {e}"))?;
+        Ok(Self {
+            text: address.to_string(),
+            at,
+        })
+    }
+}
+
 pub struct Controller {
     harness: TestHarness,
     scan_ns: i64,
@@ -125,19 +143,37 @@ impl Controller {
         self.scan_ns
     }
 
+    /// `address` parsed, when the program declares a variable there: what the line writes every millisecond, resolved
+    /// once at Build (spec 2026-11-10-solver-substeps-io-links-design.md, decision 2).
+    pub fn declared_at(&self, address: &str) -> Option<Port> {
+        self.at(address)?;
+        Port::parse(address).ok()
+    }
+
     /// Writes the input image at `address`, read at the next scan.
     pub fn write(&mut self, address: &str, value: Value) -> Result<(), String> {
+        self.write_at(&Port::parse(address)?, value)
+    }
+
+    pub fn write_at(&mut self, port: &Port, value: Value) -> Result<(), String> {
         self.harness
-            .set_direct_input(address, value)
-            .map_err(|e| format!("{address}: {e}"))
+            .runtime_mut()
+            .write_io(&port.at, value)
+            .map_err(|e| format!("{}: {e}", port.text))
     }
 
     /// Reads the image at `address`: an output the last scan wrote, or an input as last written. truST reads an
     /// address outside the image as zero (measured 2026-11-09).
     pub fn read(&self, address: &str) -> Result<Value, String> {
+        self.read_at(&Port::parse(address)?)
+    }
+
+    pub fn read_at(&self, port: &Port) -> Result<Value, String> {
         self.harness
-            .get_direct_output(address)
-            .map_err(|e| format!("{address}: {e}"))
+            .runtime()
+            .io()
+            .read(&port.at)
+            .map_err(|e| format!("{}: {e}", port.text))
     }
 
     /// A panel button: its bit is true for the next scan only. A bit the program does not declare is ignored; Build

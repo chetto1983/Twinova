@@ -328,3 +328,24 @@ fn a_line_program_commands_the_chain_transfer_and_reads_raised_fb() {
     // at that scan. popup falls at the 500 ms scan; raised_fb drops at 501 and is read at 510.
     assert_eq!(changes, [(200, true), (510, false)]);
 }
+
+/// The field resolves the mirror of its commands and feedbacks at Build; an address that is neither is refused, not
+/// written into or read from a corner of the image nothing uses.
+#[test]
+fn an_address_the_field_does_not_have_is_refused() {
+    let mut field = Field::build(&fixture("demo_m3")).unwrap().unwrap();
+    assert_eq!(
+        field.set_command("%QX7.7", Value::Bool(true)).unwrap_err(),
+        "%QX7.7: the field has no signal there"
+    );
+    assert_eq!(
+        field.feedback_value("%IX7.7").unwrap_err(),
+        "%IX7.7: the field has no signal there"
+    );
+    assert!(
+        field
+            .set_command("%QX0.0", Value::DWord(1))
+            .unwrap_err()
+            .starts_with("%QX0.0: ")
+    );
+}

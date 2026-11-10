@@ -243,9 +243,10 @@ fn equal_runs_give_equal_bits_on_every_platform() {
     };
     let first = fingerprint();
     assert_eq!(first, fingerprint());
-    // Pinned on Linux x86-64 (2026-11-10, Coulomb friction), equal in dev and release. The windows-2022 CI job runs this test too: with
-    // enhanced-determinism the same bits must come out there (research 15).
-    assert_eq!(first, 0x106e_9422_7f30_a7d7, "{first:#018x}");
+    // Pinned on Linux x86-64 (2026-11-10, Coulomb friction, one solver iteration), equal in dev and release. The
+    // windows-2022 CI job runs this test too: with enhanced-determinism the same bits must come out there
+    // (research 15).
+    assert_eq!(first, 0x2674_dda1_319b_763a, "{first:#018x}");
 }
 
 pub(super) fn fixture(name: &str) -> twinova_project::Project {
