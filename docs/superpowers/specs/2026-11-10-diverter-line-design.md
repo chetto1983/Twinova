@@ -1,6 +1,6 @@
 # Spec: roller conveyor, chain transfer and the first complete line (ROADMAP 4.4a)
 
-Date: 2026-11-10. Status: **draft**, for the user's approval.
+Date: 2026-11-10. Status: **approved** (user, 2026-11-10).
 
 ROADMAP 4.4 is split into sub-phases, each with its own spec, E2E and merge (user, 2026-11-10):
 
