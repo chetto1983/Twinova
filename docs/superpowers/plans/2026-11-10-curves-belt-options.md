@@ -115,7 +115,10 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
     acceptance: holds 2° below, slides 1° above.
   - *Tests changed (mechanical):* `world_tests.rs`'s `belt()` gains the new fields (no arc, no guards, no skew), and
     the hook test's `Surfaces` takes a `Drive::Linear`. No assertion changed.
-- [ ] Verify: mutants on the physics.
+- [x] Verify: mutants on the physics.
+  - *Delivered:* 396 mutants on `path.rs`, `surfaces.rs`, `layout.rs` and `world.rs`. 8 survived, in the stub guards'
+    positions, the chords' overlap and the skew's magnitude. Two tests now catch them, and the rerun of those 47
+    mutants caught every one.
 
 ### Task 4 — Drive and signals
 
