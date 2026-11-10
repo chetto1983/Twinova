@@ -169,7 +169,9 @@ What this does not prove:
   DYNAMIC_FIXED (`collider_components.rs`), with no kinematic–fixed pair.
 - **Exits:**
   - a conveyor's end;
-  - the chain transfer's side, over the length of its deck.
+  - the chain transfer's side, over its deck and half a carton beyond each end. Measured while implementing
+    (2026-11-10): with the deck's span only, a queue standing over a raised transfer spilled the cartons it half
+    carried onto the floor. A chute beside a real transfer catches them.
   - A sink attaches to an exit and collects when the carton's front crosses it.
   - An unconnected exit is closed by a wall. A blocked sink puts a wall at its exit (M4.1: no product is lost).
 - **The loop.** The chain deck is driven at step 3 of the 1 ms loop (`line.rs`), like a belt's motor. The order
@@ -194,8 +196,13 @@ source → belt_a → roller_r (with chain_transfer at its centre) → belt_b �
 
 - `sensor_a` sits at the transfer, on the roller. Two photocells can't share a host here (4.4a's sensors mount on
   belts or rollers).
-- The program sends every third carton to reject, waits for `raised_fb` before it counts the carton as diverted, and
-  lowers after the carton leaves.
+- The program sends every third carton to reject.
+  - **It keeps the chains up for a carry time,** 1.5 s after `raised_fb` (0.6 m at 0.5 m/s, with margin), then lowers.
+    It can't wait for the beam to clear: the beam runs 5 cm above the rollers, and a raised carton rides 6.5 cm
+    above them, so the beam passes under it (measured 2026-11-10: lowering on a clear beam dropped the carton back
+    mid-carry).
+  - **It holds belt A and the rollers while the chains are up.** At 2 s spacing, the next carton otherwise runs into
+    the raised deck's edge.
 
 ## Acceptance of 4.4a
 
