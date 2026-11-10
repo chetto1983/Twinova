@@ -37,7 +37,7 @@ ROADMAP 4.4 is split into sub-phases, each with its own spec, E2E and merge (use
 | `examples/parts/chain-transfer/part.js` `geometry()` | 266 | copied as the chain transfer's view generator |
 | `examples/parts/belt-conveyor/part.js` `geometry()`, `_shared/legs.js` | 697 + 67 | copied as the belt's view generator, split below 600 lines |
 | `examples/parts/diffuse-sensor/part.js`, `_shared/sensorPhotoeye.js` | 241 | copied as the photo-eye's view generator |
-| `public/textures/ChainLink.webp`, the belt and roller textures | — | copied, first-party per OIP's `THIRD_PARTY_NOTICES.md` |
+| `public/textures/{ChainLink.webp, RollerMetal.webp, BeltFabric.jpg, BeltFabricArrows.jpg}` | — | copied, first-party per OIP's `THIRD_PARTY_NOTICES.md` |
 | `src/sim/conveyorContacts.ts` (surface velocity per contact) | 369 | translated, without the gates (above) |
 | `src/sim/deckDrive.ts` (`setSurfaceVelocity`, `setSurfaceSpeed`) | 77 | translated |
 | `examples/parts/chain-transfer/behavior.ts` `step()` | 30 | re-expressed as the ST block |
@@ -161,7 +161,8 @@ What this does not prove:
   through the contact hook, as today.
 - **A kinematic deck is moved before each step** with `set_next_kinematic_translation`, Rapier's documented
   mechanism (`rigid_body.rs`: "Rapier computes the velocity needed to reach this position smoothly"). It does not
-  collide with the static decks: Rapier pairs no two non-dynamic bodies.
+  collide with the static decks: Rapier's default `ActiveCollisionTypes` is DYNAMIC_DYNAMIC | DYNAMIC_KINEMATIC |
+  DYNAMIC_FIXED (`collider_components.rs`), with no kinematic–fixed pair.
 - **Exits:**
   - a conveyor's end;
   - the chain transfer's side, over the length of its deck.
