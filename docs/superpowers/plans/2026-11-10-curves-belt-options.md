@@ -169,6 +169,17 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
 
 ### Task 6 — Acceptance
 
-- [ ] E2E of the curve line on Linux and Windows.
-- [ ] The release soak.
-- [ ] Verification file; ROADMAP 4.4b; CHANGELOG.
+- [x] E2E of the curve line on Linux and Windows.
+- [x] The release soak.
+- [x] Verification file; ROADMAP 4.4b; CHANGELOG.
+  - *Delivered:*
+    - `e2e/curve.mjs` 3/3 on Linux, with the whole suite: `run` 11/11, `project` 42/42, `line` 4/4. Windows runs on
+      the CI of PR #32;
+    - the release soak: the transfer line at 4.1× real time, the curve line at 2.7×, memory flat;
+    - verification `2026-11-10-curves-belt-options.md`.
+  - *Found and fixed:*
+    - the I/O panel printed a REAL as the integer of its bits;
+    - the drive in ST cost a third of the field's time, and skipping its ramp at its target saves 12 % with the same
+      result (measured).
+  - *Test changed (approved with Task 4's):* `run.mjs` broke the belt block at `motor := run;`; it now breaks
+    `target := speed_ref;`.

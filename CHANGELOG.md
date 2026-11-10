@@ -46,4 +46,17 @@ and build inside the app, on Windows and Linux.
   - its logic is an ST block with a `raised_fb` feedback;
   - the example line sends every third carton to a reject sink.
   The 3D view draws the rollers, the chain transfer and the photo eyes as OIP does.
+- Curved conveyors and the conveyor options (ROADMAP 4.4b), from Open Industry Project (MIT):
+  - curved belt and curved roller conveyors, left or right, 15° to 180°: a carton turns with the curve and leaves
+    square;
+  - side guards on belts, rollers and curves, an incline on belts and rollers, and roller skew that drifts the load
+    against a guard;
+  - every conveyor's drive ramps by `accel_time` and `decel_time`, and can report `velocity` (30 at its rated speed),
+    an `encoder` of the surface's travel and a `pulse`, or take its speed from `speed_ref`. These signals are
+    optional: a project binds only those it needs;
+  - the belt, the curved belt and the curved roller conveyor are drawn as OIP draws them, the belt's fabric moving
+    with its speed;
+  - the friction model is Coulomb, which changes every run's numbers slightly; the M3 demo's photocell moves to
+    2.75 m.
+- The I/O panel shows a REAL signal as its number.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.
