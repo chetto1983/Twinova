@@ -1,5 +1,5 @@
 (* The 4.4b curve line: belt A, a left belt curve, belt B, a right roller curve, belt C. Every conveyor runs; the
-   photocells and the sink's count are declared so the I/O panel shows them. *)
+   photocells, the sink's count and curve A's drive feedback are declared so the I/O panel shows them. *)
 PROGRAM Main
 VAR
     detected_a AT %IX0.0 : BOOL;
@@ -10,6 +10,8 @@ VAR
     curve_b_run AT %QX0.3 : BOOL;
     belt_c_run AT %QX0.4 : BOOL;
     delivered AT %ID4 : DINT;
+    curve_a_velocity AT %ID8 : REAL;
+    curve_a_travel AT %ID12 : REAL;
 END_VAR
 belt_a_run := TRUE;
 curve_a_run := TRUE;

@@ -13,6 +13,8 @@ use twinova_project::Project;
 use twinova_project::address::{Address, Area};
 use twinova_project::model::{Definition, Direction, Instance, ParamType, ParamValue, SignalType};
 
+use crate::field_image::place;
+
 /// The field's cycle, fixed (user, 2026-11-09).
 pub const FIELD_CYCLE_NS: i64 = 1_000_000;
 
@@ -25,7 +27,7 @@ fn natives(generator: &str) -> &'static [(&'static str, &'static str)] {
         "twinova.belt/1"
         | "twinova.roller/1"
         | "twinova.belt_curve/1"
-        | "twinova.roller_curve/1" => &[("motor", "BOOL")],
+        | "twinova.roller_curve/1" => &[("surface_speed", "REAL")],
         "twinova.chain_transfer/1" => &[("lift", "REAL"), ("raised", "BOOL")],
         _ => &[],
     }
@@ -53,7 +55,7 @@ pub fn mirror(address: &str) -> Result<String, String> {
     Ok(a.to_string())
 }
 
-fn behaving(project: &Project) -> Vec<(&Instance, &Definition)> {
+pub(crate) fn behaving(project: &Project) -> Vec<(&Instance, &Definition)> {
     let mut out: Vec<_> = project
         .scene
         .instances
@@ -102,19 +104,15 @@ fn generate(project: &Project) -> Result<(String, Spans), String> {
     let _ = writeln!(out, "    PROGRAM {PROGRAM} WITH Cycle : Field;");
     out.push_str("END_RESOURCE\n");
     let mut config = String::new();
-    for (inst, def) in &devices {
-        for signal in &def.signals {
-            if let Some(address) = inst.signals.get(&signal.name) {
-                let _ = writeln!(
-                    config,
-                    "    {PROGRAM}.{}.{} AT {} : {};",
-                    inst.id,
-                    signal.name,
-                    mirror(address)?,
-                    st_type(signal.ty)
-                );
-            }
-        }
+    for placed in place(&devices)? {
+        let _ = writeln!(
+            config,
+            "    {PROGRAM}.{}.{} AT {} : {};",
+            placed.instance.id,
+            placed.signal.name,
+            placed.address,
+            st_type(placed.signal.ty)
+        );
     }
     if !config.is_empty() {
         out.push_str("VAR_CONFIG\n");
@@ -219,6 +217,17 @@ impl Field {
         let (text, spans) = generate(project)?;
         let mut harness = TestHarness::from_source(&text)
             .map_err(|e| format!("field runtime: {}", locate(&e.to_string(), &text, &spans)))?;
+        for placed in place(&devices)? {
+            if let Some(value) = placed.fallback {
+                let address = placed.address.to_string();
+                harness.set_direct_input(&address, value).map_err(|e| {
+                    format!(
+                        "{}.{} at {address}: {e}",
+                        placed.instance.id, placed.signal.name
+                    )
+                })?;
+            }
+        }
         let (mut commands, mut feedback) = (Vec::new(), Vec::new());
         for (inst, def) in &devices {
             let block = &def.behaviour.as_ref().expect("filtered").function_block;
@@ -319,3 +328,7 @@ impl Field {
 #[cfg(test)]
 #[path = "field_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "field_drive_tests.rs"]
+mod drive_tests;

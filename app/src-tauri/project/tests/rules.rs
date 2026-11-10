@@ -493,3 +493,34 @@ fn an_optional_signal_may_stay_unbound_and_a_required_one_may_not() {
     rehash(&mut files);
     parse_project(&files).expect("an optional signal left unbound");
 }
+
+/// An unbound optional signal reads its fallback parameter (spec 2026-11-10-curves-belt-options-design.md, amended in
+/// Task 4): only an optional signal has one, and it names a parameter of the signal's type.
+#[test]
+fn a_fallback_names_a_parameter_of_an_optional_signals_type() {
+    expect(
+        "fallback on a required signal",
+        "signals.run: only an optional signal has a fallback",
+        |f| edit(f, BELT, |d| d["signals"][0]["fallback"] = json!("speed")),
+    );
+    expect(
+        "fallback to nothing",
+        "signals.speed_ref: fallback 'nope' is not a parameter",
+        |f| edit(f, BELT, |d| d["signals"][2]["fallback"] = json!("nope")),
+    );
+    expect(
+        "fallback of another type",
+        "signals.speed_ref: fallback 'start_delay' is TIME, not REAL",
+        |f| {
+            edit(f, BELT, |d| {
+                d["signals"][2]["fallback"] = json!("start_delay")
+            })
+        },
+    );
+    let mut files = reference();
+    edit(&mut files, BELT, |d| {
+        d["signals"][2]["fallback"] = json!("speed")
+    });
+    rehash(&mut files);
+    parse_project(&files).expect("speed_ref falls back to speed");
+}

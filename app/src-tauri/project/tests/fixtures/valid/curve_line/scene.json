@@ -172,8 +172,10 @@
         1.0
       ],
       "signals": {
+        "encoder": "%ID12",
         "run": "%QX0.1",
-        "running": "%IX0.2"
+        "running": "%IX0.2",
+        "velocity": "%ID8"
       }
     },
     {

@@ -245,10 +245,19 @@ impl World {
         self.world.bodies[self.decks[transfer]].set_next_kinematic_translation(at.translation);
     }
 
-    /// A belt's motor: its surface runs at the belt's speed while on, a curve's at its centreline.
+    /// A belt's motor: its surface runs at the belt's speed while on.
     pub fn set_belt_running(&mut self, belt: usize, on: bool) {
+        let speed = if on {
+            self.layout.belts[belt].speed
+        } else {
+            0.0
+        };
+        self.set_belt_speed(belt, speed);
+    }
+
+    /// A conveyor's surface speed, m/s, along its flow (a curve's at its centreline); negative runs it backwards.
+    pub fn set_belt_speed(&mut self, belt: usize, speed: Real) {
         let b = &self.layout.belts[belt];
-        let speed = if on { b.speed } else { 0.0 };
         for &(index, motion) in &self.surfaces[belt] {
             self.hooks.surface[index] = match motion {
                 Motion::Along(rotation) => Drive::Linear(rotation * along(speed, b.skew)),

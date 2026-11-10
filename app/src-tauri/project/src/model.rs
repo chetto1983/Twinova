@@ -127,6 +127,9 @@ pub struct SignalDef {
     /// were.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// The parameter an unbound optional signal reads instead (spec, amended in Task 4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fallback: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

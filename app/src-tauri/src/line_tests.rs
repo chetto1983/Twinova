@@ -185,7 +185,7 @@ fn a_belt_without_a_behaviour_follows_the_controller_and_reports_running_itself(
 fn a_behaviour_drives_its_belt_motor_whatever_the_controller_commands() {
     let mut project = fixture("demo_m3");
     let block = project.behaviours.get_mut("twinova.belt@1").unwrap();
-    *block = block.replace("motor := run;", "motor := FALSE;");
+    *block = block.replace("    target := speed_ref;", "    target := 0.0;");
     let (mut line, _) = Line::build(&project).unwrap();
     line.press("%IX1.0");
     run_ms(&mut line, 8000);
@@ -271,4 +271,12 @@ fn the_curve_line_carries_cartons_through_both_curves_to_the_sink() {
     let w = line.world();
     assert_eq!(w.created(), w.delivered(0) + w.cartons().len() as u64);
     assert!((4..=6).contains(&w.delivered(0)), "{}", w.delivered(0));
+    // Curve A's drive feedback, bound at %ID8 and %ID12: 30 at its rated speed, and 30 s of travel at 0.5 m/s, less
+    // the scan the controller last read it at.
+    let real = |address: &str| match line.controller().read(address).unwrap() {
+        Value::DWord(bits) => f32::from_bits(bits),
+        other => panic!("{address}: {other:?}"),
+    };
+    assert_eq!(real("%ID8"), 30.0);
+    assert!((real("%ID12") - 15.0).abs() < 0.01, "{}", real("%ID12"));
 }

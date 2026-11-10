@@ -175,6 +175,7 @@
     },
     {
       "direction": "plc_output",
+      "fallback": "speed",
       "name": "speed_ref",
       "optional": true,
       "type": "REAL"

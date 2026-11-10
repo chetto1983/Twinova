@@ -62,16 +62,16 @@ fn a_failed_build_keeps_the_running_line_and_the_project_sources() {
     step(app.state()).unwrap();
     let (program, mut behaviours) = sources(&app);
     let belt = behaviours.get_mut("twinova.belt@1").unwrap();
-    *belt = belt.replace("motor := run;", "motor := ;");
+    *belt = belt.replace("    target := speed_ref;", "    target := ;");
     let error = build(app.state(), app.state(), program.clone(), behaviours).unwrap_err();
-    assert!(error.contains("components/twinova.belt@1.st:15"), "{error}");
+    assert!(error.contains("components/twinova.belt@1.st:34"), "{error}");
     assert_eq!(
         step(app.state()).unwrap().time_ms,
         20,
         "the line keeps running"
     );
     let kept = app.state::<ProjectState>().project().unwrap();
-    assert!(kept.behaviours["twinova.belt@1"].contains("motor := run;"));
+    assert!(kept.behaviours["twinova.belt@1"].contains("    target := speed_ref;"));
     let error = build(app.state(), app.state(), program, BTreeMap::new()).unwrap_err();
     assert!(
         error.contains("the behaviour of twinova.belt@1, is not listed"),
@@ -84,7 +84,10 @@ fn an_accepted_build_becomes_the_project_sources() {
     let app = app();
     let (program, mut behaviours) = sources(&app);
     let belt = behaviours.get_mut("twinova.belt@1").unwrap();
-    *belt = belt.replace("motor := run;", "motor := run; (* edited *)");
+    *belt = belt.replace(
+        "    target := speed_ref;",
+        "    target := speed_ref; (* edited *)",
+    );
     build(app.state(), app.state(), program, behaviours).unwrap();
     let kept = app.state::<ProjectState>().project().unwrap();
     assert!(kept.behaviours["twinova.belt@1"].contains("(* edited *)"));

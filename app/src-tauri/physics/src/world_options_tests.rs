@@ -263,3 +263,15 @@ fn a_skewed_surface_keeps_its_throughput_and_drifts_by_the_tangent() {
     );
     assert_eq!(along(0.5, 0.0), Vector::new(0.5, 0.0, 0.0));
 }
+
+/// The drive sets a conveyor's speed, signed: a negative one carries back along the flow.
+#[test]
+fn a_conveyor_runs_at_the_speed_its_drive_sets_either_way() {
+    let mut w = one_conveyor(belt("b", 0.0, 4.0, 0.5, true), false);
+    w.set_belt_speed(0, 0.3);
+    run(&mut w, 1500);
+    assert!((local(&w).1.x - 0.3).abs() < 0.005, "{:?}", local(&w).1);
+    w.set_belt_speed(0, -0.2);
+    run(&mut w, 1000);
+    assert!((local(&w).1.x + 0.2).abs() < 0.005, "{:?}", local(&w).1);
+}

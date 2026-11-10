@@ -122,13 +122,28 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
 
 ### Task 4 — Drive and signals
 
-- [ ] Tests first:
+- [x] Tests first:
   - the ramp reaches rated speed in `accel_time` and stops in `decel_time`;
   - the encoder and the pulse follow travel;
   - `velocity` reads 30 at `speed_at_30`;
   - a bound `speed_ref` sets the speed;
   - an unbound optional signal builds.
-- [ ] Implement the drive block in the fixtures (script), the field's private addresses, and `line.rs`.
+- [x] Implement the drive block in the fixtures (script), the field's private addresses, and `line.rs`.
+  - *Delivered:*
+    - `migrate_fixtures_4_4b_drive.py` (scratchpad) writes OIP's drive in ST into every conveyor block, with the
+      native `surface_speed`, and points `speed_ref` at the `speed` fallback;
+    - `field_image.rs` places an unbound optional signal past every bound byte of its area, and Build writes the
+      fallback there;
+    - the ramp lands on its millisecond (500 ms, 200 ms, and 250 ms at half speed); the encoder is within 0.5 mm
+      over 10 s; there is one pulse per inch; the PLC reads curve A's velocity (30) and travel in the curve line.
+  - *Decisions (user, spec amended):* the native is `surface_speed`; an unbound signal reads its `fallback`.
+  - *Measured (truST `6405915`):*
+    - `AT %I*` cannot be configured at `%M`, so the private address lives in the field's image;
+    - `DWORD_TO_REAL` keeps the bits, not the number;
+    - a comment right before an assignment inside an `IF` fails C1's lowering, so the block's notes live in its
+      header.
+  - *Tests changed (approved by the user):* 7 tests from 4.3/4.4a, intent unchanged. They searched for or read
+    `motor`, or compared the demo's `VAR_CONFIG`, which now holds the private addresses.
 - [ ] Verify: mutants on `field.rs` and `line.rs`.
 
 ### Task 5 — View
