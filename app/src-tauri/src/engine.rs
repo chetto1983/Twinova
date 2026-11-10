@@ -6,6 +6,7 @@ use serde::Serialize;
 use trust_runtime::value::Value;
 use twinova_physics::Carton;
 use twinova_project::Project;
+use twinova_project::model::SignalType;
 
 use crate::line::Line;
 
@@ -73,21 +74,22 @@ pub struct Saved {
 
 pub struct Engine {
     line: Line,
-    /// The scene's signals and the panel's buttons, by name and address.
-    signals: Vec<(String, String)>,
+    /// The scene's signals and the panel's buttons, by name, address and type.
+    signals: Vec<(String, String, SignalType)>,
     /// Every external input with its virtual time in ns.
     inputs: Vec<(i64, Input)>,
     fault: Option<String>,
     pub lag_ms: i64,
 }
 
-fn text(value: &Value) -> String {
-    match value {
-        Value::Bool(true) => "TRUE".into(),
-        Value::Bool(false) => "FALSE".into(),
-        // The image is bit-string typed: a DINT at %ID reads back as a DWORD.
-        Value::DWord(bits) => (*bits as i32).to_string(),
-        other => format!("{other:?}"),
+fn text(value: &Value, ty: SignalType) -> String {
+    match (value, ty) {
+        (Value::Bool(true), _) => "TRUE".into(),
+        (Value::Bool(false), _) => "FALSE".into(),
+        // The image is bit-string typed: a DINT or a REAL at %ID reads back as a DWORD of its bits.
+        (Value::DWord(bits), SignalType::REAL) => f32::from_bits(*bits).to_string(),
+        (Value::DWord(bits), _) => (*bits as i32).to_string(),
+        (other, _) => format!("{other:?}"),
     }
 }
 
@@ -100,16 +102,21 @@ impl Engine {
             .instances
             .iter()
             .flat_map(|i| {
-                i.signals
-                    .iter()
-                    .map(move |(name, address)| (format!("{}.{name}", i.id), address.clone()))
+                let def = &project.definitions[&i.definition];
+                i.signals.iter().map(move |(name, address)| {
+                    let ty = def.signals.iter().find(|s| &s.name == name);
+                    let ty = ty
+                        .expect("the format checks a bound signal is the definition's")
+                        .ty;
+                    (format!("{}.{name}", i.id), address.clone(), ty)
+                })
             })
             .chain(
                 scene
                     .controller
                     .panel
                     .iter()
-                    .map(|b| (b.name.clone(), b.address.clone())),
+                    .map(|b| (b.name.clone(), b.address.clone(), SignalType::BOOL)),
             )
             .collect();
         let engine = Self {
@@ -222,10 +229,12 @@ impl Engine {
             signals: self
                 .signals
                 .iter()
-                .map(|(name, address)| SignalState {
+                .map(|(name, address, ty)| SignalState {
                     name: name.clone(),
                     address: address.clone(),
-                    value: controller.read(address).map_or_else(|e| e, |v| text(&v)),
+                    value: controller
+                        .read(address)
+                        .map_or_else(|e| e, |v| text(&v, *ty)),
                 })
                 .collect(),
             jam: match controller.variable("jam") {
