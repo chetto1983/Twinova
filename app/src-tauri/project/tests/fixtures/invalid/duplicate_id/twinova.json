@@ -2,7 +2,8 @@
   "app": "0.1.0",
   "components": [
     "components/twinova.belt@1.json",
-    "components/twinova.diverter@1.json",
+    "components/twinova.chain_transfer@1.json",
+    "components/twinova.roller@1.json",
     "components/twinova.sensor_diffuse@1.json",
     "components/twinova.sink@1.json",
     "components/twinova.source@1.json"
@@ -10,13 +11,15 @@
   "files": {
     "components/twinova.belt@1.json": "67525523241fa95b5f2a151342bdae2fda66ca49812112e0bfad2d33a554f72f",
     "components/twinova.belt@1.st": "7391e9875329cecc61f3faab03d592188253f9793443a4a8f6fe73807245559c",
-    "components/twinova.diverter@1.json": "f68e011be3e4f8fcef21577c39d9b58c7e3cb3597bab2f40469bc8e8479d8bd1",
-    "components/twinova.diverter@1.st": "58186a483b950fd0ba5168a9d39b9b6a54adaa510b8a694d110c0e9f44d2bc77",
+    "components/twinova.chain_transfer@1.json": "c3478d4a7b05df7087d409a14224f0735696dd664912681b85046cca1505fe4c",
+    "components/twinova.chain_transfer@1.st": "5737f5d2966dc1ba7d03d5cf2466f6c30981bc8652ccbe64b1d2ea05358d217f",
+    "components/twinova.roller@1.json": "61fd2e7d947d6e2d8e7961371bfd20d54d59b61def88e0eb8e6cc7b85a9de954",
+    "components/twinova.roller@1.st": "e12b2ad0e077280166a17a0c71e9cbbbb100932771c0216456ac16265766968c",
     "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
     "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
     "components/twinova.source@1.json": "c41dfb89fd394067b9e71785f51d437262c4625afe95734049d3d75edac2e18e",
-    "plc/Main.st": "c83c68a490e4dbe059daae0678b1f444526c809781c89ee9b30a05a285889ded",
-    "scene.json": "af4b11579fbe4846c3933c95957ee8500644734ff9502d8f58afa3356931c2fe"
+    "plc/Main.st": "50644176ce250bbea79f13be22753e328e185d89ee870df3ceb8b4704a9e6143",
+    "scene.json": "c301e52f0824a83c3743d4125ea8653f1d890c784eefd79a6e83c80f9299650a"
   },
   "format": "twinova-project",
   "name": "Negative: duplicate_id",

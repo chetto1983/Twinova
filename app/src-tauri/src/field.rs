@@ -23,7 +23,8 @@ const PROGRAM: &str = "F";
 fn natives(generator: &str) -> &'static [(&'static str, &'static str)] {
     match generator {
         "twinova.belt/1" => &[("motor", "BOOL")],
-        "twinova.diverter/1" => &[("position", "DINT")],
+        "twinova.roller/1" => &[("motor", "BOOL")],
+        "twinova.chain_transfer/1" => &[("lift", "REAL"), ("raised", "BOOL")],
         _ => &[],
     }
 }

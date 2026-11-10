@@ -1,0 +1,102 @@
+{
+  "behaviour": {
+    "function_block": "ChainTransferBehaviour"
+  },
+  "generator": "twinova.chain_transfer/1",
+  "id": "twinova.chain_transfer",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": 2,
+      "max": 10.0,
+      "min": 1.0,
+      "name": "chains",
+      "type": "DINT",
+      "unit": null
+    },
+    {
+      "default": 0.33,
+      "max": 5.0,
+      "min": 0.03,
+      "name": "distance",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.6,
+      "max": 3.0,
+      "min": 0.5,
+      "name": "lane_length",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.5,
+      "max": 3.0,
+      "min": 0.0,
+      "name": "speed",
+      "type": "REAL",
+      "unit": "m/s"
+    },
+    {
+      "default": 150000000,
+      "max": 2000000000.0,
+      "min": 20000000.0,
+      "name": "raise_time",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": false,
+      "max": null,
+      "min": null,
+      "name": "out_right",
+      "type": "BOOL",
+      "unit": null
+    }
+  ],
+  "ports": [
+    {
+      "kind": "mount_device",
+      "name": "mount"
+    },
+    {
+      "kind": "flow_out",
+      "name": "out"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_output",
+      "name": "popup",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "raised_fb",
+      "type": "BOOL"
+    }
+  ],
+  "version": 1
+}

@@ -3,7 +3,8 @@
 //! 1. the physics step (`twinova_physics::World`);
 //! 2. the native models write the controller's inputs: diffuse sensors, sink counters, the feedback of a belt
 //!    without a behaviour;
-//! 3. the field cycle, which reads the controller's outputs and writes its inputs and the belts' motors;
+//! 3. the field cycle, which reads the controller's outputs and writes its inputs, the belts' motors and the chain
+//!    transfers' lift (spec 2026-11-10-diverter-line-design.md);
 //! 4. the controller's scan, when its period is due.
 
 use trust_runtime::value::Value;
@@ -26,6 +27,8 @@ pub struct Line {
     field: Option<Field>,
     controller: Controller,
     belts: Vec<BeltIo>,
+    /// Per layout chain transfer, its instance in the field.
+    transfers: Vec<String>,
     /// Per layout sensor, the controller input its `detected` is bound to.
     sensors: Vec<Option<String>>,
     /// Per layout sink, the controller input its `count` is bound to.
@@ -47,6 +50,15 @@ fn is_true(value: &Value) -> bool {
     matches!(value, Value::Bool(true))
 }
 
+fn has_behaviour(project: &Project, instance: &str) -> bool {
+    project
+        .scene
+        .instances
+        .iter()
+        .find(|i| i.id == instance)
+        .is_some_and(|i| project.definitions[&i.definition].behaviour.is_some())
+}
+
 impl Line {
     /// Builds the world, the field and the controller of `project`, with the warnings Build shows.
     pub fn build(project: &Project) -> Result<(Self, Vec<String>), String> {
@@ -60,14 +72,14 @@ impl Line {
                 instance: b.id.clone(),
                 run: signal(project, &b.id, "run"),
                 running: signal(project, &b.id, "running"),
-                behaviour: project
-                    .scene
-                    .instances
-                    .iter()
-                    .find(|i| i.id == b.id)
-                    .is_some_and(|i| project.definitions[&i.definition].behaviour.is_some()),
+                behaviour: has_behaviour(project, &b.id),
             })
             .collect();
+        // Its change-over is its block's, so a chain transfer has no native fallback (spec, "The families").
+        let transfers: Vec<String> = layout.transfers.iter().map(|t| t.id.clone()).collect();
+        if let Some(t) = transfers.iter().find(|t| !has_behaviour(project, t)) {
+            return Err(format!("{t}: twinova.chain_transfer needs its behaviour"));
+        }
         let sensors = layout
             .sensors
             .iter()
@@ -84,6 +96,7 @@ impl Line {
             field,
             controller,
             belts,
+            transfers,
             sensors,
             sinks,
             t_ns: 0,
@@ -170,6 +183,17 @@ impl Line {
                 self.input(&running, Value::Bool(motor))?;
             }
             self.world.set_belt_running(k, motor);
+        }
+        if let Some(field) = &self.field {
+            for (k, instance) in self.transfers.iter().enumerate() {
+                let Some(Value::Real(lift)) = field.native(instance, "lift") else {
+                    unreachable!("Build checked {instance}.lift : REAL");
+                };
+                let raised = field
+                    .native(instance, "raised")
+                    .is_some_and(|v| is_true(&v));
+                self.world.set_transfer(k, lift, raised);
+            }
         }
         if self.t_ns >= self.next_scan_ns {
             self.controller.scan()?;

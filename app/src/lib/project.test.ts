@@ -68,9 +68,9 @@ describe("inspector rows", () => {
   });
 
   it("lists every signal with its address, or none when unbound", () => {
-    expect(signalRows(instance("diverter"), definition("diverter"))).toEqual([
-      { name: "divert", type: "BOOL", direction: "plc_output", address: "%QX0.2" },
-      { name: "in_position", type: "BOOL", direction: "plc_input", address: "%IX0.4" },
+    expect(signalRows(instance("chain_transfer"), definition("chain_transfer"))).toEqual([
+      { name: "popup", type: "BOOL", direction: "plc_output", address: "%QX0.2" },
+      { name: "raised_fb", type: "BOOL", direction: "plc_input", address: "%IX0.4" },
     ]);
     const unbound = { ...instance("belt_a"), signals: {} };
     expect(signalRows(unbound, definition("belt")).map((r) => r.address)).toEqual([null, null]);
@@ -127,11 +127,19 @@ describe("geometry", () => {
       centre: [1, 0.76, 0],
       token: "--scene-belt",
     });
-    const diverter = shapeOf(instance("diverter"), definition("diverter"));
-    expect([diverter.size, diverter.centre]).toEqual([
-      [1, 0.08, 0.6],
-      [0.5, 0.76, 0],
+    const roller = shapeOf(instance("roller_r"), definition("roller"));
+    expect([roller.size, roller.centre]).toEqual([
+      [2, 0.08, 0.6],
+      [1, 0.76, 0],
     ]);
+    const transfer = shapeOf(instance("chain_transfer"), definition("chain_transfer"));
+    expect([transfer.size, transfer.centre]).toEqual([
+      [0.66, 0.06, 0.6],
+      [0, 0.74, 0],
+    ]);
+    const wide = { ...instance("chain_transfer"), parameters: { chains: 3, distance: 0.25, lane_length: 0.8 } };
+    const stand = shapeOf(wide, definition("chain_transfer"));
+    expect([stand.kind, stand.size, stand.token]).toEqual(["box", [0.75, 0.06, 0.8], "--scene-device"]);
   });
 
   it("gives every other family its own stand-in", () => {
@@ -180,7 +188,7 @@ describe("geometry", () => {
 
   it("frames the footprint of the scene", () => {
     expect(frame([])).toEqual({ centre: [0, 0, 0], radius: 1 });
-    expect(frame(scene.instances)).toEqual({ centre: [2.75, 0.8, 0], radius: 4.25 });
+    expect(frame(scene.instances)).toEqual({ centre: [3.25, 0.8, -0.3], radius: 4.75 });
     expect(frame([sinkAt(2), sinkAt(10)])).toEqual({ centre: [-0.5, 0.8, 6], radius: 5 });
   });
 });

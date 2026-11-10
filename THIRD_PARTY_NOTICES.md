@@ -8,8 +8,21 @@ which keeps its own copyright and licence.
 <https://github.com/Open-Industry-Project/Open-Industry-Project>, read at commit
 `05728680455137294bb8e39fb686dcf5c3670c50`. Twinova's 3D view takes its lighting rig from it: a hemisphere light with
 a cool sky and a warm ground bounce, a warm key light with soft shadows and a cool fill light, and their colours,
-intensities and directions (`src/render/env.ts`, `src/render/metalEnvironment.ts`). No code or asset is copied
-verbatim. ROADMAP 4.4 plans to use some of its models, under the same licence.
+intensities and directions (`src/render/env.ts`, `src/render/metalEnvironment.ts`).
+
+Since ROADMAP 4.4a (read at commit `1e7488c02019e198ce4f01f579c63f78fd5407ef` of the same repository), Twinova
+copies and translates part of it, under the licence below; each file names its source:
+
+- **Copied (TypeScript):**
+  - the geometry builder, `app/src/lib/oip/geometry/`, from `src/core/geometry/` and `src/core/parts/partApi.ts`;
+  - the roller conveyor, chain transfer and photo eye generators, `app/src/lib/oip/parts/`, from `examples/parts/`;
+  - the textures `ChainLink.webp` and `RollerMetal.webp`, `app/src/assets/oip/`, first-party per OIP's
+    `THIRD_PARTY_NOTICES.md`;
+  - the materials' values, `app/src/lib/materials.ts`.
+- **Translated into Rust:** the conveyor surface velocity, the chain transfer's deck and its lift, in
+  `app/src-tauri/physics/src/world.rs`.
+- **Re-expressed in Structured Text:** the chain transfer's behaviour, in the project fixtures'
+  `components/twinova.chain_transfer@1.st`.
 
 > The MIT License (MIT)
 >

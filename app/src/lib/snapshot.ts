@@ -24,6 +24,8 @@ export interface Snapshot {
   time_ms: number;
   cartons: Carton[];
   sinks: SinkState[];
+  /** Each chain transfer's lift, 0 down to 1 up. */
+  transfers: { id: string; lift: number }[];
   signals: SignalState[];
   jam: boolean | null;
   lag_ms: number;

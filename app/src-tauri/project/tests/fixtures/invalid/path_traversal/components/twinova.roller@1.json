@@ -1,0 +1,114 @@
+{
+  "behaviour": {
+    "function_block": "RollerBehaviour"
+  },
+  "generator": "twinova.roller/1",
+  "id": "twinova.roller",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": 2.0,
+      "max": 50.0,
+      "min": 0.3,
+      "name": "length",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.6,
+      "max": 3.0,
+      "min": 0.2,
+      "name": "width",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.8,
+      "max": 3.0,
+      "min": 0.0,
+      "name": "height",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.17,
+      "max": 0.6,
+      "min": 0.1,
+      "name": "frame_height",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.5,
+      "max": 3.0,
+      "min": 0.0,
+      "name": "speed",
+      "type": "REAL",
+      "unit": "m/s"
+    },
+    {
+      "default": 0.42,
+      "max": 2.0,
+      "min": 0.0,
+      "name": "friction",
+      "type": "REAL",
+      "unit": null
+    },
+    {
+      "default": 0,
+      "max": null,
+      "min": 0.0,
+      "name": "start_delay",
+      "type": "TIME",
+      "unit": "ns"
+    }
+  ],
+  "ports": [
+    {
+      "kind": "flow_in",
+      "name": "in"
+    },
+    {
+      "kind": "flow_out",
+      "name": "out"
+    },
+    {
+      "kind": "mount_host",
+      "name": "rail"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_output",
+      "name": "run",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "running",
+      "type": "BOOL"
+    }
+  ],
+  "version": 1
+}

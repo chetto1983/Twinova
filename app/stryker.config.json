@@ -1,7 +1,14 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "vitest",
-  "mutate": ["src/lib/snapshot.ts", "src/lib/project.ts", "src/lib/sources.ts"],
+  "mutate": [
+    "src/lib/snapshot.ts",
+    "src/lib/project.ts",
+    "src/lib/sources.ts",
+    "src/lib/meshes.ts",
+    "src/lib/families.ts",
+    "src/lib/materials.ts"
+  ],
   "reporters": ["clear-text", "progress", "json"],
   "thresholds": {
     "high": 90,

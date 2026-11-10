@@ -11,7 +11,7 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use tauri::State;
 use twinova_project::archive::{export_archive, import_archive};
-use twinova_project::model::{Definition, Instance, PanelButton};
+use twinova_project::model::{Connection, Definition, Instance, PanelButton};
 use twinova_project::storage::{open_folder, save_folder};
 use twinova_project::{Opened, Project};
 
@@ -96,6 +96,36 @@ pub struct ProjectView {
     /// The behaviour block of each definition that has one, by `id@version`, for the editor.
     pub behaviours: BTreeMap<String, String>,
     pub panel: Vec<PanelButton>,
+    /// Each mounted device's host and position along it, so the view places it as the physics does.
+    pub mounts: Vec<MountView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct MountView {
+    pub device: String,
+    pub host: String,
+    pub at: f64,
+}
+
+fn mounts(project: &Project) -> Vec<MountView> {
+    project
+        .scene
+        .connections
+        .iter()
+        .filter_map(|c| match c {
+            Connection::Mount {
+                host,
+                device,
+                position,
+                ..
+            } => Some(MountView {
+                device: device.0.clone(),
+                host: host.0.clone(),
+                at: position[0],
+            }),
+            _ => None,
+        })
+        .collect()
 }
 
 fn view(current: &Current, changed_outside: Vec<String>, recovered: bool) -> ProjectView {
@@ -109,6 +139,7 @@ fn view(current: &Current, changed_outside: Vec<String>, recovered: bool) -> Pro
         program: current.project.program.clone(),
         behaviours: current.project.behaviours.clone(),
         panel: current.project.scene.controller.panel.clone(),
+        mounts: mounts(&current.project),
     }
 }
 

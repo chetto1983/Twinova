@@ -93,65 +93,75 @@ fn the_belt_without_a_delay_reports_running_in_the_cycle_that_sees_run() {
     assert_eq!(ms_until(&mut field, "%IX0.1", 10), Some(1));
 }
 
+/// The chain transfer's block (spec 2026-11-10-diverter-line-design.md): `popup` raises and carries sideways at once,
+/// the lift slews over `raise_time` one millisecond per cycle, and `raised_fb` reports the top of the stroke.
 #[test]
-fn each_diverter_takes_its_own_switch_time_and_reports_its_position() {
+fn each_chain_transfer_lifts_over_its_own_raise_time_and_reports_the_top() {
     let mut project = fixture("two_belts_diverter");
     project.scene.instances.push(Instance {
-        id: "diverter_2".into(),
-        name: "Second diverter".into(),
-        definition: "twinova.diverter@1".into(),
+        id: "chain_transfer_2".into(),
+        name: "Second chain transfer".into(),
+        definition: "twinova.chain_transfer@1".into(),
         position: [8.0, 0.0, 0.0],
         rotation: [0.0, 0.0, 0.0, 1.0],
-        parameters: [("switch_time".to_string(), ParamValue::Int(100_000_000))].into(),
+        parameters: [("raise_time".to_string(), ParamValue::Int(100_000_000))].into(),
         signals: [
-            ("divert".to_string(), "%QX2.0".to_string()),
-            ("in_position".to_string(), "%IX2.0".to_string()),
+            ("popup".to_string(), "%QX2.0".to_string()),
+            ("raised_fb".to_string(), "%IX2.0".to_string()),
         ]
         .into(),
     });
-    let divert = instance(&mut project, "diverter").signals.clone();
+    let t = instance(&mut project, "chain_transfer").signals.clone();
     let mut field = Field::build(&project).unwrap().unwrap();
     field.cycle().unwrap();
-    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(0)));
-    assert!(bool_at(&field, &divert["in_position"]));
-    field
-        .set_command(&divert["divert"], Value::Bool(true))
-        .unwrap();
+    assert_eq!(
+        field.native("chain_transfer", "lift"),
+        Some(Value::Real(0.0))
+    );
+    assert_eq!(
+        field.native("chain_transfer", "raised"),
+        Some(Value::Bool(false))
+    );
+    assert!(!bool_at(&field, &t["raised_fb"]));
+    field.set_command(&t["popup"], Value::Bool(true)).unwrap();
     field.set_command("%QX2.0", Value::Bool(true)).unwrap();
     field.cycle().unwrap();
-    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(-1)));
-    assert!(!bool_at(&field, &divert["in_position"]));
-    // A command restarts the flap's timer in the cycle that sees it, so the move lasts switch_time exactly
-    // (counted from that cycle, which already ran above).
-    assert_eq!(ms_until(&mut field, "%IX2.0", 1000), Some(100), "100 ms");
     assert_eq!(
-        ms_until(&mut field, &divert["in_position"], 1000),
-        Some(200),
-        "the default 300 ms, 100 of them already run"
+        field.native("chain_transfer", "raised"),
+        Some(Value::Bool(true))
     );
-    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(1)));
-    // Back to A in the cycle after the flap reached B.
-    field
-        .set_command(&divert["divert"], Value::Bool(false))
-        .unwrap();
-    field.cycle().unwrap();
-    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(-1)));
     assert_eq!(
-        ms_until(&mut field, &divert["in_position"], 1000),
-        Some(300)
+        field.native("chain_transfer_2", "lift"),
+        Some(Value::Real(0.01))
     );
-    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(0)));
-}
-
-#[test]
-fn a_diverter_starts_at_its_default_output() {
-    let mut project = fixture("two_belts_diverter");
-    instance(&mut project, "diverter")
-        .parameters
-        .insert("default_output".into(), ParamValue::Int(1));
-    let mut field = Field::build(&project).unwrap().unwrap();
+    // The first millisecond of stroke ran above, in the cycle that saw popup.
+    assert_eq!(ms_until(&mut field, "%IX2.0", 1000), Some(99), "100 ms");
+    assert_eq!(
+        ms_until(&mut field, &t["raised_fb"], 1000),
+        Some(50),
+        "the default 150 ms, 100 of them already run"
+    );
+    assert_eq!(
+        field.native("chain_transfer", "lift"),
+        Some(Value::Real(1.0))
+    );
+    // Down: the chains stop carrying sideways at once, and the stroke takes raise_time again.
+    field.set_command(&t["popup"], Value::Bool(false)).unwrap();
     field.cycle().unwrap();
-    assert_eq!(field.native("diverter", "position"), Some(Value::DInt(-1)));
+    assert_eq!(
+        field.native("chain_transfer", "raised"),
+        Some(Value::Bool(false))
+    );
+    assert!(!bool_at(&field, &t["raised_fb"]));
+    for _ in 1..149 {
+        field.cycle().unwrap();
+    }
+    assert!(matches!(field.native("chain_transfer", "lift"), Some(Value::Real(l)) if l > 0.0));
+    field.cycle().unwrap();
+    assert_eq!(
+        field.native("chain_transfer", "lift"),
+        Some(Value::Real(0.0))
+    );
 }
 
 fn with_belt_source(edit: impl FnOnce(&str) -> String) -> Result<Option<Field>, String> {
@@ -228,16 +238,32 @@ fn a_location_outside_the_blocks_is_the_generated_program() {
 }
 
 #[test]
-fn a_diverter_without_its_position_is_refused() {
+fn a_chain_transfer_without_its_lift_is_refused() {
     let mut project = fixture("two_belts_diverter");
-    let source = project.behaviours.get_mut("twinova.diverter@1").unwrap();
-    *source = source
-        .replace("in_position", "IN_POSITION")
-        .replace("position", "flap")
-        .replace("IN_POSITION", "in_position");
+    let source = project
+        .behaviours
+        .get_mut("twinova.chain_transfer@1")
+        .unwrap();
+    *source = source.replace("lift", "height");
     let error = Field::build(&project).err().unwrap();
     assert!(
-        error.contains("DiverterBehaviour must declare position : DINT, which the native twinova.diverter/1 uses"),
+        error.contains(
+            "ChainTransferBehaviour must declare lift : REAL, which the native twinova.chain_transfer/1 uses"
+        ),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_roller_without_its_motor_is_refused() {
+    let mut project = fixture("two_belts_diverter");
+    let source = project.behaviours.get_mut("twinova.roller@1").unwrap();
+    *source = source.replace("motor", "drive");
+    let error = Field::build(&project).err().unwrap();
+    assert!(
+        error.contains(
+            "RollerBehaviour must declare motor : BOOL, which the native twinova.roller/1 uses"
+        ),
         "{error}"
     );
 }
@@ -254,25 +280,25 @@ fn a_real_parameter_reaches_the_block() {
     assert_eq!(field.native("belt_a", "speed"), Some(Value::Real(0.5)));
 }
 
-/// The diverter's behaviour driven by a line program (spec 2026-11-09, acceptance 2): each millisecond the field reads
-/// the controller's outputs and writes its inputs; every 10 ms the controller scans.
+/// The chain transfer's behaviour driven by a line program (spec 2026-11-09, acceptance 2): each millisecond the field
+/// reads the controller's outputs and writes its inputs; every 10 ms the controller scans.
 #[test]
-fn a_line_program_commands_the_diverter_and_reads_its_position() {
+fn a_line_program_commands_the_chain_transfer_and_reads_raised_fb() {
     use crate::controller::Controller;
     let mut project = fixture("two_belts_diverter");
-    let d = instance(&mut project, "diverter").signals.clone();
+    let t = instance(&mut project, "chain_transfer").signals.clone();
     project.program = vec![(
         "plc/Main.st".into(),
         format!(
-            "PROGRAM Main\nVAR\n  divert AT {} : BOOL;\n  in_position AT {} : BOOL;\n  n : DINT;\nEND_VAR\n\
-             n := n + 1;\ndivert := n >= 5 AND n < 50;\nEND_PROGRAM\n",
-            d["divert"], d["in_position"]
+            "PROGRAM Main\nVAR\n  popup AT {} : BOOL;\n  raised_fb AT {} : BOOL;\n  n : DINT;\nEND_VAR\n\
+             n := n + 1;\npopup := n >= 5 AND n < 50;\nEND_PROGRAM\n",
+            t["popup"], t["raised_fb"]
         ),
     )];
     let (mut controller, _) = Controller::build(&project).unwrap();
     let mut field = Field::build(&project).unwrap().unwrap();
-    let mut rises = Vec::new();
-    let mut settled = true;
+    let mut changes = Vec::new();
+    let mut up = false;
     for ms in 1..=1000 {
         for address in field.commands().to_vec() {
             field
@@ -287,14 +313,14 @@ fn a_line_program_commands_the_diverter_and_reads_its_position() {
         }
         if ms % 10 == 0 {
             controller.scan().unwrap();
-            let now = controller.read(&d["in_position"]).unwrap() == Value::Bool(true);
-            if now && !settled {
-                rises.push(ms);
+            let now = controller.read(&t["raised_fb"]).unwrap() == Value::Bool(true);
+            if now != up {
+                changes.push((ms, now));
             }
-            settled = now;
+            up = now;
         }
     }
-    // divert rises at the 50 ms scan; the field sees it at 51 ms and settles 300 ms later, at 351 ms; the
-    // controller reads it at its 360 ms scan. divert falls at the 500 ms scan: settled at 801, read at 810.
-    assert_eq!(rises, [360, 810]);
+    // popup rises at the 50 ms scan; the field sees it at 51 ms and tops out 150 ms of stroke later, at 200 ms, read
+    // at that scan. popup falls at the 500 ms scan; raised_fb drops at 501 and is read at 510.
+    assert_eq!(changes, [(200, true), (510, false)]);
 }

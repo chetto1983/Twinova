@@ -1,15 +1,19 @@
 // CPU and memory of the release app, phase by phase, on Linux (reads /proc).
 //
-//   npx tauri build --no-bundle && xvfb-run node e2e/soak.mjs [seconds-per-phase]
+//   npx tauri build --no-bundle && xvfb-run node e2e/soak.mjs [seconds-per-phase] [project-folder]
+//
+// Without a folder it runs the bundled demo and presses its Start; with one, the project opened at start.
 //
 // It samples the app process and its children (the WebKit web and network processes) every 2 s:
 // CPU as a percentage of one core, and the resident set (VmRSS).
 
 import { readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { button, click, selectSpeed, session, virtualSeconds } from "./helpers.mjs";
+import { app, browser, button, click, selectSpeed, sessions, virtualSeconds } from "./helpers.mjs";
 
 const PHASE_S = Number(process.argv[2] ?? 60);
+const PROJECT = process.argv[3] ? [`--project=${resolve(process.argv[3])}`] : [];
 const SAMPLE_MS = 2000;
 const TICKS_PER_S = 100; // USER_HZ, the unit of utime and stime in /proc/<pid>/stat
 
@@ -31,9 +35,9 @@ function processes() {
       // the process ended while it was being read
     }
   }
-  const app = [...all].find(([, p]) => p.cmd === "twinova");
-  if (!app) throw new Error("the twinova process is not running");
-  const tree = new Map([app]);
+  const main = [...all].find(([, p]) => p.cmd === "twinova");
+  if (!main) throw new Error("the twinova process is not running");
+  const tree = new Map([main]);
   let grew = true;
   while (grew) {
     grew = false;
@@ -80,19 +84,21 @@ async function phase(name, seconds) {
   }
 }
 
-session("release", async () => {
-  await sleep(3000);
-  await phase("Idle after start", PHASE_S);
-  await click(button("Run"));
-  await click(button("Start"));
-  await phase("Run ×1, line running", PHASE_S);
-  await click(button("Pause"));
-  await selectSpeed("Max");
-  await click(button("Run"));
-  await phase("Run as fast as possible", PHASE_S);
-  await click(button("Pause"));
-  await phase("Paused", PHASE_S);
-}).catch((e) => {
+sessions(() =>
+  app("release", PROJECT, async () => {
+    await sleep(3000);
+    await phase("Idle after start", PHASE_S);
+    await click(button("Run"));
+    if (await browser.$(button("Start")).isExisting()) await click(button("Start"));
+    await phase("Run ×1, line running", PHASE_S);
+    await click(button("Pause"));
+    await selectSpeed("Max");
+    await click(button("Run"));
+    await phase("Run as fast as possible", PHASE_S);
+    await click(button("Pause"));
+    await phase("Paused", PHASE_S);
+  }),
+).catch((e) => {
   console.error(e);
   process.exit(1);
 });

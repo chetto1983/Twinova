@@ -1,10 +1,14 @@
 <script lang="ts">
-  // The 3D view of a project: each instance as its family's stand-in shape, sized from its parameters (project.ts,
-  // shapeOf), at its pose, the selected one highlighted; and the cartons of the running line, at the poses the physics
-  // gives them (engine.rs `Snapshot.cartons`).
+  // The 3D view of a project: each instance as OIP's generator draws its family (families.ts), or as its stand-in
+  // shape sized from its parameters (project.ts, shapeOf), at its pose, the selected one highlighted; a chain
+  // transfer's deck at its lift, and the cartons of the running line at the poses the physics gives them (engine.rs
+  // `Snapshot.transfers`, `Snapshot.cartons`).
   import * as THREE from "three";
+  import { drawnOf } from "./families";
+  import { materialOf } from "./materials";
+  import { toObject } from "./meshes";
   import { frame, shapeOf, type ProjectView } from "./project";
-  import { CARTON_SIZE_M, type Carton } from "./snapshot";
+  import { CARTON_SIZE_M, type Carton, type Snapshot } from "./snapshot";
   import Viewport from "./Viewport.svelte";
 
   let {
@@ -12,7 +16,14 @@
     selected,
     theme,
     cartons,
-  }: { project: ProjectView; selected: string | null; theme: string; cartons: Carton[] } = $props();
+    transfers,
+  }: {
+    project: ProjectView;
+    selected: string | null;
+    theme: string;
+    cartons: Carton[];
+    transfers: Snapshot["transfers"];
+  } = $props();
 
   const scene = new THREE.Scene();
   const content = new THREE.Group();
@@ -22,6 +33,9 @@
   const cartonMaterial = new THREE.MeshStandardMaterial({ roughness: 0.9 });
   /** One mesh per carton id, kept while the carton lives, so a snapshot moves meshes instead of rebuilding them. */
   const meshes = new Map<number, THREE.Mesh>();
+  /** Each chain transfer's deck group, its height when down, and its stroke. */
+  const decks = new Map<string, { group: THREE.Group; down: number; stroke: number }>();
+  const loader = new THREE.TextureLoader();
   let requestRender = $state(() => {});
   const view = $derived(frame(project.instances));
   const target = $derived(new THREE.Vector3(...view.centre));
@@ -37,10 +51,13 @@
     content.traverse((o) => {
       if (o instanceof THREE.Mesh) {
         o.geometry.dispose();
-        (o.material as THREE.Material).dispose();
+        const material = o.material as THREE.MeshStandardMaterial;
+        material.map?.dispose();
+        material.dispose();
       }
     });
     content.clear();
+    decks.clear();
   }
 
   function build(): void {
@@ -48,11 +65,33 @@
     for (const instance of project.instances) {
       const def = project.definitions[instance.definition];
       if (!def) continue;
+      const lit = instance.id === selected;
+      const drawn = drawnOf(project, instance);
+      if (drawn) {
+        const group = new THREE.Group();
+        group.position.set(...drawn.offset);
+        for (const part of drawn.parts) {
+          const material = materialOf(part.material, loader);
+          if (lit) {
+            material.emissive = token("--scene-selected");
+            material.emissiveIntensity = 0.6;
+          }
+          const mesh = toObject(part, material);
+          mesh.castShadow = true;
+          group.add(mesh);
+        }
+        if (drawn.stroke) decks.set(instance.id, { group, down: drawn.offset[1], stroke: drawn.stroke });
+        const placed = new THREE.Group();
+        placed.position.set(...drawn.position);
+        placed.quaternion.set(...drawn.rotation);
+        placed.add(group);
+        content.add(placed);
+        continue;
+      }
       const shape = shapeOf(instance, def);
       const [x, y, z] = shape.size;
       const geometry =
         shape.kind === "box" ? new THREE.BoxGeometry(x, y, z) : new THREE.CylinderGeometry(x / 2, z / 2, y);
-      const lit = instance.id === selected;
       const material = new THREE.MeshStandardMaterial({
         color: token(shape.token),
         emissive: lit ? token("--scene-selected") : new THREE.Color(0),
@@ -74,6 +113,15 @@
     void [project, selected, theme];
     build();
     cartonMaterial.color = token("--scene-product");
+    requestRender();
+  });
+
+  $effect(() => {
+    void [project, selected];
+    for (const t of transfers) {
+      const deck = decks.get(t.id);
+      if (deck) deck.group.position.y = deck.down + t.lift * deck.stroke;
+    }
     requestRender();
   });
 
