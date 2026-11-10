@@ -141,6 +141,15 @@ What this does not prove:
 - **A sensor on a curve** mounts at an angle in degrees from the arc's start, after the entry stub. Its beam is
   radial, so a passing carton's outer corner reaches it about 3 cm early.
 
+## Amended before the drive (Task 4, user, 2026-11-10)
+
+- **The native is `surface_speed : REAL`** (m/s, the deck's speed after the ramp), not `velocity`: `velocity` stays
+  the PLC signal, OIP's name, and one block cannot declare both.
+- **An unbound optional signal reads its fallback.** A definition's optional signal may name a parameter,
+  `"fallback": "speed"`. Left unbound, it is given its private `%M` address, and the field writes the instance's
+  value of that parameter there at Build. The block then always uses `speed_ref`: bound and set to 0 by the PLC, it
+  stops the deck with `run` still TRUE; unbound, it reads `speed`. Without a fallback, an unbound signal reads 0.
+
 ## Acceptance of 4.4b
 
 1. **Curves:**
