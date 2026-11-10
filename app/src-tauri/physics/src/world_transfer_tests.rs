@@ -120,14 +120,18 @@ fn a_raised_transfer_throws_its_load_v2_2g_and_carries_it_out_square() {
     let mut w = line(true, 1, 2000);
     let mut lift = Lift { travel: 0 };
     until_x(&mut w, 3.85);
-    let (mut peak, mut yaw) = (0.0f32, 0.0f32);
+    let (mut peak, mut yaw, mut side) = (0.0f32, 0.0f32, 0.0f32);
     for _ in 0..3000 {
         lift.step(&mut w, true);
         if let Some(c) = w.cartons().first() {
             peak = peak.max(c.position[1]);
             yaw = yaw.max(yaw_deg(c).abs());
+            side = side.min(c.position[2]);
         }
     }
+    // A transfer that does not carry to the right carries to the host's left, −z: the sink takes the carton when its
+    // front crosses the left edge, its centre half a carton in.
+    assert!(side < -0.1, "carried left: {side}");
     // At rest on the raised deck the carton's centre is at 0.8 − 0.03 + 0.095 + 0.15.
     let rest = 0.8 - TRANSFER_BELOW + TRANSFER_STROKE + CARTON_HALF;
     let v = TRANSFER_STROKE / (RAISE_MS as Real / 1000.0);
