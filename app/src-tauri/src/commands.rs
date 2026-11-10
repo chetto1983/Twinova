@@ -15,9 +15,17 @@ use twinova_project::{Project, encode_project, parse_project};
 use crate::engine::{Engine, Saved, Snapshot};
 use crate::project_commands::{ProjectState, lines};
 
+/// A tick of the Run loop: its work, then the rest of the frame asleep, so a snapshot is published about 30 times a
+/// second (spec 2026-11-08-run-modes-design.md).
 const FRAME: Duration = Duration::from_millis(33);
 /// Wall time spent scanning per tick when running as fast as possible; the rest of the frame lets the UI draw.
 const FAST_BUDGET: Duration = Duration::from_millis(25);
+
+/// What is left of a frame after `spent` of work. Sleeping a whole frame after 25 ms of scans ran as fast as possible
+/// 43 % of the time (spec 2026-11-10-run-pace-native-feedback-design.md, measured).
+fn rest(spent: Duration) -> Duration {
+    FRAME.saturating_sub(spent)
+}
 
 #[derive(Default)]
 pub struct AppState {
@@ -170,6 +178,7 @@ pub fn run<R: Runtime>(
     thread::spawn(move || {
         let started = Instant::now();
         while running.load(Ordering::SeqCst) {
+            let tick_started = Instant::now();
             let wall_ms = i64::try_from(started.elapsed().as_millis()).unwrap_or(i64::MAX);
             let tick = engine.lock().map_err(poisoned).and_then(|mut guard| {
                 let e = guard.as_mut().ok_or("no engine")?;
@@ -194,7 +203,7 @@ pub fn run<R: Runtime>(
                     let _ = app.emit("engine-error", error);
                 }
             }
-            thread::sleep(FRAME);
+            thread::sleep(rest(tick_started.elapsed()));
         }
         let _ = app.emit("stopped", ());
     });
