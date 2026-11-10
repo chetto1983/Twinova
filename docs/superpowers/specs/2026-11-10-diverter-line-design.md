@@ -185,6 +185,23 @@ What this does not prove:
 - A vitest per family checks its bounding box against the parameters. The source and the sink stay simple markers,
   as OIP's spawner and despawner are.
 
+**Amended while implementing (2026-11-10):**
+
+- **The belt's look moves to 4.4b** (user). OIP's belt generator is 554 lines, mostly for multi-segment paths,
+  inclines and guard openings. Its straight case relies on a "fabric" material in OIP's renderer. 4.4a draws OIP's
+  roller conveyor, chain transfer and photo eye; the belt keeps its stand-in box until the curves, which reuse its
+  path and sweep.
+- **The kernel holds only what these generators use:** `box`, `surface`, `merge`, `bevelBox`, `lathe`, `extrude`,
+  `transform`. `sweep`, `fillet` and `arc` come with the belt; `loft`, `cylinder` and the CSG `subtract` are left out.
+- **Banks are instanced:** rollers, stubs, drive bands, leg pieces and bolts, as OIP's renderer draws them.
+- **Materials.** OIP's finishes (frame, guard, leg, bolt, roller) are a triplanar shader over its `Metal.webp`. Twinova
+  keeps their colour, metalness and roughness on three's standard material, and maps the two textures whose meshes
+  carry real UVs: the roller tube and the chain links.
+- **The photo eye sits 3 cm lower than in OIP.** OIP's beam leaves 8 cm above the deck. Twinova's physics casts it at
+  5 cm (4.3), and the view puts the lens on the physics' beam.
+- **Mounted devices are placed from their mount,** as the physics places them. The project view gains the mounts
+  (device, host, position along it), and the snapshot gains each transfer's lift.
+
 ## The line fixture and its program
 
 `two_belts_diverter` becomes:

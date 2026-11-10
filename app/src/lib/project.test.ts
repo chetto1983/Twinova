@@ -137,6 +137,9 @@ describe("geometry", () => {
       [0.66, 0.06, 0.6],
       [0, 0.74, 0],
     ]);
+    const wide = { ...instance("chain_transfer"), parameters: { chains: 3, distance: 0.25, lane_length: 0.8 } };
+    const stand = shapeOf(wide, definition("chain_transfer"));
+    expect([stand.kind, stand.size, stand.token]).toEqual(["box", [0.75, 0.06, 0.8], "--scene-device"]);
   });
 
   it("gives every other family its own stand-in", () => {

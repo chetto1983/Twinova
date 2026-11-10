@@ -363,6 +363,8 @@ fn each_transfer_answers_for_its_own_deck_and_side() {
         sensors: vec![],
     });
     assert_eq!((w.transfers(), w.transfer_id(1)), (2, "second"));
+    w.set_transfer(1, 0.25, true);
+    assert_eq!((w.transfer_lift(0), w.transfer_lift(1)), (0.0, 0.25));
     w.set_belt_running(0, true);
     w.set_transfer(0, 0.0, false);
     until_x(&mut w, 1.85);

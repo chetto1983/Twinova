@@ -144,13 +144,23 @@ vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and Windows.
 
 ### Task 4 — The view from OIP's generators
 
-- [ ] Copy the kernel and the generators of the roller, chain transfer, belt and photo-eye, with their headers.
+- [x] Copy the kernel and the generators of the roller, chain transfer, belt and photo-eye, with their headers.
   Split any file over 600 LOC. Add the textures and `THIRD_PARTY_NOTICES.md`.
-- [ ] Tests first:
+- [x] Tests first:
   - `meshes.ts` turns a description into a `BufferGeometry` with its vertices, normals and indices;
   - each generator's bounding box matches its parameters.
-- [ ] `ProjectScene.svelte` draws from the generators; the chain deck follows its lift from the snapshot.
-- [ ] Verify: frontend gates, Stryker on `meshes.ts`, a screenshot of the line for the verification file.
+- [x] `ProjectScene.svelte` draws from the generators; the chain deck follows its lift from the snapshot.
+- [x] Verify: frontend gates, Stryker on `meshes.ts`, a screenshot of the line for the verification file.
+  - *Delivered:*
+    - OIP's roller conveyor, chain transfer and photo eye are drawn from its copied kernel and generators. The belt's
+      generator moves to 4.4b (user).
+    - Each generator's bounds are tested against OIP's own figures: `rig.json` bounds, `legs.js` and
+      `sensorPhotoeye.js`. Two of OIP's comments are 1 mm off its geometry: the chain loop and the foot plate.
+    - The view places mounted devices from their mount (the project view gains `mounts`), and the deck rises by the
+      snapshot's lift.
+    - Coverage is 97.5 % of lines; Stryker on the view helpers is 99.2 %.
+    - The E2E is green on the new view.
+    - The screenshot is taken by Task 5's `e2e/line.mjs`.
 
 ### Task 5 — Acceptance
 

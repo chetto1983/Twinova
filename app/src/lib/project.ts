@@ -50,6 +50,8 @@ export interface ProjectView {
   /** The behaviour block of each definition that has one, by `id@version`. */
   behaviours: Record<string, string>;
   panel: { name: string; address: string }[];
+  /** Each mounted device's host and position along it (project_commands.rs `MountView`). */
+  mounts: { device: string; host: string; at: number }[];
 }
 
 export interface ParameterRow {
@@ -143,7 +145,7 @@ const DECK_M = 0.08;
 /** OIP's chain-transfer deck: 0.06 m deep (examples/parts/chain-transfer/rig.json at 1e7488c). */
 const CHAIN_DECK_M = 0.06;
 
-function real(instance: Instance, def: Definition, name: string, fallback: number): number {
+export function real(instance: Instance, def: Definition, name: string, fallback: number): number {
   const p = def.parameters.find((q) => q.name === name);
   const value = Object.hasOwn(instance.parameters, name) ? instance.parameters[name] : p?.default;
   return typeof value === "number" ? value : fallback;

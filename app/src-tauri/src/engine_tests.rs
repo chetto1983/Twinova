@@ -161,3 +161,27 @@ fn a_runtime_fault_stops_every_later_step() {
     let first = engine.step().unwrap_err();
     assert_eq!(engine.step().unwrap_err(), first);
 }
+
+#[test]
+fn the_snapshot_carries_each_chain_transfer_s_lift() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("project/tests/fixtures/valid/two_belts_diverter");
+    let project = open_folder(&dir).unwrap().opened.project;
+    let (mut engine, _) = Engine::new(&project).unwrap();
+    let lift = |e: &Engine| {
+        let s = e.snapshot();
+        assert_eq!(s.transfers.len(), 1);
+        assert_eq!(s.transfers[0].id, "chain_transfer");
+        s.transfers[0].lift
+    };
+    assert_eq!(lift(&engine), 0.0);
+    // The third carton reaches the transfer at about 11.4 s; the chains top out 150 ms later.
+    let topped = (0..1_300).any(|_| {
+        engine.step().unwrap();
+        lift(&engine) == 1.0
+    });
+    assert!(
+        topped,
+        "the lift reached 1 while the third carton was diverted"
+    );
+}

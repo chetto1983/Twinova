@@ -36,6 +36,19 @@ fn a_project_opens_into_a_view_of_its_instances() {
             .iter()
             .any(|i| i.id == "chain_transfer" && i.signals["popup"] == "%QX0.2")
     );
+    let mount = |device: &str, host: &str, at: f64| MountView {
+        device: device.into(),
+        host: host.into(),
+        at,
+    };
+    assert_eq!(
+        view.mounts,
+        [
+            mount("sensor_a", "roller_r", 1.0),
+            mount("sensor_b", "belt_b", 1.5),
+            mount("chain_transfer", "roller_r", 1.0)
+        ]
+    );
     assert_eq!(view.folder, Some(fixture("valid", "two_belts_diverter")));
     assert!(view.changed_outside.is_empty() && !view.recovered);
 }

@@ -198,7 +198,13 @@
       <section class="panel stage">
         <header class="panel-head"><h2 class="panel-title">{project.name}</h2></header>
         <div class="stage-body">
-          <ProjectScene {project} {selected} {theme} cartons={snapshot?.cartons ?? []} />
+          <ProjectScene
+            {project}
+            {selected}
+            {theme}
+            cartons={snapshot?.cartons ?? []}
+            transfers={snapshot?.transfers ?? []}
+          />
         </div>
       </section>
       <div class="side">

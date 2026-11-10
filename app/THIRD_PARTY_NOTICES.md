@@ -25,6 +25,8 @@
 | `src/lib/i18n.svelte.ts`, `src/lib/preferences.ts` | chetto1983/ModbusTool `src/lib/` | MIT |
 | `src/app.css` (component classes) | chetto1983/ModbusTool `src/app.css` | MIT |
 | `e2e/run.mjs` (structure and helpers) | chetto1983/ModbusTool `e2e/run.mjs`, `e2e/helpers.mjs` | MIT |
+| `src/lib/oip/geometry/`, `src/lib/oip/parts/`, `src/lib/materials.ts` (values), `src/assets/oip/` | Open Industry Project at `1e7488c` (`src/core/geometry/`, `examples/parts/`, `public/textures/`); notice in the repository's `THIRD_PARTY_NOTICES.md` | MIT |
+| `src-tauri/physics/src/world.rs` (surface velocity, the chain transfer's deck and lift, translated) | Open Industry Project at `1e7488c` (`src/sim/conveyorContacts.ts`, `src/sim/deckDrive.ts`, `src/sim/rigDriver.ts`) | MIT |
 
 ## Direct runtime dependencies
 
@@ -34,7 +36,7 @@ Transitive dependencies carry their own licenses in their packages.
 |---|---|---|
 | trust-runtime (truST Platform) at `6405915973a77587748ffb061a61d37bb8a368b0` | MIT OR Apache-2.0 | <https://github.com/johannesPettersson80/trust-platform> |
 | tiverse-mmap, truST's patched copy (`third_party/tiverse-mmap`) at the same commit, through `[patch.crates-io]` | MIT OR Apache-2.0 | <https://github.com/johannesPettersson80/trust-platform> |
-| nexosim 1.0, from the fork <https://github.com/chetto1983/nexosim> at `480e7247` (its single-threaded executor made FIFO, proposed upstream) | MIT OR Apache-2.0 | <https://github.com/asynchronics/nexosim> |
+| rapier3d 0.36.1, with `enhanced-determinism` | Apache-2.0 | <https://github.com/dimforge/rapier> |
 | tauri | MIT OR Apache-2.0 | <https://github.com/tauri-apps/tauri> |
 | serde, serde_json | MIT OR Apache-2.0 | <https://github.com/serde-rs> |
 | webkit2gtk (Linux) | MIT | <https://github.com/tauri-apps/webkit2gtk-rs> |

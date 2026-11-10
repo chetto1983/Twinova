@@ -110,8 +110,9 @@ pub struct World {
     delivered: Vec<u64>,
     /// The wall each blocked sink puts at its exit.
     sink_walls: Vec<Option<ColliderHandle>>,
-    /// Each chain transfer's deck, a kinematic body.
+    /// Each chain transfer's deck, a kinematic body, and its lift as last set.
     decks: Vec<RigidBodyHandle>,
+    lifts: Vec<Real>,
 }
 
 /// The wall across an exit: past a conveyor's end, or along a chain transfer's side over its deck.
@@ -227,6 +228,7 @@ impl World {
             sources,
             delivered: vec![0; sinks],
             sink_walls: vec![None; sinks],
+            lifts: vec![0.0; decks.len()],
             decks,
         }
     }
@@ -237,6 +239,10 @@ impl World {
 
     pub fn transfer_id(&self, transfer: usize) -> &str {
         &self.layout.transfers[transfer].id
+    }
+
+    pub fn transfer_lift(&self, transfer: usize) -> Real {
+        self.lifts[transfer]
     }
 
     /// A chain transfer's deck at `lift` of its stroke, carrying sideways while `raised` and forward otherwise, at its
@@ -250,6 +256,7 @@ impl World {
             Vector::new(t.speed, 0.0, 0.0)
         };
         self.hooks.surface[self.layout.belts.len() + transfer] = host.rotation * local;
+        self.lifts[transfer] = lift;
         let at = host * Pose::from_translation(deck_centre(&self.layout, transfer, lift));
         self.world.bodies[self.decks[transfer]].set_next_kinematic_translation(at.translation);
     }
