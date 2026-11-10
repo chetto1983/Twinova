@@ -76,6 +76,17 @@ fn private_addresses_lie_past_every_bound_byte_and_never_overlap() {
         "%QD8",
         "a bound signal at its mirror"
     );
+    // Each area keeps its own count: the controller's outputs end at byte 1 of the field's inputs, its inputs at byte
+    // 16 of the field's outputs (%ID12), so the first private input is %ID1 and the first private output byte 16.
+    let first = |area: Area| {
+        placed
+            .iter()
+            .find(|p| p.address.area == area && !p.instance.signals.contains_key(&p.signal.name))
+            .map(|p| p.address.to_string())
+            .unwrap()
+    };
+    assert_eq!(first(Area::Input), "%ID1");
+    assert_eq!(first(Area::Output), "%QD16");
 }
 
 #[test]

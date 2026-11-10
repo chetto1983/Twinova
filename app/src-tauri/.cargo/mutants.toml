@@ -8,3 +8,9 @@ examine_globs = [
   "project/src/storage.rs", "project/src/archive.rs",
   "physics/src/world.rs", "physics/src/layout.rs", "physics/src/path.rs", "physics/src/surfaces.rs",
 ]
+# Equivalent mutants, each with its reason (CLAUDE.md "MUTATION").
+exclude_re = [
+  # field_image.rs `place`: the slot only names which of the two counters an area uses; `!=` swaps the names, and each
+  # area still counts in a counter of its own.
+  "src/field_image.rs:.*replace == with != in place",
+]
