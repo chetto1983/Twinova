@@ -164,9 +164,14 @@ vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and Windows.
 
 ### Task 5 — Acceptance
 
-- [ ] `e2e/line.mjs` on Linux and Windows:
+- [x] `e2e/line.mjs` on Linux and Windows:
   - both sinks count in the program's ratio;
   - `popup` and `raised_fb` show in the I/O panel;
   - the engine replays the line equally under Step, ×1 and as fast as possible (engine test).
-- [ ] The release soak of the line against 4.3a.
-- [ ] The verification file; ROADMAP 4.4a; CHANGELOG.
+- [x] The release soak of the line against 4.3a.
+- [x] The verification file; ROADMAP 4.4a; CHANGELOG.
+  - *Delivered:*
+    - `e2e/line.mjs` 4/4 on Linux;
+    - Step, ×1 and as fast as possible are equal at 15 s;
+    - the release soak runs the line at 6.9× real time, with memory flat;
+    - verification `2026-11-10-diverter-line.md`.

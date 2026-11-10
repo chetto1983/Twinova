@@ -19,7 +19,7 @@
     "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
     "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
     "components/twinova.source@1.json": "c41dfb89fd394067b9e71785f51d437262c4625afe95734049d3d75edac2e18e",
-    "plc/Main.st": "af1994d8f8d195f4b27c256a5f15f20947eb95495bb954d7560c45abc409d933",
+    "plc/Main.st": "50644176ce250bbea79f13be22753e328e185d89ee870df3ceb8b4704a9e6143",
     "scene.json": "d7d2052dc6ce8a839e1c66fa99a9aa48e605d6d8d5b902c4b375b2235b51fb0d"
   },
   "format": "twinova-project",

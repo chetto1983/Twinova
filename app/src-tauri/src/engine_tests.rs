@@ -185,3 +185,39 @@ fn the_snapshot_carries_each_chain_transfer_s_lift() {
         "the lift reached 1 while the third carton was diverted"
     );
 }
+
+/// The 4.4a line (spec 2026-11-10-diverter-line-design.md, acceptance 4): Step, Run at ×1 against the wall clock and
+/// as fast as possible reach the same states.
+#[test]
+fn the_line_with_its_chain_transfer_runs_alike_under_step_x1_and_as_fast_as_possible() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("project/tests/fixtures/valid/two_belts_diverter");
+    let project = open_folder(&dir).unwrap().opened.project;
+    let fresh = || Engine::new(&project).unwrap().0;
+    let mut stepped = fresh();
+    for _ in 0..1_500 {
+        stepped.step().unwrap();
+    }
+    let mut paced = fresh();
+    let mut wall = 0;
+    while paced.time_ms() < 15_000 {
+        wall += 500;
+        paced.catch_up(0, wall, 1.0).unwrap();
+    }
+    let mut fast = fresh();
+    while fast.time_ms() < 15_000 {
+        fast.catch_up(0, 1_000_000, 1.0).unwrap();
+    }
+    let end = stepped.snapshot();
+    assert_eq!(end.time_ms, 15_000);
+    assert_eq!(end.sinks[1].delivered, 1, "the third carton went to reject");
+    assert_eq!(paced.snapshot(), end);
+    assert_eq!(fast.time_ms(), 15_000);
+    assert_eq!(
+        Snapshot {
+            lag_ms: 0,
+            ..fast.snapshot()
+        },
+        end
+    );
+}

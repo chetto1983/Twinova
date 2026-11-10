@@ -41,4 +41,9 @@ and build inside the app, on Windows and Linux.
   - A save interrupted by a crash is rolled back when the project is next opened. Files changed outside Twinova are
     opened and listed.
   - An opened project builds and runs; the app starts on the bundled demo project.
+- A roller conveyor and a chain transfer (ROADMAP 4.4a), copied and translated from Open Industry Project (MIT):
+  - the transfer pops its chains up through the rollers and carries a carton out of the side;
+  - its logic is an ST block with a `raised_fb` feedback;
+  - the example line sends every third carton to a reject sink.
+  The 3D view draws the rollers, the chain transfer and the photo eyes as OIP does.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.
