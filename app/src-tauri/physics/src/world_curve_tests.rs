@@ -288,6 +288,7 @@ fn a_line_with_curves_gives_equal_bits_on_every_platform() {
     };
     let first = fingerprint();
     assert_eq!(first, fingerprint());
-    // Pinned on Linux x86-64 (2026-11-10), equal in dev and release; the windows-2022 CI job runs this test too.
-    assert_eq!(first, 0xfb7e_9104_c1a6_c781, "{first:#018x}");
+    // Pinned on Linux x86-64 (2026-11-10, Coulomb friction, one solver iteration), equal in dev and release; the
+    // windows-2022 CI job runs this test too.
+    assert_eq!(first, 0xaba0_61e5_4b1d_fbe2, "{first:#018x}");
 }
