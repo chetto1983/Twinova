@@ -67,21 +67,24 @@ function arcOf(project: ProjectView, instance: Instance) {
   };
 }
 
-/** Where a device mounted `at` along its host hangs, and how it is turned: along a straight host, or at an angle (degrees
- *  into the arc) on a curve, facing along the arc (physics path.rs `Arc::frame`). */
-function mountFrame(project: ProjectView, on: Instance, at: number, local: Vec3): { offset: Vec3; turn?: Quat } {
-  if (!CURVES[project.definitions[on.definition]?.generator ?? ""]) {
-    return { offset: [at + local[0], local[1], local[2]] };
-  }
+/** Where a device mounted `at` along its host hangs, `up` above its floor and `across` to the right of its centreline,
+ *  and how it is turned: along a straight host, or at an angle (degrees into the arc) on a curve, facing along the arc
+ *  (physics path.rs `Arc::frame`). */
+function mountFrame(
+  project: ProjectView,
+  on: Instance,
+  at: number,
+  up: number,
+  across: number,
+): { offset: Vec3; turn?: Quat } {
+  if (!CURVES[project.definitions[on.definition]?.generator ?? ""]) return { offset: [at, up, across] };
   const { rc, right } = arcOf(project, on);
   const t = right ? -1 : 1;
   const a = (at * Math.PI) / 180;
-  const [lx, ly, lz] = local;
-  const [cos, sin] = [Math.cos(t * a), Math.sin(t * a)];
   const offset: Vec3 = [
-    STUB + rc * Math.sin(a) + lx * cos + lz * sin,
-    ly,
-    -t * rc * (1 - Math.cos(a)) - lx * sin + lz * cos,
+    STUB + rc * Math.sin(a) + across * Math.sin(t * a),
+    up,
+    -t * rc * (1 - Math.cos(a)) + across * Math.cos(t * a),
   ];
   return { offset, turn: yaw(t * a) };
 }
@@ -161,8 +164,8 @@ export function drawnOf(project: ProjectView, instance: Instance): Drawn | null 
       // at emitY above its origin; Twinova's beam runs BEAM_HEIGHT above the surface (spec 2026-11-10, "The view").
       const surface = value(on.instance, "height", 0.8);
       const edge = value(on.instance, "width", 0.6) / 2;
-      const lens: Vec3 = [0, surface + BEAM_HEIGHT - PHOTOEYE.emitY, -edge - 0.02 - PHOTOEYE.front];
-      const placed = mountFrame(project, on.instance, on.at, lens);
+      const up = surface + BEAM_HEIGHT - PHOTOEYE.emitY;
+      const placed = mountFrame(project, on.instance, on.at, up, -edge - 0.02 - PHOTOEYE.front);
       return { parts: photoeyeGeometry(g), position: on.instance.position, rotation: on.instance.rotation, ...placed };
     }
     default:
