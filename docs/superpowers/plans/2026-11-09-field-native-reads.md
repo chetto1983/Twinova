@@ -49,18 +49,18 @@ Rust, truST `6405915` (`trust_runtime::memory::{InstanceId, VariableStorage}`); 
 
 ### Task 1 — Read through the resolved block
 
-- [ ] The existing native-read tests are the contract (`field_tests.rs`, `line_tests.rs`, `engine_tests.rs`). They
+- [x] The existing native-read tests are the contract (`field_tests.rs`, `line_tests.rs`, `engine_tests.rs`). They
   pass before the change and must pass unchanged after it.
-- [ ] Implement in `field.rs`.
-- [ ] Verify:
+- [x] Implement in `field.rs`.
+- [x] Verify:
   - `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`;
   - `cargo llvm-cov --workspace --fail-under-lines 85`;
   - `cargo mutants -f src/field.rs`.
 
 ### Task 2 — Measure and record
 
-- [ ] `cargo run --release --example replay_cost`, before and after, twice each.
-- [ ] Soak of the release build (`xvfb-run node e2e/soak.mjs 45`), the as-fast-as-possible phase against 4.3's.
-- [ ] A callgrind profile after the change.
-- [ ] E2E (`npm run e2e`) on the debug build.
-- [ ] Write the verification file; add ROADMAP 4.3a.
+- [x] `cargo run --release --example replay_cost`, before and after, twice each.
+- [x] Soak of the release build (`xvfb-run node e2e/soak.mjs 45`), the as-fast-as-possible phase against 4.3's.
+- [x] A callgrind profile after the change.
+- [x] E2E (`npm run e2e`) on the debug build.
+- [x] Write the verification file; add ROADMAP 4.3a.
