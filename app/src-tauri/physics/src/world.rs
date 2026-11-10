@@ -134,11 +134,18 @@ fn exit_wall(layout: &Layout, exit: Exit) -> ColliderBuilder {
             (
                 b.pose,
                 at,
-                Vector::new(t.along / 2.0, WALL_HEIGHT / 2.0, 0.01),
+                Vector::new(side_reach(t), WALL_HEIGHT / 2.0, 0.01),
             )
         }
     };
     ColliderBuilder::cuboid(half.x, half.y, half.z).position(pose * Pose::from_translation(at))
+}
+
+/// How far along its host, from the deck's centre, a chain transfer's side exit reaches: the deck, and a carton that
+/// only overlaps it, as a chute beside the transfer catches what the chains drag off (measured 2026-11-10: with the
+/// deck's own span, a queue standing over a raised transfer spilled the cartons it half carried onto the floor).
+fn side_reach(t: &crate::layout::Transfer) -> Real {
+    t.along / 2.0 + CARTON_HALF
 }
 
 /// The sign of a chain transfer's side along its host's z.
@@ -285,6 +292,11 @@ impl World {
         self.delivered[sink]
     }
 
+    /// The cartons the sources have made: delivered plus those on the line, when none is lost.
+    pub fn created(&self) -> u64 {
+        self.sources.iter().map(|s| s.made as u64).sum()
+    }
+
     /// One millisecond: the physics step, then the sinks take what reached them and the sources add what is due.
     pub fn step(&mut self) {
         self.world.step_with_events(&self.hooks, &());
@@ -332,7 +344,7 @@ impl World {
                 let t = &self.layout.transfers[transfer];
                 let (b, p) = (&self.layout.belts[t.host], self.local(t.host, carton));
                 side(t.out_right) * p.z + CARTON_HALF >= t.across / 2.0
-                    && (p.x - t.at).abs() <= t.along / 2.0
+                    && (p.x - t.at).abs() <= side_reach(t)
                     && p.y >= b.height - CARTON_HALF
             }
         }

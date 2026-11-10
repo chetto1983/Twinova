@@ -37,8 +37,8 @@ fn the_demo_builds_and_warns_about_the_unused_counter() {
 #[test]
 fn the_roller_conveyor_runs_on_its_behaviour_and_carries_onto_belt_b() {
     let (mut line, _) = Line::build(&fixture("two_belts_diverter")).unwrap();
-    // From the entry to past belt B's start: 5 m at 0.5 m/s.
-    run_ms(&mut line, 12_000);
+    // From the entry to past belt B's start: 5 m at 0.5 m/s; before the third carton holds the infeed at 11.4 s.
+    run_ms(&mut line, 11_000);
     assert!(bit(&line, "%QX0.3"), "the program's roller_run");
     // The roller's motor is its block's: a carton past the roller shows the block turned it on.
     let on_b = line
@@ -195,4 +195,68 @@ fn a_behaviour_drives_its_belt_motor_whatever_the_controller_commands() {
         0,
         "the block holds its motor off"
     );
+}
+
+/// The 4.4a line (spec 2026-11-10-diverter-line-design.md): the source made `count` cartons, two seconds apart.
+fn diverter_line(count: i64) -> Line {
+    let mut project = fixture("two_belts_diverter");
+    let source = project
+        .scene
+        .instances
+        .iter_mut()
+        .find(|i| i.id == "source")
+        .unwrap();
+    source
+        .parameters
+        .insert("max_count".into(), ParamValue::Int(count));
+    Line::build(&project).unwrap().0
+}
+
+#[test]
+fn every_third_carton_is_raised_and_carried_to_the_reject_sink() {
+    let mut line = diverter_line(9);
+    // The ninth carton reaches the transfer at about 23.7 s and belt B's end 6 s later.
+    run_ms(&mut line, 40_000);
+    let w = line.world();
+    assert_eq!(
+        (w.delivered(0), w.delivered(1), w.cartons().len()),
+        (6, 3, 0)
+    );
+}
+
+#[test]
+fn a_chain_transfer_needs_its_behaviour() {
+    let mut project = fixture("two_belts_diverter");
+    project
+        .definitions
+        .get_mut("twinova.chain_transfer@1")
+        .unwrap()
+        .behaviour = None;
+    let error = Line::build(&project).err().unwrap();
+    assert_eq!(
+        error,
+        "chain_transfer: twinova.chain_transfer needs its behaviour"
+    );
+}
+
+#[test]
+fn no_carton_is_lost_or_duplicated_and_a_blocked_normal_sink_holds_a_finite_queue() {
+    let mut line = diverter_line(0);
+    line.set_sink_blocked(0, true);
+    let mut most = 0;
+    // The queue backs up over the transfer within about 20 s.
+    for _ in 0..60_000 {
+        line.step_ms().unwrap();
+        let w = line.world();
+        assert_eq!(
+            w.created(),
+            w.delivered(0) + w.delivered(1) + w.cartons().len() as u64
+        );
+        most = most.max(w.cartons().len());
+    }
+    let w = line.world();
+    assert_eq!(w.delivered(0), 0);
+    assert!(w.delivered(1) > 0, "the transfer keeps diverting");
+    // Belt A, the roller and belt B hold 7 m of 0.3 m cartons at most; the source waits for a free entry.
+    assert!(most <= 24, "{most} cartons on the line");
 }

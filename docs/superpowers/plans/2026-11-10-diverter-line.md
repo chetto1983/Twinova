@@ -124,13 +124,23 @@ vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and Windows.
 
 ### Task 3 — The chain transfer's behaviour and the line
 
-- [ ] Tests first:
+- [x] Tests first:
   - `popup` raises `lift` over `raise_time`, and `raised_fb` follows;
   - a transfer without its block fails Build with the spec's message;
   - every third carton reaches `sink_reject`;
   - created = delivered + on the line, at all times, also with `sink_ok` blocked.
-- [ ] Implement the block (in the fixture script, Task 1's file), `field.rs` natives and `line.rs`.
-- [ ] Verify: Rust gates, mutants on `field.rs` and `line.rs`.
+- [x] Implement the block (in the fixture script, Task 1's file), `field.rs` natives and `line.rs`.
+- [x] Verify: Rust gates, mutants on `field.rs` and `line.rs`.
+  - *Delivered:*
+    - the line drives each chain deck from its block every millisecond;
+    - a transfer without its block fails Build;
+    - with 9 cartons, 6 reach `sink_ok` and 3 `sink_reject`;
+    - conservation holds at every millisecond, with a finite queue while `sink_ok` is blocked.
+  - *Found and fixed by the line tests (spec amended):*
+    - a raised carton rides above the beam, so the program keeps the chains up for a carry time;
+    - it holds the infeed while they are up;
+    - the side exit reaches half a carton past the deck.
+  - *Mutants:* 96 tested, 0 survivors after two `created()` checks. The 6 timeouts are loop-breaking mutants.
 
 ### Task 4 — The view from OIP's generators
 

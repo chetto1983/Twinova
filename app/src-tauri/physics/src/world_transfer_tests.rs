@@ -197,6 +197,7 @@ fn no_carton_is_lost_or_duplicated_while_every_third_is_diverted() {
         over = now;
         lift.step(&mut w, raised);
         let made = w.sources[0].made as u64;
+        assert_eq!(w.created(), made);
         assert_eq!(
             made,
             w.delivered(0) + w.delivered(1) + w.cartons().len() as u64
@@ -211,7 +212,7 @@ fn no_carton_is_lost_or_duplicated_while_every_third_is_diverted() {
 }
 
 #[test]
-fn a_side_wall_runs_along_the_deck_past_its_edge() {
+fn a_side_wall_runs_along_the_deck_and_a_carton_past_it() {
     let mut l = Layout {
         belts: vec![roller(3.0)],
         ..Layout::default()
@@ -230,8 +231,8 @@ fn a_side_wall_runs_along_the_deck_past_its_edge() {
     let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
     let (lo, hi) = (aabb.mins, aabb.maxs);
     assert!(
-        near(lo.x, 3.67) && near(hi.x, 4.33),
-        "along the deck: {lo:?} {hi:?}"
+        near(lo.x, 3.52) && near(hi.x, 4.48),
+        "along the deck and a carton past it: {lo:?} {hi:?}"
     );
     assert!(
         near(lo.z, 0.3) && near(hi.z, 0.32),
@@ -325,7 +326,7 @@ fn a_line_with_a_transfer_gives_equal_bits_on_every_platform() {
     let first = fingerprint();
     assert_eq!(first, fingerprint());
     // Pinned on Linux x86-64 (2026-11-10), equal in dev and release; the windows-2022 CI job runs this test too.
-    assert_eq!(first, 0x1d2b_5c37_6203_c6a1, "{first:#018x}");
+    assert_eq!(first, 0x417f_321f_68a7_ccb0, "{first:#018x}");
 }
 
 /// Two transfers on one roller conveyor, the second carrying to the right: only the raised one takes the carton, at
