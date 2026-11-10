@@ -52,15 +52,21 @@ As 4.4b.
 
 ### Task 1 — One solver iteration
 
-- [ ] Set it; run every test; the fingerprints in dev and release; pin them.
-- [ ] Verify: Rust gates; windows-2022 in CI.
+- [x] Set it; run every test; the fingerprints in dev and release; pin them.
+- [x] Verify: Rust gates; windows-2022 in CI.
+  - *Delivered:* only the three fingerprints failed, each equal in dev and release; pinned again
+    (`0x2674dda1319b763a`, `0x2c224abfa5e90d6c`, `0xaba061e54b1dfbe2`). windows-2022 runs on the CI of PR #34.
 
 ### Task 2 — Addresses resolved at Build
 
-- [ ] Tests first: a declared address resolves and an undeclared one does not; a write and a read through it equal the
+- [x] Tests first: a declared address resolves and an undeclared one does not; a write and a read through it equal the
   string's; an address the field does not have is refused.
-- [ ] Implement; measure before and after; verify: mutants on the changed code.
+- [x] Implement; measure before and after; verify: mutants on the changed code.
+  - *Delivered:* `Port` in the controller, the field's mirrors, the line's parsed addresses. No existing test
+    changed. Measured: 38.0–39.4 → 34.7–36.9 µs and 58.6–61.0 → 54.3–58.1 µs. Mutants: 28 tested, no survivor.
 
 ### Task 3 — Acceptance
 
-- [ ] E2E on Linux; the release measurement and soak; verification, ROADMAP, CHANGELOG.
+- [x] E2E on Linux; the release measurement and soak; verification, ROADMAP, CHANGELOG.
+  - *Delivered:* E2E 11/11, 42/42, 4/4 and 3/3 on Linux; the soak at 16.5× and 11.3× real time, memory flat;
+    verification `2026-11-10-solver-substeps-io-links.md`.
