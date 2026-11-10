@@ -165,6 +165,10 @@ impl World {
     pub fn new(layout: Layout) -> Self {
         let mut world = PhysicsWorld::default();
         world.integration_parameters.dt = STEP_S;
+        // Coulomb friction: one constraint per contact point, each with its own tangent velocity, so a curve turns its
+        // load with it. Rapier's default (Simplified) adds a twist constraint with no target velocity that holds the
+        // load's yaw (spec 2026-11-10-curves-belt-options-design.md, measured).
+        world.integration_parameters.friction_model = FrictionModel::Coulomb;
         world.insert_collider(
             // The floor, for what falls off a belt.
             ColliderBuilder::cuboid(500.0, 0.05, 500.0)

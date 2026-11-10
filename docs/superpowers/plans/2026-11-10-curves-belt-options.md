@@ -71,9 +71,9 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
 
 ### Task 1 — Coulomb friction
 
-- [ ] World-wide Coulomb.
-- [ ] Re-run every test. Report the demo jam and the transfer's peak speed, and fix them as the user decided.
-- [ ] Re-pin the fingerprints, equal in dev and release.
+- [x] World-wide Coulomb.
+- [x] Re-run every test. Report the demo jam and the transfer's peak speed, and fix them as the user decided.
+- [x] Re-pin the fingerprints, equal in dev and release.
 - [ ] Verify: Rust gates; windows-2022 in CI.
 
 ### Task 2 — Format: curves, options, optional signals

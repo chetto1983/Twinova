@@ -240,9 +240,9 @@ fn equal_runs_give_equal_bits_on_every_platform() {
     };
     let first = fingerprint();
     assert_eq!(first, fingerprint());
-    // Pinned on Linux x86-64 (2026-11-09), equal in dev and release. The windows-2022 CI job runs this test too: with
+    // Pinned on Linux x86-64 (2026-11-10, Coulomb friction), equal in dev and release. The windows-2022 CI job runs this test too: with
     // enhanced-determinism the same bits must come out there (research 15).
-    assert_eq!(first, 0x7ee1_e6ce_7ddf_4a1f, "{first:#018x}");
+    assert_eq!(first, 0x106e_9422_7f30_a7d7, "{first:#018x}");
 }
 
 pub(super) fn fixture(name: &str) -> twinova_project::Project {
@@ -287,7 +287,7 @@ fn the_demo_lays_out_its_belt_source_sink_and_sensor() {
         [Sensor {
             id: "sensor_a".into(),
             belt: 0,
-            at: 2.7,
+            at: 2.75,
             range: 0.5
         }]
     );
@@ -439,7 +439,10 @@ fn a_moved_and_turned_belt_keeps_its_pose_and_each_sensor_its_mount() {
     let at: Vec<(String, Real)> = l.sensors.iter().map(|s| (s.id.clone(), s.at)).collect();
     assert_eq!(
         at,
-        [("sensor_a".to_string(), 2.7), ("sensor_b".to_string(), 1.0)]
+        [
+            ("sensor_a".to_string(), 2.75),
+            ("sensor_b".to_string(), 1.0)
+        ]
     );
     assert_eq!((l.belt("belt_a"), l.belt("nothing")), (Some(0), None));
 }

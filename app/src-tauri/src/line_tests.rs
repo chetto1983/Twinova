@@ -89,8 +89,8 @@ fn a_blocked_sink_covers_the_photocell_and_trips_the_jam() {
             jam_at = Some(ms);
         }
     }
-    // The first carton reaches the wall at about 5.4 s and covers the photocell at 2.7 m from about 4.8 s; the jam
-    // latches 2 s of cover with the motor on later.
+    // The first carton reaches the wall at about 5.4 s and covers the photocell at 2.75 m from about 4.9 s, and keeps
+    // covering it held there; the jam latches 2 s of cover with the motor on later.
     let jam_at = jam_at.expect("a jam");
     assert!((6_700..7_000).contains(&jam_at), "jam at {jam_at} ms");
     assert!(!bit(&line, "%QX0.0"), "the jam stops the motor");
