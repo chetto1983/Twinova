@@ -3,10 +3,11 @@
 //! its inputs and writes the controller's inputs, at the mirrored address (`%QX0.0` ↔ `%IX0.0`), and it scans every
 //! millisecond. Twinova generates its program and configuration from the project at Build; nothing of it is stored.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
 use trust_runtime::harness::TestHarness;
+use trust_runtime::memory::InstanceId;
 use trust_runtime::value::{Duration, Value};
 use twinova_project::Project;
 use twinova_project::address::{Address, Area};
@@ -14,6 +15,9 @@ use twinova_project::model::{Definition, Direction, Instance, ParamType, ParamVa
 
 /// The field's cycle, fixed (user, 2026-11-09).
 pub const FIELD_CYCLE_NS: i64 = 1_000_000;
+
+/// The instance of the generated `PROGRAM Field`.
+const PROGRAM: &str = "F";
 
 /// The variables a family's native model reads from its behaviour block, by generator.
 fn natives(generator: &str) -> &'static [(&'static str, &'static str)] {
@@ -26,6 +30,9 @@ fn natives(generator: &str) -> &'static [(&'static str, &'static str)] {
 
 pub struct Field {
     harness: TestHarness,
+    /// Each behaving instance's block, by instance id, resolved at Build. A read by path parses the path every time,
+    /// 31 % of a run when the belts' `motor` was read so every millisecond (spec, "Amended after the acceptance").
+    blocks: BTreeMap<String, InstanceId>,
     /// The controller's output addresses the field reads, as the controller names them.
     commands: Vec<String>,
     /// The controller's input addresses the field writes.
@@ -88,9 +95,8 @@ fn generate(project: &Project) -> Result<(String, Spans), String> {
         let _ = writeln!(out, "{}();", inst.id);
     }
     out.push_str("END_PROGRAM\n\nCONFIGURATION Twinova\nRESOURCE Devices ON PLC\n");
-    out.push_str(
-        "    TASK Cycle (INTERVAL := T#1ms, PRIORITY := 1);\n    PROGRAM F WITH Cycle : Field;\n",
-    );
+    out.push_str("    TASK Cycle (INTERVAL := T#1ms, PRIORITY := 1);\n");
+    let _ = writeln!(out, "    PROGRAM {PROGRAM} WITH Cycle : Field;");
     out.push_str("END_RESOURCE\n");
     let mut config = String::new();
     for (inst, def) in &devices {
@@ -98,7 +104,7 @@ fn generate(project: &Project) -> Result<(String, Spans), String> {
             if let Some(address) = inst.signals.get(&signal.name) {
                 let _ = writeln!(
                     config,
-                    "    F.{}.{} AT {} : {};",
+                    "    {PROGRAM}.{}.{} AT {} : {};",
                     inst.id,
                     signal.name,
                     mirror(address)?,
@@ -177,6 +183,27 @@ fn param_type(ty: ParamType) -> &'static str {
     }
 }
 
+/// The block of each device, from the program instance down: the generated program declares both, so a field that
+/// compiled has them.
+fn resolve_blocks(
+    harness: &TestHarness,
+    devices: &[(&Instance, &Definition)],
+) -> BTreeMap<String, InstanceId> {
+    let storage = harness.runtime().storage();
+    let instance = |value: Option<&Value>, name: &str| match value {
+        Some(Value::Instance(id)) => *id,
+        other => panic!("the generated field declares {name} as an instance, found {other:?}"),
+    };
+    let program = instance(storage.get_global(PROGRAM), PROGRAM);
+    devices
+        .iter()
+        .map(|(inst, _)| {
+            let block = instance(storage.get_instance_var(program, &inst.id), &inst.id);
+            (inst.id.clone(), block)
+        })
+        .collect()
+}
+
 impl Field {
     /// Builds the field of `project`, or `None` when no component has a behaviour. A block cannot compile alone,
     /// because its `AT %I*` needs the configuration (E202, measured), so the whole field compiles at once and each
@@ -192,7 +219,7 @@ impl Field {
         let (mut commands, mut feedback) = (Vec::new(), Vec::new());
         for (inst, def) in &devices {
             let block = &def.behaviour.as_ref().expect("filtered").function_block;
-            let path = |name: &str| format!("F.{}.{name}", inst.id);
+            let path = |name: &str| format!("{PROGRAM}.{}.{name}", inst.id);
             for (name, ty) in natives(&def.generator) {
                 match harness.get_output(&path(name)) {
                     Some(v) if type_name(&v) == *ty => {}
@@ -233,8 +260,10 @@ impl Field {
                 }
             }
         }
+        let blocks = resolve_blocks(&harness, &devices);
         Ok(Some(Self {
             harness,
+            blocks,
             commands,
             feedback,
         }))
@@ -264,7 +293,12 @@ impl Field {
 
     /// A block variable the native model reads, such as a belt's `motor`.
     pub fn native(&self, instance: &str, name: &str) -> Option<Value> {
-        self.harness.get_output(&format!("F.{instance}.{name}"))
+        let block = *self.blocks.get(instance)?;
+        self.harness
+            .runtime()
+            .storage()
+            .get_instance_var(block, name)
+            .cloned()
     }
 
     /// One millisecond of virtual time, then one cycle.
