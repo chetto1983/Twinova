@@ -1,8 +1,10 @@
 // The materials OIP draws these parts in, at 1e7488c (MIT; THIRD_PARTY_NOTICES.md): the parts' own (their rig.json
 // `materials`, linear RGB) and the conveyor finishes of src/render/parts/common.ts (sRGB hex). OIP's finishes are a
 // triplanar shader over its Metal.webp; Twinova keeps their colour, metalness and roughness on three's standard
-// material, and maps the two textures whose meshes carry real UVs: the roller tube and the chain links.
+// material, and maps the textures whose meshes carry real UVs: the roller tube, the chain links, and the belt's weave
+// (common.ts `beltWebglMaterial`).
 import * as THREE from "three";
+import beltFabric from "../assets/oip/BeltFabric.jpg";
 import chainLink from "../assets/oip/ChainLink.webp";
 import rollerMetal from "../assets/oip/RollerMetal.webp";
 import type { Material } from "./oip/parts/part";
@@ -16,6 +18,7 @@ interface Spec {
 }
 
 export const SPECS: Record<Material, Spec> = {
+  belt: { color: 0xffffff, metalness: 0, roughness: 0.85, map: beltFabric },
   frame: { color: 0x56a7c8, metalness: 0.35, roughness: 0.45 },
   guard: { color: 0xeef1f5, metalness: 0.5, roughness: 0.4 },
   leg: { color: 0xbcc1c7, metalness: 0.4, roughness: 0.62 },

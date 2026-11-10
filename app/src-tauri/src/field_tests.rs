@@ -53,7 +53,9 @@ fn the_demo_field_holds_the_belt_and_its_mirrored_signals() {
         "PROGRAM Field\nVAR\n    belt_a : BeltBehaviour;\nEND_VAR\nbelt_a();\nEND_PROGRAM\n\n\
          CONFIGURATION Twinova\nRESOURCE Devices ON PLC\n    TASK Cycle (INTERVAL := T#1ms, PRIORITY := 1);\n    \
          PROGRAM F WITH Cycle : Field;\nEND_RESOURCE\nVAR_CONFIG\n    F.belt_a.run AT %IX0.0 : BOOL;\n    \
-         F.belt_a.running AT %QX0.1 : BOOL;\nEND_VAR\nEND_CONFIGURATION\n"
+         F.belt_a.running AT %QX0.1 : BOOL;\n    F.belt_a.speed_ref AT %ID1 : REAL;\n    \
+         F.belt_a.velocity AT %QD1 : REAL;\n    F.belt_a.encoder AT %QD5 : REAL;\n    \
+         F.belt_a.pulse AT %QX9.0 : BOOL;\nEND_VAR\nEND_CONFIGURATION\n"
     );
     assert!(text.starts_with("(* Twinova belt conveyor"));
 }
@@ -77,10 +79,16 @@ fn the_belt_runs_at_once_and_reports_running_after_its_start_delay() {
     assert_eq!(field.commands(), ["%QX0.0"]);
     assert_eq!(field.feedback(), ["%IX0.1"]);
     field.cycle().unwrap();
-    assert_eq!(field.native("belt_a", "motor"), Some(Value::Bool(false)));
+    assert_eq!(
+        field.native("belt_a", "surface_speed"),
+        Some(Value::Real(0.0))
+    );
     field.set_command("%QX0.0", Value::Bool(true)).unwrap();
     field.cycle().unwrap();
-    assert_eq!(field.native("belt_a", "motor"), Some(Value::Bool(true)));
+    assert_eq!(
+        field.native("belt_a", "surface_speed"),
+        Some(Value::Real(0.5))
+    );
     // truST's TON reaches Q one cycle before PT (spec 2026-11-09, "Measured"): 500 ms after the cycle that saw run,
     // less one.
     assert_eq!(ms_until(&mut field, "%IX0.1", 1000), Some(499));
@@ -173,19 +181,16 @@ fn with_belt_source(edit: impl FnOnce(&str) -> String) -> Result<Option<Field>, 
 
 #[test]
 fn a_block_without_its_native_variable_is_refused() {
-    let error = with_belt_source(|s| {
-        s.replace("motor : BOOL;", "engine : BOOL;")
-            .replace("motor :=", "engine :=")
-    })
-    .err()
-    .unwrap();
+    let error = with_belt_source(|s| s.replace("surface_speed", "engine"))
+        .err()
+        .unwrap();
     assert_eq!(
         error,
-        "components/twinova.belt@1.st: BeltBehaviour must declare motor : BOOL, which the native twinova.belt/1 uses"
+        "components/twinova.belt@1.st: BeltBehaviour must declare surface_speed : REAL, which the native twinova.belt/1 uses"
     );
     let error = with_belt_source(|s| {
-        s.replace("motor : BOOL;", "motor : DINT;")
-            .replace("motor := run;", "motor := 1;")
+        s.replace("surface_speed", "engine")
+            .replace("VAR_OUTPUT\n", "VAR_OUTPUT\n    surface_speed : DINT;\n")
     })
     .err()
     .unwrap();
@@ -211,13 +216,13 @@ fn a_parameter_of_another_type_is_refused() {
 
 #[test]
 fn a_mistake_in_a_block_is_reported_against_its_file_and_line() {
-    let error = with_belt_source(|s| s.replace("motor := run;", "motor := ;"))
+    let error = with_belt_source(|s| s.replace("    target := speed_ref;", "    target := ;"))
         .err()
         .unwrap();
     assert_eq!(
         error,
-        "field runtime: expected expression at components/twinova.belt@1.st:15\n\
-         expected ';' at components/twinova.belt@1.st:16"
+        "field runtime: expected expression at components/twinova.belt@1.st:37\n\
+         expected ';' at components/twinova.belt@1.st:38"
     );
 }
 
@@ -255,14 +260,14 @@ fn a_chain_transfer_without_its_lift_is_refused() {
 }
 
 #[test]
-fn a_roller_without_its_motor_is_refused() {
+fn a_roller_without_its_surface_speed_is_refused() {
     let mut project = fixture("two_belts_diverter");
     let source = project.behaviours.get_mut("twinova.roller@1").unwrap();
-    *source = source.replace("motor", "drive");
+    *source = source.replace("surface_speed", "drive");
     let error = Field::build(&project).err().unwrap();
     assert!(
         error.contains(
-            "RollerBehaviour must declare motor : BOOL, which the native twinova.roller/1 uses"
+            "RollerBehaviour must declare surface_speed : REAL, which the native twinova.roller/1 uses"
         ),
         "{error}"
     );

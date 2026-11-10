@@ -1,7 +1,7 @@
 //! Rules on names, paths, numbers and definitions (spec 2026-11-08-project-format-design.md, annex).
 
 use crate::diagnostic::Diagnostic;
-use crate::model::{Definition, ParamType, ParamValue, PortKind, Quat, Vec3};
+use crate::model::{Definition, ParamType, ParamValue, PortKind, Quat, SignalType, Vec3};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// `^[a-z][a-z0-9_]*$`.
@@ -95,6 +95,16 @@ fn fmt_bound(bound: Option<f64>) -> String {
     bound.map_or("-".into(), |b| b.to_string())
 }
 
+/// Whether a parameter can stand for a signal: the same IEC type (a signal has no TIME).
+fn same_type(parameter: ParamType, signal: SignalType) -> bool {
+    matches!(
+        (parameter, signal),
+        (ParamType::BOOL, SignalType::BOOL)
+            | (ParamType::DINT, SignalType::DINT)
+            | (ParamType::REAL, SignalType::REAL)
+    )
+}
+
 /// Names that occur more than once.
 pub(crate) fn duplicates<'a>(names: impl Iterator<Item = &'a str>) -> Vec<&'a str> {
     let mut seen = BTreeSet::new();
@@ -149,6 +159,21 @@ pub(crate) fn definition(
         }
         if p.min.zip(p.max).is_some_and(|(lo, hi)| lo > hi) {
             err(format!("parameters.{}", p.name), "min is above max".into());
+        }
+    }
+    for s in &def.signals {
+        let Some(fallback) = &s.fallback else {
+            continue;
+        };
+        let path = format!("signals.{}", s.name);
+        match def.parameters.iter().find(|p| &p.name == fallback) {
+            _ if !s.optional => err(path, "only an optional signal has a fallback".into()),
+            None => err(path, format!("fallback '{fallback}' is not a parameter")),
+            Some(p) if !same_type(p.ty, s.ty) => err(
+                path,
+                format!("fallback '{fallback}' is {:?}, not {:?}", p.ty, s.ty),
+            ),
+            Some(_) => {}
         }
     }
     let nodes: BTreeMap<&str, Option<&str>> = def

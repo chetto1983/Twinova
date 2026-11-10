@@ -25,12 +25,14 @@ describe("OIP's materials", () => {
       THREE.SRGBColorSpace,
     ]);
     expect(materialOf("chain", loader).map!.name).toMatch(/ChainLink/);
+    expect(materialOf("belt", loader).map!.name).toMatch(/BeltFabric/);
     expect(materialOf("guard", loader).map).toBeNull();
   });
 });
 
 /** OIP's values, at 1e7488c: the finishes of src/render/parts/common.ts and the parts' rig.json materials. */
 const OIP: Record<Material, [number | number[], number, number]> = {
+  belt: [0xffffff, 0, 0.85],
   frame: [0x56a7c8, 0.35, 0.45],
   guard: [0xeef1f5, 0.5, 0.4],
   leg: [0xbcc1c7, 0.4, 0.62],

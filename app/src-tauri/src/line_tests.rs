@@ -89,8 +89,8 @@ fn a_blocked_sink_covers_the_photocell_and_trips_the_jam() {
             jam_at = Some(ms);
         }
     }
-    // The first carton reaches the wall at about 5.4 s and covers the photocell at 2.7 m from about 4.8 s; the jam
-    // latches 2 s of cover with the motor on later.
+    // The first carton reaches the wall at about 5.4 s and covers the photocell at 2.75 m from about 4.9 s, and keeps
+    // covering it held there; the jam latches 2 s of cover with the motor on later.
     let jam_at = jam_at.expect("a jam");
     assert!((6_700..7_000).contains(&jam_at), "jam at {jam_at} ms");
     assert!(!bit(&line, "%QX0.0"), "the jam stops the motor");
@@ -185,7 +185,7 @@ fn a_belt_without_a_behaviour_follows_the_controller_and_reports_running_itself(
 fn a_behaviour_drives_its_belt_motor_whatever_the_controller_commands() {
     let mut project = fixture("demo_m3");
     let block = project.behaviours.get_mut("twinova.belt@1").unwrap();
-    *block = block.replace("motor := run;", "motor := FALSE;");
+    *block = block.replace("    target := speed_ref;", "    target := 0.0;");
     let (mut line, _) = Line::build(&project).unwrap();
     line.press("%IX1.0");
     run_ms(&mut line, 8000);
@@ -259,4 +259,24 @@ fn no_carton_is_lost_or_duplicated_and_a_blocked_normal_sink_holds_a_finite_queu
     assert!(w.delivered(1) > 0, "the transfer keeps diverting");
     // Belt A, the roller and belt B hold 7 m of 0.3 m cartons at most; the source waits for a free entry.
     assert!(most <= 24, "{most} cartons on the line");
+}
+
+/// The 4.4b curve line: two belts, a left belt curve, a right roller curve and a third belt, each conveyor's motor
+/// from its block, the program running them all; every carton reaches the sink through both curves.
+#[test]
+fn the_curve_line_carries_cartons_through_both_curves_to_the_sink() {
+    let (mut line, _) = Line::build(&fixture("curve_line")).unwrap();
+    // A carton every 2 s from 10 ms, about 10.2 m of path at 0.5 m/s: the first arrives near 20.4 s.
+    run_ms(&mut line, 30_000);
+    let w = line.world();
+    assert_eq!(w.created(), w.delivered(0) + w.cartons().len() as u64);
+    assert!((4..=6).contains(&w.delivered(0)), "{}", w.delivered(0));
+    // Curve A's drive feedback, bound at %ID8 and %ID12: 30 at its rated speed, and 30 s of travel at 0.5 m/s, less
+    // the scan the controller last read it at.
+    let real = |address: &str| match line.controller().read(address).unwrap() {
+        Value::DWord(bits) => f32::from_bits(bits),
+        other => panic!("{address}: {other:?}"),
+    };
+    assert_eq!(real("%ID8"), 30.0);
+    assert!((real("%ID12") - 15.0).abs() < 0.01, "{}", real("%ID12"));
 }

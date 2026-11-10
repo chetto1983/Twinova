@@ -7,13 +7,13 @@
     "components/twinova.source@1.json"
   ],
   "files": {
-    "components/twinova.belt@1.json": "67525523241fa95b5f2a151342bdae2fda66ca49812112e0bfad2d33a554f72f",
-    "components/twinova.belt@1.st": "7391e9875329cecc61f3faab03d592188253f9793443a4a8f6fe73807245559c",
+    "components/twinova.belt@1.json": "4f0e7245eb15416fba20508485b743f198e5a4a03a1ffe0036554c20a01a29ac",
+    "components/twinova.belt@1.st": "966946535d0b91db84349a7916819170f5c0e8866d82698265636eb4d99c6e76",
     "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
     "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
     "components/twinova.source@1.json": "c41dfb89fd394067b9e71785f51d437262c4625afe95734049d3d75edac2e18e",
     "plc/Main.st": "76936d5f42b305491df9c8bc07a7dc6208fe2ac69bdfc19420f7508fb9ee21dd",
-    "scene.json": "952de7449aa095a408b1a74078d07ada5938b4b04979e2e05f757d741b73371e"
+    "scene.json": "cc6b521a7178445be17e3f273479006a035d9090a355193156b36e43fe328c70"
   },
   "format": "twinova-project",
   "name": "M3 demo",

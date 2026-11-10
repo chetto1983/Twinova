@@ -3,6 +3,7 @@ pub mod controller;
 pub mod demo;
 pub mod engine;
 pub mod field;
+mod field_image;
 pub mod line;
 pub mod project_commands;
 pub mod webview_locale;

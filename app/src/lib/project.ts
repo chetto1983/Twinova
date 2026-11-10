@@ -141,7 +141,6 @@ export interface Shape {
   token: string;
 }
 
-const DECK_M = 0.08;
 /** OIP's chain-transfer deck: 0.06 m deep (examples/parts/chain-transfer/rig.json at 1e7488c). */
 const CHAIN_DECK_M = 0.06;
 
@@ -151,20 +150,17 @@ export function real(instance: Instance, def: Definition, name: string, fallback
   return typeof value === "number" ? value : fallback;
 }
 
-/** The first generator per family (spec decision: native, versioned generators): sizes come from the parameters. */
+export function flag(instance: Instance, def: Definition, name: string, fallback: boolean): boolean {
+  const p = def.parameters.find((q) => q.name === name);
+  const value = Object.hasOwn(instance.parameters, name) ? instance.parameters[name] : p?.default;
+  return typeof value === "boolean" ? value : fallback;
+}
+
+/** The stand-in of a family OIP's generators do not draw (families.ts), or of a device without its mount: sizes come
+ *  from the parameters. */
 export function shapeOf(instance: Instance, def: Definition): Shape {
-  const length = real(instance, def, "length", 1);
-  const width = real(instance, def, "width", 0.6);
   const top = real(instance, def, "height", 0.8);
   switch (def.generator) {
-    case "twinova.belt/1":
-    case "twinova.roller/1":
-      return {
-        kind: "box",
-        size: [length, DECK_M, width],
-        centre: [length / 2, top - DECK_M / 2, 0],
-        token: "--scene-belt",
-      };
     case "twinova.chain_transfer/1": {
       // Its deck sits 3 cm under its host's rollers (OIP's chain transfer); the host's height is the default top.
       const along = real(instance, def, "chains", 2) * real(instance, def, "distance", 0.33);

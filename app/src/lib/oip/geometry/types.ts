@@ -17,6 +17,10 @@ type V2 = readonly [number, number];
 
 /** The `g` a part's geometry() composes its mesh with. */
 export interface GeometryBuilder {
+  /** Sweep a closed `[up, width]` section along a path, the section kept level (sweep.ts). */
+  sweep(profile: ReadonlyArray<V2>, path: ReadonlyArray<V3>, opts?: { caps?: boolean }): MeshDescription;
+  /** Points along an arc in the X-Y plane about `center`, from angle `start` to `end` in `segments` steps. */
+  arc(center: V3, radius: number, start: number, end: number, segments?: number): ReadonlyArray<V3>;
   merge(...parts: readonly MeshDescription[]): MeshDescription;
   box(size: V3, center: V3): MeshDescription;
   surface(): SurfaceBuilder;

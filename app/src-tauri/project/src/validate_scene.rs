@@ -55,6 +55,16 @@ pub(crate) fn scene(scene: &Scene, definitions: &BTreeMap<String, Definition>) -
                 }
             }
         }
+        for signal in def
+            .signals
+            .iter()
+            .filter(|s| !s.optional && !inst.signals.contains_key(&s.name))
+        {
+            err(
+                at(&format!("signals.{}", signal.name)),
+                format!("{} needs it bound to an address", def.key()),
+            );
+        }
         for (name, text) in &inst.signals {
             let path = at(&format!("signals.{name}"));
             let Some(signal) = def.signals.iter().find(|s| &s.name == name) else {

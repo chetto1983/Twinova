@@ -16,13 +16,16 @@ copies and translates part of it, under the licence below; each file names its s
 - **Copied (TypeScript):**
   - the geometry builder, `app/src/lib/oip/geometry/`, from `src/core/geometry/` and `src/core/parts/partApi.ts`;
   - the roller conveyor, chain transfer and photo eye generators, `app/src/lib/oip/parts/`, from `examples/parts/`;
-  - the textures `ChainLink.webp` and `RollerMetal.webp`, `app/src/assets/oip/`, first-party per OIP's
-    `THIRD_PARTY_NOTICES.md`;
+    since 4.4b also the belt, the curved belt and the curved roller conveyor, and the conveyor floor stand;
+  - the textures `ChainLink.webp`, `RollerMetal.webp` and (4.4b) `BeltFabric.jpg`, `app/src/assets/oip/`, first-party
+    per OIP's `THIRD_PARTY_NOTICES.md`;
   - the materials' values, `app/src/lib/materials.ts`.
 - **Translated into Rust:** the conveyor surface velocity, the chain transfer's deck and its lift, in
-  `app/src-tauri/physics/src/world.rs`.
+  `app/src-tauri/physics/src/world.rs`; since 4.4b a curve's deck and its rotating surface field, the guards and a
+  skewed roller's drive, in `path.rs`, `surfaces.rs` and `world.rs`.
 - **Re-expressed in Structured Text:** the chain transfer's behaviour, in the project fixtures'
-  `components/twinova.chain_transfer@1.st`.
+  `components/twinova.chain_transfer@1.st`; since 4.4b the conveyor drive (`_shared/conveyorDrive.js`), in every
+  conveyor's behaviour block.
 
 > The MIT License (MIT)
 >

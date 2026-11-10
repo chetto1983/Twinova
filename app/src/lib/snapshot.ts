@@ -26,6 +26,8 @@ export interface Snapshot {
   sinks: SinkState[];
   /** Each chain transfer's lift, 0 down to 1 up. */
   transfers: { id: string; lift: number }[];
+  /** Each conveyor's surface travel along its flow since Build, m: its fabric scrolls by it. */
+  conveyors: { id: string; travel: number }[];
   signals: SignalState[];
   jam: boolean | null;
   lag_ms: number;
@@ -39,6 +41,10 @@ export interface Built {
 
 /** The products of 4.3 (twinova-physics, CARTON_HALF): a 0.3 m carton. */
 export const CARTON_SIZE_M = 0.3;
+
+/** A scrolling texture's offset along u after `travel` metres at `tilesPerMetre` (OIP functionMesh.ts: the offset walks
+ *  backwards, so the pattern moves forward with the surface). */
+export const scrollOffset = (travel: number, tilesPerMetre: number): number => -((travel * tilesPerMetre) % 1);
 
 /** Every product the line's sinks have taken. */
 export const deliveredOf = (s: Snapshot | null): number => s?.sinks.reduce((n, sink) => n + sink.delivered, 0) ?? 0;

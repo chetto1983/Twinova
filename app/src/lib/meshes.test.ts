@@ -8,7 +8,13 @@ import { photoeyeGeometry } from "./oip/parts/photoeye";
 import { rollerGeometry } from "./oip/parts/roller";
 
 const r = (x: number) => Math.round(x * 1e4) / 1e4;
-const rollerParams = { length: 2, width: 0.6, frameHeight: 0.17, standHeight: 0.8 };
+const rollerParams = {
+  length: 2,
+  width: 0.6,
+  frameHeight: 0.17,
+  standHeight: 0.8,
+  guards: [true, true] as const,
+};
 /** The leg pieces and bolts a roller conveyor's stands are drawn from, at a stand height. */
 const stands = (standHeight: number) =>
   rollerGeometry(createGeometryBuilder(), { ...rollerParams, standHeight })

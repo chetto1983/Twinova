@@ -1,14 +1,14 @@
 <script lang="ts">
   // The 3D view of a project: each instance as OIP's generator draws its family (families.ts), or as its stand-in
   // shape sized from its parameters (project.ts, shapeOf), at its pose, the selected one highlighted; a chain
-  // transfer's deck at its lift, and the cartons of the running line at the poses the physics gives them (engine.rs
-  // `Snapshot.transfers`, `Snapshot.cartons`).
+  // transfer's deck at its lift, a belt's fabric moved by its travel, and the cartons of the running line at the poses
+  // the physics gives them (engine.rs `Snapshot.transfers`, `Snapshot.conveyors`, `Snapshot.cartons`).
   import * as THREE from "three";
   import { drawnOf } from "./families";
   import { materialOf } from "./materials";
   import { toObject } from "./meshes";
   import { frame, shapeOf, type ProjectView } from "./project";
-  import { CARTON_SIZE_M, type Carton, type Snapshot } from "./snapshot";
+  import { CARTON_SIZE_M, scrollOffset, type Carton, type Snapshot } from "./snapshot";
   import Viewport from "./Viewport.svelte";
 
   let {
@@ -17,12 +17,14 @@
     theme,
     cartons,
     transfers,
+    conveyors,
   }: {
     project: ProjectView;
     selected: string | null;
     theme: string;
     cartons: Carton[];
     transfers: Snapshot["transfers"];
+    conveyors: Snapshot["conveyors"];
   } = $props();
 
   const scene = new THREE.Scene();
@@ -35,6 +37,8 @@
   const meshes = new Map<number, THREE.Mesh>();
   /** Each chain transfer's deck group, its height when down, and its stroke. */
   const decks = new Map<string, { group: THREE.Group; down: number; stroke: number }>();
+  /** Each conveyor's scrolling textures, and their tiles per metre of travel. */
+  const fabrics = new Map<string, { map: THREE.Texture; tiles: number }[]>();
   const loader = new THREE.TextureLoader();
   let requestRender = $state(() => {});
   const view = $derived(frame(project.instances));
@@ -58,6 +62,7 @@
     });
     content.clear();
     decks.clear();
+    fabrics.clear();
   }
 
   function build(): void {
@@ -70,11 +75,15 @@
       if (drawn) {
         const group = new THREE.Group();
         group.position.set(...drawn.offset);
+        if (drawn.turn) group.quaternion.set(...drawn.turn);
         for (const part of drawn.parts) {
           const material = materialOf(part.material, loader);
           if (lit) {
             material.emissive = token("--scene-selected");
             material.emissiveIntensity = 0.6;
+          }
+          if (part.scroll && material.map) {
+            fabrics.set(instance.id, [...(fabrics.get(instance.id) ?? []), { map: material.map, tiles: part.scroll }]);
           }
           const mesh = toObject(part, material);
           mesh.castShadow = true;
@@ -121,6 +130,14 @@
     for (const t of transfers) {
       const deck = decks.get(t.id);
       if (deck) deck.group.position.y = deck.down + t.lift * deck.stroke;
+    }
+    requestRender();
+  });
+
+  $effect(() => {
+    void [project, selected];
+    for (const c of conveyors) {
+      for (const fabric of fabrics.get(c.id) ?? []) fabric.map.offset.x = scrollOffset(c.travel, fabric.tiles);
     }
     requestRender();
   });

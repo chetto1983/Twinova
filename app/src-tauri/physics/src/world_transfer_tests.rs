@@ -329,8 +329,8 @@ fn a_line_with_a_transfer_gives_equal_bits_on_every_platform() {
     };
     let first = fingerprint();
     assert_eq!(first, fingerprint());
-    // Pinned on Linux x86-64 (2026-11-10), equal in dev and release; the windows-2022 CI job runs this test too.
-    assert_eq!(first, 0x417f_321f_68a7_ccb0, "{first:#018x}");
+    // Pinned on Linux x86-64 (2026-11-10, Coulomb friction), equal in dev and release; the windows-2022 CI job runs this test too.
+    assert_eq!(first, 0x88a2_f689_560c_76e4, "{first:#018x}");
 }
 
 /// Two transfers on one roller conveyor, the second carrying to the right: only the raised one takes the carton, at
@@ -373,15 +373,21 @@ fn each_transfer_answers_for_its_own_deck_and_side() {
     w.set_transfer(0, 0.0, false);
     until_x(&mut w, 1.85);
     let mut travel = 0;
-    let mut lateral = 0.0f32;
+    // The carry speed once the carton has settled to it, two thirds across (its front leaves at z = 0.15): it climbs
+    // through the lift's throw and overshoots to 0.51 before settling (measured 2026-11-10, Coulomb friction).
+    let mut lateral = None;
     for _ in 0..3000 {
         travel = (travel + 1).min(RAISE_MS);
         w.set_transfer(1, travel as Real / RAISE_MS as Real, true);
         w.step();
         if let Some(c) = w.cartons.first() {
-            lateral = lateral.max(w.world.bodies[c.1].linvel().z);
+            let body = &w.world.bodies[c.1];
+            if lateral.is_none() && body.translation().z >= 0.1 {
+                lateral = Some(body.linvel().z);
+            }
         }
     }
+    let lateral = lateral.expect("carried right");
     assert_eq!((w.delivered(0), w.delivered(1)), (0, 1));
     assert!(
         (lateral - 0.5).abs() < 0.01,

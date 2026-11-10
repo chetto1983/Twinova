@@ -1,6 +1,7 @@
 // Copied from Open Industry Project, src/core/geometry/geometryBuilder.ts at 1e7488c (MIT, Copyright (c) 2024-present
 // Automation Standard LLC and Contributors; THIRD_PARTY_NOTICES.md). Twinova keeps the operations its generators use:
-// loft, cylinder and subtract are left out, and sweep, fillet and arc come with the belt in 4.4b.
+// loft, cylinder and subtract are left out, and so is fillet, which only a bent belt path uses (4.4b draws straight
+// belts and curves).
 //
 // The GeometryBuilder implementation - the `g` handed to a part's geometry() (docs/procedural-geometry.md, Tier 2): a
 // curated set of mid-level constructive ops a part composes into a portable MeshDescription.
@@ -13,6 +14,7 @@ import type { GeometryBuilder, MeshDescription, SurfaceBuilder } from "./types";
 import { GeometryBudgetError, MAX_DESCRIPTION_VERTICES } from "./mesh";
 import type { Vec3 } from "./mesh";
 import { bevelBoxDescription, extrudeDescription, latheDescription, transformDescription } from "./shapes";
+import { sweepProfileAlongPath } from "./sweep";
 
 /** Concatenate descriptions into one mesh, re-basing each part's indices onto the running vertex offset.
  *  Budget-checked against the combined vertex count (a merge can blow the cap even when each piece is fine). */
@@ -68,6 +70,19 @@ function boxDescription(
 /** Build a fresh GeometryBuilder. Stateless - a new one per geometry() call keeps the op surface pure. */
 export function createGeometryBuilder(): GeometryBuilder {
   return {
+    sweep(profile, path, opts): MeshDescription {
+      // sweepProfileAlongPath already validates the profile/station counts and enforces the vertex budget.
+      return sweepProfileAlongPath(profile, path, opts);
+    },
+    arc(center, radius, start, end, segments = 8): ReadonlyArray<Vec3> {
+      const seg = Math.max(1, Math.floor(segments));
+      const out: Vec3[] = [];
+      for (let i = 0; i <= seg; i++) {
+        const a = start + (end - start) * (i / seg);
+        out.push([center[0] + radius * Math.cos(a), center[1] + radius * Math.sin(a), center[2]]);
+      }
+      return out;
+    },
     box(size, center): MeshDescription {
       return boxDescription(size, center);
     },

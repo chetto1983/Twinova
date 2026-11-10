@@ -3,6 +3,8 @@
 //! and the state fingerprint can be compared between Linux and Windows.
 
 pub mod layout;
+pub mod path;
+mod surfaces;
 pub mod world;
 
 pub use layout::{Layout, layout};

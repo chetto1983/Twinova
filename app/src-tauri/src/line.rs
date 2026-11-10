@@ -3,8 +3,9 @@
 //! 1. the physics step (`twinova_physics::World`);
 //! 2. the native models write the controller's inputs: diffuse sensors, sink counters, the feedback of a belt
 //!    without a behaviour;
-//! 3. the field cycle, which reads the controller's outputs and writes its inputs, the belts' motors and the chain
-//!    transfers' lift (spec 2026-11-10-diverter-line-design.md);
+//! 3. the field cycle, which reads the controller's outputs and writes its inputs, the conveyors' surface speeds
+//!    (spec 2026-11-10-curves-belt-options-design.md) and the chain transfers' lift (spec
+//!    2026-11-10-diverter-line-design.md);
 //! 4. the controller's scan, when its period is due.
 
 use trust_runtime::value::Value;
@@ -14,7 +15,7 @@ use twinova_project::Project;
 use crate::controller::Controller;
 use crate::field::Field;
 
-/// A belt's signals, and whether its motor comes from its behaviour or straight from the controller.
+/// A conveyor's signals, and whether its speed comes from its behaviour or its motor straight from the controller.
 struct BeltIo {
     instance: String,
     run: Option<String>,
@@ -172,17 +173,21 @@ impl Line {
         }
         for k in 0..self.belts.len() {
             let belt = &self.belts[k];
-            let motor = match (&self.field, belt.behaviour) {
-                (Some(field), true) => field
-                    .native(&belt.instance, "motor")
-                    .is_some_and(|v| is_true(&v)),
-                _ => self.output(&belt.run)?,
-            };
-            if !belt.behaviour {
-                let running = belt.running.clone();
-                self.input(&running, Value::Bool(motor))?;
+            match (&self.field, belt.behaviour) {
+                (Some(field), true) => {
+                    let Some(Value::Real(speed)) = field.native(&belt.instance, "surface_speed")
+                    else {
+                        unreachable!("Build checked {}.surface_speed : REAL", belt.instance);
+                    };
+                    self.world.set_belt_speed(k, speed);
+                }
+                _ => {
+                    let (run, running) = (belt.run.clone(), belt.running.clone());
+                    let motor = self.output(&run)?;
+                    self.input(&running, Value::Bool(motor))?;
+                    self.world.set_belt_running(k, motor);
+                }
             }
-            self.world.set_belt_running(k, motor);
         }
         if let Some(field) = &self.field {
             for (k, instance) in self.transfers.iter().enumerate() {

@@ -221,3 +221,21 @@ fn the_line_with_its_chain_transfer_runs_alike_under_step_x1_and_as_fast_as_poss
         end
     );
 }
+
+/// A REAL signal reads as its number, not as the bits of the double word it travels in (4.4b's drive feedback).
+#[test]
+fn a_real_signal_reads_as_a_number() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/curve_line");
+    let mut engine = Engine::new(&open_folder(&dir).unwrap().opened.project)
+        .unwrap()
+        .0;
+    let s = run_for(&mut engine, 1).pop().unwrap();
+    assert_eq!(signal(&s, "curve_a.velocity"), "30");
+    let travel: f32 = signal(&s, "curve_a.encoder").parse().unwrap();
+    assert!((travel - 0.5).abs() < 0.011, "{travel}");
+    assert_eq!(
+        signal(&s, "sink.count"),
+        "0",
+        "a DINT still reads as an integer"
+    );
+}

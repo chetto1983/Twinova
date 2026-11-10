@@ -99,8 +99,8 @@ describe("the families OIP's generators draw", () => {
   });
 
   it("leaves the other families, and an unmounted device, to their stand-ins", () => {
-    expect(drawn("belt_a")).toBeNull();
     expect(drawn("sink_ok")).toBeNull();
+    expect(drawn("source")).toBeNull();
     const loose = { ...project, mounts: [] };
     const transfer = scene.instances.find((i) => i.id === "chain_transfer")!;
     expect(drawnOf(loose, transfer)).toBeNull();

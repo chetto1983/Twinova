@@ -1,6 +1,5 @@
 // Copied from Open Industry Project, src/core/geometry/meshDescription.ts at 1e7488c (MIT, Copyright (c) 2024-present
 // Automation Standard LLC and Contributors; THIRD_PARTY_NOTICES.md): the vertex budget every geometry op is capped by.
-// The sweeps come with the belt in 4.4b.
 
 /** Hard ceiling on one description's vertices, the geometry analogue of the determinism guard and the
  *  per-tick spawn caps: a runaway geometry function can't allocate without bound. Tune as real parts arrive. */
