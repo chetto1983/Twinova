@@ -58,16 +58,30 @@ As 4.4b.
 
 ### Task 1 — The Run loop's pace
 
-- [ ] Test first: the rest of a frame after a tick, and none after an overrun.
-- [ ] Implement; verify with the command tests.
+- [x] Test first: the rest of a frame after a tick, and none after an overrun.
+- [x] Implement; verify with the command tests.
+  - *Delivered:* `rest()` and the loop's sleep. The command test that measures the frame between snapshots reads
+    58 ms on the old sleep (it fails) and 33 ms now.
 
 ### Task 2 — The drive feedback, native
 
-- [ ] Tests first: velocity, encoder and pulse from the native model (4.4b's figures); a bound native signal is not
+- [x] Tests first: velocity, encoder and pulse from the native model (4.4b's figures); a bound native signal is not
   in the field's image; the curve line reads 30 and its travel.
-- [ ] The fixture script; `drive.rs`, the field and the line.
-- [ ] Verify: Rust gates, mutants on the changed code.
+- [x] The fixture script; `drive.rs`, the field and the line.
+- [x] Verify: Rust gates, mutants on the changed code.
+  - *Delivered:*
+    - `drive.rs` with OIP's `publishDrive`; `migrate_fixtures_4_4b1.py` (scratchpad) rewrote every conveyor block;
+    - `field.rs` `block_signals` keeps the native signals out of the field's image and copies;
+    - the line writes the feedback after the physics step, also for a conveyor without a behaviour.
+  - *Found by the tests:* through an f32, a pitch of exactly one millisecond's travel missed pulses, so the pitch
+    stays the parameter's f64.
+  - *Order:* `drive.rs` and its tests were written together; the line's tests after the line's code.
+  - *Tests:* six 4.4b tests failed, all of the kind this plan names. Two moved to the native model with the same
+    figures, four are mechanical (the verification file lists them).
+  - *Mutants:* 59 tested, no survivor.
 
 ### Task 3 — Acceptance
 
-- [ ] E2E on Linux; the release measurement and soak; verification, ROADMAP, CHANGELOG.
+- [x] E2E on Linux; the release measurement and soak; verification, ROADMAP, CHANGELOG.
+  - *Delivered:* E2E 11/11, 42/42, 4/4 and 3/3 on Linux; 63 → 50 µs and 105 → 79 µs per simulated millisecond; the
+    soak at 10.9× and 8.0× real time; verification `2026-11-10-run-pace-native-feedback.md`.
