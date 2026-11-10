@@ -105,6 +105,22 @@ What this does not prove:
      `fillet`, `arc` come back), and `_shared/guardArc.js`;
    - the belt and roller guards follow their parameters.
 
+## Amended while writing the format (Task 2, 2026-11-10)
+
+- **A curve's frame.** A curve's origin is its entry, on the centreline, at the surface's height like a belt's tail.
+  It runs along local +x for the entry stub (0.085 m), turns about a centre at inner_radius + width / 2 to its left
+  (−z) or, with `turn_right`, to its right (+z), and leaves along the exit stub. A default 90° left curve placed at the
+  origin hands over at (0.985, 0, −0.985).
+- **The ramps default to 0 s** (instant), not OIP's 0.5 s, so the 4.3/4.4a lines keep their timing. The other drive
+  defaults are OIP's: `speed_at_30` 0.5 m/s (0.01–10), `pulse_pitch` one inch, 0.0254 m (0.00127–2.54).
+- **A required signal must be bound.** The format refuses an instance that leaves a non-optional signal unbound
+  ("… needs it bound to an address"). Until now only truST's compile caught it, at Build.
+- **The chain transfer's exit side has no guard.** Guard openings are out of scope, so the line fixture's roller has
+  `left_guard` FALSE, the side its transfer carries out on; Build will refuse a guard across a transfer's exit
+  (Task 3).
+- **Until Task 4, the curves' blocks are the straight conveyor's** (`motor : BOOL`), and the optional drive signals
+  stay unbound in the fixtures.
+
 ## Acceptance of 4.4b
 
 1. **Curves:**

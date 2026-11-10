@@ -78,11 +78,19 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
 
 ### Task 2 — Format: curves, options, optional signals
 
-- [ ] Tests first:
+- [x] Tests first:
   - the curve definitions and the new parameters validate;
   - an optional signal may stay unbound; a required one may not.
-- [ ] Fixtures: the curve families; the belt and roller parameters; a line `belt → curve → belt` with guards.
-- [ ] Verify: crate tests and corpus.
+- [x] Fixtures: the curve families; the belt and roller parameters; a line `belt → curve → belt` with guards.
+- [x] Verify: crate tests and corpus.
+  - *Delivered:*
+    - `migrate_fixtures_4_4b.py` (scratchpad) appends the new parameters and optional signals to every pinned belt
+      and roller, valid and invalid, and writes `curve_line`: belt A, a left belt curve, belt B, a right roller
+      curve, belt C. The corpus confirms the encoder writes the same bytes;
+    - the format refuses an unbound required signal;
+    - two frontend tests listed the belt fixture's parameters and signals in full; their expectations gain the new
+      ones (the inspector is unchanged);
+    - the decisions are in the spec's Task 2 amendment.
 
 ### Task 3 — Physics: curves, guards, incline, skew
 
