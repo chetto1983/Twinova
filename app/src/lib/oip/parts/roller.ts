@@ -46,7 +46,7 @@ const BAND_CORD_PER_R = 1 / 5;
 const BAND_INSET_PER_R = 5 / 6;
 const BAND_SPACING_PER_R = 3 / 4;
 
-interface Roller {
+export interface Roller {
   x: number;
   z: number;
   yaw: number;
@@ -128,7 +128,8 @@ function layoutRollerBands(
 }
 
 /** The bed's rollers: tubes, two axle stubs each, and the drive bands of a powered bed. */
-function rollerBed(g: GeometryBuilder, rollers: readonly Roller[], fullAxle: number): MeshPart[] {
+/** The tubes and their axle stubs, the rollers {x, z, yaw, length} in bed order a radius under the surface. */
+export function rollerBed(g: GeometryBuilder, rollers: readonly Roller[]): MeshPart[] {
   const R = ROLLER_R;
   const y = -R; // the 'roller' link: the axles a radius under the conveying surface
   const sxy = R / ROLLER_TEMPLATE_R;
@@ -149,6 +150,16 @@ function rollerBed(g: GeometryBuilder, rollers: readonly Roller[], fullAxle: num
     stubs.push({ position: [r.x + ax * so, y, r.z + az * so], quaternion: q, scale: ss });
     stubs.push({ position: [r.x - ax * so, y, r.z - az * so], quaternion: q, scale: ss });
   }
+  return [
+    { desc: rollerTemplate(g), material: "roller", instances: bodies },
+    { desc: cylinderTemplate(g, 16), material: "roller", instances: stubs },
+  ];
+}
+
+/** A powered bed's drive bands between neighbouring rollers. */
+function rollerBands(g: GeometryBuilder, rollers: readonly Roller[], fullAxle: number): MeshPart[] {
+  const R = ROLLER_R;
+  const y = -R;
   const laid = layoutRollerBands(rollers, fullAxle, R);
   const lr = R + laid.cord * 0.4; // seated on the tube: the cord's inner edge just under the facet flats
   const arcs: Instance[] = [];
@@ -164,8 +175,6 @@ function rollerBed(g: GeometryBuilder, rollers: readonly Roller[], fullAxle: num
     strands.push({ position: [mx, y - lr, mz], quaternion: yawQuat(yaw), scale: sc });
   }
   return [
-    { desc: rollerTemplate(g), material: "roller", instances: bodies },
-    { desc: cylinderTemplate(g, 16), material: "roller", instances: stubs },
     { desc: bandArcTemplate(g, lr, laid.cord / 2), material: "band", instances: arcs },
     { desc: bandStrandTemplate(g), material: "band", instances: strands },
   ];
@@ -209,5 +218,6 @@ export function rollerGeometry(g: GeometryBuilder, p: RollerParams): MeshPart[] 
     dir: x <= p.length / 2 ? 1 : -1,
   }));
   const legs = stands(g, p.width / 2, Math.max(0.05, p.standHeight - frameDepth), frameDepth, at);
-  return [...rollerBed(g, layoutRollers(p), p.width - 0.004), ...frame(g, p), ...legs];
+  const rollers = layoutRollers(p);
+  return [...rollerBed(g, rollers), ...rollerBands(g, rollers, p.width - 0.004), ...frame(g, p), ...legs];
 }

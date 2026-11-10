@@ -7,6 +7,7 @@ export type V3 = readonly [number, number, number];
 export type Quat = readonly [number, number, number, number];
 
 export type Material =
+  | "belt"
   | "frame"
   | "chainFrame"
   | "support"

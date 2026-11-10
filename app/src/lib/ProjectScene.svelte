@@ -70,6 +70,7 @@
       if (drawn) {
         const group = new THREE.Group();
         group.position.set(...drawn.offset);
+        if (drawn.turn) group.quaternion.set(...drawn.turn);
         for (const part of drawn.parts) {
           const material = materialOf(part.material, loader);
           if (lit) {
