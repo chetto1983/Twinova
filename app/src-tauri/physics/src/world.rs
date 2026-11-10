@@ -62,6 +62,10 @@ pub struct World {
     sink_walls: Vec<Option<ColliderHandle>>,
     /// Each conveyor's surfaces, by index into the hook's, and how each moves its load.
     surfaces: Vec<Vec<(usize, Motion)>>,
+    /// Each conveyor's surface speed as last set, and its travel since the world began (f64, so a long run does not
+    /// drift), for the view's scrolling fabric.
+    speeds: Vec<Real>,
+    travels: Vec<f64>,
     /// Each chain transfer's surface, its deck, a kinematic body, and its lift as last set.
     transfer_surfaces: Vec<usize>,
     decks: Vec<RigidBodyHandle>,
@@ -211,10 +215,25 @@ impl World {
             delivered: vec![0; sinks],
             sink_walls: vec![None; sinks],
             lifts: vec![0.0; decks.len()],
+            speeds: vec![0.0; surfaces.len()],
+            travels: vec![0.0; surfaces.len()],
             surfaces,
             transfer_surfaces,
             decks,
         }
+    }
+
+    pub fn belts(&self) -> usize {
+        self.layout.belts.len()
+    }
+
+    pub fn belt_id(&self, belt: usize) -> &str {
+        &self.layout.belts[belt].id
+    }
+
+    /// How far a conveyor's surface has run along its flow, m: back for a negative speed.
+    pub fn belt_travel(&self, belt: usize) -> f64 {
+        self.travels[belt]
     }
 
     pub fn transfers(&self) -> usize {
@@ -257,6 +276,7 @@ impl World {
 
     /// A conveyor's surface speed, m/s, along its flow (a curve's at its centreline); negative runs it backwards.
     pub fn set_belt_speed(&mut self, belt: usize, speed: Real) {
+        self.speeds[belt] = speed;
         let b = &self.layout.belts[belt];
         for &(index, motion) in &self.surfaces[belt] {
             self.hooks.surface[index] = match motion {
@@ -309,6 +329,9 @@ impl World {
     pub fn step(&mut self) {
         self.world.step_with_events(&self.hooks, &());
         self.t_ns += STEP_NS;
+        for (travel, speed) in self.travels.iter_mut().zip(&self.speeds) {
+            *travel += f64::from(*speed) * (STEP_NS as f64 * 1e-9);
+        }
         for sink in 0..self.layout.sinks.len() {
             if self.sink_walls[sink].is_none() {
                 self.collect(sink);

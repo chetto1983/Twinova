@@ -275,3 +275,26 @@ fn a_conveyor_runs_at_the_speed_its_drive_sets_either_way() {
     run(&mut w, 1000);
     assert!((local(&w).1.x + 0.2).abs() < 0.005, "{:?}", local(&w).1);
 }
+
+/// The view scrolls a belt's fabric by its travel: the speed it ran at, each millisecond, either way.
+#[test]
+fn a_conveyor_counts_its_surface_travel() {
+    let mut w = World::new(Layout {
+        belts: vec![
+            belt("a", 0.0, 2.0, 0.5, true),
+            belt("b", 2.0, 2.0, 0.5, true),
+        ],
+        ..Layout::default()
+    });
+    assert_eq!((w.belts(), w.belt_id(1)), (2, "b"));
+    w.set_belt_speed(0, 0.5);
+    run(&mut w, 1000);
+    w.set_belt_speed(0, -0.25);
+    run(&mut w, 400);
+    assert!(
+        (w.belt_travel(0) - 0.4).abs() < 1e-9,
+        "{}",
+        w.belt_travel(0)
+    );
+    assert_eq!(w.belt_travel(1), 0.0, "a stopped belt does not run");
+}

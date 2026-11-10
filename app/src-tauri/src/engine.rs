@@ -26,6 +26,12 @@ pub struct TransferState {
     pub lift: f32,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ConveyorState {
+    pub id: String,
+    pub travel: f64,
+}
+
 /// A scene signal or a panel button with its value in the controller's image, for the I/O panel.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct SignalState {
@@ -41,6 +47,8 @@ pub struct Snapshot {
     pub sinks: Vec<SinkState>,
     /// Each chain transfer's lift, 0 down to 1 up, for the view to raise its chains.
     pub transfers: Vec<TransferState>,
+    /// Each conveyor's surface travel, m, for the view to scroll its fabric.
+    pub conveyors: Vec<ConveyorState>,
     pub signals: Vec<SignalState>,
     /// M3's jam alarm, when the program declares `jam`.
     pub jam: Option<bool>,
@@ -203,6 +211,12 @@ impl Engine {
                 .map(|k| TransferState {
                     id: world.transfer_id(k).to_string(),
                     lift: world.transfer_lift(k),
+                })
+                .collect(),
+            conveyors: (0..world.belts())
+                .map(|k| ConveyorState {
+                    id: world.belt_id(k).to_string(),
+                    travel: world.belt_travel(k),
                 })
                 .collect(),
             signals: self
