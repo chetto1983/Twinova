@@ -221,8 +221,8 @@ fn a_mistake_in_a_block_is_reported_against_its_file_and_line() {
         .unwrap();
     assert_eq!(
         error,
-        "field runtime: expected expression at components/twinova.belt@1.st:34\n\
-         expected ';' at components/twinova.belt@1.st:35"
+        "field runtime: expected expression at components/twinova.belt@1.st:37\n\
+         expected ';' at components/twinova.belt@1.st:38"
     );
 }
 

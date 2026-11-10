@@ -10,11 +10,11 @@
   ],
   "files": {
     "components/twinova.belt@1.json": "737a6c3dec0c1bc3782dc9536d5f6915f31aae153503f53fae2b448ca994b5d5",
-    "components/twinova.belt@1.st": "f423975e01d915213a271a82fcd32c6029839eea5d850c2c9435c98cfbe3c280",
+    "components/twinova.belt@1.st": "966946535d0b91db84349a7916819170f5c0e8866d82698265636eb4d99c6e76",
     "components/twinova.chain_transfer@1.json": "c3478d4a7b05df7087d409a14224f0735696dd664912681b85046cca1505fe4c",
     "components/twinova.chain_transfer@1.st": "5737f5d2966dc1ba7d03d5cf2466f6c30981bc8652ccbe64b1d2ea05358d217f",
     "components/twinova.roller@1.json": "e73639d40e788052454d393ae45cd2e12a531d6d0fa2d5e63d156f43cff417b1",
-    "components/twinova.roller@1.st": "ee616d1500e47f3e24f9a176c9613d17ef7da82290fde6c754410c502f6bf3e5",
+    "components/twinova.roller@1.st": "db7cd94e316e6129a61cfb4ff78d14fff00ad6f94359632a68b2f8675391c34e",
     "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
     "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
     "components/twinova.source@1.json": "c41dfb89fd394067b9e71785f51d437262c4625afe95734049d3d75edac2e18e",

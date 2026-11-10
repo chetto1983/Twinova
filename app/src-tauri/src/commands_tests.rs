@@ -64,7 +64,7 @@ fn a_failed_build_keeps_the_running_line_and_the_project_sources() {
     let belt = behaviours.get_mut("twinova.belt@1").unwrap();
     *belt = belt.replace("    target := speed_ref;", "    target := ;");
     let error = build(app.state(), app.state(), program.clone(), behaviours).unwrap_err();
-    assert!(error.contains("components/twinova.belt@1.st:34"), "{error}");
+    assert!(error.contains("components/twinova.belt@1.st:37"), "{error}");
     assert_eq!(
         step(app.state()).unwrap().time_ms,
         20,
