@@ -6,5 +6,5 @@ examine_globs = [
   "src/engine.rs", "src/line.rs", "src/field.rs", "src/controller.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs",
-  "physics/src/world.rs", "physics/src/layout.rs",
+  "physics/src/world.rs", "physics/src/layout.rs", "physics/src/path.rs", "physics/src/surfaces.rs",
 ]

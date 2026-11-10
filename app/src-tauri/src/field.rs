@@ -22,8 +22,10 @@ const PROGRAM: &str = "F";
 /// The variables a family's native model reads from its behaviour block, by generator.
 fn natives(generator: &str) -> &'static [(&'static str, &'static str)] {
     match generator {
-        "twinova.belt/1" => &[("motor", "BOOL")],
-        "twinova.roller/1" => &[("motor", "BOOL")],
+        "twinova.belt/1"
+        | "twinova.roller/1"
+        | "twinova.belt_curve/1"
+        | "twinova.roller_curve/1" => &[("motor", "BOOL")],
         "twinova.chain_transfer/1" => &[("lift", "REAL"), ("raised", "BOOL")],
         _ => &[],
     }

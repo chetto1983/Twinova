@@ -1,30 +1,29 @@
 //! The line's physics (spec 2026-11-09-component-behaviour-design.md, "Transport with physics"; research 15 and 16):
-//! products are rigid bodies in Rapier, and a belt is a fixed box whose contacts get a tangent velocity, Rapier's
-//! documented mechanism for conveyor belts (`SolverContact::tangent_velocity`). Nothing hands a product from one belt
-//! to the next: contacts and friction do, as in Open Industry Project and NX MCD. One step is 1 ms of virtual time.
+//! products are rigid bodies in Rapier, and a conveyor is fixed boxes whose contacts get a surface velocity
+//! (`surfaces.rs`), straight or curved, with its guards (`path.rs`). Nothing hands a product from one conveyor to the
+//! next: contacts and friction do, as in Open Industry Project and NX MCD. One step is 1 ms of virtual time.
 //!
 //! Translated from Open Industry Project at `1e7488c` (MIT, Copyright (c) 2024-present Automation Standard LLC and
-//! Contributors; THIRD_PARTY_NOTICES.md): a surface's linear velocity per contact (`src/sim/conveyorContacts.ts`,
-//! `src/sim/deckDrive.ts` `setSurfaceVelocity`), and a moving link as a kinematic body moved before each step
-//! (`src/sim/rigDriver.ts`, `MoveKinematic`), here for the chain transfer's lift. OIP's ghost-contact gates and its
-//! friction coupling are not translated: they patch Jolt, and Rapier passes these tests without them (research 15).
+//! Contributors; THIRD_PARTY_NOTICES.md): a deck's surface velocity (`src/sim/deckDrive.ts` `setSurfaceVelocity`,
+//! and a skewed roller's in `examples/parts/roller-conveyor/behavior.ts`), and a moving link as a kinematic body moved
+//! before each step (`src/sim/rigDriver.ts`, `MoveKinematic`), here for the chain transfer's lift. OIP's ghost-contact
+//! gates and its friction coupling are not translated: they patch Jolt, and Rapier passes these tests without them
+//! (research 15).
 
 use rapier3d::prelude::*;
 use serde::Serialize;
 
-use crate::layout::{Exit, Layout};
+use crate::layout::{Belt, Exit, Layout};
+use crate::path::{Motion, Piece, deck, guards};
+#[cfg(test)]
+use crate::surfaces::surface_of_pair;
+use crate::surfaces::{CARTON_FRICTION, Drive, Surfaces, surface};
 
 pub const STEP_NS: i64 = 1_000_000;
 const STEP_S: Real = 0.001;
-/// A standard carton's friction. Rapier has no geometric mean, so pairs multiply, and a surface's collider friction
-/// is its carton grip divided by this (OIP: surfaceFrictionFromCarton).
-const CARTON_FRICTION: Real = 0.5;
 /// The products of 4.3: M3's 0.3 m carton.
 pub const CARTON_HALF: Real = 0.15;
 const CARTON_DENSITY: Real = 100.0;
-/// One solid deck per belt, as deep as OIP's frame (CONVEYOR_BODY_THICKNESS): a thin slab over a housing leaves a
-/// notch cargo catches on at junctions.
-const BELT_THICKNESS: Real = 0.17;
 /// OIP's cargo edge rounding (bodyFactory.ts makeBoxShape): min(0.02 m, 0.4 × the smallest half extent).
 const CARTON_ROUNDING: Real = 0.02;
 const WALL_HEIGHT: Real = 0.4;
@@ -37,55 +36,6 @@ const TRANSFER_DECK: Real = 0.06;
 const TRANSFER_BELOW: Real = 0.03;
 /// OIP's chains grip as rollers (`conveyor.surface: "roller"`, `CONVEYOR_FRICTION`).
 const CHAIN_GRIP: Real = 0.35;
-
-/// Surface velocities for the contact hook, belts first and then chain transfers; a surface's collider carries its
-/// index + 1 in its user data.
-///
-/// No seam gate. OIP filters shallow sideways contacts at junctions (conveyorContacts.ts), and the Rapier probe with
-/// sharp boxes and a thin deck needed it (research 15). With OIP's own carton and deck (rounded edges, one deep solid
-/// deck), the tests pass the same with and without it, so it was dropped ("baseline or drop", 2026-11-09). Measured
-/// on straight belts butted end to end at 1 ms; curves and coarser steps may need it again.
-struct Surfaces {
-    surface: Vec<Vector>,
-}
-
-/// A surface's deck: its grip against a carton, and its index for the contact hook.
-fn surface(half: Vector, grip: Real, index: usize) -> ColliderBuilder {
-    ColliderBuilder::cuboid(half.x, half.y, half.z)
-        .friction(grip / CARTON_FRICTION)
-        .friction_combine_rule(CoefficientCombineRule::Multiply)
-        .user_data(index as u128 + 1)
-        .active_hooks(ActiveHooks::MODIFY_SOLVER_CONTACTS)
-}
-
-/// The surface of a contact pair, and whether it is collider 2: the tangent velocity is that of collider 2 relative to
-/// collider 1, so a belt as collider 2 gives the opposite sign (measured with the probe, research 15).
-fn surface_of_pair(user1: u128, user2: u128) -> Option<(usize, bool)> {
-    match (user1, user2) {
-        (0, 0) => None,
-        (belt, 0) => Some((belt as usize - 1, false)),
-        (_, belt) => Some((belt as usize - 1, true)),
-    }
-}
-
-impl PhysicsHooks for Surfaces {
-    fn modify_solver_contacts(&self, ctx: &mut ContactModificationContext) {
-        let pair = surface_of_pair(
-            ctx.colliders[ctx.collider1].user_data,
-            ctx.colliders[ctx.collider2].user_data,
-        );
-        if let (Some((belt, second)), Some(m)) = (pair, ctx.rigid_mut()) {
-            let v = if second {
-                -self.surface[belt]
-            } else {
-                self.surface[belt]
-            };
-            for c in m.solver_contacts.iter_mut() {
-                c.tangent_velocity = v;
-            }
-        }
-    }
-}
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Carton {
@@ -110,7 +60,10 @@ pub struct World {
     delivered: Vec<u64>,
     /// The wall each blocked sink puts at its exit.
     sink_walls: Vec<Option<ColliderHandle>>,
-    /// Each chain transfer's deck, a kinematic body, and its lift as last set.
+    /// Each conveyor's surfaces, by index into the hook's, and how each moves its load.
+    surfaces: Vec<Vec<(usize, Motion)>>,
+    /// Each chain transfer's surface, its deck, a kinematic body, and its lift as last set.
+    transfer_surfaces: Vec<usize>,
     decks: Vec<RigidBodyHandle>,
     lifts: Vec<Real>,
 }
@@ -120,9 +73,10 @@ fn exit_wall(layout: &Layout, exit: Exit) -> ColliderBuilder {
     let (pose, at, half) = match exit {
         Exit::End(k) => {
             let b = &layout.belts[k];
-            let at = Vector::new(b.length + 0.01, b.height + WALL_HEIGHT / 2.0, 0.0);
+            let (frame, length) = exit_frame(b);
+            let at = Vector::new(length + 0.01, b.height + WALL_HEIGHT / 2.0, 0.0);
             (
-                b.pose,
+                frame,
                 at,
                 Vector::new(0.01, WALL_HEIGHT / 2.0, b.width / 2.0),
             )
@@ -142,11 +96,32 @@ fn exit_wall(layout: &Layout, exit: Exit) -> ColliderBuilder {
     ColliderBuilder::cuboid(half.x, half.y, half.z).position(pose * Pose::from_translation(at))
 }
 
+/// A frame along which a conveyor's exit lies, and how far: a straight conveyor's own, at its length; a curve's exit
+/// stub tip.
+fn exit_frame(b: &Belt) -> (Pose, Real) {
+    match b.arc {
+        None => (b.pose, b.length),
+        Some(arc) => (b.pose * arc.end(b.width), 0.0),
+    }
+}
+
 /// How far along its host, from the deck's centre, a chain transfer's side exit reaches: the deck, and a carton that
 /// only overlaps it, as a chute beside the transfer catches what the chains drag off (measured 2026-11-10: with the
 /// deck's own span, a queue standing over a raised transfer spilled the cartons it half carried onto the floor).
 fn side_reach(t: &crate::layout::Transfer) -> Real {
     t.along / 2.0 + CARTON_HALF
+}
+
+/// A deck's surface velocity in its own frame. Skewed rollers drive along their normal, the flow turned by the skew at
+/// speed / cos(skew), so the throughput stays `speed` while the load drifts sideways at speed · tan(skew) (OIP
+/// `roller-conveyor/behavior.ts`).
+fn along(speed: Real, skew: Real) -> Vector {
+    if skew == 0.0 {
+        return Vector::new(speed, 0.0, 0.0);
+    }
+    let (sin, cos) = skew.sin_cos();
+    let magnitude = speed / cos;
+    Vector::new(cos * magnitude, 0.0, -sin * magnitude)
 }
 
 /// The sign of a chain transfer's side along its host's z.
@@ -179,22 +154,26 @@ impl World {
         let mut hooks = Surfaces {
             surface: Vec::new(),
         };
+        let mut surfaces = Vec::new();
         for (i, belt) in layout.belts.iter().enumerate() {
-            let centre = Vector::new(belt.length / 2.0, belt.height - BELT_THICKNESS / 2.0, 0.0);
-            world.insert_collider(
-                surface(
-                    Vector::new(belt.length, BELT_THICKNESS, belt.width) / 2.0,
-                    belt.grip,
-                    i,
-                )
-                .position(belt.pose * Pose::from_translation(centre)),
-                None,
-            );
+            let mut own = Vec::new();
+            for (Piece { pose, half }, motion) in deck(belt) {
+                let index = hooks.surface.len();
+                world.insert_collider(surface(half, belt.grip, index).position(pose), None);
+                hooks.surface.push(Drive::Linear(Vector::ZERO));
+                own.push((index, motion));
+            }
+            surfaces.push(own);
             if belt.closed_exit {
                 world.insert_collider(exit_wall(&layout, Exit::End(i)), None);
             }
-            hooks.surface.push(Vector::ZERO);
+            for Piece { pose, half } in guards(belt) {
+                // Cargo slides along a guard (OIP: "a guard is friction 0").
+                let wall = ColliderBuilder::cuboid(half.x, half.y, half.z).friction(0.0);
+                world.insert_collider(wall.position(pose), None);
+            }
         }
+        let mut transfer_surfaces = Vec::new();
         let mut decks = Vec::new();
         for (k, t) in layout.transfers.iter().enumerate() {
             let host = layout.belts[t.host].pose;
@@ -203,14 +182,13 @@ impl World {
                     .pose(host * Pose::from_translation(deck_centre(&layout, k, 0.0))),
             );
             let half = Vector::new(t.along, TRANSFER_DECK, t.across) / 2.0;
-            world.insert_collider(
-                surface(half, CHAIN_GRIP, layout.belts.len() + k),
-                Some(deck),
-            );
+            let index = hooks.surface.len();
+            world.insert_collider(surface(half, CHAIN_GRIP, index), Some(deck));
             if t.closed_exit {
                 world.insert_collider(exit_wall(&layout, Exit::Side(k)), None);
             }
-            hooks.surface.push(Vector::ZERO);
+            hooks.surface.push(Drive::Linear(Vector::ZERO));
+            transfer_surfaces.push(index);
             decks.push(deck);
         }
         let sources = layout
@@ -233,6 +211,8 @@ impl World {
             delivered: vec![0; sinks],
             sink_walls: vec![None; sinks],
             lifts: vec![0.0; decks.len()],
+            surfaces,
+            transfer_surfaces,
             decks,
         }
     }
@@ -259,17 +239,25 @@ impl World {
         } else {
             Vector::new(t.speed, 0.0, 0.0)
         };
-        self.hooks.surface[self.layout.belts.len() + transfer] = host.rotation * local;
+        self.hooks.surface[self.transfer_surfaces[transfer]] = Drive::Linear(host.rotation * local);
         self.lifts[transfer] = lift;
         let at = host * Pose::from_translation(deck_centre(&self.layout, transfer, lift));
         self.world.bodies[self.decks[transfer]].set_next_kinematic_translation(at.translation);
     }
 
-    /// A belt's motor: its surface runs at the belt's speed while on.
+    /// A belt's motor: its surface runs at the belt's speed while on, a curve's at its centreline.
     pub fn set_belt_running(&mut self, belt: usize, on: bool) {
         let b = &self.layout.belts[belt];
         let speed = if on { b.speed } else { 0.0 };
-        self.hooks.surface[belt] = b.pose.rotation * Vector::new(speed, 0.0, 0.0);
+        for &(index, motion) in &self.surfaces[belt] {
+            self.hooks.surface[index] = match motion {
+                Motion::Along(rotation) => Drive::Linear(rotation * along(speed, b.skew)),
+                Motion::Turn { centre, rate } => Drive::Turn {
+                    centre,
+                    omega: rate * speed,
+                },
+            };
+        }
     }
 
     /// A blocked sink holds products at its exit, against a wall (M3's "outlet blocked").
@@ -346,8 +334,10 @@ impl World {
     fn reached(&self, exit: Exit, carton: RigidBodyHandle) -> bool {
         match exit {
             Exit::End(belt) => {
-                let (b, p) = (&self.layout.belts[belt], self.local(belt, carton));
-                p.x + CARTON_HALF >= b.length
+                let b = &self.layout.belts[belt];
+                let (frame, length) = exit_frame(b);
+                let p = frame.inverse_transform_point(self.world.bodies[carton].translation());
+                p.x + CARTON_HALF >= length
                     && p.z.abs() <= b.width / 2.0
                     && p.y >= b.height - CARTON_HALF
             }
@@ -414,10 +404,12 @@ impl World {
     pub fn sensor(&self, sensor: usize) -> bool {
         let s = &self.layout.sensors[sensor];
         let b = &self.layout.belts[s.belt];
-        let origin =
-            b.pose
-                .transform_point(Vector::new(s.at, b.height + BEAM_HEIGHT, -b.width / 2.0));
-        let dir = b.pose.rotation * Vector::Z;
+        let (frame, at) = match b.arc {
+            None => (b.pose, s.at),
+            Some(arc) => (b.pose * arc.frame(b.width, s.at), 0.0),
+        };
+        let origin = frame.transform_point(Vector::new(at, b.height + BEAM_HEIGHT, -b.width / 2.0));
+        let dir = frame.rotation * Vector::Z;
         self.world
             .cast_ray(
                 &Ray::new(origin, dir),
@@ -469,3 +461,11 @@ mod tests;
 #[cfg(test)]
 #[path = "world_transfer_tests.rs"]
 mod transfer_tests;
+
+#[cfg(test)]
+#[path = "world_curve_tests.rs"]
+mod curve_tests;
+
+#[cfg(test)]
+#[path = "world_options_tests.rs"]
+mod options_tests;

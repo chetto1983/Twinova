@@ -13,6 +13,9 @@ pub(super) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bo
         speed,
         grip: BELT_GRIP,
         closed_exit,
+        arc: None,
+        guards: [false; 2],
+        skew: 0.0,
     }
 }
 
@@ -472,7 +475,7 @@ fn a_belt_carries_the_same_way_whichever_collider_it_is() {
         None,
     );
     let hooks = Surfaces {
-        surface: vec![Vector::new(0.5, 0.0, 0.0)],
+        surface: vec![Drive::Linear(Vector::new(0.5, 0.0, 0.0))],
     };
     for _ in 0..1000 {
         world.step_with_events(&hooks, &());

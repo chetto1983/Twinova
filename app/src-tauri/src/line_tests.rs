@@ -260,3 +260,15 @@ fn no_carton_is_lost_or_duplicated_and_a_blocked_normal_sink_holds_a_finite_queu
     // Belt A, the roller and belt B hold 7 m of 0.3 m cartons at most; the source waits for a free entry.
     assert!(most <= 24, "{most} cartons on the line");
 }
+
+/// The 4.4b curve line: two belts, a left belt curve, a right roller curve and a third belt, each conveyor's motor
+/// from its block, the program running them all; every carton reaches the sink through both curves.
+#[test]
+fn the_curve_line_carries_cartons_through_both_curves_to_the_sink() {
+    let (mut line, _) = Line::build(&fixture("curve_line")).unwrap();
+    // A carton every 2 s from 10 ms, about 10.2 m of path at 0.5 m/s: the first arrives near 20.4 s.
+    run_ms(&mut line, 30_000);
+    let w = line.world();
+    assert_eq!(w.created(), w.delivered(0) + w.cartons().len() as u64);
+    assert!((4..=6).contains(&w.delivered(0)), "{}", w.delivered(0));
+}

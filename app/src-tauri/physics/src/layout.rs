@@ -1,9 +1,12 @@
 //! A project's line as the physics world needs it (spec 2026-11-09-component-behaviour-design.md, "Transport with
-//! physics"; spec 2026-11-10-diverter-line-design.md): straight conveyors (belts and roller conveyors) with their pose
-//! and size, the chain transfers fitted in roller conveyors, the sources and sinks at their exits, the sensors on
-//! their beams. A family this build cannot simulate makes the whole line unrunnable, with its name, as 4.2 requires.
+//! physics"; specs 2026-11-10-diverter-line-design.md and 2026-11-10-curves-belt-options-design.md): conveyors
+//! (belts, roller conveyors and their curves) with their pose, size, guards and skew, the chain transfers fitted in
+//! roller conveyors, the sources and sinks at their exits, the sensors on their beams. A family this build cannot
+//! simulate makes the whole line unrunnable, with its name, as 4.2 requires.
 
 use rapier3d::prelude::{Pose, Real, Rotation, Vector};
+
+use crate::path::arc_length;
 use twinova_project::Project;
 use twinova_project::model::{Connection, Definition, Instance, ParamValue};
 
@@ -11,13 +14,15 @@ use twinova_project::model::{Connection, Definition, Instance, ParamValue};
 /// `src/core/types/base.ts` at `1e7488c`).
 pub const BELT_GRIP: Real = 0.7;
 
-/// A straight conveyor, belt or rollers: one deck with a surface velocity. OIP draws a roller conveyor's rollers only;
-/// its physics is one deck (`examples/parts/roller-conveyor/behavior.ts` at `1e7488c`).
+/// A conveyor, belt or rollers, straight or curved: a deck with a surface velocity. OIP draws a roller conveyor's
+/// rollers only; its physics is one deck (`examples/parts/roller-conveyor/behavior.ts` at `1e7488c`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Belt {
     pub id: String,
-    /// The belt's origin: its entry end, on the floor, x along the flow and y up.
+    /// The belt's origin: its entry end, on the floor, x along the flow and y up. An inclined conveyor's pose is tilted
+    /// about the centre of its surface (OIP `tiltDeg`), so its surface and its velocity follow the slope.
     pub pose: Pose,
+    /// Along the centreline: a curve's stubs and arc.
     pub length: Real,
     pub width: Real,
     /// Height of the running surface above the floor.
@@ -27,6 +32,22 @@ pub struct Belt {
     pub grip: Real,
     /// Whether its exit feeds nothing: products are held there rather than lost (M4.1).
     pub closed_exit: bool,
+    /// A curve's arc; none for a straight conveyor.
+    pub arc: Option<Arc>,
+    /// Its left (−z) and right guards.
+    pub guards: [bool; 2],
+    /// A roller conveyor's skew, in radians: positive drifts the load to its left (OIP `skew`).
+    pub skew: Real,
+}
+
+/// A curve's arc (OIP's curved conveyors).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Arc {
+    pub inner_radius: Real,
+    /// In radians.
+    pub sweep: Real,
+    /// It turns to its right (+z) instead of its left.
+    pub right: bool,
 }
 
 /// OIP's chain transfer (`examples/parts/chain-transfer/` at `1e7488c`): a deck of chains fitted in a roller conveyor,
@@ -75,7 +96,7 @@ pub struct Sink {
 pub struct Sensor {
     pub id: String,
     pub belt: usize,
-    /// Along the belt, from its entry.
+    /// Along the belt, from its entry; on a curve, the angle into its arc, in radians.
     pub at: Real,
     pub range: Real,
 }
@@ -118,6 +139,38 @@ fn pose(inst: &Instance) -> Pose {
     let [x, y, z] = inst.position.map(|v| v as Real);
     let [qx, qy, qz, qw] = inst.rotation.map(|v| v as Real);
     Pose::from_parts(Vector::new(x, y, z), Rotation::from_xyzw(qx, qy, qz, qw))
+}
+
+fn degrees(inst: &Instance, def: &Definition, name: &str) -> Real {
+    (param(inst, def, name) as Real).to_radians()
+}
+
+/// A straight conveyor's pose, tilted by its incline about the centre of its surface, head up for a positive one.
+pub(crate) fn inclined(pose: Pose, length: Real, height: Real, incline: Real) -> Pose {
+    if incline == 0.0 {
+        return pose;
+    }
+    let centre = Vector::new(length / 2.0, height, 0.0);
+    pose * Pose::from_translation(centre)
+        * Pose::from_rotation(Rotation::from_rotation_z(incline))
+        * Pose::from_translation(-centre)
+}
+
+/// Why a roller conveyor cannot carry a chain transfer: it is curved, inclined or skewed, or has a guard across the
+/// transfer's exit.
+fn host_problem(project: &Project, host: &Belt, out_right: bool) -> Option<String> {
+    let inst = project.scene.instances.iter().find(|i| i.id == host.id);
+    let inst = inst.expect("an instance of the layout");
+    let def = definition_of(project, &host.id);
+    if def.generator != "twinova.roller/1" {
+        return Some("which is not a roller conveyor".into());
+    }
+    if param(inst, def, "incline") != 0.0 || host.skew != 0.0 {
+        return Some("which is not level and square: a chain transfer fits a level, unskewed roller conveyor".into());
+    }
+    let (side, name) = if out_right { (1, "right") } else { (0, "left") };
+    host.guards[side]
+        .then(|| format!("whose {name} guard closes the transfer's exit: turn {name}_guard off"))
 }
 
 fn definition_of<'a>(project: &'a Project, instance: &str) -> &'a Definition {
@@ -172,6 +225,8 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                 d.generator.as_str(),
                 "twinova.belt/1"
                     | "twinova.roller/1"
+                    | "twinova.belt_curve/1"
+                    | "twinova.roller_curve/1"
                     | "twinova.chain_transfer/1"
                     | "twinova.source/1"
                     | "twinova.sink/1"
@@ -188,20 +243,34 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
     }
     let mut out = Layout::default();
     for (inst, def) in &instances {
-        let grip = match def.generator.as_str() {
-            "twinova.belt/1" => BELT_GRIP,
-            "twinova.roller/1" => param(inst, def, "friction") as Real,
+        let real = |name| param(inst, def, name) as Real;
+        let (width, height) = (real("width"), real("height"));
+        let (grip, arc) = match def.generator.as_str() {
+            "twinova.belt/1" => (BELT_GRIP, None),
+            "twinova.roller/1" => (real("friction"), None),
+            "twinova.belt_curve/1" | "twinova.roller_curve/1" => {
+                let arc = Arc {
+                    inner_radius: real("inner_radius"),
+                    sweep: degrees(inst, def, "sweep"),
+                    right: real("turn_right") != 0.0,
+                };
+                (real("friction"), Some(arc))
+            }
             _ => continue,
         };
+        let length = arc.map_or_else(|| real("length"), |a| arc_length(&a, width));
         out.belts.push(Belt {
             id: inst.id.clone(),
-            pose: pose(inst),
-            length: param(inst, def, "length") as Real,
-            width: param(inst, def, "width") as Real,
-            height: param(inst, def, "height") as Real,
-            speed: param(inst, def, "speed") as Real,
+            pose: inclined(pose(inst), length, height, degrees(inst, def, "incline")),
+            length,
+            width,
+            height,
+            speed: real("speed"),
             grip,
             closed_exit: flow_peer(project, (&inst.id, "out")).is_none(),
+            arc,
+            guards: [real("left_guard") != 0.0, real("right_guard") != 0.0],
+            skew: degrees(inst, def, "skew"),
         });
     }
     for (inst, def) in &instances {
@@ -209,15 +278,15 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
             continue;
         }
         let (host, at) = mount(project, &inst.id)?;
-        let host = out
-            .belt(host)
-            .filter(|&k| definition_of(project, &out.belts[k].id).generator == "twinova.roller/1")
-            .ok_or_else(|| {
-                format!(
-                    "{} is mounted on {host}, which is not a roller conveyor",
-                    inst.id
-                )
-            })?;
+        let out_right = param(inst, def, "out_right") != 0.0;
+        let problem = match out.belt(host) {
+            Some(k) => host_problem(project, &out.belts[k], out_right),
+            None => Some("which is not a roller conveyor".into()),
+        };
+        if let Some(problem) = problem {
+            return Err(format!("{} is mounted on {host}, {problem}", inst.id));
+        }
+        let host = out.belt(host).expect("checked");
         out.transfers.push(Transfer {
             id: inst.id.clone(),
             host,
@@ -225,7 +294,7 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
             along: (param(inst, def, "chains") * param(inst, def, "distance")) as Real,
             across: param(inst, def, "lane_length") as Real,
             speed: param(inst, def, "speed") as Real,
-            out_right: param(inst, def, "out_right") != 0.0,
+            out_right,
             closed_exit: flow_peer(project, (&inst.id, "out")).is_none(),
         });
     }
@@ -267,12 +336,18 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
             }
             "twinova.sensor_diffuse/1" => {
                 let (host, at) = mount(project, &inst.id)?;
+                let belt = out.belt(host).ok_or_else(|| {
+                    format!("{} is mounted on {host}, which is not a belt", inst.id)
+                })?;
+                let at = at as Real;
                 sensors.push(Sensor {
                     id: inst.id.clone(),
-                    belt: out.belt(host).ok_or_else(|| {
-                        format!("{} is mounted on {host}, which is not a belt", inst.id)
-                    })?,
-                    at: at as Real,
+                    belt,
+                    at: if out.belts[belt].arc.is_some() {
+                        at.to_radians()
+                    } else {
+                        at
+                    },
                     range: param(inst, def, "range") as Real,
                 });
             }

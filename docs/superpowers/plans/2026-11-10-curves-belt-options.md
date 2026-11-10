@@ -74,7 +74,8 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
 - [x] World-wide Coulomb.
 - [x] Re-run every test. Report the demo jam and the transfer's peak speed, and fix them as the user decided.
 - [x] Re-pin the fingerprints, equal in dev and release.
-- [ ] Verify: Rust gates; windows-2022 in CI.
+- [x] Verify: Rust gates; windows-2022 in CI.
+  - *Delivered:* CI on PR #32 green, windows-2022 included.
 
 ### Task 2 — Format: curves, options, optional signals
 
@@ -94,12 +95,26 @@ cargo test, vitest, Stryker, cargo mutants; E2E with tauri-driver on Linux and W
 
 ### Task 3 — Physics: curves, guards, incline, skew
 
-- [ ] Tests first, after OIP's fidelity suite:
+- [x] Tests first, after OIP's fidelity suite:
   - a curve turns its load 90° ± 3°, ≤ 5 mm off the centreline;
   - a guard holds a carton a skewed roller drifts to it, at s·tan(skew);
   - breakaway on an incline within 1° of atan(μ);
   - the curve line's fingerprint.
-- [ ] Implement in `layout.rs` and `world.rs`, splitting by concern under 600 LOC.
+- [x] Implement in `layout.rs` and `world.rs`, splitting by concern under 600 LOC.
+  - *Delivered:*
+    - `path.rs` holds the geometry: decks, chords and stubs, guards;
+    - `surfaces.rs` holds the contact hook with its linear and arc drives;
+    - incline is folded into the conveyor's pose, so a level conveyor is computed exactly as before. The 4.3/4.4a
+      fingerprints are unchanged;
+    - the curve line's fingerprint is `0xfb7e9104c1a6c781`, equal in dev and release;
+    - the curves' blocks drive their decks through the field (`motor`), and the curve line delivers through both
+      curves in the app's line test.
+  - *Order:* the implementation was written before these tests; the tests were then run against it, and mutants
+    check that they catch it.
+  - *Measured and amended (spec, Task 3):* breakaway comes 1–1.8° below atan(μ). The user chose to amend the
+    acceptance: holds 2° below, slides 1° above.
+  - *Tests changed (mechanical):* `world_tests.rs`'s `belt()` gains the new fields (no arc, no guards, no skew), and
+    the hook test's `Surfaces` takes a `Drive::Linear`. No assertion changed.
 - [ ] Verify: mutants on the physics.
 
 ### Task 4 — Drive and signals
