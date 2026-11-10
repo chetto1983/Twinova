@@ -170,3 +170,26 @@ fn a_runtime_fault_is_an_error_of_the_scan() {
 fn a_syntax_error_is_refused() {
     assert!(Controller::build(&with_program("PROGRAM Main\nx := ;\nEND_PROGRAM\n")).is_err());
 }
+
+/// What the line writes every millisecond it resolves once at Build (spec
+/// 2026-11-10-solver-substeps-io-links-design.md, decision 2): an address the program declares, parsed; reads and
+/// writes through it are the string's.
+#[test]
+fn a_declared_address_resolves_once_and_reads_and_writes_as_its_text() {
+    let (mut c, _) = Controller::build(&with_program(BELT)).unwrap();
+    assert_eq!(
+        c.declared_at("%ID4"),
+        None,
+        "the program does not declare it"
+    );
+    assert_eq!(c.declared_at("not an address"), None);
+    let sensor = c.declared_at("%IX0.0").expect("declared");
+    let motor = c.declared_at("%QX0.0").expect("declared");
+    c.write_at(&sensor, Value::Bool(true)).unwrap();
+    assert_eq!(c.read("%IX0.0").unwrap(), Value::Bool(true));
+    c.scan().unwrap();
+    assert_eq!(c.read_at(&motor).unwrap(), Value::Bool(true));
+    assert_eq!(c.read_at(&motor).unwrap(), c.read("%QX0.0").unwrap());
+    let wrong = c.write_at(&sensor, Value::DWord(1)).unwrap_err();
+    assert!(wrong.starts_with("%IX0.0: "), "{wrong}");
+}

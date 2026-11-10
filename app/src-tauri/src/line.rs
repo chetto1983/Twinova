@@ -13,20 +13,20 @@ use trust_runtime::value::Value;
 use twinova_physics::{STEP_NS, World, layout};
 use twinova_project::Project;
 
-use crate::controller::Controller;
+use crate::controller::{Controller, Port};
 use crate::drive::Feedback;
 use crate::field::Field;
 
 /// A conveyor's signals, and whether its speed comes from its behaviour or its motor straight from the controller.
 struct BeltIo {
     instance: String,
-    run: Option<String>,
-    running: Option<String>,
+    run: Option<Port>,
+    running: Option<Port>,
     behaviour: bool,
     /// The controller inputs its drive feedback is bound to, and the feedback's state.
-    velocity: Option<String>,
-    encoder: Option<String>,
-    pulse: Option<String>,
+    velocity: Option<Port>,
+    encoder: Option<Port>,
+    pulse: Option<Port>,
     feedback: Feedback,
 }
 
@@ -38,9 +38,14 @@ pub struct Line {
     /// Per layout chain transfer, its instance in the field.
     transfers: Vec<String>,
     /// Per layout sensor, the controller input its `detected` is bound to.
-    sensors: Vec<Option<String>>,
+    sensors: Vec<Option<Port>>,
     /// Per layout sink, the controller input its `count` is bound to.
-    sinks: Vec<Option<String>>,
+    sinks: Vec<Option<Port>>,
+    /// The controller outputs the field reads and the inputs it writes: the address as the field names it, and the
+    /// controller's, parsed. Every controller address is resolved here at Build, and an input only when the program
+    /// declares it: one it does not is skipped, as Build warned.
+    commands: Vec<(String, Port)>,
+    feedback: Vec<(String, Port)>,
     t_ns: i64,
     next_scan_ns: i64,
 }
@@ -54,15 +59,11 @@ fn signal(project: &Project, instance: &str, name: &str) -> Option<String> {
         .and_then(|i| i.signals.get(name).cloned())
 }
 
-/// Writes a bound input the program declares; one it does not is skipped, as Build warned.
-fn input(
-    controller: &mut Controller,
-    address: &Option<String>,
-    value: Value,
-) -> Result<(), String> {
-    match address {
-        Some(a) if controller.declares(a) => controller.write(a, value),
-        _ => Ok(()),
+/// Writes a bound input.
+fn input(controller: &mut Controller, port: &Option<Port>, value: Value) -> Result<(), String> {
+    match port {
+        Some(port) => controller.write_at(port, value),
+        None => Ok(()),
     }
 }
 
@@ -90,20 +91,24 @@ impl Line {
         let layout = layout(project)?;
         let field = Field::build(project)?;
         let (controller, warnings) = Controller::build(project)?;
-        let belts = layout
-            .belts
-            .iter()
-            .map(|b| BeltIo {
+        let declared = |instance: &str, name: &str| {
+            signal(project, instance, name).and_then(|a| controller.declared_at(&a))
+        };
+        let mut belts = Vec::new();
+        for b in &layout.belts {
+            belts.push(BeltIo {
                 instance: b.id.clone(),
-                run: signal(project, &b.id, "run"),
-                running: signal(project, &b.id, "running"),
+                run: signal(project, &b.id, "run")
+                    .map(|a| Port::parse(&a))
+                    .transpose()?,
+                running: declared(&b.id, "running"),
                 behaviour: has_behaviour(project, &b.id),
-                velocity: signal(project, &b.id, "velocity"),
-                encoder: signal(project, &b.id, "encoder"),
-                pulse: signal(project, &b.id, "pulse"),
+                velocity: declared(&b.id, "velocity"),
+                encoder: declared(&b.id, "encoder"),
+                pulse: declared(&b.id, "pulse"),
                 feedback: Feedback::of(project, &b.id),
-            })
-            .collect();
+            });
+        }
         // Its change-over is its block's, so a chain transfer has no native fallback (spec, "The families").
         let transfers: Vec<String> = layout.transfers.iter().map(|t| t.id.clone()).collect();
         if let Some(t) = transfers.iter().find(|t| !has_behaviour(project, t)) {
@@ -112,13 +117,24 @@ impl Line {
         let sensors = layout
             .sensors
             .iter()
-            .map(|s| signal(project, &s.id, "detected"))
+            .map(|s| declared(&s.id, "detected"))
             .collect();
         let sinks = layout
             .sinks
             .iter()
-            .map(|s| signal(project, &s.id, "count"))
+            .map(|s| declared(&s.id, "count"))
             .collect();
+        let (mut commands, mut feedback) = (Vec::new(), Vec::new());
+        if let Some(field) = &field {
+            for address in field.commands() {
+                commands.push((address.clone(), Port::parse(address)?));
+            }
+            for address in field.feedback() {
+                if let Some(port) = controller.declared_at(address) {
+                    feedback.push((address.clone(), port));
+                }
+            }
+        }
         let next_scan_ns = controller.scan_ns();
         let line = Self {
             world: World::new(layout),
@@ -128,6 +144,8 @@ impl Line {
             transfers,
             sensors,
             sinks,
+            commands,
+            feedback,
             t_ns: 0,
             next_scan_ns,
         };
@@ -159,9 +177,9 @@ impl Line {
         self.world.set_sink_blocked(sink, blocked);
     }
 
-    fn output(&self, address: &Option<String>) -> Result<bool, String> {
-        match address {
-            Some(a) => self.controller.read(a).map(|v| is_true(&v)),
+    fn output(&self, port: &Option<Port>) -> Result<bool, String> {
+        match port {
+            Some(port) => self.controller.read_at(port).map(|v| is_true(&v)),
             None => Ok(false),
         }
     }
@@ -200,15 +218,13 @@ impl Line {
             }
         }
         if let Some(field) = self.field.as_mut() {
-            for address in field.commands().to_vec() {
-                field.set_command(&address, self.controller.read(&address)?)?;
+            for (address, port) in &self.commands {
+                field.set_command(address, self.controller.read_at(port)?)?;
             }
             field.cycle()?;
-            for address in field.feedback().to_vec() {
-                let value = field.feedback_value(&address)?;
-                if self.controller.declares(&address) {
-                    self.controller.write(&address, value)?;
-                }
+            for (address, port) in &self.feedback {
+                self.controller
+                    .write_at(port, field.feedback_value(address)?)?;
             }
         }
         for k in 0..self.belts.len() {
