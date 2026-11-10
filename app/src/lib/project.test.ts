@@ -127,18 +127,7 @@ describe("geometry", () => {
     expect(eulerDegrees(locked)).toEqual([90, 30, 0]);
   });
 
-  it("sizes a belt from its length, width and height", () => {
-    expect(shapeOf(instance("belt_b"), definition("belt"))).toEqual({
-      kind: "box",
-      size: [2, 0.08, 0.6],
-      centre: [1, 0.76, 0],
-      token: "--scene-belt",
-    });
-    const roller = shapeOf(instance("roller_r"), definition("roller"));
-    expect([roller.size, roller.centre]).toEqual([
-      [2, 0.08, 0.6],
-      [1, 0.76, 0],
-    ]);
+  it("sizes an unmounted chain transfer from its chains, their distance and its lane", () => {
     const transfer = shapeOf(instance("chain_transfer"), definition("chain_transfer"));
     expect([transfer.size, transfer.centre]).toEqual([
       [0.66, 0.06, 0.6],
@@ -177,20 +166,18 @@ describe("geometry", () => {
   });
 
   it("takes a size from the definition's default when the instance does not set it", () => {
-    const belt = definition("belt");
-    const wide = structuredClone(belt);
-    wide.parameters.find((p) => p.name === "width")!.default = 0.9;
-    wide.parameters.find((p) => p.name === "height")!.default = 1.1;
-    const shape = shapeOf(instance("belt_b"), wide);
-    expect(shape.size).toEqual([2, 0.08, 0.9]);
-    expect(shape.centre[1]).toBeCloseTo(1.06, 12);
+    const wide = structuredClone(definition("sensor_diffuse"));
+    wide.parameters.push({ ...wide.parameters[0]!, name: "height", default: 1.1 });
+    const shape = shapeOf({ ...instance("sensor_a"), parameters: {} }, wide);
+    expect(shape.centre[1]).toBeCloseTo(1.25, 12);
   });
 
   it("falls back to default sizes when a parameter is missing or not a number", () => {
-    const bare = { ...definition("belt"), parameters: [] };
-    expect(shapeOf({ ...instance("belt_a"), parameters: {} }, bare).size).toEqual([1, 0.08, 0.6]);
-    const odd = { ...instance("belt_a"), parameters: { length: true } };
-    expect(shapeOf(odd, definition("belt")).size[0]).toBe(1);
+    const bare = { ...definition("chain_transfer"), parameters: [] };
+    const loose = { ...instance("chain_transfer"), parameters: {} };
+    expect(shapeOf(loose, bare).size).toEqual([0.66, 0.06, 0.6]);
+    const odd = { ...instance("chain_transfer"), parameters: { chains: true } };
+    expect(shapeOf(odd, definition("chain_transfer")).size[0]).toBeCloseTo(0.66, 12);
   });
 
   it("frames the footprint of the scene", () => {
