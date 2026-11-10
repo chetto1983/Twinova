@@ -61,12 +61,13 @@ sessions(() =>
       eventually(
         async () => {
           const [ok, reject] = [await count("sink_ok.count"), await count("sink_reject.count")];
-          if (reject < 5) throw new Error(`${ok} / ${reject} so far`);
+          if (reject < 3) throw new Error(`${ok} / ${reject} so far`);
           // A carton on belt B is two thirds of the way to its sink when the reject count moves.
           if (Math.abs(ok - 2 * reject) > 2) throw new Error(`${ok} to sink_ok, ${reject} to reject`);
         },
         "counts",
-        60_000,
+        // The debug build on the windows-2022 runner reaches two rejects in about a minute at Max (CI run 42801667508).
+        120_000,
       ),
     );
     await click(button("Pause"));
