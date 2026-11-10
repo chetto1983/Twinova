@@ -17,6 +17,8 @@ type V2 = readonly [number, number];
 
 /** The `g` a part's geometry() composes its mesh with. */
 export interface GeometryBuilder {
+  /** Sweep a closed `[up, width]` section along a path, the section kept level (sweep.ts). */
+  sweep(profile: ReadonlyArray<V2>, path: ReadonlyArray<V3>, opts?: { caps?: boolean }): MeshDescription;
   merge(...parts: readonly MeshDescription[]): MeshDescription;
   box(size: V3, center: V3): MeshDescription;
   surface(): SurfaceBuilder;

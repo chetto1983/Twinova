@@ -151,6 +151,12 @@ export function real(instance: Instance, def: Definition, name: string, fallback
   return typeof value === "number" ? value : fallback;
 }
 
+export function flag(instance: Instance, def: Definition, name: string, fallback: boolean): boolean {
+  const p = def.parameters.find((q) => q.name === name);
+  const value = Object.hasOwn(instance.parameters, name) ? instance.parameters[name] : p?.default;
+  return typeof value === "boolean" ? value : fallback;
+}
+
 /** The first generator per family (spec decision: native, versioned generators): sizes come from the parameters. */
 export function shapeOf(instance: Instance, def: Definition): Shape {
   const length = real(instance, def, "length", 1);

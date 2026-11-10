@@ -7,7 +7,7 @@ import { chainTransferGeometry } from "./oip/parts/chainTransfer";
 import type { MeshPart } from "./oip/parts/part";
 import { PHOTOEYE, photoeyeGeometry } from "./oip/parts/photoeye";
 import { rollerGeometry } from "./oip/parts/roller";
-import { real, type Instance, type ProjectView, type Quat, type Vec3 } from "./project";
+import { flag, real, type Instance, type ProjectView, type Quat, type Vec3 } from "./project";
 
 /** The chain deck under its host's rollers, and its stroke (physics world.rs `TRANSFER_BELOW`, `TRANSFER_STROKE`). */
 const TRANSFER_BELOW = 0.03;
@@ -32,6 +32,12 @@ function host(project: ProjectView, device: string): { instance: Instance; at: n
   return mount && instance ? { instance, at: mount.at } : null;
 }
 
+/** A conveyor's left (−z) and right guards. */
+function guards(project: ProjectView, instance: Instance): [boolean, boolean] {
+  const def = project.definitions[instance.definition]!;
+  return [flag(instance, def, "left_guard", true), flag(instance, def, "right_guard", true)];
+}
+
 export function drawnOf(project: ProjectView, instance: Instance): Drawn | null {
   const def = project.definitions[instance.definition];
   const value = (inst: Instance, name: string, fallback: number) =>
@@ -46,6 +52,7 @@ export function drawnOf(project: ProjectView, instance: Instance): Drawn | null 
         width: value(instance, "width", 0.6),
         frameHeight: value(instance, "frame_height", 0.17),
         standHeight: height,
+        guards: guards(project, instance),
       });
       return { parts, position: instance.position, rotation: instance.rotation, offset: [length / 2, height, 0] };
     }
