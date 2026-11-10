@@ -251,3 +251,15 @@ fn the_layout_takes_incline_skew_guards_and_a_sensor_angle_from_the_parameters()
     );
     assert_eq!(l.belts[0].grip, BELT_GRIP);
 }
+
+/// OIP's skew: the throughput stays the speed and the drift is speed · tan(skew), to the left for a positive skew.
+#[test]
+fn a_skewed_surface_keeps_its_throughput_and_drifts_by_the_tangent() {
+    let skew = 30.0_f32.to_radians();
+    let v = along(0.5, skew);
+    assert!(
+        (v.x - 0.5).abs() < 1e-6 && (v.z + 0.5 * skew.tan()).abs() < 1e-6,
+        "{v:?}"
+    );
+    assert_eq!(along(0.5, 0.0), Vector::new(0.5, 0.0, 0.0));
+}
