@@ -44,10 +44,19 @@ tempfile = "=3.27.0"
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
 
-# Rapier and its geometry crate optimised in dev builds too: the physics tests step thousands of 1 ms frames.
+# Rapier and truST optimised in dev builds too: the line tests step tens of thousands of 1 ms frames through the
+# physics and two ST runtimes, and cargo mutants reruns them for every mutant against a 60 s timeout (mutation.yml).
 [profile.dev.package.rapier3d]
 opt-level = 3
 [profile.dev.package.parry3d]
+opt-level = 3
+[profile.dev.package.trust-runtime]
+opt-level = 3
+[profile.dev.package.trust-runtime-core]
+opt-level = 3
+[profile.dev.package.trust-hir]
+opt-level = 3
+[profile.dev.package.trust-syntax]
 opt-level = 3
 
 [profile.release]
