@@ -171,6 +171,12 @@ What this does not prove:
 - **The fabric scrolls by the snapshot's travel:** the world integrates each conveyor's speed every millisecond, and
   the view sets the texture offset to −travel (OIP `functionMesh.ts`).
 
+## Amended after the acceptance (4.4b1, 2026-11-10)
+
+- **The velocity, the encoder and the pulse are the conveyor's native model,** not lines of its ST block: they cost a
+  third of the field's cycle (spec `2026-11-10-run-pace-native-feedback-design.md`, user). Decision 5's ramp,
+  `running` and `speed_ref` stay in ST.
+
 ## Acceptance of 4.4b
 
 1. **Curves:**
