@@ -19,6 +19,13 @@ use crate::path::{Motion, Piece, deck, guards};
 use crate::surfaces::surface_of_pair;
 use crate::surfaces::{CARTON_FRICTION, Drive, Surfaces, surface};
 
+#[path = "world_devices.rs"]
+mod devices;
+#[cfg(test)]
+use devices::TRANSFER_BELOW;
+pub use devices::TRANSFER_STROKE;
+use devices::{Devices, side_exit, side_wall};
+
 pub const STEP_NS: i64 = 1_000_000;
 const STEP_S: Real = 0.001;
 /// The products of 4.3: M3's 0.3 m carton.
@@ -29,14 +36,6 @@ const CARTON_ROUNDING: Real = 0.02;
 const WALL_HEIGHT: Real = 0.4;
 /// The beam of a diffuse sensor, above the running surface.
 const BEAM_HEIGHT: Real = 0.05;
-/// The chain transfer (OIP `examples/parts/chain-transfer/`): its pop-up stroke (`RAISE`), its deck's depth (`rig.json`
-/// deck 0.06), and how far under the host's rollers it is fitted (`snap.track.targetLocalY` −0.03).
-pub const TRANSFER_STROKE: Real = 0.095;
-const TRANSFER_DECK: Real = 0.06;
-const TRANSFER_BELOW: Real = 0.03;
-/// OIP's chains grip as rollers (`conveyor.surface: "roller"`, `CONVEYOR_FRICTION`).
-const CHAIN_GRIP: Real = 0.35;
-
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Carton {
     pub id: u64,
@@ -58,7 +57,8 @@ pub struct World {
     t_ns: i64,
     sources: Vec<SourceState>,
     delivered: Vec<u64>,
-    /// The wall each blocked sink puts at its exit.
+    /// Whether each sink is blocked, and the wall it then puts at its exit.
+    blocked: Vec<bool>,
     sink_walls: Vec<Option<ColliderHandle>>,
     /// Each conveyor's surfaces, by index into the hook's, and how each moves its load.
     surfaces: Vec<Vec<(usize, Motion)>>,
@@ -66,38 +66,27 @@ pub struct World {
     /// drift), for the view's scrolling fabric.
     speeds: Vec<Real>,
     travels: Vec<f64>,
-    /// Each chain transfer's surface, its deck, a kinematic body, and its lift as last set.
-    transfer_surfaces: Vec<usize>,
-    decks: Vec<RigidBodyHandle>,
-    lifts: Vec<Real>,
+    /// The devices that move: chain transfers, stoppers and pushers.
+    devices: Devices,
 }
 
-/// The wall across an exit: past a conveyor's end, or along a chain transfer's side over its deck.
-fn exit_wall(layout: &Layout, exit: Exit) -> ColliderBuilder {
-    let (pose, at, half) = match exit {
-        Exit::End(k) => {
-            let b = &layout.belts[k];
-            let (frame, length) = exit_frame(b);
-            let at = Vector::new(length + 0.01, b.height + WALL_HEIGHT / 2.0, 0.0);
-            (
-                frame,
-                at,
-                Vector::new(0.01, WALL_HEIGHT / 2.0, b.width / 2.0),
-            )
-        }
-        Exit::Side(k) => {
-            let t = &layout.transfers[k];
-            let b = &layout.belts[t.host];
-            let z = side(t.out_right) * (t.across / 2.0 + 0.01);
-            let at = Vector::new(t.at, b.height + WALL_HEIGHT / 2.0, z);
-            (
-                b.pose,
-                at,
-                Vector::new(side_reach(t), WALL_HEIGHT / 2.0, 0.01),
-            )
-        }
+/// The wall across an exit: past a conveyor's end, or along a chain transfer's side. A pusher's side has none: its
+/// paddle's stroke crosses that edge, and a wall there would crush what it pushes (measured 2026-11-11), so what it
+/// pushes to nowhere falls beside the conveyor.
+fn exit_wall(layout: &Layout, exit: Exit) -> Option<ColliderBuilder> {
+    let k = match exit {
+        Exit::End(k) => k,
+        Exit::Side(_) => return side_exit(layout, exit).map(|s| side_wall(layout, s)),
+        Exit::Push(_) => return None,
     };
-    ColliderBuilder::cuboid(half.x, half.y, half.z).position(pose * Pose::from_translation(at))
+    let b = &layout.belts[k];
+    let (frame, length) = exit_frame(b);
+    let at = Vector::new(length + 0.01, b.height + WALL_HEIGHT / 2.0, 0.0);
+    let half = Vector::new(0.01, WALL_HEIGHT / 2.0, b.width / 2.0);
+    Some(
+        ColliderBuilder::cuboid(half.x, half.y, half.z)
+            .position(frame * Pose::from_translation(at)),
+    )
 }
 
 /// A frame along which a conveyor's exit lies, and how far: a straight conveyor's own, at its length; a curve's exit
@@ -107,13 +96,6 @@ fn exit_frame(b: &Belt) -> (Pose, Real) {
         None => (b.pose, b.length),
         Some(arc) => (b.pose * arc.end(b.width), 0.0),
     }
-}
-
-/// How far along its host, from the deck's centre, a chain transfer's side exit reaches: the deck, and a carton that
-/// only overlaps it, as a chute beside the transfer catches what the chains drag off (measured 2026-11-10: with the
-/// deck's own span, a queue standing over a raised transfer spilled the cartons it half carried onto the floor).
-fn side_reach(t: &crate::layout::Transfer) -> Real {
-    t.along / 2.0 + CARTON_HALF
 }
 
 /// A deck's surface velocity in its own frame. Skewed rollers drive along their normal, the flow turned by the skew at
@@ -128,16 +110,9 @@ fn along(speed: Real, skew: Real) -> Vector {
     Vector::new(cos * magnitude, 0.0, -sin * magnitude)
 }
 
-/// The sign of a chain transfer's side along its host's z.
+/// The sign of a device's side along its host's z.
 fn side(right: bool) -> Real {
     if right { 1.0 } else { -1.0 }
-}
-
-/// A chain transfer's deck centre in its host's frame, at `lift` (0 down, 1 up) of its stroke.
-fn deck_centre(layout: &Layout, transfer: usize, lift: Real) -> Vector {
-    let t = &layout.transfers[transfer];
-    let top = layout.belts[t.host].height - TRANSFER_BELOW + TRANSFER_STROKE * lift;
-    Vector::new(t.at, top - TRANSFER_DECK / 2.0, 0.0)
 }
 
 impl World {
@@ -172,7 +147,7 @@ impl World {
             }
             surfaces.push(own);
             if belt.closed_exit {
-                world.insert_collider(exit_wall(&layout, Exit::End(i)), None);
+                world.insert_collider(exit_wall(&layout, Exit::End(i)).expect("an end wall"), None);
             }
             for Piece { pose, half } in guards(belt) {
                 // Cargo slides along a guard (OIP: "a guard is friction 0").
@@ -180,24 +155,7 @@ impl World {
                 world.insert_collider(wall.position(pose), None);
             }
         }
-        let mut transfer_surfaces = Vec::new();
-        let mut decks = Vec::new();
-        for (k, t) in layout.transfers.iter().enumerate() {
-            let host = layout.belts[t.host].pose;
-            let deck = world.insert_body(
-                RigidBodyBuilder::kinematic_position_based()
-                    .pose(host * Pose::from_translation(deck_centre(&layout, k, 0.0))),
-            );
-            let half = Vector::new(t.along, TRANSFER_DECK, t.across) / 2.0;
-            let index = hooks.surface.len();
-            world.insert_collider(surface(half, CHAIN_GRIP, index), Some(deck));
-            if t.closed_exit {
-                world.insert_collider(exit_wall(&layout, Exit::Side(k)), None);
-            }
-            hooks.surface.push(Drive::Linear(Vector::ZERO));
-            transfer_surfaces.push(index);
-            decks.push(deck);
-        }
+        let devices = Devices::new(&mut world, &mut hooks, &layout);
         let sources = layout
             .sources
             .iter()
@@ -216,13 +174,12 @@ impl World {
             t_ns: 0,
             sources,
             delivered: vec![0; sinks],
+            blocked: vec![false; sinks],
             sink_walls: vec![None; sinks],
-            lifts: vec![0.0; decks.len()],
             speeds: vec![0.0; surfaces.len()],
             travels: vec![0.0; surfaces.len()],
             surfaces,
-            transfer_surfaces,
-            decks,
+            devices,
         }
     }
 
@@ -242,34 +199,6 @@ impl World {
     /// How far a conveyor's surface has run along its flow, m: back for a negative speed.
     pub fn belt_travel(&self, belt: usize) -> f64 {
         self.travels[belt]
-    }
-
-    pub fn transfers(&self) -> usize {
-        self.layout.transfers.len()
-    }
-
-    pub fn transfer_id(&self, transfer: usize) -> &str {
-        &self.layout.transfers[transfer].id
-    }
-
-    pub fn transfer_lift(&self, transfer: usize) -> Real {
-        self.lifts[transfer]
-    }
-
-    /// A chain transfer's deck at `lift` of its stroke, carrying sideways while `raised` and forward otherwise, at its
-    /// speed (OIP `chain-transfer/behavior.ts` `step`). The deck reaches that height at the next step.
-    pub fn set_transfer(&mut self, transfer: usize, lift: Real, raised: bool) {
-        let t = &self.layout.transfers[transfer];
-        let host = self.layout.belts[t.host].pose;
-        let local = if raised {
-            Vector::new(0.0, 0.0, side(t.out_right) * t.speed)
-        } else {
-            Vector::new(t.speed, 0.0, 0.0)
-        };
-        self.hooks.surface[self.transfer_surfaces[transfer]] = Drive::Linear(host.rotation * local);
-        self.lifts[transfer] = lift;
-        let at = host * Pose::from_translation(deck_centre(&self.layout, transfer, lift));
-        self.world.bodies[self.decks[transfer]].set_next_kinematic_translation(at.translation);
     }
 
     /// A belt's motor: its surface runs at the belt's speed while on.
@@ -297,18 +226,17 @@ impl World {
         }
     }
 
-    /// A blocked sink holds products at its exit, against a wall (M3's "outlet blocked").
+    /// A blocked sink takes nothing and holds products at its exit, against a wall (M3's "outlet blocked").
     pub fn set_sink_blocked(&mut self, sink: usize, blocked: bool) {
-        match (self.sink_walls[sink], blocked) {
-            (None, true) => {
-                let wall = exit_wall(&self.layout, self.layout.sinks[sink].exit);
-                self.sink_walls[sink] = Some(self.world.insert_collider(wall, None));
-            }
-            (Some(handle), false) => {
-                self.world.remove_collider(handle);
-                self.sink_walls[sink] = None;
-            }
-            _ => {}
+        if self.blocked[sink] == blocked {
+            return;
+        }
+        self.blocked[sink] = blocked;
+        if let Some(handle) = self.sink_walls[sink].take() {
+            self.world.remove_collider(handle);
+        }
+        if blocked && let Some(wall) = exit_wall(&self.layout, self.layout.sinks[sink].exit) {
+            self.sink_walls[sink] = Some(self.world.insert_collider(wall, None));
         }
     }
 
@@ -321,7 +249,7 @@ impl World {
     }
 
     pub fn sink_blocked(&self, sink: usize) -> bool {
-        self.sink_walls[sink].is_some()
+        self.blocked[sink]
     }
 
     pub fn delivered(&self, sink: usize) -> u64 {
@@ -341,7 +269,7 @@ impl World {
             *travel += f64::from(*speed) * (STEP_NS as f64 * 1e-9);
         }
         for sink in 0..self.layout.sinks.len() {
-            if self.sink_walls[sink].is_none() {
+            if !self.blocked[sink] {
                 self.collect(sink);
             }
         }
@@ -381,11 +309,11 @@ impl World {
                     && p.z.abs() <= b.width / 2.0
                     && p.y >= b.height - CARTON_HALF
             }
-            Exit::Side(transfer) => {
-                let t = &self.layout.transfers[transfer];
-                let (b, p) = (&self.layout.belts[t.host], self.local(t.host, carton));
-                side(t.out_right) * p.z + CARTON_HALF >= t.across / 2.0
-                    && (p.x - t.at).abs() <= side_reach(t)
+            Exit::Side(_) | Exit::Push(_) => {
+                let s = side_exit(&self.layout, exit).expect("a side exit");
+                let (b, p) = (&self.layout.belts[s.host], self.local(s.host, carton));
+                side(s.right) * p.z + CARTON_HALF >= s.edge
+                    && (p.x - s.at).abs() <= s.reach
                     && p.y >= b.height - CARTON_HALF
             }
         }
@@ -509,3 +437,11 @@ mod curve_tests;
 #[cfg(test)]
 #[path = "world_options_tests.rs"]
 mod options_tests;
+
+#[cfg(test)]
+#[path = "world_stopper_tests.rs"]
+mod stopper_tests;
+
+#[cfg(test)]
+#[path = "world_pusher_tests.rs"]
+mod pusher_tests;

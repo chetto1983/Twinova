@@ -26,6 +26,7 @@ pub(crate) fn conveyor(arc: Option<Arc>, guards: [bool; 2]) -> Belt {
         arc,
         guards,
         skew: 0.0,
+        openings: Vec::new(),
     }
 }
 
@@ -237,4 +238,63 @@ fn curve_guards_run_without_gaps() {
         near(start.x, -STUB) && near(end.x, 0.0),
         "exit stub: {start:?} {end:?}"
     );
+}
+
+/// A pusher beside a straight conveyor opens its guard on that side, 0.75 m about its position (OIP
+/// `guardOpenings.ts`); the other guard stays whole, and an opening past either end leaves the guard only inside it.
+#[test]
+fn a_pusher_opens_the_guard_on_its_side_about_its_position() {
+    use crate::layout::Opening;
+    let mut belt = conveyor(None, [true; 2]);
+    belt.openings = vec![Opening {
+        right: true,
+        centre: 1.0,
+        length: 0.75,
+    }];
+    let spans_of = |belt: &Belt| -> Vec<(Real, Real)> {
+        guards(belt)
+            .iter()
+            .filter(|p| p.pose.translation.z > 2.0)
+            .map(|p| {
+                let x = p.pose.translation.x - 1.0;
+                (x - p.half.x, x + p.half.x)
+            })
+            .collect()
+    };
+    let right = spans_of(&belt);
+    assert_eq!(right.len(), 2, "{right:?}");
+    assert!(
+        near(right[0].0, 0.0) && near(right[0].1, 0.625),
+        "{right:?}"
+    );
+    assert!(
+        near(right[1].0, 1.375) && near(right[1].1, 3.0),
+        "{right:?}"
+    );
+    assert_eq!(guards(&belt).len(), 3, "the left guard is whole");
+    belt.openings.push(Opening {
+        right: true,
+        centre: 2.9,
+        length: 0.75,
+    });
+    let right = spans_of(&belt);
+    assert_eq!(right.len(), 2, "{right:?}");
+    assert!(
+        near(right[1].0, 1.375) && near(right[1].1, 2.525),
+        "{right:?}"
+    );
+    belt.openings = vec![Opening {
+        right: false,
+        centre: 0.1,
+        length: 0.75,
+    }];
+    let left: Vec<_> = guards(&belt)
+        .into_iter()
+        .filter(|p| p.pose.translation.z < 2.0)
+        .collect();
+    assert_eq!(left.len(), 1);
+    assert!(near(
+        left[0].pose.translation.x - 1.0 - left[0].half.x,
+        0.475
+    ));
 }

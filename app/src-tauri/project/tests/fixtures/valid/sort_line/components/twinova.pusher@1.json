@@ -1,0 +1,83 @@
+{
+  "behaviour": {
+    "function_block": "PusherBehaviour"
+  },
+  "generator": "twinova.pusher/1",
+  "id": "twinova.pusher",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": 0.75,
+      "max": 1.5,
+      "min": 0.1,
+      "name": "stroke",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 250000000,
+      "max": 2000000000.0,
+      "min": 50000000.0,
+      "name": "push_time",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": false,
+      "max": null,
+      "min": null,
+      "name": "out_right",
+      "type": "BOOL",
+      "unit": null
+    }
+  ],
+  "ports": [
+    {
+      "kind": "mount_device",
+      "name": "mount"
+    },
+    {
+      "kind": "flow_out",
+      "name": "out"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_output",
+      "name": "extend",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "extended_fb",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "retracted_fb",
+      "type": "BOOL"
+    }
+  ],
+  "version": 1
+}

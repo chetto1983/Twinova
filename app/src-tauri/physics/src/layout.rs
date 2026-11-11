@@ -7,6 +7,10 @@
 use rapier3d::prelude::{Pose, Real, Rotation, Vector};
 
 use crate::path::arc_length;
+
+#[path = "layout_devices.rs"]
+mod devices;
+pub use devices::{PUSHER_OPENING, Pusher, Stopper, Transfer, roller_gap};
 use twinova_project::Project;
 use twinova_project::model::{Connection, Definition, Instance, ParamValue};
 
@@ -38,6 +42,8 @@ pub struct Belt {
     pub guards: [bool; 2],
     /// A roller conveyor's skew, in radians: positive drifts the load to its left (OIP `skew`).
     pub skew: Real,
+    /// Where its guards open for the pushers beside it.
+    pub openings: Vec<Opening>,
 }
 
 /// A curve's arc (OIP's curved conveyors).
@@ -50,30 +56,22 @@ pub struct Arc {
     pub right: bool,
 }
 
-/// OIP's chain transfer (`examples/parts/chain-transfer/` at `1e7488c`): a deck of chains fitted in a roller conveyor,
-/// lifted to carry sideways out of its side exit.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Transfer {
-    pub id: String,
-    /// The roller conveyor it is fitted in.
-    pub host: usize,
-    /// The deck's centre along the host, from its entry.
-    pub at: Real,
-    /// The deck along the host's flow (`chains × distance`) and across it (`lane_length`).
-    pub along: Real,
-    pub across: Real,
-    pub speed: Real,
-    /// It carries to the host's right (+z) instead of its left (−z).
-    pub out_right: bool,
-    /// Whether its side exit feeds nothing: a wall holds what it carries there.
-    pub closed_exit: bool,
-}
-
-/// Where a product leaves the line's surfaces: a conveyor's end, or a chain transfer's side.
+/// Where a product leaves the line's surfaces: a conveyor's end, a chain transfer's side, or a pusher's.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Exit {
     End(usize),
     Side(usize),
+    Push(usize),
+}
+
+/// A gap in a straight conveyor's guard, where a pusher stands (OIP `guardOpenings.ts`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Opening {
+    /// In the right guard (+z) instead of the left.
+    pub right: bool,
+    /// Its centre along the conveyor, from its entry.
+    pub centre: Real,
+    pub length: Real,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -105,6 +103,8 @@ pub struct Sensor {
 pub struct Layout {
     pub belts: Vec<Belt>,
     pub transfers: Vec<Transfer>,
+    pub stoppers: Vec<Stopper>,
+    pub pushers: Vec<Pusher>,
     pub sources: Vec<Source>,
     pub sinks: Vec<Sink>,
     pub sensors: Vec<Sensor>,
@@ -117,6 +117,10 @@ impl Layout {
 
     pub fn transfer(&self, id: &str) -> Option<usize> {
         self.transfers.iter().position(|t| t.id == id)
+    }
+
+    pub fn pusher(&self, id: &str) -> Option<usize> {
+        self.pushers.iter().position(|p| p.id == id)
     }
 }
 
@@ -156,44 +160,9 @@ pub(crate) fn inclined(pose: Pose, length: Real, height: Real, incline: Real) ->
         * Pose::from_translation(-centre)
 }
 
-/// Why a roller conveyor cannot carry a chain transfer: it is curved, inclined or skewed, or has a guard across the
-/// transfer's exit.
-fn host_problem(project: &Project, host: &Belt, out_right: bool) -> Option<String> {
-    let inst = project.scene.instances.iter().find(|i| i.id == host.id);
-    let inst = inst.expect("an instance of the layout");
-    let def = definition_of(project, &host.id);
-    if def.generator != "twinova.roller/1" {
-        return Some("which is not a roller conveyor".into());
-    }
-    if param(inst, def, "incline") != 0.0 || host.skew != 0.0 {
-        return Some("which is not level and square: a chain transfer fits a level, unskewed roller conveyor".into());
-    }
-    let (side, name) = if out_right { (1, "right") } else { (0, "left") };
-    host.guards[side]
-        .then(|| format!("whose {name} guard closes the transfer's exit: turn {name}_guard off"))
-}
-
 fn definition_of<'a>(project: &'a Project, instance: &str) -> &'a Definition {
     let inst = project.scene.instances.iter().find(|i| i.id == instance);
     &project.definitions[&inst.expect("an instance of the layout").definition]
-}
-
-/// The host and the position along it of a mounted device.
-fn mount<'a>(project: &'a Project, device: &str) -> Result<(&'a str, f64), String> {
-    project
-        .scene
-        .connections
-        .iter()
-        .find_map(|c| match c {
-            Connection::Mount {
-                host,
-                device: d,
-                position,
-                ..
-            } if d.0 == device => Some((host.0.as_str(), position[0])),
-            _ => None,
-        })
-        .ok_or_else(|| format!("{device} is not mounted"))
 }
 
 /// The peer of a flow port: `(instance, port)` at the other end of the flow connection that has `end`.
@@ -228,6 +197,8 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                     | "twinova.belt_curve/1"
                     | "twinova.roller_curve/1"
                     | "twinova.chain_transfer/1"
+                    | "twinova.stopper/1"
+                    | "twinova.pusher/1"
                     | "twinova.source/1"
                     | "twinova.sink/1"
                     | "twinova.sensor_diffuse/1"
@@ -270,34 +241,11 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
             closed_exit: flow_peer(project, (&inst.id, "out")).is_none(),
             arc,
             guards: [real("left_guard") != 0.0, real("right_guard") != 0.0],
+            openings: Vec::new(),
             skew: degrees(inst, def, "skew"),
         });
     }
-    for (inst, def) in &instances {
-        if def.generator != "twinova.chain_transfer/1" {
-            continue;
-        }
-        let (host, at) = mount(project, &inst.id)?;
-        let out_right = param(inst, def, "out_right") != 0.0;
-        let problem = match out.belt(host) {
-            Some(k) => host_problem(project, &out.belts[k], out_right),
-            None => Some("which is not a roller conveyor".into()),
-        };
-        if let Some(problem) = problem {
-            return Err(format!("{} is mounted on {host}, {problem}", inst.id));
-        }
-        let host = out.belt(host).expect("checked");
-        out.transfers.push(Transfer {
-            id: inst.id.clone(),
-            host,
-            at: at as Real,
-            along: (param(inst, def, "chains") * param(inst, def, "distance")) as Real,
-            across: param(inst, def, "lane_length") as Real,
-            speed: param(inst, def, "speed") as Real,
-            out_right,
-            closed_exit: flow_peer(project, (&inst.id, "out")).is_none(),
-        });
-    }
+    devices::devices(project, &instances, &mut out)?;
     let belt_at = |end: (&str, &str), what: &str| -> Result<usize, String> {
         let peer = flow_peer(project, end).ok_or_else(|| format!("{} is not connected", what))?;
         out.belt(peer.0)
@@ -319,12 +267,13 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                 let what = format!("{}.in", inst.id);
                 let peer = flow_peer(project, (&inst.id, "in"))
                     .ok_or_else(|| format!("{what} is not connected"))?;
-                let exit = match (out.belt(peer.0), out.transfer(peer.0)) {
-                    (Some(belt), _) => Exit::End(belt),
-                    (_, Some(transfer)) => Exit::Side(transfer),
+                let exit = match (out.belt(peer.0), out.transfer(peer.0), out.pusher(peer.0)) {
+                    (Some(belt), ..) => Exit::End(belt),
+                    (_, Some(transfer), _) => Exit::Side(transfer),
+                    (.., Some(pusher)) => Exit::Push(pusher),
                     _ => {
                         return Err(format!(
-                            "{what} is connected to {}, which is not a conveyor or a chain transfer",
+                            "{what} is connected to {}, which is not a conveyor, a chain transfer or a pusher",
                             peer.0
                         ));
                     }
@@ -335,7 +284,7 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                 });
             }
             "twinova.sensor_diffuse/1" => {
-                let (host, at) = mount(project, &inst.id)?;
+                let (host, at) = devices::mount(project, &inst.id)?;
                 let belt = out.belt(host).ok_or_else(|| {
                     format!("{} is mounted on {host}, which is not a belt", inst.id)
                 })?;

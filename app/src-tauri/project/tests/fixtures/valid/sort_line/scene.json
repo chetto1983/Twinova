@@ -1,0 +1,536 @@
+{
+  "connections": [
+    {
+      "from": [
+        "source",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "belt_in",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "belt_in",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "roller_a",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "roller_a",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "turntable",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "turntable",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "belt_b",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "belt_b",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "sink_b",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "pusher",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "sink_reject",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "belt_c",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "sink_c",
+        "in"
+      ]
+    },
+    {
+      "device": [
+        "stopper",
+        "mount"
+      ],
+      "host": [
+        "roller_a",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.64,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "device": [
+        "pusher",
+        "mount"
+      ],
+      "host": [
+        "belt_b",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.5,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "device": [
+        "s_in",
+        "mount"
+      ],
+      "host": [
+        "belt_in",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.85,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "device": [
+        "s_stop",
+        "mount"
+      ],
+      "host": [
+        "roller_a",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.45,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "device": [
+        "s_turn",
+        "mount"
+      ],
+      "host": [
+        "turntable",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        0.6,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "device": [
+        "s_push",
+        "mount"
+      ],
+      "host": [
+        "belt_b",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.65,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "controller": {
+    "panel": []
+  },
+  "groups": [],
+  "instances": [
+    {
+      "definition": "twinova.source@1",
+      "id": "source",
+      "name": "Source",
+      "parameters": {},
+      "position": [
+        -0.5,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {}
+    },
+    {
+      "definition": "twinova.belt@1",
+      "id": "belt_in",
+      "name": "Belt In",
+      "parameters": {
+        "length": 2.0
+      },
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "run": "%QX0.0",
+        "running": "%IX1.0"
+      }
+    },
+    {
+      "definition": "twinova.roller@1",
+      "id": "roller_a",
+      "name": "Roller A",
+      "parameters": {},
+      "position": [
+        2.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "run": "%QX0.1",
+        "running": "%IX1.1"
+      }
+    },
+    {
+      "definition": "twinova.stopper@1",
+      "id": "stopper",
+      "name": "Stopper",
+      "parameters": {},
+      "position": [
+        3.6375,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "raised_fb": "%IX0.4",
+        "stop": "%QX0.5"
+      }
+    },
+    {
+      "definition": "twinova.turntable@1",
+      "id": "turntable",
+      "name": "Turntable",
+      "parameters": {
+        "rotation_speed": 90.0
+      },
+      "position": [
+        4.45,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "in_position": "%IX0.5",
+        "run": "%QX0.2",
+        "running": "%IX1.2",
+        "target_angle": "%QD8"
+      }
+    },
+    {
+      "definition": "twinova.belt@1",
+      "id": "belt_b",
+      "name": "Belt B",
+      "parameters": {
+        "left_guard": false,
+        "length": 3.0
+      },
+      "position": [
+        4.9,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "run": "%QX0.3",
+        "running": "%IX1.3"
+      }
+    },
+    {
+      "definition": "twinova.pusher@1",
+      "id": "pusher",
+      "name": "Pusher",
+      "parameters": {},
+      "position": [
+        6.4,
+        0.0,
+        0.3
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "extend": "%QX0.6",
+        "extended_fb": "%IX0.6",
+        "retracted_fb": "%IX0.7"
+      }
+    },
+    {
+      "definition": "twinova.belt@1",
+      "id": "belt_c",
+      "name": "Belt C",
+      "parameters": {
+        "length": 2.0
+      },
+      "position": [
+        4.45,
+        0.0,
+        -0.45
+      ],
+      "rotation": [
+        0.0,
+        0.7071068,
+        0.0,
+        0.7071068
+      ],
+      "signals": {
+        "run": "%QX0.4",
+        "running": "%IX1.4"
+      }
+    },
+    {
+      "definition": "twinova.sink@1",
+      "id": "sink_b",
+      "name": "Straight sink",
+      "parameters": {},
+      "position": [
+        7.9,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "count": "%ID4"
+      }
+    },
+    {
+      "definition": "twinova.sink@1",
+      "id": "sink_c",
+      "name": "Turned sink",
+      "parameters": {},
+      "position": [
+        4.45,
+        0.0,
+        -2.45
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "count": "%ID8"
+      }
+    },
+    {
+      "definition": "twinova.sink@1",
+      "id": "sink_reject",
+      "name": "Reject sink",
+      "parameters": {},
+      "position": [
+        6.4,
+        0.0,
+        -0.9
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "count": "%ID12"
+      }
+    },
+    {
+      "definition": "twinova.sensor_diffuse@1",
+      "id": "s_in",
+      "name": "Infeed photocell",
+      "parameters": {},
+      "position": [
+        1.85,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "detected": "%IX0.0"
+      }
+    },
+    {
+      "definition": "twinova.sensor_diffuse@1",
+      "id": "s_stop",
+      "name": "Stopper photocell",
+      "parameters": {},
+      "position": [
+        3.45,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "detected": "%IX0.1"
+      }
+    },
+    {
+      "definition": "twinova.sensor_diffuse@1",
+      "id": "s_turn",
+      "name": "Turntable photocell",
+      "parameters": {},
+      "position": [
+        4.6,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "detected": "%IX0.2"
+      }
+    },
+    {
+      "definition": "twinova.sensor_diffuse@1",
+      "id": "s_push",
+      "name": "Pusher photocell",
+      "parameters": {},
+      "position": [
+        6.55,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "detected": "%IX0.3"
+      }
+    }
+  ]
+}
