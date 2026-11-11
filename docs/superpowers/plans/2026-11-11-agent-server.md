@@ -56,20 +56,20 @@ Rust 2024, rmcp 3.9.0 (Apache-2.0), axum (MIT), tokio (MIT), schemars (MIT), tru
 
 ## Tasks
 
-- [ ] **Task 1: the engine crate.**
+- [x] **Task 1: the engine crate.**
   - Move the files with `git mv`; fix the paths; Build as `twinova_engine::build`, which `commands.rs` calls.
   - `cargo test --workspace` gives the same counts and fingerprints; clippy and fmt clean; the app's E2E passes.
   - Commit `refactor(engine): the engine in a crate without Tauri`.
-- [ ] **Task 2: the agent and its run tools.**
+- [x] **Task 2: the agent and its run tools.**
   - Tests first, through rmcp's client on stdio and HTTP: open `sort_line`, run until every sink counts, read the
     counts, compare the fingerprint with `Engine` run directly; tool errors; two HTTP sessions.
   - Then the tools.
   - Commit `feat(agent): Twinova over MCP, stdio and HTTP, with the run tools`.
-- [ ] **Task 3: the editing tools.**
+- [x] **Task 3: the editing tools.**
   - Tests first: the round trip of the spec's acceptance 3, refusals with their messages, Build failing with the line
     running on.
   - Commit `feat(agent): scene editing over MCP`.
-- [ ] **Task 4: CI, measurement and documents.**
+- [x] **Task 4: CI, measurement and documents.**
   - Windows CI for the two crates.
   - Drive `sort_line` with `curl` over HTTP from this container.
   - `.mcp.json`, the verification file, ROADMAP 2.7 and the CHANGELOG.

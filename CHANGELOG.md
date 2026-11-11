@@ -75,4 +75,9 @@ and build inside the app, on Windows and Linux.
     `velocity`, `encoder`, `pulse`); a photocell can stand beside it;
   - the three are drawn as OIP draws them, moving with the line;
   - a sorting line example (`sort_line`) uses all three.
+- Twinova for coding agents (ROADMAP 2.7): `twinova-agent` serves the engine over the Model Context Protocol, on
+  stdio or on HTTP (`--http`, `127.0.0.1:7650/mcp` by default). An agent opens a project, builds it, runs it scan by
+  scan or until a condition holds, reads its signals, presses buttons, blocks sinks, saves and restores states and
+  compares fingerprints; it also edits the scene (parameters, signals, instances, connections, ST sources), builds it
+  as the app does and saves it. `.mcp.json` registers it for agents working in this repository.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.
