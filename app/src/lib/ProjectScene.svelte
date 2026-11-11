@@ -2,7 +2,7 @@
   // The 3D view of a project: each instance as OIP's generator draws its family (families.ts), or as its stand-in
   // shape sized from its parameters (project.ts, shapeOf), at its pose, the selected one highlighted; a chain
   // transfer's deck at its lift, a belt's fabric moved by its travel, and the cartons of the running line at the poses
-  // the physics gives them (engine.rs `Snapshot.transfers`, `Snapshot.conveyors`, `Snapshot.cartons`).
+  // the physics gives them (engine.rs `Snapshot.actuators`, `Snapshot.conveyors`, `Snapshot.cartons`).
   import * as THREE from "three";
   import { drawnOf } from "./families";
   import { materialOf } from "./materials";
@@ -16,14 +16,14 @@
     selected,
     theme,
     cartons,
-    transfers,
+    actuators,
     conveyors,
   }: {
     project: ProjectView;
     selected: string | null;
     theme: string;
     cartons: Carton[];
-    transfers: Snapshot["transfers"];
+    actuators: Snapshot["actuators"];
     conveyors: Snapshot["conveyors"];
   } = $props();
 
@@ -127,9 +127,9 @@
 
   $effect(() => {
     void [project, selected];
-    for (const t of transfers) {
-      const deck = decks.get(t.id);
-      if (deck) deck.group.position.y = deck.down + t.lift * deck.stroke;
+    for (const a of actuators) {
+      const deck = decks.get(a.id);
+      if (deck) deck.group.position.y = deck.down + a.value * deck.stroke;
     }
     requestRender();
   });

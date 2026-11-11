@@ -203,7 +203,7 @@
             {selected}
             {theme}
             cartons={snapshot?.cartons ?? []}
-            transfers={snapshot?.transfers ?? []}
+            actuators={snapshot?.actuators ?? []}
             conveyors={snapshot?.conveyors ?? []}
           />
         </div>

@@ -4,7 +4,8 @@
    deck is home and empty, and rises again once the carton reaches the turntable's photocell. Every second carton is
    stopped there, turned to 90 degrees, run off onto belt C, and the deck turns home; the others run straight on to
    belt B, where every second one is pushed off to the reject sink as it passes the pusher's photocell. The sinks'
-   counts are declared so the I/O panel shows them. *)
+   counts and the conveyors' running are declared so the I/O panel shows them. A carton leaving belt In is the fall
+   of its photocell, taken by hand: an F_TRIG fires on its first scan, its photocell being clear. *)
 PROGRAM Main
 VAR
     at_in AT %IX0.0 : BOOL;
@@ -23,23 +24,28 @@ VAR
     stop AT %QX0.5 : BOOL;
     extend AT %QX0.6 : BOOL;
     target AT %QD8 : REAL;
+    belt_in_running AT %IX1.0 : BOOL;
+    roller_running AT %IX1.1 : BOOL;
+    lane_running AT %IX1.2 : BOOL;
+    belt_b_running AT %IX1.3 : BOOL;
+    belt_c_running AT %IX1.4 : BOOL;
     count_b AT %ID4 : DINT;
     count_c AT %ID8 : DINT;
     count_reject AT %ID12 : DINT;
     step : INT;
     occupied : BOOL;
+    was_in : BOOL;
     cartons : DINT;
     straight : DINT;
-    left_in : F_TRIG;
     arrived : R_TRIG;
     passing : R_TRIG;
     settle : TON;
     carry : TON;
 END_VAR
-left_in(CLK := at_in);
-IF left_in.Q THEN
+IF was_in AND NOT at_in THEN
     occupied := TRUE;
 END_IF;
+was_in := at_in;
 arrived(CLK := at_turn);
 settle(IN := step = 2, PT := T#300MS);
 carry(IN := step = 4, PT := T#2000MS);

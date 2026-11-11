@@ -5,8 +5,9 @@
 //!    (`drive.rs`: velocity, encoder and pulse of the millisecond just stepped), the `running` of a belt without a
 //!    behaviour;
 //! 3. the field cycle, which reads the controller's outputs and writes its inputs, the conveyors' surface speeds
-//!    (spec 2026-11-10-curves-belt-options-design.md) and the chain transfers' lift (spec
-//!    2026-11-10-diverter-line-design.md);
+//!    (spec 2026-11-10-curves-belt-options-design.md), the chain transfers' lift (spec
+//!    2026-11-10-diverter-line-design.md), and the stoppers', pushers' and turntables' positions (spec
+//!    2026-11-11-stopper-pusher-turntable-design.md);
 //! 4. the controller's scan, when its period is due.
 
 use trust_runtime::value::Value;
@@ -30,13 +31,29 @@ struct BeltIo {
     feedback: Feedback,
 }
 
+/// A family whose block poses it in the world.
+#[derive(Debug, Clone, Copy)]
+enum Kind {
+    Transfer,
+    Stopper,
+    Pusher,
+    Turntable,
+}
+
+/// A device the field moves: its family, its index among the layout's devices of that family, its instance.
+struct Device {
+    kind: Kind,
+    index: usize,
+    instance: String,
+}
+
 pub struct Line {
     world: World,
     field: Option<Field>,
     controller: Controller,
     belts: Vec<BeltIo>,
-    /// Per layout chain transfer, its instance in the field.
-    transfers: Vec<String>,
+    /// The devices the field moves.
+    devices: Vec<Device>,
     /// Per layout sensor, the controller input its `detected` is bound to.
     sensors: Vec<Option<Port>>,
     /// Per layout sink, the controller input its `count` is bound to.
@@ -76,13 +93,15 @@ fn is_true(value: &Value) -> bool {
     matches!(value, Value::Bool(true))
 }
 
+fn instance_of<'a>(project: &'a Project, instance: &str) -> &'a twinova_project::model::Instance {
+    let found = project.scene.instances.iter().find(|i| i.id == instance);
+    found.expect("an instance of the layout")
+}
+
 fn has_behaviour(project: &Project, instance: &str) -> bool {
-    project
-        .scene
-        .instances
-        .iter()
-        .find(|i| i.id == instance)
-        .is_some_and(|i| project.definitions[&i.definition].behaviour.is_some())
+    project.definitions[&instance_of(project, instance).definition]
+        .behaviour
+        .is_some()
 }
 
 impl Line {
@@ -109,10 +128,52 @@ impl Line {
                 feedback: Feedback::of(project, &b.id),
             });
         }
-        // Its change-over is its block's, so a chain transfer has no native fallback (spec, "The families").
-        let transfers: Vec<String> = layout.transfers.iter().map(|t| t.id.clone()).collect();
-        if let Some(t) = transfers.iter().find(|t| !has_behaviour(project, t)) {
-            return Err(format!("{t}: twinova.chain_transfer needs its behaviour"));
+        // A device's motion is its block's, so it has no native fallback (specs 2026-11-10-diverter-line-design.md and
+        // 2026-11-11-stopper-pusher-turntable-design.md, "The families").
+        let by_kind = [
+            (
+                Kind::Transfer,
+                layout
+                    .transfers
+                    .iter()
+                    .map(|t| t.id.clone())
+                    .collect::<Vec<_>>(),
+            ),
+            (
+                Kind::Stopper,
+                layout.stoppers.iter().map(|s| s.id.clone()).collect(),
+            ),
+            (
+                Kind::Pusher,
+                layout.pushers.iter().map(|p| p.id.clone()).collect(),
+            ),
+            (
+                Kind::Turntable,
+                layout
+                    .turntables
+                    .iter()
+                    .map(|&k| layout.belts[k].id.clone())
+                    .collect(),
+            ),
+        ];
+        let devices: Vec<Device> = by_kind
+            .into_iter()
+            .flat_map(|(kind, ids)| {
+                ids.into_iter()
+                    .enumerate()
+                    .map(move |(index, instance)| Device {
+                        kind,
+                        index,
+                        instance,
+                    })
+            })
+            .collect();
+        if let Some(d) = devices
+            .iter()
+            .find(|d| !has_behaviour(project, &d.instance))
+        {
+            let family = &project.definitions[&instance_of(project, &d.instance).definition].id;
+            return Err(format!("{}: {family} needs its behaviour", d.instance));
         }
         let sensors = layout
             .sensors
@@ -141,7 +202,7 @@ impl Line {
             field,
             controller,
             belts,
-            transfers,
+            devices,
             sensors,
             sinks,
             commands,
@@ -245,14 +306,26 @@ impl Line {
             }
         }
         if let Some(field) = &self.field {
-            for (k, instance) in self.transfers.iter().enumerate() {
-                let Some(Value::Real(lift)) = field.native(instance, "lift") else {
-                    unreachable!("Build checked {instance}.lift : REAL");
+            for d in &self.devices {
+                let real = |name: &str| match field.native(&d.instance, name) {
+                    Some(Value::Real(x)) => x,
+                    _ => unreachable!("Build checked {}.{name} : REAL", d.instance),
                 };
-                let raised = field
-                    .native(instance, "raised")
-                    .is_some_and(|v| is_true(&v));
-                self.world.set_transfer(k, lift, raised);
+                match d.kind {
+                    Kind::Transfer => {
+                        let raised = field
+                            .native(&d.instance, "raised")
+                            .is_some_and(|v| is_true(&v));
+                        self.world.set_transfer(d.index, real("lift"), raised);
+                    }
+                    Kind::Stopper => self.world.set_stopper(d.index, real("lift")),
+                    Kind::Pusher => self.world.set_pusher(d.index, real("reach")),
+                    Kind::Turntable => self.world.set_turntable(
+                        d.index,
+                        real("deck_angle").to_radians(),
+                        real("deck_rate").to_radians(),
+                    ),
+                }
             }
         }
         if self.t_ns >= self.next_scan_ns {
@@ -270,3 +343,7 @@ mod tests;
 #[cfg(test)]
 #[path = "line_drive_tests.rs"]
 mod drive_tests;
+
+#[cfg(test)]
+#[path = "line_devices_tests.rs"]
+mod devices_tests;
