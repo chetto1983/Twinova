@@ -5,6 +5,7 @@ pub mod address;
 pub mod archive;
 pub mod codec;
 pub mod diagnostic;
+pub mod library;
 pub mod model;
 pub mod storage;
 mod validate;

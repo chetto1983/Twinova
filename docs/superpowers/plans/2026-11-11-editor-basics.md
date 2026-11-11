@@ -105,11 +105,12 @@ Rust 2024 (`twinova-project`, the app, `twinova-agent`), Tauri 2, Svelte 5, thre
 ## Tasks
 
 - [x] **Task 1: spec and plan** (docs commit).
-- [ ] **Task 2: the library.**
+- [x] **Task 2: the library.**
   - Extract the 15 families from the fixtures into `library/components/` (a script; they are byte-equal).
   - `library.rs`; tests:
     - each family parses and validates as a definition;
-    - its block compiles in the field (a `twinova-engine` test: the format crate has no ST compiler);
+    - every family is used by a fixture the engine's tests build and run, so its block compiles in the field (the
+      format crate has no ST compiler);
     - every fixture's copy equals the library's.
   - Commit `feat(project): the component library, embedded`.
 - [ ] **Task 3: shared edits and history.**

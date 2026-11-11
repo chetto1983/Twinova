@@ -1,0 +1,51 @@
+{
+  "behaviour": null,
+  "generator": "twinova.sensor_laser/1",
+  "id": "twinova.sensor_laser",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": 4.0,
+      "max": 10.0,
+      "min": 0.1,
+      "name": "max_range",
+      "type": "REAL",
+      "unit": "m"
+    }
+  ],
+  "ports": [
+    {
+      "kind": "mount_device",
+      "name": "mount"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_input",
+      "name": "distance",
+      "type": "REAL"
+    }
+  ],
+  "version": 1
+}

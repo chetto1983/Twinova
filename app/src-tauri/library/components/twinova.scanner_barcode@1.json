@@ -1,0 +1,61 @@
+{
+  "behaviour": null,
+  "generator": "twinova.scanner_barcode/1",
+  "id": "twinova.scanner_barcode",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": 0.5,
+      "max": 2.0,
+      "min": 0.1,
+      "name": "read_depth",
+      "type": "REAL",
+      "unit": "m"
+    }
+  ],
+  "ports": [
+    {
+      "kind": "mount_device",
+      "name": "mount"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_input",
+      "name": "read",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "count",
+      "type": "DINT"
+    },
+    {
+      "direction": "plc_input",
+      "name": "code",
+      "type": "DINT"
+    }
+  ],
+  "version": 1
+}

@@ -1,0 +1,42 @@
+{
+  "behaviour": null,
+  "generator": "twinova.sensor_through_beam/1",
+  "id": "twinova.sensor_through_beam",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [],
+  "ports": [
+    {
+      "kind": "mount_device",
+      "name": "mount"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_input",
+      "name": "detected",
+      "type": "BOOL"
+    }
+  ],
+  "version": 1
+}
