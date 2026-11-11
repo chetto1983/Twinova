@@ -43,9 +43,10 @@ async function inspectsTheScene(scene) {
   const wired = scene.instances.find((instance) => Object.keys(instance.signals ?? {}).length > 0);
   await check(`the inspector shows ${wired.name}'s addresses`, async () => {
     await click(`//section[contains(@class,"tree")]//button[span[1][normalize-space()="${wired.name}"]]`);
-    const shown = await textOf(`//section[contains(@class,"inspector")]`);
-    for (const address of Object.values(wired.signals)) {
-      if (!shown.includes(address)) throw new Error(`${address} is not in "${shown}"`);
+    // Each signal's address is the value of its field in the inspector, which edits it (ROADMAP 4.5a).
+    for (const [signal, address] of Object.entries(wired.signals)) {
+      const field = await browser.$(`//section[contains(@class,"inspector")]//input[@aria-label="${signal}"]`);
+      await eventually(async () => expectEqual(await field.getValue(), address, signal), signal, 5_000);
     }
   });
 }
