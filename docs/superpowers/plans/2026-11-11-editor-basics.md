@@ -79,6 +79,9 @@ Rust 2024 (`twinova-project`, the app, `twinova-agent`), Tauri 2, Svelte 5, thre
    - `plc/Main.st` holding `PROGRAM Main\nEND_PROGRAM\n`;
    - no folder: Save asks for one, as Save As does today.
 5. **`edit` returns the operation's own error,** and the app shows it in the status line, as Build errors are shown.
+7. **Undo and redo keep the current ST sources** (found while writing Task 4). The program and the blocks are edited
+   in the editor and enter the project at Build. Undoing a scene edit after a Build would otherwise roll the text
+   back; a block comes back only with a definition the undo restores.
 6. **The heading field is degrees about +Y.** Writing it sets the rotation `[0, sin(θ/2), 0, cos(θ/2)]`; a rotation
    with tilt (none in the library today) shows its heading and keeps the tilt only if the field is untouched.
 
@@ -118,7 +121,7 @@ Rust 2024 (`twinova-project`, the app, `twinova-agent`), Tauri 2, Svelte 5, thre
   - Tests first for `place`, `set_name`, `set_mount_at`, `set_flow` and `History`.
   - The agent's `describe` lists the library; its `add_instance` places library families.
   - Commit `feat(project): edits and undo shared by the app and the agent`.
-- [ ] **Task 4: the app's edit commands.**
+- [x] **Task 4: the app's edit commands.**
   - Commands: `edit` (one operation, tagged), `undo`, `redo`, `new_project`.
   - The view carries flows and ports.
   - Tests in `edit_commands_tests.rs`:

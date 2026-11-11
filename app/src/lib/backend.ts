@@ -1,8 +1,9 @@
-// The Tauri commands of src-tauri/src/commands.rs and project_commands.rs, and the events of the Run loop.
+// The Tauri commands of src-tauri/src/commands.rs, project_commands.rs and edit_commands.rs, and the events of the Run
+// loop.
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import type { ProjectView } from "./project";
+import type { Edit, ProjectView } from "./project";
 import type { Built, Snapshot } from "./snapshot";
 
 export const backend = {
@@ -50,6 +51,12 @@ export const projects = {
     const file = await save({ filters: ARCHIVE });
     return file === null ? null : invoke<void>("export_project", { file }).then(() => file);
   },
+  /** An empty scene with an empty program, not yet saved to a folder. */
+  create: () => invoke<ProjectView>("new_project"),
+  /** One edit of the open project, one undo step (edit_commands.rs); rejects with the edit's error. */
+  edit: (op: Edit) => invoke<ProjectView>("edit", { op }),
+  undo: () => invoke<ProjectView>("undo"),
+  redo: () => invoke<ProjectView>("redo"),
   importArchive: async (): Promise<ProjectView | null> => {
     const file = await open({ filters: ARCHIVE });
     return file === null ? null : invoke<ProjectView>("import_project", { file });

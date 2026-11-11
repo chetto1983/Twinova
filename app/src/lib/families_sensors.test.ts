@@ -22,6 +22,7 @@ const family = (name: string): Definition => ({
   generator: `twinova.${name}/1`,
   parameters: [],
   signals: [],
+  ports: [{ name: "mount", kind: "mount_device" }],
 });
 const place = (id: string, definition: string): Instance => ({
   id,

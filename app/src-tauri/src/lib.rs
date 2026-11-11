@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod demo;
+pub mod edit_commands;
 pub mod project_commands;
 pub mod webview_locale;
 
@@ -34,6 +35,10 @@ pub fn run() {
             project_commands::save_project,
             project_commands::export_project,
             project_commands::import_project,
+            edit_commands::edit,
+            edit_commands::undo,
+            edit_commands::redo,
+            edit_commands::new_project,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Twinova");

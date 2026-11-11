@@ -1,6 +1,10 @@
 //! Undo and redo of a working project (spec 2026-11-11-editor-basics-design.md): each edit records the whole project as
-//! it was, so undoing gives back exactly the project before it (OIP keeps whole documents too). A failed edit records
-//! nothing; a new edit clears what could be redone.
+//! it was, so undoing gives back the scene and the definitions before it (OIP keeps whole documents too). A failed edit
+//! records nothing; a new edit clears what could be redone.
+//!
+//! The ST sources are not undone: they are edited in the editor and enter the project at Build, so undoing a scene edit
+//! keeps the program and every block's current text. A block the earlier project pins and the current one does not
+//! comes back with the definition.
 
 use crate::Project;
 
@@ -42,13 +46,17 @@ impl History {
     }
 
     fn swap(from: &mut Vec<Project>, to: &mut Vec<Project>, project: &mut Project) -> bool {
-        match from.pop() {
-            Some(earlier) => {
-                to.push(std::mem::replace(project, earlier));
-                true
+        let Some(mut other) = from.pop() else {
+            return false;
+        };
+        other.program = project.program.clone();
+        for (key, text) in &mut other.behaviours {
+            if let Some(current) = project.behaviours.get(key) {
+                text.clone_from(current);
             }
-            None => false,
         }
+        to.push(std::mem::replace(project, other));
+        true
     }
 
     pub fn can_undo(&self) -> bool {
@@ -116,6 +124,38 @@ mod tests {
         assert_eq!(p, before);
         assert!(h.undo(&mut p));
         assert!(!h.can_undo(), "the failed edit was not recorded");
+    }
+
+    #[test]
+    fn undo_and_redo_keep_the_current_st_sources() {
+        let (mut p, mut h) = (project(), History::default());
+        h.apply(&mut p, |p| edit::remove_instance(p, "belt_a"))
+            .unwrap();
+        // A Build since put new sources in: undoing the removal keeps them.
+        p.program[0].1 = "PROGRAM Main (* built *) END_PROGRAM".into();
+        p.behaviours
+            .insert("twinova.belt@1".into(), "(* belt, edited *)".into());
+        h.undo(&mut p);
+        assert!(p.scene.instances.iter().any(|i| i.id == "belt_a"));
+        assert_eq!(p.program[0].1, "PROGRAM Main (* built *) END_PROGRAM");
+        assert_eq!(p.behaviours["twinova.belt@1"], "(* belt, edited *)");
+        h.redo(&mut p);
+        assert_eq!(p.program[0].1, "PROGRAM Main (* built *) END_PROGRAM");
+        assert_eq!(p.behaviours["twinova.belt@1"], "(* belt, edited *)");
+    }
+
+    #[test]
+    fn a_block_comes_back_with_the_definition_an_undo_restores() {
+        let (mut p, mut h) = (project(), History::default());
+        let block = p.behaviours["twinova.belt@1"].clone();
+        h.apply(&mut p, |p| {
+            p.definitions.remove("twinova.belt@1");
+            p.behaviours.remove("twinova.belt@1");
+            Ok(())
+        })
+        .unwrap();
+        h.undo(&mut p);
+        assert_eq!(p.behaviours["twinova.belt@1"], block);
     }
 
     #[test]
