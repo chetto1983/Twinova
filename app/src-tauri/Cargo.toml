@@ -56,6 +56,14 @@ opt-level = 3
 [profile.dev.package.trust-syntax]
 opt-level = 3
 
+# cargo mutants builds every mutant with this profile (.cargo/mutants.toml): the test profile without debug info, which
+# a mutant's failing test does not need (https://mutants.rs/performance.html). It keeps the dev profile's optimised
+# Rapier and truST (the tests ran as fast). Measured in .cargo/mutants.toml; CI set the same with
+# CARGO_PROFILE_DEV_DEBUG before.
+[profile.mutants]
+inherits = "test"
+debug = "none"
+
 [profile.release]
 codegen-units = 1
 lto = true
