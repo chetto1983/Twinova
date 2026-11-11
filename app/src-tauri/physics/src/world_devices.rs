@@ -1,7 +1,12 @@
 //! The devices that move in the line: OIP's chain transfer, blade stop and pusher, each a kinematic body moved before
 //! each step (OIP `src/sim/rigDriver.ts`, `MoveKinematic`; Rapier's position-based kinematic body), and their side
-//! exits. A kinematic body does not collide with the fixed decks and guards it passes through (Rapier's default
-//! `ActiveCollisionTypes`), only with the cartons.
+//! exits; and OIP's turntable, whose lane stays still while its flow turns. A kinematic body does not collide with the
+//! fixed decks and guards it passes through (Rapier's default `ActiveCollisionTypes`), only with the cartons.
+//!
+//! The turntable carries its load by its surface alone: while the deck turns, the lane is the curves' rotating field
+//! about its centre at the deck's rate; settled, its flow runs along the deck's angle (OIP `turntable-conveyor/part.js`
+//! `step`). OIP's deck body and its grip are not translated: cargo never touches the deck, and in Rapier the field
+//! alone turns a carton 90° within 0.01° (spec, measured).
 //!
 //! Translated from Open Industry Project at `1e7488c` (MIT; THIRD_PARTY_NOTICES.md): the colliders of
 //! `examples/parts/{chain-transfer,blade-stop,diverter}/rig.json`, as the spec 2026-11-11-stopper-pusher-turntable-design.md
@@ -9,8 +14,9 @@
 
 use rapier3d::prelude::*;
 
-use super::{CARTON_HALF, WALL_HEIGHT, World, side};
+use super::{CARTON_HALF, WALL_HEIGHT, World, along, side};
 use crate::layout::{Exit, Layout, Pusher, Stopper, Transfer};
+use crate::path::Motion;
 use crate::surfaces::{CARTON_FRICTION, Drive, Surfaces, surface};
 
 /// The chain transfer (OIP `examples/parts/chain-transfer/`): its pop-up stroke (`RAISE`), its deck's depth (`rig.json`
@@ -42,11 +48,36 @@ pub(super) struct Moving {
     at: Real,
 }
 
-/// Each device's body, by layout index; a chain transfer's surface too.
+/// A turntable's deck: its lane, the centre it turns about, and its angle (radians, counter-clockwise seen from above,
+/// from its start heading) and rate (rad/s) as last set.
+pub(super) struct Spin {
+    lane: usize,
+    centre: Vector,
+    angle: Real,
+    rate: Real,
+}
+
+impl Spin {
+    /// The drive of a piece of its lane that runs along `rotation`, at `speed` along the deck's heading.
+    fn drive(&self, rotation: Rotation, speed: Real) -> Drive {
+        if self.rate != 0.0 {
+            return Drive::Turn {
+                centre: self.centre,
+                omega: rotation * Vector::new(0.0, self.rate, 0.0),
+            };
+        }
+        Drive::Linear(
+            rotation * Rotation::from_rotation_y(self.angle) * Vector::new(speed, 0.0, 0.0),
+        )
+    }
+}
+
+/// Each device's body, by layout index; a chain transfer's surface too; each turntable's deck.
 pub(super) struct Devices {
     transfers: Vec<(usize, Moving)>,
     pub(super) stoppers: Vec<Moving>,
     pub(super) pushers: Vec<Moving>,
+    spins: Vec<Spin>,
 }
 
 /// A side exit: along `host` at `at`, as far each way as `reach`, past the edge `edge` from its centreline, to its
@@ -195,10 +226,39 @@ impl Devices {
             );
             world.insert_collider(wall, None);
         }
+        let spins = (layout.turntables.iter())
+            .map(|&lane| {
+                let b = &layout.belts[lane];
+                let centre = b
+                    .pose
+                    .transform_point(Vector::new(b.length / 2.0, 0.0, 0.0));
+                Spin {
+                    lane,
+                    centre,
+                    angle: 0.0,
+                    rate: 0.0,
+                }
+            })
+            .collect();
         Self {
             transfers,
             stoppers,
             pushers,
+            spins,
+        }
+    }
+
+    /// The drive of a piece of `belt`'s deck that moves its load by `motion` at `speed`: a turntable's lane turns with
+    /// its deck.
+    pub(super) fn drive(&self, belt: usize, motion: Motion, speed: Real, skew: Real) -> Drive {
+        let spin = self.spins.iter().find(|s| s.lane == belt);
+        match (motion, spin) {
+            (Motion::Along(rotation), Some(spin)) => spin.drive(rotation, speed),
+            (Motion::Along(rotation), None) => Drive::Linear(rotation * along(speed, skew)),
+            (Motion::Turn { centre, rate }, _) => Drive::Turn {
+                centre,
+                omega: rate * speed,
+            },
         }
     }
 }
@@ -294,5 +354,27 @@ impl World {
             centre,
             reach,
         );
+    }
+
+    pub fn turntables(&self) -> usize {
+        self.devices.spins.len()
+    }
+
+    pub fn turntable_id(&self, turntable: usize) -> &str {
+        &self.layout.belts[self.devices.spins[turntable].lane].id
+    }
+
+    /// A turntable's deck angle as last set, radians counter-clockwise seen from above.
+    pub fn turntable_angle(&self, turntable: usize) -> Real {
+        self.devices.spins[turntable].angle
+    }
+
+    /// A turntable's deck at `angle` (radians, counter-clockwise seen from above, from its start heading), turning at
+    /// `rate` (rad/s): its lane turns its load with it while `rate` is not 0, and runs along `angle` otherwise.
+    pub fn set_turntable(&mut self, turntable: usize, angle: Real, rate: Real) {
+        let spin = &mut self.devices.spins[turntable];
+        (spin.angle, spin.rate) = (angle, rate);
+        let lane = spin.lane;
+        self.drive(lane);
     }
 }

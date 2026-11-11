@@ -17,6 +17,7 @@ pub(super) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bo
         guards: [false; 2],
         skew: 0.0,
         openings: Vec::new(),
+        turntable: false,
     }
 }
 
@@ -40,6 +41,7 @@ fn two_belts(speed_b: Real, cartons: i64) -> World {
         transfers: vec![],
         stoppers: vec![],
         pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 1_000_000_000, cartons)],
         sinks: vec![Sink {
             id: "sink".into(),
@@ -186,6 +188,7 @@ fn a_closed_exit_holds_products_instead_of_dropping_them() {
         transfers: vec![],
         stoppers: vec![],
         pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![],
         sensors: vec![],
@@ -204,6 +207,7 @@ fn a_sensor_sees_a_carton_while_it_crosses_the_beam() {
         transfers: vec![],
         stoppers: vec![],
         pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![Sink {
             id: "sink".into(),
@@ -311,7 +315,7 @@ fn a_family_without_a_model_makes_the_line_unrunnable() {
         .definitions
         .get_mut("twinova.belt@1")
         .unwrap()
-        .generator = "twinova.turntable/1".into();
+        .generator = "twinova.sensor_through_beam/1".into();
     assert_eq!(
         layout(&project).unwrap_err(),
         "this build cannot run belt_a (twinova.belt): their families have no model yet (ROADMAP 4.4)"
@@ -392,6 +396,7 @@ fn a_sensor_reaches_as_far_as_its_range() {
         transfers: vec![],
         stoppers: vec![],
         pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![],
         sensors: vec![
@@ -504,6 +509,7 @@ fn a_sink_takes_only_what_reaches_its_own_belt() {
         transfers: vec![],
         stoppers: vec![],
         pushers: vec![],
+        turntables: vec![],
         sources: vec![source(1, 1_000_000, 0, 1)],
         sinks: vec![Sink {
             id: "sink".into(),

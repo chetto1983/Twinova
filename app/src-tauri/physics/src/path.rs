@@ -21,6 +21,11 @@ pub const STUB: Real = 0.085;
 const MAX_SEGMENT: Real = 10.0 * std::f32::consts::PI / 180.0;
 /// How far each chord overlaps the next (OIP: `chord / 2 + 0.01`).
 const CHORD_OVERLAP: Real = 0.01;
+/// A turntable's caps (OIP `turntable-conveyor/part.js` `laneCap`): each `CAP_DEPTH` widths deep plus a centimetre
+/// each side, centred `CAP_CENTRE` widths across, so it overlaps the lane by 2 cm and ends at the rim, 0.75 widths out.
+const CAP_DEPTH: Real = 0.25;
+const CAP_CENTRE: Real = 0.625;
+const CAP_OVERLAP: Real = 0.01;
 /// One solid deck per conveyor, as deep as OIP's frame (CONVEYOR_BODY_THICKNESS): a thin slab over a housing leaves a
 /// notch cargo catches on at junctions.
 pub const DECK_THICKNESS: Real = 0.17;
@@ -111,15 +116,25 @@ fn placed(frame: Pose, at: Vector, half: Vector) -> Piece {
     }
 }
 
-/// A conveyor's deck, and how each box moves its load: one box for a straight conveyor; a curve's entry stub, chords
-/// and exit stub.
+/// A conveyor's deck, and how each box moves its load: one box for a straight conveyor; for a turntable's lane, that
+/// box and OIP's two caps that reach the rim across it, a static cross (`turntable-conveyor/part.js`: a rotating
+/// rectangle would sweep into its neighbours); a curve's entry stub, chords and exit stub.
 pub fn deck(belt: &Belt) -> Vec<(Piece, Motion)> {
     let (pose, w) = (belt.pose, belt.width);
     let y = belt.height - DECK_THICKNESS / 2.0;
     let Some(arc) = belt.arc else {
         let half = Vector::new(belt.length, DECK_THICKNESS, w) / 2.0;
         let centre = Vector::new(belt.length / 2.0, y, 0.0);
-        return vec![(placed(pose, centre, half), Motion::Along(pose.rotation))];
+        let along = Motion::Along(pose.rotation);
+        let mut out = vec![(placed(pose, centre, half), along)];
+        if belt.turntable {
+            let cap = Vector::new(w, DECK_THICKNESS, CAP_DEPTH * w + 2.0 * CAP_OVERLAP) / 2.0;
+            for side in [-1.0, 1.0] {
+                let at = centre + Vector::new(0.0, 0.0, side * (CAP_CENTRE * w - CAP_OVERLAP));
+                out.push((placed(pose, at, cap), along));
+            }
+        }
+        return out;
     };
     let stub = Vector::new(STUB, DECK_THICKNESS, w) / 2.0;
     let end = pose * arc.end(w);

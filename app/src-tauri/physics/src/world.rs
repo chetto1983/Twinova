@@ -214,15 +214,14 @@ impl World {
     /// A conveyor's surface speed, m/s, along its flow (a curve's at its centreline); negative runs it backwards.
     pub fn set_belt_speed(&mut self, belt: usize, speed: Real) {
         self.speeds[belt] = speed;
-        let b = &self.layout.belts[belt];
+        self.drive(belt);
+    }
+
+    /// Sets the drives of a conveyor's deck from its speed, and a turntable's lane from its deck as well.
+    fn drive(&mut self, belt: usize) {
+        let (speed, skew) = (self.speeds[belt], self.layout.belts[belt].skew);
         for &(index, motion) in &self.surfaces[belt] {
-            self.hooks.surface[index] = match motion {
-                Motion::Along(rotation) => Drive::Linear(rotation * along(speed, b.skew)),
-                Motion::Turn { centre, rate } => Drive::Turn {
-                    centre,
-                    omega: rate * speed,
-                },
-            };
+            self.hooks.surface[index] = self.devices.drive(belt, motion, speed, skew);
         }
     }
 
@@ -445,3 +444,7 @@ mod stopper_tests;
 #[cfg(test)]
 #[path = "world_pusher_tests.rs"]
 mod pusher_tests;
+
+#[cfg(test)]
+#[path = "world_turntable_tests.rs"]
+mod turntable_tests;

@@ -48,6 +48,7 @@ fn line(side_sink: bool, cartons: i64, interval_ms: i64) -> World {
         }],
         stoppers: vec![],
         pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, interval_ms * 1_000_000, cartons)],
         sinks,
         sensors: vec![],
@@ -358,6 +359,7 @@ fn each_transfer_answers_for_its_own_deck_and_side() {
         transfers: vec![transfer("first", 0.8, false), transfer("second", 2.0, true)],
         stoppers: vec![],
         pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 1_000_000_000_000, 1)],
         sinks: vec![
             Sink {

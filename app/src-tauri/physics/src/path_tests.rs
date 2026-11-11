@@ -27,6 +27,7 @@ pub(crate) fn conveyor(arc: Option<Arc>, guards: [bool; 2]) -> Belt {
         guards,
         skew: 0.0,
         openings: Vec::new(),
+        turntable: false,
     }
 }
 
@@ -297,4 +298,27 @@ fn a_pusher_opens_the_guard_on_its_side_about_its_position() {
         left[0].pose.translation.x - 1.0 - left[0].half.x,
         0.475
     ));
+}
+
+/// OIP's turntable deck: the lane from rim to rim along its start heading, and two caps that overlap it by 2 cm and
+/// reach the rim across it, 0.75 widths from the centre; all three carry along the start heading.
+#[test]
+fn a_turntable_deck_is_a_static_cross_from_rim_to_rim() {
+    let mut lane = conveyor(None, [false; 2]);
+    (lane.turntable, lane.length) = (true, 0.9);
+    let pieces = deck(&lane);
+    assert_eq!(pieces.len(), 3);
+    let centre = Vector::new(1.45, 0.8 - DECK_THICKNESS / 2.0, 2.0);
+    let span = |p: &Piece| (p.pose.translation - centre, p.half);
+    let (at, half) = span(&pieces[0].0);
+    assert!(at.length() < 1e-5 && near(half.x, 0.45) && near(half.z, 0.3));
+    for ((piece, motion), side) in pieces[1..].iter().zip([-1.0, 1.0]) {
+        let (at, half) = span(piece);
+        assert!(near(at.x, 0.0) && near(half.x, 0.3), "{at:?} {half:?}");
+        assert!(
+            near(side * at.z - half.z, 0.28) && near(side * at.z + half.z, 0.45),
+            "{at:?} {half:?}"
+        );
+        assert_eq!(*motion, Motion::Along(lane.pose.rotation));
+    }
 }

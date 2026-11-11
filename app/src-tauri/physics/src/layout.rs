@@ -1,8 +1,9 @@
 //! A project's line as the physics world needs it (spec 2026-11-09-component-behaviour-design.md, "Transport with
-//! physics"; specs 2026-11-10-diverter-line-design.md and 2026-11-10-curves-belt-options-design.md): conveyors
-//! (belts, roller conveyors and their curves) with their pose, size, guards and skew, the chain transfers fitted in
-//! roller conveyors, the sources and sinks at their exits, the sensors on their beams. A family this build cannot
-//! simulate makes the whole line unrunnable, with its name, as 4.2 requires.
+//! physics"; specs 2026-11-10-diverter-line-design.md, 2026-11-10-curves-belt-options-design.md and
+//! 2026-11-11-stopper-pusher-turntable-design.md): conveyors (belts, roller conveyors, their curves and turntables'
+//! lanes) with their pose, size, guards and skew, the devices mounted on them (`layout_devices.rs`), the sources and
+//! sinks at their exits, the sensors on their beams. A family this build cannot simulate makes the whole line
+//! unrunnable, with its name, as 4.2 requires.
 
 use rapier3d::prelude::{Pose, Real, Rotation, Vector};
 
@@ -44,7 +45,14 @@ pub struct Belt {
     pub skew: Real,
     /// Where its guards open for the pushers beside it.
     pub openings: Vec<Opening>,
+    /// It is a turntable's lane: OIP's static cross for a deck, and a flow that turns with the deck
+    /// (`World::set_turntable`).
+    pub turntable: bool,
 }
+
+/// A turntable's lane along its start heading, in widths: OIP's deck is 1.5 widths across (`turntable-conveyor/part.js`
+/// `PLATE`), and its lane box runs from rim to rim.
+pub const TURNTABLE_LANE: Real = 1.5;
 
 /// A curve's arc (OIP's curved conveyors).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -105,6 +113,8 @@ pub struct Layout {
     pub transfers: Vec<Transfer>,
     pub stoppers: Vec<Stopper>,
     pub pushers: Vec<Pusher>,
+    /// The conveyors that are turntables' lanes.
+    pub turntables: Vec<usize>,
     pub sources: Vec<Source>,
     pub sinks: Vec<Sink>,
     pub sensors: Vec<Sensor>,
@@ -196,6 +206,7 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                     | "twinova.roller/1"
                     | "twinova.belt_curve/1"
                     | "twinova.roller_curve/1"
+                    | "twinova.turntable/1"
                     | "twinova.chain_transfer/1"
                     | "twinova.stopper/1"
                     | "twinova.pusher/1"
@@ -218,7 +229,7 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
         let (width, height) = (real("width"), real("height"));
         let (grip, arc) = match def.generator.as_str() {
             "twinova.belt/1" => (BELT_GRIP, None),
-            "twinova.roller/1" => (real("friction"), None),
+            "twinova.roller/1" | "twinova.turntable/1" => (real("friction"), None),
             "twinova.belt_curve/1" | "twinova.roller_curve/1" => {
                 let arc = Arc {
                     inner_radius: real("inner_radius"),
@@ -229,20 +240,38 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
             }
             _ => continue,
         };
-        let length = arc.map_or_else(|| real("length"), |a| arc_length(&a, width));
+        let turntable = def.generator == "twinova.turntable/1";
+        let (pose, length) = if turntable {
+            let half = TURNTABLE_LANE * width / 2.0;
+            (
+                pose(inst) * Pose::from_translation(Vector::new(-half, 0.0, 0.0)),
+                2.0 * half,
+            )
+        } else {
+            let length = arc.map_or_else(|| real("length"), |a| arc_length(&a, width));
+            (
+                inclined(pose(inst), length, height, degrees(inst, def, "incline")),
+                length,
+            )
+        };
+        if turntable {
+            out.turntables.push(out.belts.len());
+        }
         out.belts.push(Belt {
             id: inst.id.clone(),
-            pose: inclined(pose(inst), length, height, degrees(inst, def, "incline")),
+            pose,
             length,
             width,
             height,
             speed: real("speed"),
             grip,
-            closed_exit: flow_peer(project, (&inst.id, "out")).is_none(),
+            // A turntable's ends have no wall: its deck turns them (OIP has none).
+            closed_exit: !turntable && flow_peer(project, (&inst.id, "out")).is_none(),
             arc,
             guards: [real("left_guard") != 0.0, real("right_guard") != 0.0],
             openings: Vec::new(),
             skew: degrees(inst, def, "skew"),
+            turntable,
         });
     }
     devices::devices(project, &instances, &mut out)?;
