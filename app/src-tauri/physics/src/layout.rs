@@ -13,7 +13,7 @@ use crate::path::arc_length;
 mod devices;
 pub use devices::{PUSHER_OPENING, Pusher, Stopper, Transfer, roller_gap};
 use twinova_project::Project;
-use twinova_project::model::{Connection, Definition, Instance, ParamValue};
+use twinova_project::model::{Connection, Definition, Instance, Item, ParamValue, rgb};
 
 /// A belt's grip against a standard carton, the figure a belt datasheet quotes (OIP `BELT_FRICTION`,
 /// `src/core/types/base.ts` at `1e7488c`).
@@ -90,6 +90,43 @@ pub struct Source {
     pub first_ns: i64,
     /// 0 is unlimited.
     pub max_count: i64,
+    pub products: Products,
+}
+
+/// What a source makes (spec 2026-11-11-sensors-products-design.md; OIP `box-spawner/behavior.ts`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Products {
+    /// Length along the flow, width across it, height, m.
+    pub size: Vector,
+    pub mass: Real,
+    /// Each product's size drawn from OIP's range instead.
+    pub random_size: bool,
+    /// Handed out one per product, in step: product n takes colour n and code n.
+    pub colors: Vec<[u8; 3]>,
+    pub codes: Vec<i32>,
+    /// Draw each product's colour and code at random from the lists instead of walking them.
+    pub random_order: bool,
+    pub seed: u32,
+}
+
+/// A source pinned before 4.4d has no product parameters: it makes M3's 0.3 m carton, at the spec's 2.7 kg.
+const DEFAULT_SIZE: Real = 0.3;
+const DEFAULT_MASS: Real = 2.7;
+const DEFAULT_SEED: u32 = 1;
+
+impl Products {
+    /// M3's carton, unpainted and without a code.
+    pub fn carton() -> Self {
+        Self {
+            size: Vector::splat(DEFAULT_SIZE),
+            mass: DEFAULT_MASS,
+            random_size: false,
+            colors: Vec::new(),
+            codes: Vec::new(),
+            random_order: false,
+            seed: DEFAULT_SEED,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -134,13 +171,54 @@ impl Layout {
     }
 }
 
-/// A scalar parameter as a number; a list, which no scalar reads, as none.
+/// A scalar parameter as a number, if the definition has it.
+fn number(inst: &Instance, def: &Definition, name: &str) -> Option<f64> {
+    match inst.parameter(def, name)? {
+        ParamValue::Real(x) => Some(*x),
+        ParamValue::Int(n) => Some(*n as f64),
+        ParamValue::Bool(b) => Some(f64::from(u8::from(*b))),
+        ParamValue::List(_) => None,
+    }
+}
+
 fn param(inst: &Instance, def: &Definition, name: &str) -> f64 {
+    number(inst, def, name).unwrap_or(0.0)
+}
+
+/// A list parameter's items; none if the definition does not have it.
+fn items<'a>(inst: &'a Instance, def: &'a Definition, name: &str) -> &'a [Item] {
     match inst.parameter(def, name) {
-        Some(ParamValue::Real(x)) => *x,
-        Some(ParamValue::Int(n)) => *n as f64,
-        Some(ParamValue::Bool(b)) => f64::from(u8::from(*b)),
-        Some(ParamValue::List(_)) | None => 0.0,
+        Some(ParamValue::List(items)) => items,
+        _ => &[],
+    }
+}
+
+fn products(inst: &Instance, def: &Definition) -> Products {
+    let real = |name, default: Real| number(inst, def, name).map_or(default, |x| x as Real);
+    Products {
+        size: Vector::new(
+            real("length", DEFAULT_SIZE),
+            real("width", DEFAULT_SIZE),
+            real("height", DEFAULT_SIZE),
+        ),
+        mass: real("mass", DEFAULT_MASS),
+        random_size: param(inst, def, "random_size") != 0.0,
+        // The format checked both lists' items.
+        colors: (items(inst, def, "colors").iter())
+            .filter_map(|item| match item {
+                Item::Text(t) => rgb(t),
+                Item::Int(_) => None,
+            })
+            .collect(),
+        codes: (items(inst, def, "codes").iter())
+            .filter_map(|item| match item {
+                Item::Int(n) => i32::try_from(*n).ok(),
+                Item::Text(_) => None,
+            })
+            .collect(),
+        random_order: param(inst, def, "random_order") != 0.0,
+        // A DINT seed's bits, as mulberry32 takes a 32-bit state.
+        seed: number(inst, def, "seed").map_or(DEFAULT_SEED, |n| n as i32 as u32),
     }
 }
 
@@ -286,6 +364,7 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                 interval_ns: param(inst, def, "interval") as i64,
                 first_ns: param(inst, def, "first_arrival") as i64,
                 max_count: param(inst, def, "max_count") as i64,
+                products: products(inst, def),
             }),
             "twinova.sink/1" => {
                 let what = format!("{}.in", inst.id);

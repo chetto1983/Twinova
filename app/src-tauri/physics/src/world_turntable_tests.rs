@@ -77,7 +77,7 @@ fn cell() -> World {
 
 /// The carton's plan position and heading.
 fn plan(w: &World) -> (Vector, Rotation) {
-    let body = &w.world.bodies[w.cartons[0].1];
+    let body = &w.world.bodies[w.products[0].body];
     (body.translation(), *body.rotation())
 }
 
@@ -121,7 +121,7 @@ fn a_carton_turns_with_the_deck_and_runs_off_along_its_new_heading() {
     assert!((w.turntable_angle(0) - std::f32::consts::FRAC_PI_2).abs() < 1e-6);
     w.set_belt_speed(1, 0.5);
     run(&mut w, 300);
-    let v = w.world.bodies[w.cartons[0].1].linvel();
+    let v = w.world.bodies[w.products[0].body].linvel();
     assert!(
         (v.z + 0.5).abs() < 0.005 && v.x.abs() < 0.005,
         "along the new heading: {v:?}"
@@ -195,5 +195,7 @@ fn a_turntable_gives_equal_bits_on_every_platform() {
     let first = fingerprint();
     assert_eq!(first, fingerprint());
     // Pinned on Linux x86-64 (2026-11-11), equal in dev and release; the windows-2022 CI job runs this test too.
-    assert_eq!(first, 0x1109_870f_76d5_c9c8, "{first:#018x}");
+    // Re-pinned 2026-11-11 for 4.4d: the fingerprint covers each product's size, colour, code and read mark, and the
+    // carton's mass is set (2.7 kg) instead of following from its rounded core (1.76 kg).
+    assert_eq!(first, 0x7c82_7bab_a5c1_d88f, "{first:#018x}");
 }

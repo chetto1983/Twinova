@@ -76,22 +76,6 @@ fn a_parameter_takes_a_value_of_its_type_or_its_default_back() {
 #[test]
 fn a_list_parameter_takes_an_array_of_its_items() {
     let mut p = sort_line();
-    let source = p.definitions.get_mut("twinova.source@1").unwrap();
-    for (name, ty) in [
-        ("codes", ParamType::DintList),
-        ("colors", ParamType::ColorList),
-    ] {
-        source
-            .parameters
-            .push(twinova_project::model::ParameterDef {
-                name: name.into(),
-                ty,
-                unit: None,
-                default: ParamValue::List(Vec::new()),
-                min: None,
-                max: None,
-            });
-    }
     set_parameter(&mut p, "source", "codes", Some(&json!([3, 1]))).unwrap();
     set_parameter(&mut p, "source", "colors", Some(&json!(["#ff0000"]))).unwrap();
     let parameters = &instance(&p, "source").parameters;

@@ -3,7 +3,7 @@
 
 use proptest::prelude::*;
 use std::path::Path;
-use twinova_project::model::{Item, ParamType, ParamValue, ParameterDef};
+use twinova_project::model::{Item, ParamType, ParamValue};
 use twinova_project::storage::open_folder;
 use twinova_project::{Project, encode_project, parse_project};
 
@@ -13,33 +13,18 @@ fn reference() -> Project {
     open_folder(&root).unwrap().opened.project
 }
 
-fn list_param(name: &str, ty: ParamType, default: Vec<Item>) -> ParameterDef {
-    ParameterDef {
-        name: name.into(),
-        ty,
-        unit: None,
-        default: ParamValue::List(default),
-        min: None,
-        max: None,
-    }
-}
-
-/// The reference line with the source's definition given both list parameters, and an instance overriding them.
+/// The reference line with the source's list parameters (4.4d), `codes` defaulting to `[7]`, and its instance
+/// overriding both.
 fn with_lists(codes: Vec<i32>, colors: Vec<[u8; 3]>) -> Project {
     let mut project = reference();
-    let key = project
-        .scene
-        .instances
-        .iter()
-        .find(|i| i.id == "source")
-        .unwrap()
-        .definition
-        .clone();
-    let def = project.definitions.get_mut(&key).unwrap();
-    def.parameters
-        .push(list_param("codes", ParamType::DintList, vec![Item::Int(7)]));
-    def.parameters
-        .push(list_param("colors", ParamType::ColorList, vec![]));
+    let def = project.definitions.get_mut("twinova.source@1").unwrap();
+    let default = def
+        .parameters
+        .iter_mut()
+        .find(|p| p.name == "codes")
+        .unwrap();
+    assert_eq!(default.ty, ParamType::DintList);
+    default.default = ParamValue::List(vec![Item::Int(7)]);
     let source = project
         .scene
         .instances

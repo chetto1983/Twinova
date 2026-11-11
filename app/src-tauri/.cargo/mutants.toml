@@ -1,7 +1,7 @@
 # cargo mutants configuration (https://mutants.rs). Scope (CLAUDE.md "MUTATION >=70%"; the gate in mutation.yml
 # allows no survivor): the run engine and the line loop, the field runtime and the controller (4.3; crate twinova-engine), the line physics
-# (crate twinova-physics), the project format's address parser, validation, codec and storage (4.2), and the agent server's sessions and tools
-# (2.7).
+# (crate twinova-physics), the project format's address parser, model, validation, codec and storage (4.2), and the agent server's
+# sessions and tools (2.7).
 # mutation.yml runs it with --workspace.
 # Every mutant builds with Cargo.toml's `mutants` profile, the test profile without debug info
 # (https://mutants.rs/performance.html). Measured 2026-11-11, per mutant, in place, against the test profile: physics
@@ -12,8 +12,9 @@ examine_globs = [
   "engine/src/engine.rs", "engine/src/line.rs", "engine/src/drive.rs", "engine/src/field.rs",
   "engine/src/field_image.rs", "engine/src/controller.rs", "engine/src/build.rs", "engine/src/locate.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
-  "project/src/storage.rs", "project/src/archive.rs",
-  "physics/src/world.rs", "physics/src/world_devices.rs", "physics/src/layout.rs", "physics/src/layout_devices.rs",
+  "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs",
+  "physics/src/world.rs", "physics/src/world_devices.rs", "physics/src/world_products.rs", "physics/src/layout.rs",
+  "physics/src/layout_devices.rs",
   "physics/src/path.rs", "physics/src/surfaces.rs",
   "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/edit.rs", "agent/src/tools_edit.rs",
 ]

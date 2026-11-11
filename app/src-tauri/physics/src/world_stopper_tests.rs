@@ -35,7 +35,7 @@ fn queue(speed: Real, raise: Real) -> World {
 }
 
 fn tilt(w: &World, k: usize) -> Real {
-    let r = *w.world.bodies[w.cartons[k].1].rotation();
+    let r = *w.world.bodies[w.products[k].body].rotation();
     (r * Vector::Y).angle_between(Vector::Y).to_degrees()
 }
 
@@ -45,7 +45,7 @@ fn a_raised_blade_holds_a_queue_dead() {
     let mut worst: Real = 0.0;
     for _ in 0..8000 {
         w.step();
-        for k in 0..w.cartons.len() {
+        for k in 0..w.products.len() {
             worst = worst.max(tilt(&w, k));
         }
     }
@@ -62,7 +62,7 @@ fn a_raised_blade_holds_a_queue_dead() {
             "a queue: {x:?}"
         );
     }
-    let v = w.world.bodies[w.cartons[0].1].linvel();
+    let v = w.world.bodies[w.products[0].body].linvel();
     assert!(v.length() < 1e-3, "at rest: {v:?}");
     assert!(worst < 2.0, "tilted {worst}°");
 }
@@ -77,7 +77,7 @@ fn a_lowered_blade_lets_the_front_carton_run_on_at_the_hosts_speed() {
         let lift = 1.0 - (ms as Real / RAISE_MS as Real).min(1.0);
         w.set_stopper(0, lift);
         w.step();
-        let v = w.world.bodies[w.cartons[0].1].linvel();
+        let v = w.world.bodies[w.products[0].body].linvel();
         if (v.x - 0.5).abs() < 0.005 {
             assert!(ms <= 220, "at speed after {ms} ms");
             return;

@@ -1,5 +1,5 @@
 use super::*;
-use crate::layout::{BELT_GRIP, Belt, Exit, Sensor, Sink, Source, layout};
+use crate::layout::{BELT_GRIP, Belt, Exit, Products, Sensor, Sink, Source, layout};
 use std::path::Path;
 use twinova_project::storage::open_folder;
 
@@ -28,6 +28,7 @@ pub(super) fn source(belt: usize, first_ns: i64, interval_ns: i64, max_count: i6
         interval_ns,
         first_ns,
         max_count,
+        products: Products::carton(),
     }
 }
 
@@ -68,7 +69,7 @@ fn x(w: &World, k: usize) -> f32 {
 fn a_belt_carries_a_carton_at_its_speed() {
     let mut w = two_belts(0.5, 1);
     run(&mut w, 2001);
-    let v = w.world.bodies[w.cartons[0].1].linvel().x;
+    let v = w.world.bodies[w.products[0].body].linvel().x;
     assert!((v - 0.5).abs() < 0.005, "{v}");
     let y = w.cartons()[0].position[1];
     assert!(
@@ -257,7 +258,9 @@ fn equal_runs_give_equal_bits_on_every_platform() {
     // Pinned on Linux x86-64 (2026-11-10, Coulomb friction, one solver iteration), equal in dev and release. The
     // windows-2022 CI job runs this test too: with enhanced-determinism the same bits must come out there
     // (research 15).
-    assert_eq!(first, 0x2674_dda1_319b_763a, "{first:#018x}");
+    // Re-pinned 2026-11-11 for 4.4d: the fingerprint covers each product's size, colour, code and read mark, and the
+    // carton's mass is set (2.7 kg) instead of following from its rounded core (1.76 kg).
+    assert_eq!(first, 0x6e1f_b275_927f_76a9, "{first:#018x}");
 }
 
 pub(super) fn fixture(name: &str) -> twinova_project::Project {
@@ -287,7 +290,8 @@ fn the_demo_lays_out_its_belt_source_sink_and_sensor() {
             belt: 0,
             interval_ns: 2_000_000_000,
             first_ns: 10_000_000,
-            max_count: 0
+            max_count: 0,
+            products: Products::carton(),
         }]
     );
     assert_eq!(

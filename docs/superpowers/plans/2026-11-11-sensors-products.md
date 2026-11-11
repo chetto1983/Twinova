@@ -41,8 +41,9 @@ the native sensors (user), the carton's real mass, unpainted products and the le
 
 - **Determinism:** the same seed gives the same products, bit for bit. The draws are mulberry32 on u32, mapped to f64,
   then cast once to f32.
-- **Fingerprints:** they now cover each product's attributes. Equal-run tests stay green; no stored value exists to
-  update (grep: no hard-coded fingerprint).
+- **Fingerprints:** they now cover each product's attributes, and the carton's mass is set, so the four values pinned
+  in the physics tests ("equal bits on every platform") are pinned again, equal in dev and release, with the reason
+  beside each; Windows CI checks the same bits.
 - **Files:** none over 600 lines.
 - **Fixtures:** written by an independent script (`scratchpad/migrate_fixtures_4_4d.py`), never by the code under test.
 - **Gates:**
@@ -126,7 +127,7 @@ the native sensors (user), the carton's real mass, unpainted products and the le
     - the agent's `set_parameter` with a list.
   - TS: `project.ts` parameter types; a list shows as its values joined.
   - Commit `feat(format): list parameters, DINT_LIST and COLOR_LIST`.
-- [ ] **Task 3: products with attributes.**
+- [x] **Task 3: products with attributes.**
   - Tests first:
     - mulberry32 against OIP's reference sequence for a seed;
     - colour and code lists cycle together (item n takes colour n and code n);
@@ -137,6 +138,8 @@ the native sensors (user), the carton's real mass, unpainted products and the le
     - OIP's box (0.6 × 0.4 × 0.4) and the largest random box (0.8 × 0.5 × 0.5) pass the 4.4b–c families with the probe's
       bounds: turntable, pusher, stopper, belt curve, roller curve, sinks and side exits reached by their own size.
   - Then the split and the per-product sizes. The snapshot gains `size` and `color`.
+  - The source definition of every valid fixture gains the product parameters (`migrate_fixtures_4_4d.py`), defaults
+    M3's carton; a source pinned without them makes the carton too.
   - Commit `feat(physics): products with size, mass, colour and code`.
 - [ ] **Task 4: the four sensors in physics and the line.**
   - Tests first:

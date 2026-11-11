@@ -14,7 +14,7 @@
 
 use rapier3d::prelude::*;
 
-use super::{CARTON_HALF, WALL_HEIGHT, World, along, side};
+use super::{WALL_HEIGHT, World, along, side};
 use crate::layout::{Exit, Layout, Pusher, Stopper, Transfer};
 use crate::path::Motion;
 use crate::surfaces::{CARTON_FRICTION, Drive, Surfaces, surface};
@@ -80,21 +80,20 @@ pub(super) struct Devices {
     spins: Vec<Spin>,
 }
 
-/// A side exit: along `host` at `at`, as far each way as `reach`, past the edge `edge` from its centreline, to its
+/// A side exit: along `host` at `at`, as far each way as `span`, past the edge `edge` from its centreline, to its
 /// right or its left.
 #[derive(Clone, Copy)]
 pub(super) struct Side {
     pub host: usize,
     pub at: Real,
-    pub reach: Real,
+    pub span: Real,
     pub edge: Real,
     pub right: bool,
 }
 
-/// The side exit of a chain transfer or a pusher. A transfer's reaches the deck and a carton that only overlaps it,
-/// as a chute beside the transfer catches what the chains drag off (measured 2026-11-10: with the deck's own span, a
-/// queue standing over a raised transfer spilled the cartons it half carried onto the floor); a pusher's, its paddle's
-/// and a carton's.
+/// The side exit of a chain transfer or a pusher: the deck's span or the paddle's. A product counts while it overlaps it
+/// (`World::reached`), as a chute beside the transfer catches what the chains drag off (measured 2026-11-10: with the
+/// deck's own span, a queue standing over a raised transfer spilled the cartons it half carried onto the floor).
 pub(super) fn side_exit(layout: &Layout, exit: Exit) -> Option<Side> {
     match exit {
         Exit::End(_) => None,
@@ -103,7 +102,7 @@ pub(super) fn side_exit(layout: &Layout, exit: Exit) -> Option<Side> {
             Some(Side {
                 host: t.host,
                 at: t.at,
-                reach: t.along / 2.0 + CARTON_HALF,
+                span: t.along / 2.0,
                 edge: t.across / 2.0,
                 right: t.out_right,
             })
@@ -113,13 +112,16 @@ pub(super) fn side_exit(layout: &Layout, exit: Exit) -> Option<Side> {
             Some(Side {
                 host: p.host,
                 at: p.at,
-                reach: PADDLE.x / 2.0 + CARTON_HALF,
+                span: PADDLE.x / 2.0,
                 edge: layout.belts[p.host].width / 2.0,
                 right: p.out_right,
             })
         }
     }
 }
+
+/// How far a side exit's wall runs past its span each way: M3's carton's half, as it did before products had sizes.
+const SIDE_WALL_MARGIN: Real = 0.15;
 
 /// The wall along a side exit that feeds nothing.
 pub(super) fn side_wall(layout: &Layout, s: Side) -> ColliderBuilder {
@@ -129,7 +131,7 @@ pub(super) fn side_wall(layout: &Layout, s: Side) -> ColliderBuilder {
         b.height + WALL_HEIGHT / 2.0,
         side(s.right) * (s.edge + 0.01),
     );
-    ColliderBuilder::cuboid(s.reach, WALL_HEIGHT / 2.0, 0.01)
+    ColliderBuilder::cuboid(s.span + SIDE_WALL_MARGIN, WALL_HEIGHT / 2.0, 0.01)
         .position(b.pose * Pose::from_translation(at))
 }
 

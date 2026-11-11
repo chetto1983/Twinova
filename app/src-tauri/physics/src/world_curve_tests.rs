@@ -61,7 +61,7 @@ fn leaving(w: &mut World, at: Real) -> (Real, Real, Real) {
     let frame = w.layout.belts[2].pose;
     for _ in 0..20_000 {
         w.step();
-        let handle = w.cartons[0].1;
+        let handle = w.products[0].body;
         let body = &w.world.bodies[handle];
         let p = frame.inverse_transform_point(body.translation());
         if p.x >= at {
@@ -290,5 +290,7 @@ fn a_line_with_curves_gives_equal_bits_on_every_platform() {
     assert_eq!(first, fingerprint());
     // Pinned on Linux x86-64 (2026-11-10, Coulomb friction, one solver iteration), equal in dev and release; the
     // windows-2022 CI job runs this test too.
-    assert_eq!(first, 0xaba0_61e5_4b1d_fbe2, "{first:#018x}");
+    // Re-pinned 2026-11-11 for 4.4d: the fingerprint covers each product's size, colour, code and read mark, and the
+    // carton's mass is set (2.7 kg) instead of following from its rounded core (1.76 kg).
+    assert_eq!(first, 0x94df_f910_2f56_7273, "{first:#018x}");
 }

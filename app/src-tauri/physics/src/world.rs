@@ -21,38 +21,39 @@ use crate::surfaces::{CARTON_FRICTION, Drive, Surfaces, surface};
 
 #[path = "world_devices.rs"]
 mod devices;
+#[path = "world_products.rs"]
+mod products;
 #[cfg(test)]
 use devices::TRANSFER_BELOW;
 pub use devices::TRANSFER_STROKE;
 use devices::{Devices, side_exit, side_wall};
+use products::{Product, SourceState};
 
 pub const STEP_NS: i64 = 1_000_000;
 const STEP_S: Real = 0.001;
-/// The products of 4.3: M3's 0.3 m carton.
-pub const CARTON_HALF: Real = 0.15;
-const CARTON_DENSITY: Real = 100.0;
-/// OIP's cargo edge rounding (bodyFactory.ts makeBoxShape): min(0.02 m, 0.4 × the smallest half extent).
-const CARTON_ROUNDING: Real = 0.02;
+/// The half extent of the tests' products, M3's 0.3 m carton (`Products::carton`).
+#[cfg(test)]
+const CARTON_HALF: Real = 0.15;
 const WALL_HEIGHT: Real = 0.4;
 /// The beam of a diffuse sensor, above the running surface.
 const BEAM_HEIGHT: Real = 0.05;
+/// A product as the view draws it.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Carton {
     pub id: u64,
     pub position: [f32; 3],
     pub rotation: [f32; 4],
-}
-
-struct SourceState {
-    next_ns: i64,
-    made: i64,
+    /// Full extents along its own x (the flow it was made on), y and z, m.
+    pub size: [f32; 3],
+    /// `[r, g, b]`, or none for an unpainted product.
+    pub color: Option<[u8; 3]>,
 }
 
 pub struct World {
     world: PhysicsWorld,
     hooks: Surfaces,
     layout: Layout,
-    cartons: Vec<(u64, RigidBodyHandle)>,
+    products: Vec<Product>,
     next_id: u64,
     t_ns: i64,
     sources: Vec<SourceState>,
@@ -156,20 +157,15 @@ impl World {
             }
         }
         let devices = Devices::new(&mut world, &mut hooks, &layout);
-        let sources = layout
-            .sources
-            .iter()
-            .map(|s| SourceState {
-                next_ns: s.first_ns,
-                made: 0,
-            })
+        let sources = (layout.sources.iter())
+            .map(|s| SourceState::new(s.first_ns, s.products.seed))
             .collect();
         let sinks = layout.sinks.len();
         Self {
             world,
             hooks,
             layout,
-            cartons: Vec::new(),
+            products: Vec::new(),
             next_id: 1,
             t_ns: 0,
             sources,
@@ -255,7 +251,7 @@ impl World {
         self.delivered[sink]
     }
 
-    /// The cartons the sources have made: delivered plus those on the line, when none is lost.
+    /// The products the sources have made: delivered plus those on the line, when none is lost.
     pub fn created(&self) -> u64 {
         self.sources.iter().map(|s| s.made as u64).sum()
     }
@@ -277,94 +273,49 @@ impl World {
         }
     }
 
-    /// The carton's position in a belt's frame.
-    fn local(&self, belt: usize, handle: RigidBodyHandle) -> Vector {
+    /// A product's position in a belt's frame.
+    fn local(&self, belt: usize, product: &Product) -> Vector {
         self.layout.belts[belt]
             .pose
-            .inverse_transform_point(self.world.bodies[handle].translation())
+            .inverse_transform_point(self.world.bodies[product.body].translation())
     }
 
-    /// Removes the cartons whose front reached the sink's exit, as M3 delivered: past a conveyor's end, or past a
+    /// Removes the products whose front reached the sink's exit, as M3 delivered: past a conveyor's end, or past a
     /// chain transfer's side along its deck.
     fn collect(&mut self, sink: usize) {
         let exit = self.layout.sinks[sink].exit;
-        let reached: Vec<usize> = (0..self.cartons.len())
-            .filter(|&k| self.reached(exit, self.cartons[k].1))
+        let reached: Vec<usize> = (0..self.products.len())
+            .filter(|&k| self.reached(exit, &self.products[k]))
             .collect();
         for k in reached.into_iter().rev() {
-            let (_, handle) = self.cartons.remove(k);
-            self.world.remove_body(handle);
+            let product = self.products.remove(k);
+            self.world.remove_body(product.body);
             self.delivered[sink] += 1;
         }
     }
 
-    fn reached(&self, exit: Exit, carton: RigidBodyHandle) -> bool {
+    /// Whether a product's front is past an exit, by its own size as it lies.
+    fn reached(&self, exit: Exit, product: &Product) -> bool {
         match exit {
             Exit::End(belt) => {
                 let b = &self.layout.belts[belt];
                 let (frame, length) = exit_frame(b);
-                let p = frame.inverse_transform_point(self.world.bodies[carton].translation());
-                p.x + CARTON_HALF >= length
+                let p =
+                    frame.inverse_transform_point(self.world.bodies[product.body].translation());
+                let reach = |axis: Vector| self.reach(product, frame.rotation * axis);
+                p.x + reach(Vector::X) >= length
                     && p.z.abs() <= b.width / 2.0
-                    && p.y >= b.height - CARTON_HALF
+                    && p.y >= b.height - reach(Vector::Y)
             }
             Exit::Side(_) | Exit::Push(_) => {
                 let s = side_exit(&self.layout, exit).expect("a side exit");
-                let (b, p) = (&self.layout.belts[s.host], self.local(s.host, carton));
-                side(s.right) * p.z + CARTON_HALF >= s.edge
-                    && (p.x - s.at).abs() <= s.reach
-                    && p.y >= b.height - CARTON_HALF
+                let (b, p) = (&self.layout.belts[s.host], self.local(s.host, product));
+                let reach = |axis: Vector| self.reach(product, b.pose.rotation * axis);
+                side(s.right) * p.z + reach(Vector::Z) >= s.edge
+                    && (p.x - s.at).abs() <= s.span + reach(Vector::X)
+                    && p.y >= b.height - reach(Vector::Y)
             }
         }
-    }
-
-    /// Adds a carton at the source's belt entry when it is due and the entry is free; a carton that waited for a
-    /// free entry starts the next interval when it lands, as M3's arrivals did.
-    fn feed(&mut self, source: usize) {
-        let s = &self.layout.sources[source];
-        let state = &self.sources[source];
-        if self.t_ns < state.next_ns || (s.max_count > 0 && state.made >= s.max_count) {
-            return;
-        }
-        let b = &self.layout.belts[s.belt];
-        let at = b.pose
-            * Pose::from_translation(Vector::new(
-                CARTON_HALF + 0.001,
-                b.height + CARTON_HALF + 0.001,
-                0.0,
-            ));
-        let probe = Cuboid::new(Vector::splat(CARTON_HALF));
-        if self
-            .world
-            .intersect_shape(at, &probe, QueryFilter::only_dynamic())
-            .next()
-            .is_some()
-        {
-            return;
-        }
-        let handle = self
-            .world
-            // Continuous collision, as OIP's LinearCast: a fast or dropped carton cannot tunnel through a wall.
-            .insert_body(
-                RigidBodyBuilder::dynamic()
-                    .pose(at)
-                    .can_sleep(false)
-                    .ccd_enabled(true),
-            );
-        let core = CARTON_HALF - CARTON_ROUNDING;
-        self.world.insert_collider(
-            ColliderBuilder::round_cuboid(core, core, core, CARTON_ROUNDING)
-                .density(CARTON_DENSITY)
-                .restitution(0.0)
-                .friction(CARTON_FRICTION)
-                .friction_combine_rule(CoefficientCombineRule::Multiply),
-            Some(handle),
-        );
-        self.cartons.push((self.next_id, handle));
-        self.next_id += 1;
-        let state = &mut self.sources[source];
-        state.made += 1;
-        state.next_ns = self.t_ns + s.interval_ns;
     }
 
     /// Whether a carton crosses a diffuse sensor's beam: across its belt, at its mount, above the running surface.
@@ -387,33 +338,42 @@ impl World {
             .is_some()
     }
 
-    /// The cartons, by id, for the view and the tests.
+    /// The products, by id, for the view and the tests.
     pub fn cartons(&self) -> Vec<Carton> {
-        self.cartons
+        self.products
             .iter()
-            .map(|(id, h)| {
-                let body = &self.world.bodies[*h];
+            .map(|p| {
+                let body = &self.world.bodies[p.body];
                 let (t, r) = (body.translation(), body.rotation());
                 Carton {
-                    id: *id,
+                    id: p.id,
                     position: [t.x, t.y, t.z],
                     rotation: [r.x, r.y, r.z, r.w],
+                    size: (2.0 * p.half).to_array(),
+                    color: p.color,
                 }
             })
             .collect()
     }
 
-    /// The bits of every carton's pose and velocity: equal for equal runs, on every platform (enhanced-determinism).
+    /// The bits of every product's pose, velocity and attributes: equal for equal runs, on every platform
+    /// (enhanced-determinism).
     pub fn fingerprint(&self) -> u64 {
-        self.cartons
+        self.products
             .iter()
-            .flat_map(|(id, h)| {
-                let b = &self.world.bodies[*h];
+            .flat_map(|p| {
+                let b = &self.world.bodies[p.body];
                 let (t, r, v) = (b.translation(), b.rotation(), b.linvel());
+                let [red, green, blue] = p.color.map_or([256; 3], |c| c.map(u32::from));
                 [t.x, t.y, t.z, r.x, r.y, r.z, r.w, v.x, v.y, v.z]
-                    .map(|f| u64::from(f.to_bits()))
                     .into_iter()
-                    .chain([*id])
+                    .chain(p.half.to_array())
+                    .map(|f| u64::from(f.to_bits()))
+                    .chain([p.id, red.into(), green.into(), blue.into()])
+                    .chain([
+                        p.code.map_or(u64::MAX, |c| u64::from(c as u32)),
+                        u64::from(p.read),
+                    ])
             })
             .fold(0xcbf2_9ce4_8422_2325, |h, x| {
                 (h ^ x).wrapping_mul(0x100_0000_01b3)
@@ -448,3 +408,7 @@ mod pusher_tests;
 #[cfg(test)]
 #[path = "world_turntable_tests.rs"]
 mod turntable_tests;
+
+#[cfg(test)]
+#[path = "world_sizes_tests.rs"]
+mod sizes_tests;
