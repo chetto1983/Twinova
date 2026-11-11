@@ -80,6 +80,11 @@ the scanner's arch over belt B and the I/O panel with the new signals.
     survivor. The one timeout was a test waiting without a bound for a product the mutant removed; those waits are now
     bounded.
   - The gate is CI's in-diff run on the pull request (three shards, no survivor allowed).
+  - CI's first run found three survivors, each now killed by a test and checked locally:
+    - OIP's rounding share below 2 cm (a 6 cm product);
+    - the scanner's read window (a long product read when its centre enters it);
+    - `Instance::parameter`: only other crates' tests exercised it, and cargo-mutants runs only the mutated crate's
+      tests.
 - **Stryker:** 90.0 % over `src/lib`. The one survivor in the new code was the diffuse sensor's `case`; it is killed by
   a test of its paint.
 - **Coverage:** frontend 99.0 % of lines. Rust: CI's llvm-cov gate (≥ 85 %) passes on the pull request.
