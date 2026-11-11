@@ -219,4 +219,56 @@ fn a_pusher_fits_a_level_square_straight_conveyor_open_on_its_exit_side() {
         layout(&project).unwrap_err(),
         "pusher is mounted on source, which is not a conveyor"
     );
+    let mut project = fixture("sort_line");
+    for c in &mut project.scene.connections {
+        if let Connection::Mount { host, device, .. } = c
+            && device.0 == "pusher"
+        {
+            host.0 = "turntable".into();
+        }
+    }
+    assert_eq!(
+        layout(&project).unwrap_err(),
+        "pusher is mounted on turntable, which is not a straight conveyor"
+    );
+}
+
+/// The pusher's side exit takes a carton as soon as its face crosses the host's edge on the exit side, along the
+/// paddle and a carton either way of it (0.235 + 0.15 m), on the host's surface; not before, nor further along.
+#[test]
+fn the_side_exit_reaches_along_the_paddle_and_past_the_hosts_edge() {
+    let mut w = line(false, vec![]);
+    let mut at = |x: Real, z: Real, y: Real| {
+        let body = w
+            .world
+            .insert_body(RigidBodyBuilder::dynamic().translation(Vector::new(x, y, z)));
+        w.reached(Exit::Push(0), body)
+    };
+    let on = 0.8 + CARTON_HALF;
+    let crossed = -(0.3 - CARTON_HALF) - 0.001;
+    assert!(at(2.0, crossed, on), "its face just past the edge");
+    assert!(!at(2.0, crossed + 0.002, on), "its face just inside");
+    assert!(
+        at(2.0 + 0.38, crossed, on) && at(2.0 - 0.38, crossed, on),
+        "along the paddle and a carton"
+    );
+    assert!(
+        !at(2.0 + 0.39, crossed, on) && !at(2.0 - 0.39, crossed, on),
+        "further along"
+    );
+    assert!(!at(2.0, crossed, 0.3), "fallen to the floor");
+    assert!(!at(2.0, -crossed, on), "past the other edge");
+}
+
+/// The world reports each device it has, none where it has none, and where a pusher's paddle stands.
+#[test]
+fn the_world_counts_its_devices_and_reports_a_pushers_reach() {
+    let empty = World::new(Layout::default());
+    assert_eq!(
+        (empty.stoppers(), empty.pushers(), empty.turntables()),
+        (0, 0, 0)
+    );
+    let mut w = line(false, vec![]);
+    w.set_pusher(0, 0.4);
+    assert_eq!(w.pusher_reach(0), 0.4);
 }

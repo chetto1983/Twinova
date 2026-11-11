@@ -233,3 +233,40 @@ fn the_deck_starts_at_its_angle_parameter() {
         assert!(bit(&field, "%IX0.5"));
     }
 }
+
+/// Build refuses a device's block without the outputs its native model poses it from.
+#[test]
+fn each_device_block_must_declare_what_its_native_model_reads() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/sort_line");
+    for (key, block, name, generator) in [
+        (
+            "twinova.stopper@1",
+            "StopperBehaviour",
+            "lift",
+            "twinova.stopper/1",
+        ),
+        (
+            "twinova.pusher@1",
+            "PusherBehaviour",
+            "reach",
+            "twinova.pusher/1",
+        ),
+        (
+            "twinova.turntable@1",
+            "TurntableBehaviour",
+            "deck_rate",
+            "twinova.turntable/1",
+        ),
+    ] {
+        let mut project = open_folder(&dir).unwrap().opened.project;
+        let source = project.behaviours.get_mut(key).unwrap();
+        *source = source.replace(name, "renamed");
+        let error = Field::build(&project).err().unwrap();
+        assert_eq!(
+            error,
+            format!(
+                "components/{key}.st: {block} must declare {name} : REAL, which the native {generator} uses"
+            )
+        );
+    }
+}

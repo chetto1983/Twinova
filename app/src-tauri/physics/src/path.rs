@@ -164,13 +164,13 @@ pub fn guards(belt: &Belt) -> Vec<Piece> {
     let thick = (GUARD_HEIGHT + DECK_THICKNESS) / 2.0;
     let wall = |length: Real| Vector::new(length / 2.0, thick, GUARD_THICKNESS / 2.0);
     let mut out = Vec::new();
-    for (side, on) in [(-1.0, belt.guards[0]), (1.0, belt.guards[1])] {
-        if !on {
+    for (side, right) in [(-1.0, false), (1.0, true)] {
+        if !belt.guards[usize::from(right)] {
             continue;
         }
         let z = side * (w / 2.0 + FRAME_WALL + GUARD_THICKNESS / 2.0);
         let Some(arc) = belt.arc else {
-            for (from, to) in spans(belt, side > 0.0) {
+            for (from, to) in spans(belt, right) {
                 out.push(placed(
                     pose,
                     Vector::new((from + to) / 2.0, y, z),

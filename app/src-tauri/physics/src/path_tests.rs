@@ -284,6 +284,25 @@ fn a_pusher_opens_the_guard_on_its_side_about_its_position() {
         near(right[1].0, 1.375) && near(right[1].1, 2.525),
         "{right:?}"
     );
+    // An opening flush with an end leaves no sliver of guard there.
+    belt.openings = vec![
+        Opening {
+            right: true,
+            centre: 0.375,
+            length: 0.75,
+        },
+        Opening {
+            right: true,
+            centre: 2.625,
+            length: 0.75,
+        },
+    ];
+    let right = spans_of(&belt);
+    assert_eq!(right.len(), 1, "{right:?}");
+    assert!(
+        near(right[0].0, 0.75) && near(right[0].1, 2.25),
+        "{right:?}"
+    );
     belt.openings = vec![Opening {
         right: false,
         centre: 0.1,
