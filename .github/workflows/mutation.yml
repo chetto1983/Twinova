@@ -29,10 +29,21 @@ defaults:
     shell: bash
 
 jobs:
+  # Three shards in parallel. As one job, 886 mutants at -j 2 no longer fit the 90 minutes: the runs on main after
+  # PR #32 and #33 were cancelled at the limit with no verdict (runs 42895201537, 42911125971; the last run to finish,
+  # after PR #30, took 73 minutes). cargo-mutants numbers its shards from 0. Round-robin gives each shard a third of
+  # every crate's mutants (296, 295 and 295, measured 2026-11-11); the default, consecutive slices, would put all of
+  # the app's, the slowest to build and test, in the first.
   cargo-mutants:
+    name: cargo-mutants (${{ matrix.shard }}/3)
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2]
     env:
+      SHARD: ${{ matrix.shard }}
       # Test builds without debug info, which mutation testing does not use: a smaller target and
       # faster builds (measured in ModbusTool, 2026-11-06).
       CARGO_PROFILE_DEV_DEBUG: "0"
@@ -51,7 +62,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: app/src-tauri/mutants.out
-          key: cargo-mutants-v1-${{ runner.os }}-${{ github.sha }}
+          key: cargo-mutants-v2-${{ runner.os }}-${{ github.sha }}-${{ matrix.shard }}of3
 
       - name: System dependencies
         if: steps.results.outputs.cache-hit != 'true'
@@ -62,13 +73,13 @@ jobs:
         with:
           toolchain: 1.99.0
       # This workflow only runs on main (push, schedule, dispatch), so it is the one writer of
-      # its own dependency cache.
+      # its own dependency cache; of its shards, the first saves it.
       - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
         if: steps.results.outputs.cache-hit != 'true'
         with:
           workspaces: app/src-tauri
           shared-key: mutation
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/main' && matrix.shard == 0 }}
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
         if: steps.results.outputs.cache-hit != 'true'
         with:
@@ -85,7 +96,7 @@ jobs:
         working-directory: app/src-tauri
         run: |
           set +e
-          cargo mutants --workspace -j 2 --timeout 60 --copy-target=true
+          cargo mutants --workspace -j 2 --timeout 60 --copy-target=true --shard "$SHARD/3" --sharding round-robin
           echo $? > mutants.out/exit-code
 
       # Saved when the gate fails too: a measurement stays a measurement for this commit.
@@ -115,7 +126,7 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
-          name: cargo-mutants
+          name: cargo-mutants-${{ matrix.shard }}
           path: app/src-tauri/mutants.out
           retention-days: 7
 
