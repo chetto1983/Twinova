@@ -48,6 +48,14 @@ describe("OIP's materials", () => {
   });
 });
 
+/** OIP's `lin` (examples/parts/laser-sensor/part.js, color-sensor/part.js): an authored sRGB colour, stored linear at 8
+ *  decimals. */
+const lin = (rgb: number[]): number[] =>
+  rgb.map((c) => {
+    const l = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    return Math.abs(l) < 1e-9 ? 0 : +l.toFixed(8);
+  });
+
 /** OIP's values, at 1e7488c: the finishes of src/render/parts/common.ts and the parts' rig.json materials. */
 const OIP: Record<Material, [number | number[], number, number]> = {
   belt: [0xffffff, 0, 0.85],
@@ -88,6 +96,16 @@ const OIP: Record<Material, [number | number[], number, number]> = {
   turntableRim: [[0.03, 0.03, 0.035], 0.4, 0.6],
   turntableNameplate: [[0.55, 0.56, 0.58], 0.7, 0.35],
   turntableGear: [[0.3, 0.3, 0.32], 0.8, 0.4],
+  colorBody: [lin([0, 0.4, 0.5]), 0, 0.55],
+  colorLens: [lin([0.45, 0, 0]), 0, 0.55],
+  laserAmber: [lin([0.5, 0.35, 0.0]), 0, 0.55],
+  laserWindow: [lin([0.736647, 0.736647, 0.929502]), 0, 0.55],
+  laserDisplay: [lin([0.92, 0.4, 0.0]), 0, 0.45],
+  laserLed: [lin([0.736647, 0.736647, 0.736647]), 0, 0.55],
+  scannerHousing: [[0.479, 0.509, 0.539], 0.6, 0.35],
+  scannerBeam: [[0.888, 0.508, 0.005], 0.1, 0.45],
+  scannerHead: [[0.06, 0.065, 0.075], 0.2, 0.5],
+  scannerWindow: [[0.18, 0.18, 0.18], 0, 0.3],
 };
 
 describe("the transcription of OIP's materials", () => {

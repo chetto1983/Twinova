@@ -150,7 +150,7 @@ the native sensors (user), the carton's real mass, unpainted products and the le
       0.25 s, and no double read while blocked;
     - the line writes each signal at its address.
   - Commit `feat(physics): through-beam, colour, laser and barcode sensors`.
-- [ ] **Task 5: the view.**
+- [x] **Task 5: the view.**
   - Products scaled and coloured; the four housings copied from OIP with the notice; family shapes; vitest and
     Stryker.
   - Commit `feat(view): products at their size and colour, and the new sensors`.

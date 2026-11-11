@@ -7,6 +7,7 @@ import {
   formatTime,
   framingDistance,
   isBehind,
+  paintOf,
   scaled,
   scrollOffset,
   SPEEDS,
@@ -44,6 +45,17 @@ vi.mock("./backend", () => ({
   onStopped: vi.fn().mockResolvedValue(() => {}),
   onEngineError: vi.fn().mockResolvedValue(() => {}),
 }));
+
+describe("paintOf", () => {
+  it("keys a painted product by its colour, two hex digits a channel", () => {
+    expect(paintOf([255, 0, 127])).toBe("#ff007f");
+    expect(paintOf([0, 10, 1])).toBe("#000a01");
+  });
+
+  it("keys an unpainted product apart, for the theme's product colour", () => {
+    expect(paintOf(null)).toBe("unpainted");
+  });
+});
 
 describe("formatTime", () => {
   it("shows minutes, seconds and hundredths", () => {

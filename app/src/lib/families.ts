@@ -4,8 +4,9 @@
 // - a curve from its entry stub's tip on the centreline. OIP draws a curve about its centre, entering at +X heading
 //   −Z and turning left: Twinova's left curve is that drawing turned −90° about +Y; its right curve is the same drawing
 //   run backwards (turned π/2 − sweep), never mirrored, so its faces keep their winding (and its fabric scrolls back);
-// - a chain transfer and a photo eye from their mount on the host, along a straight host or at an angle on a curve;
-//   a photo eye on a turntable stands still beside its deck, across its lane at its start angle;
+// - a chain transfer and a sensor from their mount on the host, along a straight host or at an angle on a curve; a
+//   sensor on a turntable stands still beside its deck, across its lane at its start angle; a through-beam's receiver
+//   faces its emitter from the far edge; a barcode scanner's arch stands over its straight host;
 // - a stopper in the gap between its roller host's rollers nearest its mount, its blade raised by its lift; a pusher
 //   beside its host, its paddle face just outside the frame, pushing to its out side by its reach; a turntable from
 //   its deck's centre, the deck turned by its angle (physics world_devices.rs).
@@ -16,6 +17,8 @@ import { beltCurveGeometry } from "./oip/parts/beltCurve";
 import { chainTransferGeometry } from "./oip/parts/chainTransfer";
 import type { CurveParams } from "./oip/parts/curve";
 import type { MeshPart } from "./oip/parts/part";
+import { barcodeScannerGeometry } from "./oip/parts/barcodeScanner";
+import { LASER, laserGeometry } from "./oip/parts/laser";
 import { PHOTOEYE, photoeyeGeometry } from "./oip/parts/photoeye";
 import { pusherGeometry } from "./oip/parts/pusher";
 import { rollerGap, rollerGeometry } from "./oip/parts/roller";
@@ -28,8 +31,14 @@ import { flag, real, type Instance, type ProjectView, type Quat, type Vec3 } fro
 /** The chain deck under its host's rollers, and its stroke (physics world.rs `TRANSFER_BELOW`, `TRANSFER_STROKE`). */
 const TRANSFER_BELOW = 0.03;
 export const TRANSFER_STROKE = 0.095;
-/** A diffuse sensor's beam above its host's surface (world.rs `BEAM_HEIGHT`). */
+/** A sensor's beam above its host's surface, and its lens out from the bed edge (world_sensors.rs `BEAM_HEIGHT`,
+ *  `LENS_OUT`). */
 const BEAM_HEIGHT = 0.05;
+const LENS_OUT = 0.02;
+/** The barcode scanner's arch: how far its columns stand clear of the host's edges, and its head's window over the
+ *  surface (OIP's clearance). */
+const ARCH_CLEARANCE = 0.2;
+const ARCH_HEAD = 0.6;
 /** The stopper's blade: OIP's clearance to its bed, and how far under the surface its top rests (physics
  *  world_devices.rs `BLADE_CLEARANCE`, `BLADE_LOWERED`). */
 const BLADE_CLEARANCE = 0.03;
@@ -128,6 +137,24 @@ function mountFrame(
     -t * rc * (1 - Math.cos(a)) + across * Math.cos(t * a),
   ];
   return { offset, turn: yaw(t * a) };
+}
+
+/** A sensor's housing on its host's rail, its lens 20 mm out from the bed edge and its beam `BEAM_HEIGHT` above the
+ *  surface, facing across (+z): OIP seats the eye so (spec 2026-11-10, "The view"). */
+function beamSensor(
+  project: ProjectView,
+  instance: Instance,
+  parts: MeshPart[],
+  housing: { emitY: number; front: number },
+): Drawn | null {
+  const on = host(project, instance.id);
+  if (!on) return null;
+  const def = project.definitions[on.instance.definition];
+  const surface = real(on.instance, def, "height", 0.8);
+  const edge = real(on.instance, def, "width", 0.6) / 2;
+  const up = surface + BEAM_HEIGHT - housing.emitY;
+  const placed = mountFrame(project, on.instance, on.at, up, -edge - LENS_OUT - housing.front);
+  return { parts, position: on.instance.position, rotation: on.instance.rotation, ...placed };
 }
 
 export function drawnOf(project: ProjectView, instance: Instance): Drawn | null {
@@ -243,16 +270,43 @@ export function drawnOf(project: ProjectView, instance: Instance): Drawn | null 
         motion: { turn: true },
       };
     }
-    case "twinova.sensor_diffuse/1": {
+    case "twinova.sensor_diffuse/1":
+      return beamSensor(project, instance, photoeyeGeometry(g), PHOTOEYE);
+    case "twinova.sensor_color/1":
+      return beamSensor(project, instance, photoeyeGeometry(g, { body: "colorBody", lens: "colorLens" }), PHOTOEYE);
+    case "twinova.sensor_laser/1":
+      return beamSensor(project, instance, laserGeometry(g), LASER);
+    case "twinova.sensor_through_beam/1": {
+      // The receiver is the emitter's housing turned to face it from the far edge: lens to lens, the host's width
+      // and 20 mm each side (physics world_sensors.rs `LENS_OUT`).
       const on = host(project, instance.id);
       if (!on) return null;
-      // The lens on the beam: OIP seats the eye 20 mm out from the bed edge, facing across it (+z), and draws its beam
-      // at emitY above its origin; Twinova's beam runs BEAM_HEIGHT above the surface (spec 2026-11-10, "The view").
-      const surface = value(on.instance, "height", 0.8);
-      const edge = value(on.instance, "width", 0.6) / 2;
-      const up = surface + BEAM_HEIGHT - PHOTOEYE.emitY;
-      const placed = mountFrame(project, on.instance, on.at, up, -edge - 0.02 - PHOTOEYE.front);
-      return { parts: photoeyeGeometry(g), position: on.instance.position, rotation: on.instance.rotation, ...placed };
+      const span = 2 * (value(on.instance, "width", 0.6) / 2 + LENS_OUT + PHOTOEYE.front);
+      const emitter = photoeyeGeometry(g);
+      const receiver = emitter.map((part) => ({
+        ...part,
+        desc: g.transform(part.desc, { rotate: yaw(Math.PI), translate: [0, 0, span] }),
+      }));
+      return beamSensor(project, instance, [...emitter, ...receiver], PHOTOEYE);
+    }
+    case "twinova.scanner_barcode/1": {
+      // OIP's arch, its columns clear of the host by 0.2 m each side and its head 0.6 m over the surface, turned so its
+      // travel (+Z) runs along the host.
+      const on = host(project, instance.id);
+      if (!on) return null;
+      const parts = barcodeScannerGeometry(g, {
+        width: value(on.instance, "width", 0.6) + 2 * ARCH_CLEARANCE,
+        surfaceHeight: value(on.instance, "height", 0.8),
+        clearance: ARCH_HEAD,
+      });
+      const placed = mountFrame(project, on.instance, on.at, 0, 0);
+      return {
+        parts,
+        position: on.instance.position,
+        rotation: on.instance.rotation,
+        ...placed,
+        turn: yaw(Math.PI / 2),
+      };
     }
     default:
       return null;

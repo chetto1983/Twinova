@@ -5,6 +5,10 @@ export interface Carton {
   /** World position of its centre, m. */
   position: [number, number, number];
   rotation: [number, number, number, number];
+  /** Full extents along its own x (the flow it was made on), y and z, m. */
+  size: [number, number, number];
+  /** sRGB `[r, g, b]` 0–255, or null for an unpainted product. */
+  color: [number, number, number] | null;
 }
 
 export interface SinkState {
@@ -40,8 +44,9 @@ export interface Built {
   warnings: string[];
 }
 
-/** The products of 4.3 (twinova-physics, CARTON_HALF): a 0.3 m carton. */
-export const CARTON_SIZE_M = 0.3;
+/** The key of a product's paint, one material each: `#rrggbb`, or `unpainted` for the theme's product colour. */
+export const paintOf = (color: Carton["color"]): string =>
+  color ? `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}` : "unpainted";
 
 /** A scrolling texture's offset along u after `travel` metres at `tilesPerMetre` (OIP functionMesh.ts: the offset walks
  *  backwards, so the pattern moves forward with the surface). */
