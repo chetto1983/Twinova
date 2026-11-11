@@ -216,7 +216,7 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo test -p twinova-project -p twinova-physics -p twinova-engine -p twinova-agent
 
-  # The real app through tauri-driver (npm run e2e: e2e/run.mjs, project.mjs, line.mjs, curve.mjs and sort.mjs), on both desktop platforms Tauri can drive.
+  # The real app through tauri-driver (npm run e2e: e2e/run.mjs, project.mjs, line.mjs, curve.mjs, sort.mjs, code_sort.mjs and editor.mjs), on both desktop platforms Tauri can drive.
   # As in ModbusTool, Windows is tested here and not with cargo test: tauri-build embeds the Common
   # Controls v6 manifest in binaries only, so a test binary that links tauri does not start there
   # (0xc0000139, measured on this repository's run 42378063592).

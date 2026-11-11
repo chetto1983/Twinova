@@ -91,4 +91,14 @@ and build inside the app, on Windows and Linux.
   - a parameter can be a list of numbers or of colours;
   - a sorting line by code and colour (`code_sort_line`) uses them all.
 - A carton now weighs the 2.7 kg it was meant to: the physics gave it 1.76 kg. Every run's numbers change slightly.
+- The editor, first part (ROADMAP 4.5a):
+  - "New project" starts an empty scene;
+  - a catalogue offers every component family, by group: click to place one, or drag it into the 3D view;
+  - a click in the 3D view selects a component; a gizmo moves it on the floor (W) or turns it in 15° steps (E);
+  - the inspector edits its name, position, heading, parameters, signal addresses, what each flow port is connected to,
+    and where a sensor or device is mounted;
+  - Undo and Redo (Ctrl+Z, Ctrl+Y), up to 100 steps; Delete removes the selection;
+  - the scene runs the edits at the next Build, which the status line recalls; the ST sources being edited are kept;
+  - "Frame all" frames the scene as it is now.
+- Coding agents can place any family of the library, which is pinned into the project as the app does.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.
