@@ -10,10 +10,10 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Runtime, State};
-use twinova_project::{Project, encode_project, parse_project};
+use twinova_engine::engine::{Engine, Saved, Snapshot};
+use twinova_project::Project;
 
-use crate::engine::{Engine, Saved, Snapshot};
-use crate::project_commands::{ProjectState, lines};
+use crate::project_commands::ProjectState;
 
 /// A tick of the Run loop: its work, then the rest of the frame asleep, so a snapshot is published about 30 times a
 /// second (spec 2026-11-08-run-modes-design.md).
@@ -77,10 +77,7 @@ pub fn build(
     let mut project = projects.project()?;
     project.program = program;
     project.behaviours = behaviours;
-    let project = parse_project(&encode_project(&project))
-        .map_err(|d| lines(&d))?
-        .project;
-    let (engine, warnings) = Engine::new(&project)?;
+    let (project, engine, warnings) = twinova_engine::build(&project)?;
     projects.set_sources(&project)?;
     let snapshot = install(&state, project, engine)?;
     Ok(Built { snapshot, warnings })

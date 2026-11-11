@@ -8,7 +8,8 @@ use std::path::Path;
 use twinova_project::storage::open_folder;
 
 fn sort_line() -> Project {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/sort_line");
+    let dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/sort_line");
     open_folder(&dir).unwrap().opened.project
 }
 

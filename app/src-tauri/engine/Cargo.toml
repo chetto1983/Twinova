@@ -1,0 +1,17 @@
+[package]
+name = "twinova-engine"
+version = "0.1.0"
+description = "Twinova's run engine: the line (physics, field and controller) in lockstep on virtual time, with no UI dependency"
+authors = ["The Twinova contributors"]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+# truST at the last commit read that still has its bytecode VM (deleted upstream on 2026-10-24):
+# docs/research/10-st-senza-compilazione.md. MIT OR Apache-2.0.
+trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }
+twinova-physics = { path = "../physics" }
+twinova-project = { path = "../project" }
