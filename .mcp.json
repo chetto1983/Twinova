@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "twinova": {
+      "command": "cargo",
+      "args": ["run", "--quiet", "--manifest-path", "app/src-tauri/Cargo.toml", "-p", "twinova-agent"]
+    }
+  }
+}

@@ -1,0 +1,27 @@
+[package]
+name = "twinova-agent"
+version = "0.1.0"
+description = "Twinova for coding agents: the run engine served over MCP, on stdio and on streamable HTTP"
+authors = ["The Twinova contributors"]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+# The official Rust SDK of the Model Context Protocol (spec 2026-11-11-agent-server-design.md, inventory). Apache-2.0.
+rmcp = { version = "=3.9.0", features = ["server", "macros", "schemars", "transport-io", "transport-streamable-http-server"] }
+# The HTTP host of rmcp's streamable HTTP service, as rmcp's own tests mount it. MIT.
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-std", "signal"] }
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+twinova-engine = { path = "../engine" }
+twinova-project = { path = "../project" }
+
+[dev-dependencies]
+# rmcp's own client drives the server in the tests, over both transports.
+rmcp = { version = "=3.9.0", features = ["client", "transport-child-process", "transport-streamable-http-client-reqwest"] }
+# A temporary folder for save_project; the version the lockfile already has.
+tempfile = "=3.27.0"
