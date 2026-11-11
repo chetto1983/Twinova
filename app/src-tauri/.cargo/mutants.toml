@@ -29,4 +29,7 @@ exclude_re = [
   # layout_merge.rs `meeting`: the angle from square comes out of a quaternion and acos in f32, so no pose gives exactly
   # MERGE_SQUARE (0.1°); `>` and `>=` differ on no input a scene can produce.
   "physics/src/layout_merge.rs:.*replace <= with < in meeting",
+  # snap.rs `pose_onto`: a turn's w is exactly 0 only for a half turn, where q and -q are one rotation either way, and
+  # from_rotation_y(π) in f64 gives w = 6e-17, never 0; `<` and `<=` differ on no turn a join produces.
+  "physics/src/snap.rs:.*replace < with <= in pose_onto",
 ]

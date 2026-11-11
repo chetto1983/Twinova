@@ -101,4 +101,15 @@ and build inside the app, on Windows and Linux.
   - the scene runs the edits at the next Build, which the status line recalls; the ST sources being edited are kept;
   - "Frame all" frames the scene as it is now.
 - Coding agents can place any family of the library, which is pinned into the project as the app does.
+- Snapping (ROADMAP 4.5b):
+  - dragged with the gizmo, or dropped from the catalogue, a conveyor snaps end to end onto another, a source or a sink
+    onto an end, a device onto a conveyor's rail, and a spur square onto a straight's flank;
+  - the join is marked and named while dragging; hold Alt to place freely; a toggle and a gap (mm) beside the view;
+  - a joined conveyor takes the other's height; a move that separates two conveyors by more than 0.15 m drops their
+    flow; the inspector shows and edits each flow's gap;
+  - a spur merges through an opening cut in the host's guard (new `merge` connection);
+  - coding agents get the same joins (`join`) and each part's ends and rail (`describe`).
+- A belt's deck and guards now reach its drum faces, 85 mm past its run, as it is drawn and as Open Industry Project's
+  physics has them. Saved scenes from before join belts at their runs: their drums overlap their neighbours by 85 mm
+  until the parts are snapped again.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

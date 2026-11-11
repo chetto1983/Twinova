@@ -1,5 +1,5 @@
 (* The merge line: a spur belt merges square onto the main belt's right flank, through the opening Build cuts in its
-   guard. Start runs both belts, Stop stops them. *)
+   guard. Start runs both belts, Stop stops them; the sink's count is declared so the I/O panel shows it. *)
 PROGRAM Main
 VAR
     start AT %IX1.0 : BOOL;
@@ -8,6 +8,7 @@ VAR
     spur_running AT %IX0.2 : BOOL;
     main AT %QX0.0 : BOOL;
     spur AT %QX0.1 : BOOL;
+    delivered AT %ID4 : DINT;
 END_VAR
 
 IF start THEN

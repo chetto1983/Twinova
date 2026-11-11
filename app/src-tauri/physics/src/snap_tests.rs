@@ -73,6 +73,15 @@ fn a_conveyor_joins_another_end_to_end_with_a_flow() {
         "{r:?}"
     );
     assert!(r.rotation.angle_between(DQuat::IDENTITY) < 1e-6);
+    // Stored as [0, 0, 0, 1], not as its opposite [0, 0, 0, -1], which is the same turn.
+    let stored = p
+        .scene
+        .instances
+        .iter()
+        .find(|i| i.id == roller)
+        .unwrap()
+        .rotation;
+    assert!((stored[3] - 1.0).abs() < 1e-6, "{stored:?}");
     assert_eq!(flows(&p), [format!("{belt}.out {roller}.in")]);
     // A belt after the roller conveyor stands its drum face, 85 mm, past the roller conveyor's frame end.
     let next = scattered(&mut p, "twinova.belt@1");

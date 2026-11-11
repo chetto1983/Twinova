@@ -193,6 +193,8 @@ fn pose_onto(
     let all = interfaces(project);
     let local = end_of(&all, id, end)?.frame;
     let turn = DQuat::from_rotation_y(heading(-facing) - heading(local.rotation * DVec3::X));
+    // q and -q are one rotation: the one with w >= 0 keeps a saved scene readable ([0, 0, 0, 1], not [0, 0, 0, -1]).
+    let turn = if turn.w < 0.0 { -turn } else { turn };
     let (y, notice) = if all[id].host.is_some() {
         let y = instance(project, id).position[1];
         (y, raise(project, id, point.y - (y + local.translation.y))?)
