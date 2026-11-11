@@ -77,7 +77,7 @@ impl Arc {
     }
 
     /// The centre the arc turns about, in the curve's frame.
-    fn centre(&self, width: Real) -> Vector {
+    pub(crate) fn centre(&self, width: Real) -> Vector {
         Vector::new(STUB, 0.0, -self.turn() * self.radius(width))
     }
 

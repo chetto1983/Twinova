@@ -267,7 +267,7 @@ fn equal_runs_give_equal_bits_on_every_platform() {
     assert_eq!(first, 0x6e1f_b275_927f_76a9, "{first:#018x}");
 }
 
-pub(super) fn fixture(name: &str) -> twinova_project::Project {
+pub(crate) fn fixture(name: &str) -> twinova_project::Project {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../project/tests/fixtures/valid")
         .join(name);

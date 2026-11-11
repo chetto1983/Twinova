@@ -28,7 +28,8 @@ mod sensors;
 #[cfg(test)]
 use devices::TRANSFER_BELOW;
 pub use devices::TRANSFER_STROKE;
-use devices::{Devices, side_exit, side_wall};
+pub(crate) use devices::side_exit;
+use devices::{Devices, side_wall};
 use products::{Product, SourceState};
 use sensors::ScannerState;
 pub use sensors::{Reading, Scan, classify};
@@ -372,7 +373,7 @@ impl World {
 
 #[cfg(test)]
 #[path = "world_tests.rs"]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(test)]
 #[path = "world_transfer_tests.rs"]
