@@ -48,6 +48,14 @@ Machine: the cloud container with 4 cores. CI: the 4.5a pull request.
   - Vitest reported an unhandled error, with every test green.
   - Stryker's dry run crashed on it.
   - The mock now has it.
+- **On Windows, git gave the library CRLF line endings,** unlike the fixtures, which `.gitattributes` keeps as they
+  are.
+  - project-windows failed the library's byte-equality test on it.
+  - The Windows app would also have pinned CRLF definitions and blocks, so the same project saved on Windows and on
+    Linux would have differed.
+  - The library is now kept as written (`-text`).
+- **The project E2E read signal addresses as the inspector's text.** Once they became field values, it failed on
+  Windows CI; it reads the fields now, and the whole suite passes on Linux: 7 scripts, 77 checks.
 - **A survivor in `set_flow`:** replacing a port's peer could have dropped every other flow and no test noticed. One
   checks that the others stay.
 
