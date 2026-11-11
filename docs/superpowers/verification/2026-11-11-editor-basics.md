@@ -30,8 +30,8 @@ Machine: the cloud container with 4 cores. CI: the 4.5a pull request.
 | 1 | The library: 15 families validate; every fixture's copy equals the library's | `project/src/library_tests.rs`: validation, the list against the folder, every fixture's copy byte-equal, every family used by a fixture the engine builds | ✅ |
 | 2 | Shared edits | the agent's tests unchanged on the moved operations; `edit_tests.rs` for `place` (numbering, a pinned copy kept, a gap refilled), `set_name`, `set_mount`, `set_flow` (one peer, from either end, the replaced ends freed); the agent places an unpinned library family, and a refused add pins nothing | ✅ |
 | 3 | History | `history.rs`: back to each earlier project and forward again; a new edit clears redo; a failed edit records nothing; depth 100; the ST sources survive undo and redo, a block comes back with its definition. `edit_commands_tests.rs`: 12 edits, 12 undo steps to the empty scene, redo to the same view; opening clears it, Build and Save keep it | ✅ |
-| 4 | In the app, Linux and Windows: a line by hand from an empty project, built and run to the sink; undo to empty and redo; save and reopen | `e2e/editor.mjs`, 10 checks: 10/10 on Linux twice (WebKitGTK, debug build, Xvfb); windows-2022 (WebView2) in CI | ✅ Linux; Windows on the PR |
-| 5 | Picking and the gizmo on WebKitGTK and WebView2 | the same E2E: a drag of the gizmo's x arrow moves the belt along x, and one Ctrl+Z puts it back; a click on empty floor clears the selection and one on the belt selects it, at points projected with the viewport's camera | ✅ Linux; Windows on the PR |
+| 4 | In the app, Linux and Windows: a line by hand from an empty project, built and run to the sink; undo to empty and redo; save and reopen | `e2e/editor.mjs`, 10 checks: 10/10 on Linux, three times (WebKitGTK, debug build, Xvfb); on windows-2022 (WebView2) 9/10 at first, every editing check passing; the reopen failed on the test's own race (below) | ✅ Linux; Windows on the PR's last run |
+| 5 | Picking and the gizmo on WebKitGTK and WebView2 | the same E2E: a drag of the gizmo's x arrow moves the belt along x, and one Ctrl+Z puts it back; a click on empty floor clears the selection and one on the belt selects it, at points projected with the viewport's camera | ✅ Linux and windows-2022 (run 43058834857) |
 | 6 | Gates | fmt, clippy, the 600-line cap; cargo mutants on `edit`, `history`, `library`: no survivor (88 mutants, then the lines rechecked); Stryker 89.7 % (`inspector.ts` 85.5 %, `picking.ts` 97.1 %, `shortcuts.ts` 100 %); vitest 175 tests, 95.4 % of lines | ✅ |
 
 ## Found by measuring
@@ -56,6 +56,11 @@ Machine: the cloud container with 4 cores. CI: the 4.5a pull request.
   - The library is now kept as written (`-text`).
 - **The project E2E read signal addresses as the inspector's text.** Once they became field values, it failed on
   Windows CI; it reads the fields now, and the whole suite passes on Linux: 7 scripts, 77 checks.
+- **The editor E2E closed the app before its save had finished.**
+  - It checked `scene.json` on disk and then closed the app. A save writes the manifest last and removes its marker
+    after that, and on Windows a rename may wait up to 2 s for a held file.
+  - The next open rolled the unfinished save back, as designed, and the line reopened empty.
+  - The test now waits for the app's "Saved to" notice and checks that nothing was rolled back.
 - **A survivor in `set_flow`:** replacing a port's peer could have dropped every other flow and no test noticed. One
   checks that the others stay.
 
