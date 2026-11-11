@@ -9,5 +9,6 @@ pub mod engine;
 pub mod field;
 mod field_image;
 pub mod line;
+mod locate;
 
 pub use build::{build, diagnostics};

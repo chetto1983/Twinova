@@ -148,8 +148,8 @@ async fn an_agent_extends_the_sort_line_builds_runs_and_saves_it() {
         "the saved line runs the same"
     );
 
-    // A broken program fails Build with the compiler's message, and the line runs on from where it was. truST gives
-    // the controller's error as a byte span of the program, without the file (the field's are located per file).
+    // A broken program fails Build with the compiler's message at its file and line, and the line runs on from where it
+    // was.
     ok(
         &c,
         "write_source",
@@ -158,7 +158,7 @@ async fn an_agent_extends_the_sort_line_builds_runs_and_saves_it() {
     .await;
     assert_eq!(
         refused(&c, "build", json!({})).await,
-        "expected type at 21..22"
+        "expected type at plc/Main.st:2"
     );
     let after = ok(&c, "step", json!({})).await;
     assert!(after["time_ms"].as_i64().unwrap() > time, "the line ran on");

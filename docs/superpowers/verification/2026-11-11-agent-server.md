@@ -24,7 +24,7 @@ Machine: the cloud container with 4 cores. CI: the 2.7 pull request.
 |---|---|---|---|
 | 1 | On stdio and HTTP an MCP client runs `sort_line` until every sink counts, with the fingerprint the engine gives on its own | `agent/tests/transports.rs`: rmcp's client spawns the binary (stdio) and connects to the router on a loopback port (HTTP); the fingerprints equal the engine run directly to the same time | ✅ |
 | 2 | Tools with their schemas; errors are tool errors and the server keeps serving | the tool list and the server's instructions; a missing project, a bad path, an unknown signal, a malformed condition, then the same session runs on | ✅ |
-| 3 | Editing round trip | `agent/tests/editing.rs`: belt D added after belt C, the sink retargeted and moved, the turntable at 180°/s, the program rewritten, built (no warning), run to the sink, saved; the saved folder reopens and builds with `twinova_engine::build` and runs to the same fingerprint. A broken program fails Build with truST's message (`expected type at 21..22`) and the line runs on; a connection to a missing port fails Build and save with the format's message | ✅ |
+| 3 | Editing round trip | `agent/tests/editing.rs`: belt D added after belt C, the sink retargeted and moved, the turntable at 180°/s, the program rewritten, built (no warning), run to the sink, saved; the saved folder reopens and builds with `twinova_engine::build` and runs to the same fingerprint. A broken program fails Build with the compiler's message at its file and line (`expected type at plc/Main.st:2`) and the line runs on; a connection to a missing port fails Build and save with the format's message | ✅ |
 | 4 | Two HTTP sessions keep two lines | `two_http_sessions_keep_two_lines_and_the_run_tools_drive_one` | ✅ |
 | 5 | The split changes no result | app 24 + engine 76 = the app's 99 tests and Build's; physics 72, project 48; every fingerprint unchanged; the five E2E scripts pass on Linux | ✅ |
 | 6 | CI on Linux and Windows | `ci.yml`: Windows now tests `twinova-engine` and `twinova-agent`, which no longer link Tauri | on the PR |
@@ -59,9 +59,11 @@ Measured in place, per mutant, against the test profile:
 
 ## Found by measuring
 
-- **truST gives the controller's compile error as a byte span without the file** (`expected type at 21..22`). The
-  field locates its errors per behaviour file; the controller does not. The program is compiled from several sources,
-  so locating it needs truST's offsets across files read first. This is a separate improvement, not done here.
+- **A compile error of the line program named no file.** truST gave it as a byte span of the program
+  (`expected type at 21..22`), while the field's errors already named their behaviour file and line. Fixed in this PR:
+  a failed program is compiled again as truST's `CompileSession` with each file's path and labelled errors, and each
+  span is rewritten as `plc/Main.st:2`. A build that succeeds pays nothing. The field and the controller share one span
+  rewriter (`engine/src/locate.rs`).
 - **The disk:** the workspace's debug target reached 17 GB with this crate and the mutation runs, and filled the
   container twice. Stale test binaries and the app's static library (2.2 GB) were the bulk; all are regenerable.
 

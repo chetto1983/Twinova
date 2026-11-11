@@ -17,6 +17,7 @@ use twinova_project::model::{
 };
 
 use crate::field_image::place;
+use crate::locate::{line_of, rewrite_spans};
 
 /// The field's cycle, fixed (user, 2026-11-09).
 pub const FIELD_CYCLE_NS: i64 = 1_000_000;
@@ -166,34 +167,15 @@ fn generate(project: &Project) -> Result<(String, Spans), String> {
     Ok((out, spans))
 }
 
-/// truST's compile messages locate a problem as `at <start>..<end>`, in bytes of the compiled source (measured on
-/// `6405915`, 2026-11-09; `CompileError` carries only its message). The field compiles one generated source, so each
-/// location is rewritten as the behaviour file and line it falls in.
+/// The field compiles one generated source, so each location of truST's message is rewritten as the behaviour file and
+/// line it falls in (locate.rs).
 fn locate(message: &str, text: &str, spans: &Spans) -> String {
-    let mut out = String::new();
-    let mut rest = message;
-    while let Some(i) = rest.find("at ") {
-        let (before, after) = rest.split_at(i + 3);
-        out.push_str(before);
-        let digits = |s: &str| s.bytes().take_while(u8::is_ascii_digit).count();
-        let start_len = digits(after);
-        let end_len = after[start_len..].strip_prefix("..").map_or(0, digits);
-        if start_len == 0 || end_len == 0 {
-            rest = after;
-            continue;
-        }
-        let start: usize = after[..start_len].parse().expect("digits");
+    rewrite_spans(message, |start| {
         match spans.iter().find(|(a, b, _)| (*a..*b).contains(&start)) {
-            Some((a, _, file)) => {
-                let line = text[*a..start].matches('\n').count() + 1;
-                let _ = write!(out, "{file}:{line}");
-            }
-            None => out.push_str("the generated field program"),
+            Some((a, _, file)) => format!("{file}:{}", line_of(&text[*a..], start - a)),
+            None => "the generated field program".into(),
         }
-        rest = &after[start_len + 2 + end_len..];
-    }
-    out.push_str(rest);
-    out
+    })
 }
 
 fn type_name(value: &Value) -> &'static str {

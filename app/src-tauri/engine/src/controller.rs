@@ -2,11 +2,13 @@
 //! truST's harness at the pinned commit, scanned with virtual time, its I/O read and written through the process
 //! image as a real PLC's would be. Twinova never writes a program variable by name.
 
-use trust_runtime::harness::TestHarness;
+use trust_runtime::harness::{CompileSession, SourceFile, TestHarness};
 use trust_runtime::io::{IoAddress, IoSize};
 use trust_runtime::value::{Duration, Value};
 use twinova_project::Project;
 use twinova_project::model::SignalType;
+
+use crate::locate::locate_in_files;
 
 /// The scan period of a program that declares no periodic `TASK`: M1's 10 ms.
 pub const DEFAULT_SCAN_NS: i64 = 10_000_000;
@@ -53,6 +55,22 @@ fn st_type(ty: SignalType) -> &'static str {
     }
 }
 
+/// A compile error of the program, at its files and lines. `TestHarness` compiles unlabelled sources, so the failed
+/// program is compiled again as truST's `CompileSession` with each file's path and labelled errors (truST
+/// `host/harness/build.rs`, `source_label`), whose spans are in bytes of that file. A build that succeeds pays nothing.
+fn located(project: &Project, error: &impl ToString) -> String {
+    let files: Vec<SourceFile> = (project.program.iter())
+        .map(|(path, text)| SourceFile::with_path(path.clone(), text.clone()))
+        .collect();
+    match CompileSession::from_sources(files)
+        .label_errors(true)
+        .build_runtime()
+    {
+        Err(labelled) => locate_in_files(&labelled.to_string(), &project.program),
+        Ok(_) => error.to_string(),
+    }
+}
+
 impl Controller {
     /// Compiles the project's program and checks it against the scene. The variable the program declares at a scene
     /// signal or a panel button must have that signal's type (BOOL for a button), or Build fails. An address the
@@ -63,7 +81,7 @@ impl Controller {
             .iter()
             .map(|(_, text)| text.as_str())
             .collect();
-        let harness = TestHarness::from_sources(&sources).map_err(|e| e.to_string())?;
+        let harness = TestHarness::from_sources(&sources).map_err(|e| located(project, &e))?;
         let scan_ns = scan_period(&harness)?;
         let runtime = harness.runtime();
         let declared = runtime
