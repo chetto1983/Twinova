@@ -285,3 +285,28 @@ fn a_source_reads_its_products_and_one_pinned_before_them_makes_the_carton() {
         .retain(|p| ["interval", "first_arrival", "max_count"].contains(&p.name.as_str()));
     assert_eq!(products_of(&project), Products::carton());
 }
+
+/// OIP's rounding: 2 cm, or 0.4 of the smallest half extent when that is less (`makeBoxShape`).
+#[test]
+fn a_products_edges_are_rounded_by_its_smallest_half_extent() {
+    for (size, rounding) in [(0.3, 0.02), (0.06, 0.012)] {
+        let mut w = line(
+            Products {
+                size: Vector::splat(size),
+                ..Products::carton()
+            },
+            0.0,
+        );
+        run(&mut w, 2);
+        let body = &w.world.bodies[w.products[0].body];
+        let collider = &w.world.colliders[body.colliders()[0]];
+        let round = collider.shape().as_round_cuboid().expect("a rounded box");
+        assert!(
+            (round.border_radius - rounding).abs() < 1e-6,
+            "{size}: {}",
+            round.border_radius
+        );
+        let full = round.inner_shape.half_extents + Vector::splat(round.border_radius);
+        assert!((full - Vector::splat(size / 2.0)).abs().max_element() < 1e-6);
+    }
+}

@@ -177,6 +177,14 @@ fn an_unpainted_product_reads_no_colour() {
     assert_eq!(w.reading(0), Reading::Color(0));
 }
 
+/// Steps while `holds`, failing after 20 s of virtual time.
+fn step_while(w: &mut World, holds: impl Fn(&World) -> bool) {
+    while holds(w) {
+        assert!(w.t_ns < 20_000_000_000, "still waiting after 20 s");
+        w.step();
+    }
+}
+
 fn scanner(at: Real) -> Scanner {
     Scanner {
         id: "scan".into(),
@@ -215,13 +223,9 @@ fn the_good_read_lasts_a_quarter_of_a_second_and_the_code_holds() {
         ..Products::carton()
     };
     let mut w = line(products, vec![], vec![scanner(2.0)]);
-    while !w.scanned(0).read {
-        w.step();
-    }
+    step_while(&mut w, |w| !w.scanned(0).read);
     let read_at = w.t_ns;
-    while w.scanned(0).read {
-        w.step();
-    }
+    step_while(&mut w, |w| w.scanned(0).read);
     assert_eq!(w.t_ns - read_at, 250_000_000);
     assert_eq!(
         w.scanned(0),
@@ -236,9 +240,7 @@ fn the_good_read_lasts_a_quarter_of_a_second_and_the_code_holds() {
 #[test]
 fn a_product_held_under_the_scanner_is_read_once() {
     let mut w = line(Products::carton(), vec![], vec![scanner(2.0)]);
-    while w.scanned(0).count == 0 {
-        w.step();
-    }
+    step_while(&mut w, |w| w.scanned(0).count == 0);
     w.set_belt_running(0, false);
     run(&mut w, 3000);
     assert_eq!(w.scanned(0).count, 1);
@@ -471,5 +473,29 @@ fn a_scanner_stands_over_a_straight_conveyor_and_a_sensor_on_a_conveyor() {
     assert_eq!(
         crate::layout::layout(&project).unwrap_err(),
         "sensor_laser is mounted on sink, which is not a belt"
+    );
+}
+
+/// A product is read once its centre is within the read window, half the read depth either side of the scan line, even
+/// when its front crossed the line before.
+#[test]
+fn a_long_product_is_read_when_its_centre_enters_the_window() {
+    let long = Products {
+        size: Vector::new(0.6, 0.3, 0.3),
+        ..Products::carton()
+    };
+    let mut w = line(
+        long,
+        vec![],
+        vec![Scanner {
+            depth: 0.2,
+            ..scanner(2.0)
+        }],
+    );
+    step_while(&mut w, |w| w.scanned(0).count == 0);
+    let centre = w.cartons()[0].position[0];
+    assert!(
+        (centre - (2.0 - 0.1)).abs() < 0.002,
+        "read with its centre at {centre}"
     );
 }

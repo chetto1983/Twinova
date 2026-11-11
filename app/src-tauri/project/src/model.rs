@@ -300,3 +300,52 @@ pub struct PanelButton {
     /// A Bit address in the input area, as the controller sees it.
     pub address: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parameter(name: &str, default: f64) -> ParameterDef {
+        ParameterDef {
+            name: name.into(),
+            ty: ParamType::REAL,
+            unit: None,
+            default: ParamValue::Real(default),
+            min: None,
+            max: None,
+        }
+    }
+
+    #[test]
+    fn a_parameter_is_the_instances_override_else_its_own_default() {
+        let def = Definition {
+            id: "twinova.belt".into(),
+            version: 1,
+            origin: Origin {
+                app: "0.1.0".into(),
+            },
+            generator: "twinova.belt/1".into(),
+            parameters: vec![parameter("length", 3.0), parameter("speed", 0.5)],
+            signals: vec![],
+            ports: vec![],
+            nodes: vec![],
+            joints: vec![],
+            behaviour: None,
+        };
+        let mut inst = Instance {
+            id: "belt_a".into(),
+            name: "Belt A".into(),
+            definition: def.key(),
+            position: [0.0; 3],
+            rotation: [0.0, 0.0, 0.0, 1.0],
+            parameters: BTreeMap::new(),
+            signals: BTreeMap::new(),
+        };
+        assert_eq!(inst.parameter(&def, "speed"), Some(&ParamValue::Real(0.5)));
+        assert_eq!(inst.parameter(&def, "length"), Some(&ParamValue::Real(3.0)));
+        assert_eq!(inst.parameter(&def, "width"), None);
+        inst.parameters
+            .insert("speed".into(), ParamValue::Real(0.25));
+        assert_eq!(inst.parameter(&def, "speed"), Some(&ParamValue::Real(0.25)));
+    }
+}
