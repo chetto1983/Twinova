@@ -18,3 +18,7 @@ sha2 = "=0.10.9"
 tempfile = "=3.27.0"
 # Export and Import of a project as one archive (spec decision 1). MIT; deflate only.
 zip = { version = "=9.4.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+
+[dev-dependencies]
+# Property tests of the codec's list values (CLAUDE.md: property-based tests for codecs). MIT OR Apache-2.0.
+proptest = "=1.12.0"

@@ -67,8 +67,10 @@ the native sensors (user), the carton's real mass, unpainted products and the le
 
 1. **List values.**
    - `DINT_LIST` is a JSON array of integers, each in DINT range.
-   - `COLOR_LIST` is a JSON array of `#rrggbb` strings, written lowercase by the codec.
-   - `ParamValue` gains `List(Vec<Item>)`, where `Item` is an integer or a text.
+   - `COLOR_LIST` is a JSON array of `#rrggbb` strings, lowercase: the format refuses `#FF0000`, so one colour has one
+     spelling and the codec writes it as it is.
+   - `ParamValue` gains `List(Vec<Item>)`, where `Item` is an integer or a text. `ParamValue` is no longer `Copy`, and
+     `Instance::parameter` gives the override or the default, which the physics, the drive and the field shared as copies.
    - A list parameter cannot be an optional signal's fallback; the existing type check already refuses it.
 2. **Source parameters:**
    - `length`, `width`, `height`: REAL, m, default 0.3, min 0.1;
@@ -115,8 +117,8 @@ the native sensors (user), the carton's real mass, unpainted products and the le
 
 ## Tasks
 
-- [ ] **Task 1: spec amendment and plan** (docs commit).
-- [ ] **Task 2: list parameter types.**
+- [x] **Task 1: spec amendment and plan** (docs commit).
+- [x] **Task 2: list parameter types.**
   - Tests first:
     - parse, validate and encode both types;
     - refuse a bad colour, an out-of-range DINT and a list where a scalar belongs;

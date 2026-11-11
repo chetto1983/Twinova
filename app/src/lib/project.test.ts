@@ -53,6 +53,12 @@ describe("values", () => {
     expect(formatValue(param({ type: "BOOL" }), false)).toBe("FALSE");
     expect(formatValue(param({ type: "TIME", unit: "ns" }), 10_000_000)).toBe("10 ms");
   });
+
+  it("writes a list as its items, and an empty one as a dash", () => {
+    expect(formatValue(param({ type: "DINT_LIST" }), [3, 1, 2])).toBe("3, 1, 2");
+    expect(formatValue(param({ type: "COLOR_LIST" }), ["#ff0000", "#00ff00"])).toBe("#ff0000, #00ff00");
+    expect(formatValue(param({ type: "COLOR_LIST" }), [])).toBe("—");
+  });
 });
 
 describe("inspector rows", () => {

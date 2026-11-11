@@ -134,18 +134,13 @@ impl Layout {
     }
 }
 
+/// A scalar parameter as a number; a list, which no scalar reads, as none.
 fn param(inst: &Instance, def: &Definition, name: &str) -> f64 {
-    let value = inst.parameters.get(name).copied().or_else(|| {
-        def.parameters
-            .iter()
-            .find(|p| p.name == name)
-            .map(|p| p.default)
-    });
-    match value {
-        Some(ParamValue::Real(x)) => x,
-        Some(ParamValue::Int(n)) => n as f64,
-        Some(ParamValue::Bool(b)) => f64::from(u8::from(b)),
-        None => 0.0,
+    match inst.parameter(def, name) {
+        Some(ParamValue::Real(x)) => *x,
+        Some(ParamValue::Int(n)) => *n as f64,
+        Some(ParamValue::Bool(b)) => f64::from(u8::from(*b)),
+        Some(ParamValue::List(_)) | None => 0.0,
     }
 }
 

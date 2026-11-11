@@ -29,12 +29,15 @@ fn definition_of(project: &Project, id: &str) -> Result<Definition, String> {
 }
 
 /// `value` as a parameter of type `ty`: a REAL from any number, a DINT or a TIME (ns) from an integer, a BOOL from a
-/// boolean.
+/// boolean, a list from an array of integers or texts. The format checks ranges and colours at Build.
 fn param_value(ty: ParamType, value: &Value) -> Option<ParamValue> {
     match (ty, value) {
         (ParamType::REAL, Value::Number(n)) => n.as_f64().map(ParamValue::Real),
         (ParamType::DINT | ParamType::TIME, Value::Number(n)) => n.as_i64().map(ParamValue::Int),
         (ParamType::BOOL, Value::Bool(b)) => Some(ParamValue::Bool(*b)),
+        (ParamType::DintList | ParamType::ColorList, Value::Array(_)) => {
+            serde_json::from_value(value.clone()).ok()
+        }
         _ => None,
     }
 }
@@ -58,7 +61,7 @@ pub fn set_parameter(
         Some(v) => {
             let ty = param.ty;
             let value = param_value(ty, v)
-                .ok_or_else(|| format!("{id}.{name} is a {ty:?}: {v} is not one"))?;
+                .ok_or_else(|| format!("{id}.{name} is a {}: {v} is not one", ty.name()))?;
             instance.parameters.insert(name.into(), value);
         }
     }

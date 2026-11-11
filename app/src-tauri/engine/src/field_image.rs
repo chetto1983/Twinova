@@ -30,13 +30,11 @@ fn area(direction: Direction) -> Area {
 /// The value of the parameter `name` of `inst`, as its signal type travels in the image: a REAL as its bits.
 fn fallback_value(inst: &Instance, def: &Definition, signal: &SignalDef) -> Option<Value> {
     let name = signal.fallback.as_ref()?;
-    let p = def.parameters.iter().find(|p| &p.name == name)?;
-    let value = inst.parameters.get(name).copied().unwrap_or(p.default);
-    Some(match (signal.ty, value) {
-        (SignalType::BOOL, ParamValue::Bool(b)) => Value::Bool(b),
-        (SignalType::REAL, ParamValue::Real(x)) => Value::DWord((x as f32).to_bits()),
-        (SignalType::REAL, ParamValue::Int(n)) => Value::DWord((n as f32).to_bits()),
-        (_, ParamValue::Int(n)) => Value::DWord(n as i32 as u32),
+    Some(match (signal.ty, inst.parameter(def, name)?) {
+        (SignalType::BOOL, ParamValue::Bool(b)) => Value::Bool(*b),
+        (SignalType::REAL, ParamValue::Real(x)) => Value::DWord((*x as f32).to_bits()),
+        (SignalType::REAL, ParamValue::Int(n)) => Value::DWord((*n as f32).to_bits()),
+        (_, ParamValue::Int(n)) => Value::DWord(*n as i32 as u32),
         (_, other) => unreachable!("the format checks a fallback's type: {other:?}"),
     })
 }

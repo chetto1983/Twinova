@@ -1,7 +1,9 @@
 //! Rules on names, paths, numbers and definitions (spec 2026-11-08-project-format-design.md, annex).
 
 use crate::diagnostic::Diagnostic;
-use crate::model::{Definition, ParamType, ParamValue, PortKind, Quat, SignalType, Vec3};
+use crate::model::{
+    Definition, Item, ParamType, ParamValue, PortKind, Quat, SignalType, Vec3, rgb,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// `^[a-z][a-z0-9_]*$`.
@@ -59,25 +61,55 @@ pub(crate) fn pose_problem(position: &Vec3, rotation: &Quat) -> Option<String> {
         .then(|| format!("rotation must be a unit quaternion (its norm is {norm})"))
 }
 
-/// Checks a value against its parameter's type and range.
+/// Checks a value against its parameter's type and range; a list's items each against the range.
 pub(crate) fn value_problem(
     ty: ParamType,
-    value: ParamValue,
+    value: &ParamValue,
     min: Option<f64>,
     max: Option<f64>,
 ) -> Option<String> {
     let number = match (ty, value) {
         (ParamType::BOOL, ParamValue::Bool(_)) => return None,
-        (ParamType::REAL, ParamValue::Real(v)) => v,
-        (ParamType::REAL, ParamValue::Int(v)) => v as f64,
-        (ParamType::DINT, ParamValue::Int(v)) if i32::try_from(v).is_ok() => v as f64,
-        (ParamType::DINT, ParamValue::Int(_)) => return Some("is outside the DINT range".into()),
-        (ParamType::TIME, ParamValue::Int(v)) if v >= 0 => v as f64,
+        (ParamType::REAL, ParamValue::Real(v)) => *v,
+        (ParamType::REAL, ParamValue::Int(v)) => *v as f64,
+        (ParamType::DINT, ParamValue::Int(v)) => return dint_problem(*v, min, max),
+        (ParamType::TIME, ParamValue::Int(v)) if *v >= 0 => *v as f64,
         (ParamType::TIME, ParamValue::Int(_)) => {
             return Some("a TIME in ns cannot be negative".into());
         }
-        (ty, _) => return Some(format!("is not a {ty:?} value")),
+        (ParamType::DintList, ParamValue::List(items)) => {
+            return item_problem(items, |item| match item {
+                Item::Int(v) => dint_problem(*v, min, max),
+                Item::Text(_) => Some("is not a DINT".into()),
+            });
+        }
+        (ParamType::ColorList, ParamValue::List(items)) => {
+            return item_problem(items, |item| match item {
+                Item::Text(t) if rgb(t).is_some() => None,
+                _ => Some("is not a lowercase #rrggbb colour".into()),
+            });
+        }
+        (ty, _) => return Some(format!("is not a {} value", ty.name())),
     };
+    range_problem(number, min, max)
+}
+
+fn dint_problem(v: i64, min: Option<f64>, max: Option<f64>) -> Option<String> {
+    match i32::try_from(v) {
+        Ok(_) => range_problem(v as f64, min, max),
+        Err(_) => Some("is outside the DINT range".into()),
+    }
+}
+
+/// The first item with a problem, by its index.
+fn item_problem(items: &[Item], problem: impl Fn(&Item) -> Option<String>) -> Option<String> {
+    items
+        .iter()
+        .enumerate()
+        .find_map(|(k, item)| problem(item).map(|p| format!("item {k} {p}")))
+}
+
+fn range_problem(number: f64, min: Option<f64>, max: Option<f64>) -> Option<String> {
     if !number.is_finite() {
         Some("must be finite".into())
     } else if min.is_some_and(|m| number < m) || max.is_some_and(|m| number > m) {
@@ -154,7 +186,7 @@ pub(crate) fn definition(
         }
     }
     for p in &def.parameters {
-        if let Some(problem) = value_problem(p.ty, p.default, p.min, p.max) {
+        if let Some(problem) = value_problem(p.ty, &p.default, p.min, p.max) {
             err(format!("parameters.{}.default", p.name), problem);
         }
         if p.min.zip(p.max).is_some_and(|(lo, hi)| lo > hi) {
@@ -171,7 +203,7 @@ pub(crate) fn definition(
             None => err(path, format!("fallback '{fallback}' is not a parameter")),
             Some(p) if !same_type(p.ty, s.ty) => err(
                 path,
-                format!("fallback '{fallback}' is {:?}, not {:?}", p.ty, s.ty),
+                format!("fallback '{fallback}' is {}, not {:?}", p.ty.name(), s.ty),
             ),
             Some(_) => {}
         }

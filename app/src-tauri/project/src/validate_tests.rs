@@ -1,6 +1,7 @@
 use super::*;
-use crate::model::ParamType::{BOOL, DINT, REAL, TIME};
-use crate::model::ParamValue::{Bool, Int, Real};
+use crate::model::ParamType::{BOOL, ColorList, DINT, DintList, REAL, TIME};
+use crate::model::ParamValue::{Bool, Int, List, Real};
+use crate::model::{Item, rgb};
 
 #[test]
 fn ids_are_lowercase_words_and_definition_ids_are_dotted() {
@@ -77,61 +78,145 @@ fn poses_must_be_finite_with_a_unit_quaternion() {
 
 #[test]
 fn values_must_match_the_type_and_the_range() {
-    assert_eq!(value_problem(BOOL, Bool(true), None, None), None);
-    assert_eq!(value_problem(REAL, Real(0.5), Some(0.0), Some(1.0)), None);
+    assert_eq!(value_problem(BOOL, &Bool(true), None, None), None);
+    assert_eq!(value_problem(REAL, &Real(0.5), Some(0.0), Some(1.0)), None);
     assert_eq!(
-        value_problem(REAL, Int(1), Some(0.0), Some(1.0)),
+        value_problem(REAL, &Int(1), Some(0.0), Some(1.0)),
         None,
         "an integer is an exact REAL"
     );
     assert_eq!(
-        value_problem(REAL, Real(0.0), Some(0.0), Some(1.0)),
+        value_problem(REAL, &Real(0.0), Some(0.0), Some(1.0)),
         None,
         "bounds are inclusive"
     );
-    assert_eq!(value_problem(REAL, Real(1.0), Some(0.0), Some(1.0)), None);
+    assert_eq!(value_problem(REAL, &Real(1.0), Some(0.0), Some(1.0)), None);
     assert!(
-        value_problem(REAL, Real(1.5), Some(0.0), Some(1.0))
+        value_problem(REAL, &Real(1.5), Some(0.0), Some(1.0))
             .unwrap()
             .contains("outside [0, 1]")
     );
     assert!(
-        value_problem(REAL, Real(-0.5), Some(0.0), None)
+        value_problem(REAL, &Real(-0.5), Some(0.0), None)
             .unwrap()
             .contains("outside [0, -]")
     );
     assert!(
-        value_problem(REAL, Real(f64::NAN), None, None)
+        value_problem(REAL, &Real(f64::NAN), None, None)
             .unwrap()
             .contains("finite")
     );
     assert!(
-        value_problem(REAL, Bool(true), None, None)
+        value_problem(REAL, &Bool(true), None, None)
             .unwrap()
             .contains("not a REAL")
     );
     assert_eq!(
-        value_problem(DINT, Int(i64::from(i32::MAX)), None, None),
+        value_problem(DINT, &Int(i64::from(i32::MAX)), None, None),
         None
     );
     assert!(
-        value_problem(DINT, Int(i64::from(i32::MAX) + 1), None, None)
+        value_problem(DINT, &Int(i64::from(i32::MAX) + 1), None, None)
             .unwrap()
             .contains("DINT range")
     );
-    assert!(value_problem(DINT, Int(i64::from(i32::MIN) - 1), None, None).is_some());
+    assert!(value_problem(DINT, &Int(i64::from(i32::MIN) - 1), None, None).is_some());
     assert!(
-        value_problem(DINT, Real(1.0), None, None)
+        value_problem(DINT, &Real(1.0), None, None)
             .unwrap()
             .contains("not a DINT")
     );
-    assert_eq!(value_problem(TIME, Int(0), None, None), None);
+    assert_eq!(value_problem(TIME, &Int(0), None, None), None);
     assert!(
-        value_problem(TIME, Int(-1), None, None)
+        value_problem(TIME, &Int(-1), None, None)
             .unwrap()
             .contains("negative")
     );
-    assert!(value_problem(BOOL, Int(1), None, None).is_some());
+    assert!(value_problem(BOOL, &Int(1), None, None).is_some());
+}
+
+fn ints(values: &[i64]) -> ParamValue {
+    List(values.iter().map(|&v| Item::Int(v)).collect())
+}
+
+fn texts(values: &[&str]) -> ParamValue {
+    List(values.iter().map(|v| Item::Text(v.to_string())).collect())
+}
+
+#[test]
+fn a_dint_list_checks_each_item_against_the_dint_range_and_the_bounds() {
+    assert_eq!(value_problem(DintList, &ints(&[]), None, None), None);
+    assert_eq!(
+        value_problem(DintList, &ints(&[1, 2, 3]), Some(0.0), Some(3.0)),
+        None
+    );
+    assert_eq!(
+        value_problem(DintList, &ints(&[1, 4]), Some(0.0), Some(3.0)),
+        Some("item 1 4 is outside [0, 3]".into())
+    );
+    assert_eq!(
+        value_problem(DintList, &ints(&[0, i64::from(i32::MAX) + 1]), None, None),
+        Some("item 1 is outside the DINT range".into())
+    );
+    assert_eq!(
+        value_problem(DintList, &texts(&["7"]), None, None),
+        Some("item 0 is not a DINT".into())
+    );
+    assert_eq!(
+        value_problem(DintList, &Int(1), None, None),
+        Some("is not a DINT_LIST value".into())
+    );
+    assert_eq!(
+        value_problem(DINT, &ints(&[1]), None, None),
+        Some("is not a DINT value".into())
+    );
+}
+
+#[test]
+fn a_color_list_holds_lowercase_rrggbb_colours() {
+    assert_eq!(value_problem(ColorList, &texts(&[]), None, None), None);
+    assert_eq!(
+        value_problem(ColorList, &ints(&[]), None, None),
+        None,
+        "an empty list has no type"
+    );
+    assert_eq!(
+        value_problem(ColorList, &texts(&["#ff0000", "#00ff7f"]), None, None),
+        None
+    );
+    for bad in [
+        "#FF0000", "ff0000", "#ff000", "#ff00000", "#gg0000", "#ff 000",
+    ] {
+        assert_eq!(
+            value_problem(ColorList, &texts(&["#000000", bad]), None, None),
+            Some("item 1 is not a lowercase #rrggbb colour".into()),
+            "{bad}"
+        );
+    }
+    assert_eq!(
+        value_problem(ColorList, &ints(&[1]), None, None),
+        Some("item 0 is not a lowercase #rrggbb colour".into())
+    );
+    assert_eq!(
+        value_problem(ColorList, &Bool(true), None, None),
+        Some("is not a COLOR_LIST value".into())
+    );
+}
+
+#[test]
+fn a_colour_reads_as_its_three_channels() {
+    assert_eq!(rgb("#ff8000"), Some([255, 128, 0]));
+    assert_eq!(rgb("#0a0b0c"), Some([10, 11, 12]));
+    assert_eq!(rgb("#000000"), Some([0, 0, 0]));
+    assert_eq!(rgb("#ff800"), None);
+    assert_eq!(rgb("#ff80000"), None);
+    assert_eq!(rgb("ff8000"), None);
+    assert_eq!(rgb("#Ff8000"), None);
+    assert_eq!(
+        rgb("#+f8000"),
+        None,
+        "from_str_radix alone would take a sign"
+    );
 }
 
 #[test]

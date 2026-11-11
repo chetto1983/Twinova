@@ -3,7 +3,7 @@
 
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number];
-type Value = boolean | number;
+type Value = boolean | number | (number | string)[];
 
 export interface Instance {
   id: string;
@@ -17,7 +17,7 @@ export interface Instance {
 
 export interface ParameterDef {
   name: string;
-  type: "REAL" | "DINT" | "BOOL" | "TIME";
+  type: "REAL" | "DINT" | "BOOL" | "TIME" | "DINT_LIST" | "COLOR_LIST";
   unit: string | null;
   default: Value;
   min: number | null;
@@ -86,6 +86,7 @@ export function formatTime(ns: number): string {
 }
 
 export function formatValue(def: ParameterDef, value: Value): string {
+  if (Array.isArray(value)) return value.length === 0 ? "—" : value.join(", ");
   if (def.type === "BOOL") return value ? "TRUE" : "FALSE";
   if (def.type === "TIME") return formatTime(Number(value));
   return def.unit ? `${value} ${def.unit}` : String(value);

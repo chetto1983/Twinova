@@ -188,24 +188,17 @@ fn type_name(value: &Value) -> &'static str {
     }
 }
 
-fn param_value(ty: ParamType, value: ParamValue) -> Value {
+fn param_value(ty: ParamType, value: &ParamValue) -> Value {
     match (ty, value) {
-        (_, ParamValue::Bool(b)) => Value::Bool(b),
-        (ParamType::TIME, ParamValue::Int(ns)) => Value::Time(Duration::from_nanos(ns)),
-        (ParamType::TIME, ParamValue::Real(ns)) => Value::Time(Duration::from_nanos(ns as i64)),
-        (ParamType::REAL, ParamValue::Int(n)) => Value::Real(n as f32),
-        (ParamType::REAL, ParamValue::Real(x)) => Value::Real(x as f32),
-        (_, ParamValue::Int(n)) => Value::DInt(n as i32),
-        (_, ParamValue::Real(x)) => Value::DInt(x as i32),
-    }
-}
-
-fn param_type(ty: ParamType) -> &'static str {
-    match ty {
-        ParamType::REAL => "REAL",
-        ParamType::DINT => "DINT",
-        ParamType::BOOL => "BOOL",
-        ParamType::TIME => "TIME",
+        (_, ParamValue::Bool(b)) => Value::Bool(*b),
+        (ParamType::TIME, ParamValue::Int(ns)) => Value::Time(Duration::from_nanos(*ns)),
+        (ParamType::TIME, ParamValue::Real(ns)) => Value::Time(Duration::from_nanos(*ns as i64)),
+        (ParamType::REAL, ParamValue::Int(n)) => Value::Real(*n as f32),
+        (ParamType::REAL, ParamValue::Real(x)) => Value::Real(*x as f32),
+        (_, ParamValue::Int(n)) => Value::DInt(*n as i32),
+        (_, ParamValue::Real(x)) => Value::DInt(*x as i32),
+        // A list type's name is no ST type's, so Build refused a block declaring one before this.
+        (_, ParamValue::List(_)) => unreachable!("a list parameter never reaches a block"),
     }
 }
 
@@ -274,16 +267,18 @@ impl Field {
                 let Some(current) = harness.get_output(&path(&p.name)) else {
                     continue;
                 };
-                if type_name(&current) != param_type(p.ty) {
+                if type_name(&current) != p.ty.name() {
                     return Err(format!(
                         "components/{}.st: {block}.{} must be {} like the parameter, not {}",
                         def.key(),
                         p.name,
-                        param_type(p.ty),
+                        p.ty.name(),
                         type_name(&current)
                     ));
                 }
-                let value = inst.parameters.get(&p.name).copied().unwrap_or(p.default);
+                let value = inst
+                    .parameter(def, &p.name)
+                    .expect("a parameter of the definition");
                 harness
                     .try_set_input(&path(&p.name), param_value(p.ty, value))
                     .map_err(|e| format!("{}.{}: {e}", inst.id, p.name))?;

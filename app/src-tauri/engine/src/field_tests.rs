@@ -213,6 +213,28 @@ fn a_parameter_of_another_type_is_refused() {
     );
 }
 
+/// A list parameter has no ST type: a block that does not declare it builds, and one that does is refused.
+#[test]
+fn a_list_parameter_never_reaches_a_block() {
+    let mut project = fixture("demo_m3");
+    let belt = project.definitions.get_mut("twinova.belt@1").unwrap();
+    belt.parameters.push(twinova_project::model::ParameterDef {
+        name: "codes".into(),
+        ty: twinova_project::model::ParamType::DintList,
+        unit: None,
+        default: twinova_project::model::ParamValue::List(Vec::new()),
+        min: None,
+        max: None,
+    });
+    assert!(Field::build(&project).is_ok());
+    let source = project.behaviours.get_mut("twinova.belt@1").unwrap();
+    *source = source.replace("VAR_INPUT\n", "VAR_INPUT\n    codes : DINT;\n");
+    assert_eq!(
+        Field::build(&project).err().unwrap(),
+        "components/twinova.belt@1.st: BeltBehaviour.codes must be DINT_LIST like the parameter, not DINT"
+    );
+}
+
 #[test]
 fn a_mistake_in_a_block_is_reported_against_its_file_and_line() {
     let error = with_belt_source(|s| s.replace("    target := speed_ref;", "    target := ;"))
