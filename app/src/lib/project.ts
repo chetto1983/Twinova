@@ -3,7 +3,7 @@
 
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number];
-type Value = boolean | number | (number | string)[];
+export type Value = boolean | number | (number | string)[];
 
 export interface Instance {
   id: string;
@@ -28,7 +28,16 @@ export interface SignalDef {
   name: string;
   type: "BOOL" | "DINT" | "REAL";
   direction: "plc_input" | "plc_output";
+  optional?: boolean;
 }
+
+export interface PortDef {
+  name: string;
+  kind: "flow_in" | "flow_out" | "mount_host" | "mount_device";
+}
+
+/** `[instance, port]`. */
+export type Endpoint = [string, string];
 
 export interface Definition {
   id: string;
@@ -36,6 +45,7 @@ export interface Definition {
   generator: string;
   parameters: ParameterDef[];
   signals: SignalDef[];
+  ports: PortDef[];
 }
 
 export interface ProjectView {
@@ -52,7 +62,21 @@ export interface ProjectView {
   panel: { name: string; address: string }[];
   /** Each mounted device's host and position along it (project_commands.rs `MountView`). */
   mounts: { device: string; host: string; at: number }[];
+  flows: { from: Endpoint; to: Endpoint }[];
+  can_undo: boolean;
+  can_redo: boolean;
 }
+
+/** One edit of the open project (edit_commands.rs `Edit`). */
+export type Edit =
+  | { op: "place"; family: string; position: Vec3; rotation: Quat }
+  | { op: "move"; id: string; position: Vec3; rotation: Quat }
+  | { op: "remove"; id: string }
+  | { op: "rename"; id: string; name: string }
+  | { op: "set_parameter"; id: string; name: string; value: Value | null }
+  | { op: "bind_signal"; id: string; signal: string; address: string | null }
+  | { op: "set_mount"; device: string; host: string | null; at: number }
+  | { op: "set_flow"; id: string; port: string; peer: Endpoint | null };
 
 export interface ParameterRow {
   name: string;
@@ -72,6 +96,9 @@ export interface SignalRow {
 export function family(definitionId: string): string {
   return definitionId.slice(definitionId.lastIndexOf(".") + 1);
 }
+
+/** A family's name as the catalogue shows it: `twinova.sensor_diffuse@1` is `sensor diffuse`. */
+export const familyLabel = (key: string): string => family(key.split("@")[0]).replaceAll("_", " ");
 
 /** A TIME is stored in nanoseconds; it reads best in the largest unit that keeps it whole. */
 export function formatTime(ns: number): string {

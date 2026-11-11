@@ -1,12 +1,11 @@
 use super::*;
+use crate::model::Item;
+use crate::storage::open_folder;
 use serde_json::json;
 use std::path::Path;
-use twinova_project::model::Item;
-use twinova_project::storage::open_folder;
 
 fn sort_line() -> Project {
-    let dir =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/sort_line");
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/valid/sort_line");
     open_folder(&dir).unwrap().opened.project
 }
 
@@ -219,7 +218,7 @@ fn instances_are_added_moved_and_removed_with_their_connections() {
 #[test]
 fn a_group_forgets_a_removed_instance() {
     let mut p = sort_line();
-    p.scene.groups.push(twinova_project::model::Group {
+    p.scene.groups.push(crate::model::Group {
         id: "g".into(),
         name: "G".into(),
         position: [0.0; 3],
@@ -257,6 +256,178 @@ fn sources_are_the_program_files_and_the_definitions_behaviours() {
         assert_eq!(
             write_source(&mut p, file, ""),
             Err(format!("no source {file}"))
+        );
+    }
+}
+
+const AT: Vec3 = [0.0, 0.0, 0.0];
+const NO_TURN: Quat = [0.0, 0.0, 0.0, 1.0];
+
+/// The sort line with no instance, connection or definition: a scene to build from the library.
+fn empty() -> Project {
+    let mut p = sort_line();
+    p.scene.instances.clear();
+    p.scene.connections.clear();
+    p.scene.groups.clear();
+    p.definitions.clear();
+    p.behaviours.clear();
+    p
+}
+
+#[test]
+fn placing_pins_the_family_once_and_numbers_its_instances() {
+    let mut p = empty();
+    assert_eq!(
+        place(&mut p, "twinova.belt@1", [1.0, 0.0, 2.0], NO_TURN),
+        Ok("belt_1".into())
+    );
+    assert_eq!(
+        place(&mut p, "twinova.belt@1", AT, NO_TURN),
+        Ok("belt_2".into())
+    );
+    assert_eq!(
+        place(&mut p, "twinova.sink@1", AT, NO_TURN),
+        Ok("sink_1".into())
+    );
+    let belt = &p.scene.instances[0];
+    assert_eq!(
+        (belt.name.as_str(), belt.position),
+        ("belt_1", [1.0, 0.0, 2.0])
+    );
+    assert!(belt.parameters.is_empty() && belt.signals.is_empty());
+    let library = crate::library::family("twinova.belt@1").unwrap();
+    assert_eq!(p.definitions["twinova.belt@1"], library.definition);
+    assert_eq!(p.behaviours["twinova.belt@1"], library.behaviour.unwrap());
+    assert!(
+        !p.behaviours.contains_key("twinova.sink@1"),
+        "a family without a block pins none"
+    );
+    // A gap left by a removed instance is filled first.
+    remove_instance(&mut p, "belt_1").unwrap();
+    assert_eq!(
+        place(&mut p, "twinova.belt@1", AT, NO_TURN),
+        Ok("belt_1".into())
+    );
+    assert_eq!(
+        place(&mut p, "twinova.belt@9", AT, NO_TURN),
+        Err("no family twinova.belt@9 in the library".into())
+    );
+}
+
+#[test]
+fn placing_a_pinned_family_keeps_the_projects_copy() {
+    let mut p = sort_line();
+    p.definitions.get_mut("twinova.belt@1").unwrap().parameters[0].default = ParamValue::Real(9.0);
+    let pinned = p.definitions["twinova.belt@1"].clone();
+    p.behaviours
+        .insert("twinova.belt@1".into(), "(* edited *)".into());
+    place(&mut p, "twinova.belt@1", AT, NO_TURN).unwrap();
+    assert_eq!(p.definitions["twinova.belt@1"], pinned);
+    assert_eq!(p.behaviours["twinova.belt@1"], "(* edited *)");
+}
+
+#[test]
+fn a_name_is_trimmed_and_cannot_be_empty() {
+    let mut p = sort_line();
+    set_name(&mut p, "belt_b", "  Belt B, outfeed ").unwrap();
+    assert_eq!(instance(&p, "belt_b").name, "Belt B, outfeed");
+    assert_eq!(
+        set_name(&mut p, "belt_b", " "),
+        Err("a name cannot be empty".into())
+    );
+    assert_eq!(
+        set_name(&mut p, "ghost", "x"),
+        Err("no instance ghost".into())
+    );
+}
+
+fn mounts_of<'a>(p: &'a Project, device: &str) -> Vec<&'a Connection> {
+    (p.scene.connections.iter())
+        .filter(|c| matches!(c, Connection::Mount { device: d, .. } if d.0 == device))
+        .collect()
+}
+
+#[test]
+fn a_device_mounts_on_one_host_at_a_distance_and_unmounts() {
+    let mut p = sort_line();
+    set_mount(&mut p, "s_push", Some(("belt_c", 0.75))).unwrap();
+    assert_eq!(
+        mounts_of(&p, "s_push"),
+        [&Connection::Mount {
+            host: ("belt_c".into(), "rail".into()),
+            device: ("s_push".into(), "mount".into()),
+            position: [0.75, 0.0, 0.0],
+            rotation: NO_TURN,
+        }]
+    );
+    set_mount(&mut p, "s_push", None).unwrap();
+    assert!(mounts_of(&p, "s_push").is_empty());
+    assert_eq!(
+        mounts_of(&p, "s_in").len(),
+        1,
+        "other devices keep their mounts"
+    );
+    assert_eq!(
+        set_mount(&mut p, "s_push", Some(("sink_b", 1.0))),
+        Err("sink_b (twinova.sink@1) has no MountHost port".into())
+    );
+    assert_eq!(
+        set_mount(&mut p, "belt_b", Some(("belt_c", 1.0))),
+        Err("belt_b (twinova.belt@1) has no MountDevice port".into())
+    );
+    assert!(set_mount(&mut p, "s_push", Some(("belt_c", f64::NAN))).is_err());
+}
+
+fn flows(p: &Project) -> Vec<(String, String)> {
+    (p.scene.connections.iter())
+        .filter_map(|c| match c {
+            Connection::Flow { from, to } => Some((
+                format!("{}.{}", from.0, from.1),
+                format!("{}.{}", to.0, to.1),
+            )),
+            Connection::Mount { .. } => None,
+        })
+        .collect()
+}
+
+#[test]
+fn a_flow_port_has_one_peer_set_from_either_end() {
+    let mut p = sort_line();
+    // belt_c.out fed sink_c.in: from the sink's end, belt_b takes its place, and belt_b's old peer, sink_b, is freed.
+    set_flow(&mut p, "sink_c", "in", Some(("belt_b", "out"))).unwrap();
+    let all = flows(&p);
+    assert!(
+        all.contains(&("belt_b.out".into(), "sink_c.in".into())),
+        "{all:?}"
+    );
+    assert!(
+        all.contains(&("belt_in.out".into(), "roller_a.in".into())),
+        "the other flows stay: {all:?}"
+    );
+    assert!(
+        !all.iter()
+            .any(|(from, to)| from == "belt_c.out" || to == "sink_b.in"),
+        "{all:?}"
+    );
+    set_flow(&mut p, "belt_c", "out", Some(("sink_b", "in"))).unwrap();
+    assert!(flows(&p).contains(&("belt_c.out".into(), "sink_b.in".into())));
+    set_flow(&mut p, "belt_c", "out", None).unwrap();
+    assert!(!flows(&p).iter().any(|(from, _)| from == "belt_c.out"));
+    for (id, port, peer, error) in [
+        (
+            "belt_c",
+            "out",
+            Some(("belt_b", "out")),
+            "belt_c.out cannot flow to belt_b.out",
+        ),
+        ("belt_c", "rail", None, "belt_c.rail is not a flow port"),
+        ("belt_c", "side", None, "twinova.belt@1 has no port side"),
+        ("belt_c", "out", Some(("ghost", "in")), "no instance ghost"),
+    ] {
+        assert_eq!(
+            set_flow(&mut p, id, port, peer),
+            Err(error.into()),
+            "{id}.{port}"
         );
     }
 }

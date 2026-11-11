@@ -4,11 +4,15 @@
   // device's link at its position (a transfer's or a stopper's lift, a pusher's reach, a turntable's angle), a belt's
   // fabric moved by its travel, and the products of the running line at the poses the physics gives them, each a unit
   // box scaled to its size in its paint (engine.rs `Snapshot.actuators`, `Snapshot.conveyors`, `Snapshot.cartons`).
+  // Each instance's group carries its id, so the view picks it; the selection carries the gizmo, unless it is a device
+  // mounted on a host, which moves along its host in the inspector (sceneEditing.ts).
+  import { untrack } from "svelte";
   import * as THREE from "three";
   import { drawnOf, type Motion } from "./families";
   import { materialOf } from "./materials";
   import { toObject } from "./meshes";
-  import { frame, shapeOf, type ProjectView } from "./project";
+  import { frame, shapeOf, type ProjectView, type Quat, type Vec3 } from "./project";
+  import { sceneEditing, type GizmoMode } from "./sceneEditing";
   import { yawQuat } from "./oip/parts/part";
   import { pusherLamps } from "./oip/parts/pusher";
   import { paintOf, scaled, scrollOffset, type Carton, type Snapshot } from "./snapshot";
@@ -21,6 +25,12 @@
     cartons,
     actuators,
     conveyors,
+    framing = 0,
+    mode = "translate",
+    dropping = null,
+    onSelect = () => {},
+    onMove = () => {},
+    onDrop = () => {},
   }: {
     project: ProjectView;
     selected: string | null;
@@ -28,12 +38,27 @@
     cartons: Carton[];
     actuators: Snapshot["actuators"];
     conveyors: Snapshot["conveyors"];
+    /** Changes when the view should frame the scene again: a project opened, not an edit. */
+    framing?: number;
+    mode?: GizmoMode;
+    dropping?: string | null;
+    onSelect?: (id: string | null) => void;
+    onMove?: (id: string, position: Vec3, rotation: Quat) => void;
+    onDrop?: (family: string, position: Vec3) => void;
   } = $props();
 
   const scene = new THREE.Scene();
   const content = new THREE.Group();
   const products = new THREE.Group();
   scene.add(content, products);
+  /** Each instance's placed group, by id: what the gizmo moves. */
+  const placedGroups = new Map<string, THREE.Group>();
+  const editing = sceneEditing(scene, content, {
+    onSelect: (id) => onSelect(id),
+    onMove: (id, position, rotation) => onMove(id, position, rotation),
+    dropping: () => dropping,
+    onDrop: (family, position) => onDrop(family, position),
+  });
   const cartonGeometry = new THREE.BoxGeometry(1, 1, 1);
   const cartonMaterial = new THREE.MeshStandardMaterial({ roughness: 0.9 });
   /** One material per paint (paintOf), the unpainted one the theme's. */
@@ -58,7 +83,12 @@
   const fabrics = new Map<string, { map: THREE.Texture; tiles: number }[]>();
   const loader = new THREE.TextureLoader();
   let requestRender = $state(() => {});
-  const view = $derived(frame(project.instances));
+  /** "Frame all" asks for the scene as it is now; an edit does not move the camera. */
+  let reframes = $state(0);
+  const view = $derived.by(() => {
+    void [framing, reframes];
+    return untrack(() => frame(project.instances));
+  });
   const target = $derived(new THREE.Vector3(...view.centre));
 
   function token(name: string): THREE.Color {
@@ -78,6 +108,7 @@
       }
     });
     content.clear();
+    placedGroups.clear();
     links.clear();
     lamps.clear();
     fabrics.clear();
@@ -119,7 +150,7 @@
         placed.position.set(...drawn.position);
         placed.quaternion.set(...drawn.rotation);
         placed.add(group);
-        content.add(placed);
+        place(instance.id, placed);
         continue;
       }
       const shape = shapeOf(instance, def);
@@ -139,9 +170,23 @@
       placed.position.set(...instance.position);
       placed.quaternion.set(...instance.rotation);
       placed.add(mesh);
-      content.add(placed);
+      place(instance.id, placed);
     }
+    const mounted = project.mounts.some((m) => m.device === selected);
+    editing.attach(selected && !mounted ? (placedGroups.get(selected) ?? null) : null);
   }
+
+  /** Adds an instance's group to the view, named for picking. A mounted device is drawn from its host's pose, so its
+   *  group is the host's frame: picking it selects the device, and the gizmo leaves it alone. */
+  function place(id: string, placed: THREE.Group): void {
+    placed.userData.instance = id;
+    placedGroups.set(id, placed);
+    content.add(placed);
+  }
+
+  $effect(() => {
+    editing.setMode(mode);
+  });
 
   $effect(() => {
     void [project, selected, theme];
@@ -202,4 +247,12 @@
   });
 </script>
 
-<Viewport {scene} {theme} {target} halfWidth={view.radius} bind:requestRender />
+<Viewport
+  {scene}
+  {theme}
+  {target}
+  halfWidth={view.radius}
+  bind:requestRender
+  interact={editing.interact}
+  onFrameAll={() => (reframes += 1)}
+/>

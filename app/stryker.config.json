@@ -8,7 +8,10 @@
     "src/lib/meshes.ts",
     "src/lib/families.ts",
     "src/lib/openings.ts",
-    "src/lib/materials.ts"
+    "src/lib/materials.ts",
+    "src/lib/inspector.ts",
+    "src/lib/picking.ts",
+    "src/lib/shortcuts.ts"
   ],
   "reporters": ["clear-text", "progress", "json"],
   "thresholds": {

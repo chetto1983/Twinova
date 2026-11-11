@@ -1,0 +1,203 @@
+{
+  "behaviour": {
+    "function_block": "BeltCurveBehaviour"
+  },
+  "generator": "twinova.belt_curve/1",
+  "id": "twinova.belt_curve",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": 0.6,
+      "max": 4.0,
+      "min": 0.2,
+      "name": "inner_radius",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.6,
+      "max": 3.0,
+      "min": 0.2,
+      "name": "width",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 90.0,
+      "max": 180.0,
+      "min": 15.0,
+      "name": "sweep",
+      "type": "REAL",
+      "unit": "deg"
+    },
+    {
+      "default": 0.8,
+      "max": 3.0,
+      "min": 0.0,
+      "name": "height",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.17,
+      "max": 0.6,
+      "min": 0.1,
+      "name": "frame_height",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.5,
+      "max": 3.0,
+      "min": 0.0,
+      "name": "speed",
+      "type": "REAL",
+      "unit": "m/s"
+    },
+    {
+      "default": 0.7,
+      "max": 2.0,
+      "min": 0.0,
+      "name": "friction",
+      "type": "REAL",
+      "unit": null
+    },
+    {
+      "default": false,
+      "max": null,
+      "min": null,
+      "name": "turn_right",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": 0,
+      "max": null,
+      "min": 0.0,
+      "name": "start_delay",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": true,
+      "max": null,
+      "min": null,
+      "name": "left_guard",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": true,
+      "max": null,
+      "min": null,
+      "name": "right_guard",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": 0,
+      "max": 30000000000.0,
+      "min": 0.0,
+      "name": "accel_time",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": 0,
+      "max": 30000000000.0,
+      "min": 0.0,
+      "name": "decel_time",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": 0.5,
+      "max": 10.0,
+      "min": 0.01,
+      "name": "speed_at_30",
+      "type": "REAL",
+      "unit": "m/s"
+    },
+    {
+      "default": 0.0254,
+      "max": 2.54,
+      "min": 0.00127,
+      "name": "pulse_pitch",
+      "type": "REAL",
+      "unit": "m"
+    }
+  ],
+  "ports": [
+    {
+      "kind": "flow_in",
+      "name": "in"
+    },
+    {
+      "kind": "flow_out",
+      "name": "out"
+    },
+    {
+      "kind": "mount_host",
+      "name": "rail"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_output",
+      "name": "run",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "running",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_output",
+      "fallback": "speed",
+      "name": "speed_ref",
+      "optional": true,
+      "type": "REAL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "velocity",
+      "optional": true,
+      "type": "REAL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "encoder",
+      "optional": true,
+      "type": "REAL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "pulse",
+      "optional": true,
+      "type": "BOOL"
+    }
+  ],
+  "version": 1
+}

@@ -1,0 +1,71 @@
+{
+  "behaviour": null,
+  "generator": "twinova.sensor_color/1",
+  "id": "twinova.sensor_color",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": [
+        "#ff0000",
+        "#00ff00",
+        "#0000ff"
+      ],
+      "max": null,
+      "min": null,
+      "name": "colors",
+      "type": "COLOR_LIST",
+      "unit": null
+    },
+    {
+      "default": 80,
+      "max": 255.0,
+      "min": 0.0,
+      "name": "tolerance",
+      "type": "DINT",
+      "unit": null
+    },
+    {
+      "default": 0.5,
+      "max": 5.0,
+      "min": 0.01,
+      "name": "range",
+      "type": "REAL",
+      "unit": "m"
+    }
+  ],
+  "ports": [
+    {
+      "kind": "mount_device",
+      "name": "mount"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_input",
+      "name": "color",
+      "type": "DINT"
+    }
+  ],
+  "version": 1
+}

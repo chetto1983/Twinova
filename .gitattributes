@@ -1,3 +1,7 @@
 # The project corpus is a byte-for-byte reference (its manifests hold SHA-256 of the exact bytes): git must not
 # convert its line endings on Windows checkouts (autocrlf), as it did in run 42510999331.
 app/src-tauri/project/tests/fixtures/** -text
+# The component library is embedded in the app and copied byte for byte into the fixtures and every project that pins
+# a family: it must reach every platform with the bytes it was written with (CRLF on a Windows checkout failed the
+# library's test, run 43056805668).
+app/src-tauri/library/** -text

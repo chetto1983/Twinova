@@ -3,12 +3,15 @@
   // industrial hall after Open Industry Project's (src/render/env.ts, MIT, THIRD_PARTY_NOTICES.md): a hemisphere light
   // with a cool sky and a warm ground bounce, a warm key light with soft shadows, a cool fill light, a floor with an
   // optional grid, and an axis gizmo. It renders on demand (three.js manual, "Rendering on demand"): a frame per
-  // change, none while nothing moves; the shadow map is recomputed only with those frames.
+  // change, none while nothing moves; the shadow map is recomputed only with those frames. A view that is edited
+  // (ProjectScene.svelte) installs its picking and its gizmo through `interact`, which receives the camera, the canvas
+  // and the orbit controls, and returns its cleanup.
   import { onMount } from "svelte";
   import * as THREE from "three";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import { ViewHelper } from "three/examples/jsm/helpers/ViewHelper.js";
   import { m } from "../paraglide/messages.js";
+  import type { Interaction } from "./picking";
   import { framingDistance } from "./snapshot";
 
   let {
@@ -18,6 +21,8 @@
     halfHeight = 1,
     theme,
     requestRender = $bindable(() => {}),
+    interact,
+    onFrameAll,
   }: {
     scene: THREE.Scene;
     target: THREE.Vector3;
@@ -25,6 +30,9 @@
     halfHeight?: number;
     theme: string;
     requestRender?: () => void;
+    interact?: (view: Interaction) => () => void;
+    /** Frames the scene as it is now: a view whose target follows its content asks for a new target, which reframes. */
+    onFrameAll?: () => void;
   } = $props();
 
   let host: HTMLDivElement;
@@ -152,7 +160,9 @@
     };
     const observer = new ResizeObserver(reframe);
     observer.observe(host);
+    const release = interact?.({ camera, canvas: renderer.domElement, controls, requestRender });
     return () => {
+      release?.();
       observer.disconnect();
       cancelAnimationFrame(frame);
       gizmo.dispose();
@@ -166,7 +176,7 @@
 <div class="view" bind:this={host}>
   <div class="tools">
     <button class="btn ghost" aria-pressed={grid} onclick={() => (grid = !grid)}>{m.view_grid()}</button>
-    <button class="btn ghost" onclick={() => reframe()}>{m.view_frame()}</button>
+    <button class="btn ghost" onclick={() => (onFrameAll ? onFrameAll() : reframe())}>{m.view_frame()}</button>
   </div>
 </div>
 

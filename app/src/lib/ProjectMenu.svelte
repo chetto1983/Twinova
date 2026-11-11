@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The project button and its menu (research 13, PRJ-01): open, save, save to a folder, import, export, and back to
+  // The project button and its menu (research 13, PRJ-01): new, open, save, save to a folder, import, export, and back to
   // the bundled M3 demo. Each action reports through onChange, onNotice or onError.
   import { m } from "../paraglide/messages.js";
   import { projects } from "./backend";
@@ -52,6 +52,7 @@
   }
 
   const items = $derived([
+    { label: m.project_new(), run: async () => onChange(await projects.create()) },
     { label: m.project_open(), run: openFolder },
     ...(project.folder ? [{ label: m.project_save(), run: () => saveTo(projects.save(project.folder!)) }] : []),
     { label: m.project_save_as(), run: () => saveTo(projects.saveAs()) },

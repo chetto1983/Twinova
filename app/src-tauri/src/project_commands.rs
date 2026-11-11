@@ -1,7 +1,8 @@
 //! Tauri commands over the project format (ROADMAP 4.2, spec 2026-11-08-project-format-design.md). The webview
 //! receives a view; the validated project stays here. The app starts on the bundled M3 demo (spec
 //! 2026-11-09-component-behaviour-design.md), and a project that fails to open never replaces the current one. Build
-//! (commands.rs) puts edited ST sources back into the current project, so Save writes them.
+//! (commands.rs) puts edited ST sources back into the current project, so Save writes them. The editor's commands
+//! (edit_commands.rs) change the current project through its history.
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -12,7 +13,8 @@ use std::collections::BTreeMap;
 use tauri::State;
 use twinova_engine::diagnostics;
 use twinova_project::archive::{export_archive, import_archive};
-use twinova_project::model::{Connection, Definition, Instance, PanelButton};
+use twinova_project::history::History;
+use twinova_project::model::{Connection, Definition, Endpoint, Instance, PanelButton};
 use twinova_project::storage::{open_folder, save_folder};
 use twinova_project::{Opened, Project};
 
@@ -31,10 +33,7 @@ impl Default for ProjectState {
 impl ProjectState {
     pub fn launching(folder: Option<PathBuf>) -> Self {
         Self {
-            current: Mutex::new(Current {
-                project: crate::demo::demo(),
-                folder: None,
-            }),
+            current: Mutex::new(Current::new(crate::demo::demo(), None)),
             launch: Mutex::new(folder),
         }
     }
@@ -51,7 +50,7 @@ impl ProjectState {
         Ok(())
     }
 
-    fn lock(&self) -> Result<std::sync::MutexGuard<'_, Current>, String> {
+    pub(crate) fn lock(&self) -> Result<std::sync::MutexGuard<'_, Current>, String> {
         self.current
             .lock()
             .map_err(|_| "project lock poisoned".to_string())
@@ -74,10 +73,22 @@ pub fn launch_folder(args: impl IntoIterator<Item = OsString>) -> Option<PathBuf
     })
 }
 
-struct Current {
-    project: Project,
-    /// The folder it was opened from or saved to; `None` after an import, until it is saved.
+pub(crate) struct Current {
+    pub(crate) project: Project,
+    /// The folder it was opened from or saved to; `None` after an import or a new project, until it is saved.
     folder: Option<PathBuf>,
+    /// The editor's undo and redo; another project starts with none.
+    pub(crate) history: History,
+}
+
+impl Current {
+    pub(crate) fn new(project: Project, folder: Option<PathBuf>) -> Self {
+        Self {
+            project,
+            folder,
+            history: History::default(),
+        }
+    }
 }
 
 /// What the webview shows of a project.
@@ -99,6 +110,28 @@ pub struct ProjectView {
     pub panel: Vec<PanelButton>,
     /// Each mounted device's host and position along it, so the view places it as the physics does.
     pub mounts: Vec<MountView>,
+    /// Each flow connection, for the inspector's ports.
+    pub flows: Vec<FlowView>,
+    pub can_undo: bool,
+    pub can_redo: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct FlowView {
+    pub from: Endpoint,
+    pub to: Endpoint,
+}
+
+fn flows(project: &Project) -> Vec<FlowView> {
+    (project.scene.connections.iter())
+        .filter_map(|c| match c {
+            Connection::Flow { from, to } => Some(FlowView {
+                from: from.clone(),
+                to: to.clone(),
+            }),
+            Connection::Mount { .. } => None,
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -129,7 +162,11 @@ fn mounts(project: &Project) -> Vec<MountView> {
         .collect()
 }
 
-fn view(current: &Current, changed_outside: Vec<String>, recovered: bool) -> ProjectView {
+pub(crate) fn view(
+    current: &Current,
+    changed_outside: Vec<String>,
+    recovered: bool,
+) -> ProjectView {
     ProjectView {
         name: current.project.name.clone(),
         folder: current.folder.as_ref().map(|f| f.display().to_string()),
@@ -141,10 +178,13 @@ fn view(current: &Current, changed_outside: Vec<String>, recovered: bool) -> Pro
         behaviours: current.project.behaviours.clone(),
         panel: current.project.scene.controller.panel.clone(),
         mounts: mounts(&current.project),
+        flows: flows(&current.project),
+        can_undo: current.history.can_undo(),
+        can_redo: current.history.can_redo(),
     }
 }
 
-fn replace(
+pub(crate) fn replace(
     state: &ProjectState,
     current: Current,
     changed: Vec<String>,
@@ -156,13 +196,7 @@ fn replace(
 }
 
 fn opened(folder: Option<PathBuf>, opened: Opened) -> (Current, Vec<String>) {
-    (
-        Current {
-            project: opened.project,
-            folder,
-        },
-        opened.changed_outside,
-    )
+    (Current::new(opened.project, folder), opened.changed_outside)
 }
 
 fn open(state: &ProjectState, folder: PathBuf) -> Result<ProjectView, String> {
@@ -180,11 +214,12 @@ pub fn current_project(state: State<'_, ProjectState>) -> Result<ProjectView, St
 /// Back to the bundled demo, as it was shipped.
 #[tauri::command]
 pub fn open_demo(state: State<'_, ProjectState>) -> Result<ProjectView, String> {
-    let current = Current {
-        project: crate::demo::demo(),
-        folder: None,
-    };
-    replace(&state, current, Vec::new(), false)
+    replace(
+        &state,
+        Current::new(crate::demo::demo(), None),
+        Vec::new(),
+        false,
+    )
 }
 
 #[tauri::command]

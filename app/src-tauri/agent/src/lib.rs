@@ -11,7 +11,6 @@ use rmcp::transport::streamable_http_server::{StreamableHttpServerConfig, Stream
 use rmcp::{ServerHandler, ServiceExt, tool_handler};
 use serde::Serialize;
 
-mod edit;
 pub mod session;
 mod tools_edit;
 mod tools_run;
