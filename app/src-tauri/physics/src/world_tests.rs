@@ -16,6 +16,8 @@ pub(super) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bo
         arc: None,
         guards: [false; 2],
         skew: 0.0,
+        openings: Vec::new(),
+        turntable: false,
     }
 }
 
@@ -37,6 +39,9 @@ fn two_belts(speed_b: Real, cartons: i64) -> World {
             belt("b", 3.0, 2.0, speed_b, false),
         ],
         transfers: vec![],
+        stoppers: vec![],
+        pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 1_000_000_000, cartons)],
         sinks: vec![Sink {
             id: "sink".into(),
@@ -181,6 +186,9 @@ fn a_closed_exit_holds_products_instead_of_dropping_them() {
     let mut w = World::new(Layout {
         belts: vec![belt("a", 0.0, 3.0, 0.5, true)],
         transfers: vec![],
+        stoppers: vec![],
+        pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![],
         sensors: vec![],
@@ -197,6 +205,9 @@ fn a_sensor_sees_a_carton_while_it_crosses_the_beam() {
     let mut w = World::new(Layout {
         belts: vec![belt("a", 0.0, 3.0, 0.5, false)],
         transfers: vec![],
+        stoppers: vec![],
+        pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![Sink {
             id: "sink".into(),
@@ -304,7 +315,7 @@ fn a_family_without_a_model_makes_the_line_unrunnable() {
         .definitions
         .get_mut("twinova.belt@1")
         .unwrap()
-        .generator = "twinova.turntable/1".into();
+        .generator = "twinova.sensor_through_beam/1".into();
     assert_eq!(
         layout(&project).unwrap_err(),
         "this build cannot run belt_a (twinova.belt): their families have no model yet (ROADMAP 4.4)"
@@ -339,7 +350,7 @@ fn a_wall_closes_the_exit_across_the_belt() {
         belts: vec![belt("a", 1.0, 3.0, 0.5, true)],
         ..Layout::default()
     };
-    let wall = exit_wall(&line, Exit::End(0)).build();
+    let wall = exit_wall(&line, Exit::End(0)).unwrap().build();
     let aabb = wall.compute_aabb();
     let (lo, hi) = (aabb.mins, aabb.maxs);
     let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
@@ -383,6 +394,9 @@ fn a_sensor_reaches_as_far_as_its_range() {
     let mut w = World::new(Layout {
         belts: vec![belt("a", 0.0, 3.0, 0.0, false)],
         transfers: vec![],
+        stoppers: vec![],
+        pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![],
         sensors: vec![
@@ -493,6 +507,9 @@ fn a_sink_takes_only_what_reaches_its_own_belt() {
     let mut w = World::new(Layout {
         belts: vec![belt("a", 0.0, 3.0, 0.0, false), beside],
         transfers: vec![],
+        stoppers: vec![],
+        pushers: vec![],
+        turntables: vec![],
         sources: vec![source(1, 1_000_000, 0, 1)],
         sinks: vec![Sink {
             id: "sink".into(),

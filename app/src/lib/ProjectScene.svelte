@@ -1,14 +1,17 @@
 <script lang="ts">
   // The 3D view of a project: each instance as OIP's generator draws its family (families.ts), or as its stand-in
-  // shape sized from its parameters (project.ts, shapeOf), at its pose, the selected one highlighted; a chain
-  // transfer's deck at its lift, a belt's fabric moved by its travel, and the cartons of the running line at the poses
-  // the physics gives them (engine.rs `Snapshot.transfers`, `Snapshot.conveyors`, `Snapshot.cartons`).
+  // shape sized from its parameters (project.ts, shapeOf), at its pose, the selected one highlighted; each moving
+  // device's link at its position (a transfer's or a stopper's lift, a pusher's reach, a turntable's angle), a belt's
+  // fabric moved by its travel, and the cartons of the running line at the poses the physics gives them (engine.rs
+  // `Snapshot.actuators`, `Snapshot.conveyors`, `Snapshot.cartons`).
   import * as THREE from "three";
-  import { drawnOf } from "./families";
+  import { drawnOf, type Motion } from "./families";
   import { materialOf } from "./materials";
   import { toObject } from "./meshes";
   import { frame, shapeOf, type ProjectView } from "./project";
-  import { CARTON_SIZE_M, scrollOffset, type Carton, type Snapshot } from "./snapshot";
+  import { yawQuat } from "./oip/parts/part";
+  import { pusherLamps } from "./oip/parts/pusher";
+  import { CARTON_SIZE_M, scaled, scrollOffset, type Carton, type Snapshot } from "./snapshot";
   import Viewport from "./Viewport.svelte";
 
   let {
@@ -16,14 +19,14 @@
     selected,
     theme,
     cartons,
-    transfers,
+    actuators,
     conveyors,
   }: {
     project: ProjectView;
     selected: string | null;
     theme: string;
     cartons: Carton[];
-    transfers: Snapshot["transfers"];
+    actuators: Snapshot["actuators"];
     conveyors: Snapshot["conveyors"];
   } = $props();
 
@@ -35,8 +38,10 @@
   const cartonMaterial = new THREE.MeshStandardMaterial({ roughness: 0.9 });
   /** One mesh per carton id, kept while the carton lives, so a snapshot moves meshes instead of rebuilding them. */
   const meshes = new Map<number, THREE.Mesh>();
-  /** Each chain transfer's deck group, its height when down, and its stroke. */
-  const decks = new Map<string, { group: THREE.Group; down: number; stroke: number }>();
+  /** Each moving device's link group, and how it follows the device's position. */
+  const links = new Map<string, { group: THREE.Group; motion: Motion }>();
+  /** Each pusher's green and red lamp materials, lit as OIP lights them (pusherLamps). */
+  const lamps = new Map<string, { green: THREE.MeshStandardMaterial[]; red: THREE.MeshStandardMaterial[] }>();
   /** Each conveyor's scrolling textures, and their tiles per metre of travel. */
   const fabrics = new Map<string, { map: THREE.Texture; tiles: number }[]>();
   const loader = new THREE.TextureLoader();
@@ -61,7 +66,8 @@
       }
     });
     content.clear();
-    decks.clear();
+    links.clear();
+    lamps.clear();
     fabrics.clear();
   }
 
@@ -76,20 +82,27 @@
         const group = new THREE.Group();
         group.position.set(...drawn.offset);
         if (drawn.turn) group.quaternion.set(...drawn.turn);
+        const link = new THREE.Group();
+        group.add(link);
+        if (drawn.motion) links.set(instance.id, { group: link, motion: drawn.motion });
         for (const part of drawn.parts) {
           const material = materialOf(part.material, loader);
           if (lit) {
             material.emissive = token("--scene-selected");
             material.emissiveIntensity = 0.6;
           }
+          if (!lit && (part.material === "pusherLampGreen" || part.material === "pusherLampRed")) {
+            const own = lamps.get(instance.id) ?? { green: [], red: [] };
+            own[part.material === "pusherLampGreen" ? "green" : "red"].push(material);
+            lamps.set(instance.id, own);
+          }
           if (part.scroll && material.map) {
             fabrics.set(instance.id, [...(fabrics.get(instance.id) ?? []), { map: material.map, tiles: part.scroll }]);
           }
           const mesh = toObject(part, material);
           mesh.castShadow = true;
-          group.add(mesh);
+          (part.link ? link : group).add(mesh);
         }
-        if (drawn.stroke) decks.set(instance.id, { group, down: drawn.offset[1], stroke: drawn.stroke });
         const placed = new THREE.Group();
         placed.position.set(...drawn.position);
         placed.quaternion.set(...drawn.rotation);
@@ -127,9 +140,14 @@
 
   $effect(() => {
     void [project, selected];
-    for (const t of transfers) {
-      const deck = decks.get(t.id);
-      if (deck) deck.group.position.y = deck.down + t.lift * deck.stroke;
+    for (const a of actuators) {
+      const link = links.get(a.id);
+      if (!link) continue;
+      if ("slide" in link.motion) link.group.position.set(...scaled(link.motion.slide, a.value));
+      else link.group.quaternion.set(...yawQuat((a.value * Math.PI) / 180));
+      const lit = pusherLamps(a.value);
+      for (const [colour, materials] of Object.entries(lamps.get(a.id) ?? {}))
+        for (const m of materials) m.emissiveIntensity = lit[colour as "green" | "red"] ? 1 : 0;
     }
     requestRender();
   });

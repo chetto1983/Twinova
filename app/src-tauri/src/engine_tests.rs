@@ -170,9 +170,9 @@ fn the_snapshot_carries_each_chain_transfer_s_lift() {
     let (mut engine, _) = Engine::new(&project).unwrap();
     let lift = |e: &Engine| {
         let s = e.snapshot();
-        assert_eq!(s.transfers.len(), 1);
-        assert_eq!(s.transfers[0].id, "chain_transfer");
-        s.transfers[0].lift
+        assert_eq!(s.actuators.len(), 1);
+        assert_eq!(s.actuators[0].id, "chain_transfer");
+        s.actuators[0].value
     };
     assert_eq!(lift(&engine), 0.0);
     // The third carton reaches the transfer at about 11.4 s; the chains top out 150 ms later.

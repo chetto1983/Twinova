@@ -18,7 +18,7 @@
     "deadcode": "npm run -s i18n && knip",
     "dup": "jscpd",
     "mutation": "npm run -s i18n && stryker run",
-    "e2e": "node e2e/run.mjs && node e2e/project.mjs && node e2e/line.mjs && node e2e/curve.mjs",
+    "e2e": "node e2e/run.mjs && node e2e/project.mjs && node e2e/line.mjs && node e2e/curve.mjs && node e2e/sort.mjs",
     "soak": "node e2e/soak.mjs",
     "check:i18n": "inlang check --project ./project.inlang",
     "brand:check": "node ../scripts/verify_brand_assets.mjs",

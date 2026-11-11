@@ -118,6 +118,20 @@ describe("OIP's belt conveyor", () => {
     expect([r(guards.min.z), r(guards.max.z)]).toEqual([-0.335, 0.335]);
   });
 
+  it("opens a guard about each pusher beside it, one piece a stretch", () => {
+    const opened = beltGeometry(createGeometryBuilder(), {
+      ...belt,
+      openings: [{ right: true, centre: 1, length: 0.75 }],
+    });
+    const pieces = opened.find((p) => p.material === "guard")!.instances!;
+    // The left guard whole; the right from the tail drum to 0.625 and from 1.375 to the head drum.
+    expect(pieces.map((i) => [r(i.position[0]), r(i.scale![0])])).toEqual([
+      [3.085, 3.17],
+      [-0.085, 0.71],
+      [1.375, 1.71],
+    ]);
+  });
+
   it("runs its fabric in metres round the loop, and draws only the guards it has", () => {
     const uvs = parts[0]!.desc.uvs;
     const loop = uvs[uvs.length - 2]!;

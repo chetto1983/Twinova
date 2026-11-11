@@ -31,7 +31,14 @@ fn natives(generator: &str) -> &'static [(&'static str, &'static str)] {
         | "twinova.roller/1"
         | "twinova.belt_curve/1"
         | "twinova.roller_curve/1" => &[("surface_speed", "REAL")],
+        "twinova.turntable/1" => &[
+            ("surface_speed", "REAL"),
+            ("deck_angle", "REAL"),
+            ("deck_rate", "REAL"),
+        ],
         "twinova.chain_transfer/1" => &[("lift", "REAL"), ("raised", "BOOL")],
+        "twinova.stopper/1" => &[("lift", "REAL")],
+        "twinova.pusher/1" => &[("reach", "REAL")],
         _ => &[],
     }
 }
@@ -46,7 +53,8 @@ pub(crate) fn block_signals(def: &Definition) -> impl Iterator<Item = &SignalDef
         "twinova.belt/1"
         | "twinova.roller/1"
         | "twinova.belt_curve/1"
-        | "twinova.roller_curve/1" => &DRIVE_FEEDBACK,
+        | "twinova.roller_curve/1"
+        | "twinova.turntable/1" => &DRIVE_FEEDBACK,
         _ => &[],
     };
     def.signals
@@ -378,3 +386,7 @@ mod tests;
 #[cfg(test)]
 #[path = "field_drive_tests.rs"]
 mod drive_tests;
+
+#[cfg(test)]
+#[path = "field_devices_tests.rs"]
+mod devices_tests;

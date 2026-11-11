@@ -28,6 +28,24 @@ describe("OIP's materials", () => {
     expect(materialOf("belt", loader).map!.name).toMatch(/BeltFabric/);
     expect(materialOf("guard", loader).map).toBeNull();
   });
+
+  it("maps the pusher's rods with the roller's metal and its label unflipped, as OIP loads a part's textures", () => {
+    const rod = materialOf("pusherRod", loader);
+    expect([rod.map!.name, rod.map!.flipY]).toEqual([expect.stringMatching(/RollerMetal/), true]);
+    const label = materialOf("pusherLabel", loader);
+    expect([label.map!.name, label.map!.flipY]).toEqual([expect.stringMatching(/DiverterLabel/), false]);
+    expect(materialOf("pusherBarrel", loader).map).toBeNull();
+  });
+
+  it("gives a lamp its lit glow, dark until the view raises the intensity", () => {
+    const red = materialOf("pusherLampRed", loader);
+    expect([red.emissive.r, red.emissive.g, red.emissive.b]).toEqual([0.74902, 0.05098, 0.05098]);
+    expect(red.emissiveIntensity).toBe(0);
+    const green = materialOf("pusherLampGreen", loader);
+    expect([green.emissive.r, green.emissive.g, green.emissive.b]).toEqual([0, 1, 0.28235]);
+    const plain = materialOf("pusherButton", loader);
+    expect([plain.emissive.getHex(), plain.emissiveIntensity]).toEqual([0, 1]);
+  });
 });
 
 /** OIP's values, at 1e7488c: the finishes of src/render/parts/common.ts and the parts' rig.json materials. */
@@ -47,6 +65,29 @@ const OIP: Record<Material, [number | number[], number, number]> = {
   lens: [[0.00232198, 0.00116099, 0.00116099], 0, 0.35],
   pot: [[0.26327341, 0.26327341, 0.26327341], 0.3, 0.45],
   steel: [[0.47699978, 0.50707851, 0.53823552], 0.8, 0.38],
+  darkSteel: [[0.2204, 0.2204, 0.2204], 0.1, 0.5],
+  plate: [[0.8809, 0.8809, 0.8809], 0.1, 0.4657],
+  beltBlack: [[0.0122, 0.0122, 0.0122], 0, 1],
+  bladeOrange: [[0.8006, 0.3333, 0.0482], 0, 0.7886],
+  pusherHood: [[0.6377, 0.21222, 0.03189], 0.511, 0.361],
+  pusherCabinet: [[0.03072, 0.03689, 0.0497], 0, 0.45],
+  pusherFrame: [[0.21956, 0.22322, 0.22321], 1, 0.539],
+  pusherBarrel: [[0.78, 0.8, 0.84], 0.75, 0.42],
+  pusherRod: [0xffffff, 0.9, 0.3],
+  pusherRubber: [[0.012, 0.012, 0.013], 0, 0.85],
+  pusherHose: [[0.02, 0.16, 0.55], 0, 0.5],
+  pusherLabel: [0xffffff, 0, 0.55],
+  pusherButton: [[0.00402, 0.491, 0.63755], 0, 0.5],
+  pusherLampRed: [[0.29182, 0.11443, 0.11192], 0, 0.654],
+  pusherLampGreen: [[0.15295, 0.31398, 0.14995], 0, 0.612],
+  turntablePaint: [[0.05, 0.075, 0.095], 0.15, 0.45],
+  turntableCowl: [[0.015, 0.015, 0.017], 0.1, 0.55],
+  turntableGrille: [[0.004, 0.004, 0.005], 0, 0.9],
+  turntableSteel: [[0.7, 0.7, 0.72], 0.9, 0.28],
+  turntablePocket: [[0.006, 0.006, 0.007], 0, 0.95],
+  turntableRim: [[0.03, 0.03, 0.035], 0.4, 0.6],
+  turntableNameplate: [[0.55, 0.56, 0.58], 0.7, 0.35],
+  turntableGear: [[0.3, 0.3, 0.32], 0.8, 0.4],
 };
 
 describe("the transcription of OIP's materials", () => {

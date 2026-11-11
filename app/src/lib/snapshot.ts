@@ -24,8 +24,9 @@ export interface Snapshot {
   time_ms: number;
   cartons: Carton[];
   sinks: SinkState[];
-  /** Each chain transfer's lift, 0 down to 1 up. */
-  transfers: { id: string; lift: number }[];
+  /** Each moving device's position: a chain transfer's or a stopper's lift and a pusher's reach, 0 to 1, or a
+   *  turntable's deck angle in degrees, counter-clockwise seen from above. */
+  actuators: { id: string; value: number }[];
   /** Each conveyor's surface travel along its flow since Build, m: its fabric scrolls by it. */
   conveyors: { id: string; travel: number }[];
   signals: SignalState[];
@@ -74,4 +75,9 @@ export function framingDistance(halfWidth: number, halfHeight: number, vfovDeg: 
   const tanV = Math.tan((vfovDeg * Math.PI) / 360);
   const tanH = tanV * aspect;
   return Math.max(halfWidth / tanH, halfHeight / tanV);
+}
+
+/** `v` times `k`: where a sliding link stands at a device's position. */
+export function scaled(v: readonly [number, number, number], k: number): [number, number, number] {
+  return [v[0] * k, v[1] * k, v[2] * k];
 }

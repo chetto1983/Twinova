@@ -74,13 +74,19 @@ describe("the families OIP's generators draw", () => {
 
   it("centres a roller conveyor on its length, the rollers' top at its height", () => {
     const d = drawn("roller_r")!;
-    expect([d.position, d.offset, d.stroke]).toEqual([[3, 0, 0], [1, 0.8, 0], undefined]);
+    expect([d.position, d.offset, d.motion]).toEqual([[3, 0, 0], [1, 0.8, 0], undefined]);
     expect(d.parts[0].material).toBe("roller");
   });
 
   it("hangs a chain transfer from its host, 3 cm under the rollers at its mount, lifted by its stroke", () => {
     const d = drawn("chain_transfer")!;
-    expect([d.position, d.offset[0], d.offset[2], d.stroke]).toEqual([[3, 0, 0], 1, 0, TRANSFER_STROKE]);
+    expect([d.position, d.offset[0], d.offset[2], d.motion]).toEqual([
+      [3, 0, 0],
+      1,
+      0,
+      { slide: [0, TRANSFER_STROKE, 0] },
+    ]);
+    expect(d.parts.every((part) => part.link === "moving")).toBe(true);
     expect(d.offset[1]).toBeCloseTo(0.77, 9);
   });
 

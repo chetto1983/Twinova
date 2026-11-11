@@ -21,7 +21,30 @@ export type Material =
   | "lens"
   | "black"
   | "pot"
-  | "steel";
+  | "steel"
+  | "darkSteel"
+  | "plate"
+  | "beltBlack"
+  | "bladeOrange"
+  | "pusherHood"
+  | "pusherCabinet"
+  | "pusherFrame"
+  | "pusherBarrel"
+  | "pusherRod"
+  | "pusherRubber"
+  | "pusherHose"
+  | "pusherLabel"
+  | "pusherButton"
+  | "pusherLampRed"
+  | "pusherLampGreen"
+  | "turntablePaint"
+  | "turntableCowl"
+  | "turntableGrille"
+  | "turntableSteel"
+  | "turntablePocket"
+  | "turntableRim"
+  | "turntableNameplate"
+  | "turntableGear";
 
 export interface Instance {
   position: V3;
@@ -36,6 +59,9 @@ export interface MeshPart {
   instances?: Instance[];
   /** Texture tiles per metre that scroll at the surface speed (a chain's links, a belt's weave). */
   scroll?: number;
+  /** It rides the device's moving link (OIP's rig link: a blade, a paddle, a turntable's deck), which the view poses
+   *  from the snapshot; drawn at the link's rest. */
+  link?: "moving";
 }
 
 /** A turn of `yaw` about +Y. */

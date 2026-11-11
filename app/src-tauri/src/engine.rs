@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 use trust_runtime::value::Value;
-use twinova_physics::Carton;
+use twinova_physics::{Carton, World};
 use twinova_project::Project;
 use twinova_project::model::SignalType;
 
@@ -21,10 +21,12 @@ pub struct SinkState {
     pub blocked: bool,
 }
 
+/// Where a moving device stands: a chain transfer's or a stopper's lift and a pusher's reach, 0 to 1, or a
+/// turntable's deck angle in degrees, counter-clockwise seen from above.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct TransferState {
+pub struct ActuatorState {
     pub id: String,
-    pub lift: f32,
+    pub value: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -46,8 +48,8 @@ pub struct Snapshot {
     pub time_ms: i64,
     pub cartons: Vec<Carton>,
     pub sinks: Vec<SinkState>,
-    /// Each chain transfer's lift, 0 down to 1 up, for the view to raise its chains.
-    pub transfers: Vec<TransferState>,
+    /// Each moving device's position, for the view to pose it.
+    pub actuators: Vec<ActuatorState>,
     /// Each conveyor's surface travel, m, for the view to scroll its fabric.
     pub conveyors: Vec<ConveyorState>,
     pub signals: Vec<SignalState>,
@@ -91,6 +93,25 @@ fn text(value: &Value, ty: SignalType) -> String {
         (Value::DWord(bits), _) => (*bits as i32).to_string(),
         (other, _) => format!("{other:?}"),
     }
+}
+
+/// Every moving device's position, by kind: chain transfers, stoppers, pushers, turntables.
+fn actuators(world: &World) -> Vec<ActuatorState> {
+    let at = |id: &str, value: f32| ActuatorState {
+        id: id.to_string(),
+        value,
+    };
+    let transfers =
+        (0..world.transfers()).map(|k| at(world.transfer_id(k), world.transfer_lift(k)));
+    let stoppers = (0..world.stoppers()).map(|k| at(world.stopper_id(k), world.stopper_lift(k)));
+    let pushers = (0..world.pushers()).map(|k| at(world.pusher_id(k), world.pusher_reach(k)));
+    let turntables = (0..world.turntables())
+        .map(|k| at(world.turntable_id(k), world.turntable_angle(k).to_degrees()));
+    transfers
+        .chain(stoppers)
+        .chain(pushers)
+        .chain(turntables)
+        .collect()
 }
 
 impl Engine {
@@ -214,12 +235,7 @@ impl Engine {
                     blocked: world.sink_blocked(k),
                 })
                 .collect(),
-            transfers: (0..world.transfers())
-                .map(|k| TransferState {
-                    id: world.transfer_id(k).to_string(),
-                    lift: world.transfer_lift(k),
-                })
-                .collect(),
+            actuators: actuators(world),
             conveyors: (0..world.belts())
                 .map(|k| ConveyorState {
                     id: world.belt_id(k).to_string(),

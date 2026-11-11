@@ -7,6 +7,7 @@ import {
   formatTime,
   framingDistance,
   isBehind,
+  scaled,
   scrollOffset,
   SPEEDS,
   type Snapshot,
@@ -146,5 +147,13 @@ describe("a scrolling fabric", () => {
     expect(scrollOffset(0.25, 2)).toBe(-0.5);
     // a right curve's fabric runs backwards: a negative rate walks the offset forward
     expect(scrollOffset(0.25, -1)).toBe(0.25);
+  });
+});
+
+describe("a sliding link", () => {
+  it("stands at the device's position along its stroke", () => {
+    expect(scaled([0, 0.095, 0], 0)).toEqual([0, 0, 0]);
+    expect(scaled([0, 0, -0.75], 0.5)).toEqual([0, 0, -0.375]);
+    expect(scaled([1, 2, 3], 1)).toEqual([1, 2, 3]);
   });
 });

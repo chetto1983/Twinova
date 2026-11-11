@@ -46,6 +46,9 @@ fn line(side_sink: bool, cartons: i64, interval_ms: i64) -> World {
             out_right: false,
             closed_exit: !side_sink,
         }],
+        stoppers: vec![],
+        pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, interval_ms * 1_000_000, cartons)],
         sinks,
         sensors: vec![],
@@ -231,7 +234,7 @@ fn a_side_wall_runs_along_the_deck_and_a_carton_past_it() {
         out_right: true,
         closed_exit: true,
     });
-    let aabb = exit_wall(&l, Exit::Side(0)).build().compute_aabb();
+    let aabb = exit_wall(&l, Exit::Side(0)).unwrap().build().compute_aabb();
     let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
     let (lo, hi) = (aabb.mins, aabb.maxs);
     assert!(
@@ -298,7 +301,7 @@ fn a_transfer_needs_a_roller_conveyor_to_fit_in() {
 }
 
 #[test]
-fn a_sink_must_take_from_a_conveyor_or_a_transfer() {
+fn a_sink_must_take_from_a_conveyor_a_transfer_or_a_pusher() {
     use twinova_project::model::Connection;
     let mut project = fixture("two_belts_diverter");
     for c in &mut project.scene.connections {
@@ -310,7 +313,7 @@ fn a_sink_must_take_from_a_conveyor_or_a_transfer() {
     }
     assert_eq!(
         layout(&project).unwrap_err(),
-        "sink_reject.in is connected to source, which is not a conveyor or a chain transfer"
+        "sink_reject.in is connected to source, which is not a conveyor, a chain transfer or a pusher"
     );
 }
 
@@ -354,6 +357,9 @@ fn each_transfer_answers_for_its_own_deck_and_side() {
             ..belt("r", 0.0, 3.0, 0.5, false)
         }],
         transfers: vec![transfer("first", 0.8, false), transfer("second", 2.0, true)],
+        stoppers: vec![],
+        pushers: vec![],
+        turntables: vec![],
         sources: vec![source(0, 1_000_000, 1_000_000_000_000, 1)],
         sinks: vec![
             Sink {

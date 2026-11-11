@@ -151,3 +151,24 @@ describe("OIP's photo eye", () => {
     expect(all.max.z).toBeCloseTo(0.037 + 0.02 - 0.01, 6);
   });
 });
+
+describe("a roller conveyor's guard openings", () => {
+  it("cut its guard on the pusher's side, 0.75 m about the pusher, the other guard whole", () => {
+    const openings = [{ right: false, centre: 0.5, length: 0.75 }];
+    const parts = rollerGeometry(createGeometryBuilder(), { ...rollerParams, openings });
+    const guard = partsBounds([parts.find((p) => p.material === "guard")!]);
+    const whole = partsBounds([
+      rollerGeometry(createGeometryBuilder(), rollerParams).find((p) => p.material === "guard")!,
+    ]);
+    expect([r(guard.min.x), r(guard.max.x)]).toEqual([r(whole.min.x), r(whole.max.x)]);
+    // The opening, 0.125 to 0.875 m from the entry, is −0.875 to −0.125 about the bed's centre: no left guard there.
+    const left = parts.find((p) => p.material === "guard")!.desc.positions;
+    const xsLeft = left.filter((_, k) => k % 3 === 0 && left[k + 2]! < 0).map(r);
+    expect(xsLeft.filter((x) => x > -0.875 && x < -0.125)).toEqual([]);
+    expect([Math.min(...xsLeft), Math.max(...xsLeft)]).toEqual([-1, 1]);
+    expect(xsLeft).toContain(-0.875);
+    expect(xsLeft).toContain(-0.125);
+    const xsRight = left.filter((_, k) => k % 3 === 0 && left[k + 2]! > 0).map(r);
+    expect([...new Set(xsRight)].toSorted((a, b) => a - b)).toEqual([-1, 1]);
+  });
+});

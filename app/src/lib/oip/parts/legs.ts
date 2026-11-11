@@ -6,8 +6,12 @@
 import type { GeometryBuilder, MeshDescription } from "../geometry/types";
 import type { Instance, MeshPart, Quat, V3 } from "./part";
 
-/** A capped unit cylinder along Z, centred: the axle stub, and with six segments OIP's hex bolt head. */
-export function cylinderTemplate(g: GeometryBuilder, segments: number): MeshDescription {
+/** A capped unit cylinder along Z (or `opts.axis`), centred: the axle stub, and with six segments OIP's hex bolt head. */
+export function cylinderTemplate(
+  g: GeometryBuilder,
+  segments: number,
+  opts: { axis?: "y" | "z"; startAngle?: number; smooth?: boolean } = {},
+): MeshDescription {
   return g.lathe(
     [
       [0, -0.5],
@@ -15,7 +19,7 @@ export function cylinderTemplate(g: GeometryBuilder, segments: number): MeshDesc
       [1, 0.5],
       [0, 0.5],
     ],
-    { axis: "z", segments },
+    { axis: "z", segments, ...opts },
   );
 }
 

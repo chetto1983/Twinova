@@ -66,4 +66,13 @@ and build inside the app, on Windows and Linux.
 - The physics solves once per millisecond instead of four times, and the line parses its I/O addresses once at Build
   (ROADMAP 4.4b2): a simulated millisecond costs about 28 % less again, and as fast as possible runs the example
   lines at 16× and 11× real time. Every run's numbers change slightly.
+- A stopper, a pusher and a turntable (ROADMAP 4.4c), copied and translated from Open Industry Project (MIT):
+  - the stopper raises a blade between two rollers and holds a queue of cartons; its ST block reports `raised_fb`;
+  - the pusher sweeps a passing carton across its conveyor onto a takeaway or into a sink at its side, and reports
+    both ends of its stroke; its guard opens where it stands;
+  - the turntable turns its deck to `target_angle` the short way, at OIP's acceleration and braking, stops while
+    `enable` is off, reports `in_position`, and drives its lane as every conveyor (`run`, `speed_ref`, `running`,
+    `velocity`, `encoder`, `pulse`); a photocell can stand beside it;
+  - the three are drawn as OIP draws them, moving with the line;
+  - a sorting line example (`sort_line`) uses all three.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.
