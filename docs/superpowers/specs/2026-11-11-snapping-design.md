@@ -1,6 +1,7 @@
 # Spec: the editor, second part — snapping by interfaces (ROADMAP 4.5b)
 
-Date: 2026-11-11. Status: **draft**, for the user's approval.
+Date: 2026-11-11. Status: **draft**, for the user's approval. Amended the same day after the user's remark that real
+conveyors always have a gap between them: OIP's ends read again, gaps measured, decisions 3, 7 and 8.
 
 ROADMAP 4.5 is "Editor: catalogue, drag and drop, snapping by interfaces, move/rotate, signal wiring, undo", accepted
 by "build a two-conveyor line with a diverter by hand". 4.5a (PR #39) gave the catalogue, the gizmo, the editable
@@ -12,21 +13,22 @@ inspector and undo; ends and mounts are still set by hand. This spec is the rest
   `mount_device` (`project/src/model.rs`). A connection is a `Flow` between two ports or a `Mount` with the distance
   along the host in `position[0]`.
 - **The geometry of the ends is the physics'**, computed from the generator and the parameters:
-  - a conveyor's origin is its entry end, on the floor, x along the flow (`physics/src/layout.rs`);
-  - a straight's exit is `length` along x;
-  - a curve's exit is `Arc::end` (`path.rs`), after the entry stub, the arc and the exit stub;
+  - a conveyor's origin is its entry, on the floor, x along the flow (`physics/src/layout.rs`);
+  - a straight's deck runs from 0 to `length`;
+  - a curve ends at the tip of its exit stub (`Arc::end` in `path.rs`), 85 mm long, OIP's drum radius;
   - an incline tilts the conveyor about the centre of its surface;
   - a turntable's lane runs 1.5 widths across its centre at its start heading.
-
-  The view draws the same shapes in TypeScript (`families.ts`), with no snapping.
+- **The view and the physics disagree at a belt's ends.**
+  - The view draws a belt's end drums, frame and guards from −85 mm to `length` + 85 mm (`oip/parts/belt.ts`:
+    `r = frameHeight / 2`).
+  - The physics' deck stops at 0 and `length`.
+  - A roller conveyor is drawn and simulated from 0 to `length`.
+- **The fixtures butt the decks.** Measured with a throwaway probe over the five fixtures, each of the 12
+  conveyor-to-conveyor flows joins deck ends that coincide: 0.0000 m and 0.00°. So the belts' drawn drums overlap
+  their neighbours: by 85 mm against a roller conveyor, 170 mm against a belt (read in `belt.ts` and `roller.ts`;
+  not yet checked on screen).
 - **A flow between conveyors is only "the exit is open"** (`closed_exit`). Products cross from one deck to the next by
-  contact, so the ends must really meet.
-- **Measured (throwaway probe over the five fixtures, 2026-11-11):** each of the 12 conveyor-to-conveyor flows joins
-  ends that coincide.
-  - Gap 0.0000 m, heading difference 0.00°, and equal heights.
-  - Straight, roller, both curves and the turntable's start heading are all covered.
-
-  So "a flow between conveyors means their ends touch" already holds.
+  contact.
 - **A turntable feeds conveyors with no flow.**
   - `sort_line`'s `belt_c` starts at the turntable's rim at −90°, with no connection.
   - The turntable has no wall, and its ports exist only at the start heading.
@@ -36,8 +38,19 @@ inspector and undo; ends and mounts are still set by hand. This spec is the rest
   - all three need a level, unskewed host;
   - a sensor needs any conveyor, with the angle into the arc on a curve;
   - the barcode scanner needs a straight.
-- **A side merge, measured** in a throwaway probe (2026-11-11): a 2 m spur meets a 4 m belt's right flank square, both
-  at 0.5 m/s, with 3 cartons each case.
+- **A gap between two straights, measured** (throwaway probe, 2026-11-11): two 2 m conveyors at 0.5 m/s, five cubes
+  each case, Twinova's flat decks.
+
+  | Gap | Cube 0.10 m | 0.20 m | 0.30 m | 0.40 m |
+  |---|---|---|---|---|
+  | 0 to 50 mm | 5/5 | 5/5 | 5/5 | 5/5 |
+  | 85 mm | 4/5, one tipped over | 5/5 | 5/5 | 5/5 |
+  | 170 mm | 0/5, all fell | 4/5 | 5/5, tilt 3.5° | 5/5 |
+
+  - A product crosses a gap up to about half its length, and falls into one of 0.5 to 0.85 of its length.
+  - The physics needs no help to model a gap.
+- **A side merge, measured** (throwaway probe, 2026-11-11): a 2 m spur meets a 4 m belt's right flank square, both at
+  0.5 m/s, three cartons each case.
 
   | Case | Delivered | Worst tilt | Yaw near the exit |
   |---|---|---|---|
@@ -49,38 +62,54 @@ inspector and undo; ends and mounts are still set by hand. This spec is the rest
 
   - The merge needs the host's guard opened, as a pusher opens it.
   - Products arrive upright but turned 25–32°, and nothing squares them again.
-- **OIP** (MIT, `src/core/snap/` at `0572868`, read for ideas):
-  - every part declares plugs and sockets;
-  - the engine solves each plug against each compatible socket and keeps the cheapest join that engages;
-  - for conveyors, a join engages when the mating end moves at most 0.3 m and turns at most a quarter turn (45° onto
-    a flank);
-  - a held join lets go past 0.6 m;
-  - the cost is the move plus 0.5 per radian of turn;
-  - a device seats on a guard rail by projection;
-  - a side merge places the spur square to the flank, straight across from where it is.
+- **OIP** (MIT, `src/core/snap/` and `src/core/conveyor/conveyorBeds.ts` at `0572868`, read for ideas):
+  - Every part declares plugs and sockets. The engine solves each plug against each compatible socket and keeps the
+    cheapest join that engages.
+  - A conveyor's ends are its real faces:
+    - a belt's is the face of its end drum, half the 0.17 m belt height past the run;
+    - a straight's is the end of its frame;
+    - a curve's is the tip of its stub: 85 mm for a belt curve, 2 mm for a roller curve.
+  - Joined ends touch face to face. The real interspace is the drums' curve, and the belt's collider box reaches the drum
+    face, so in OIP's physics the gap is 0.
+  - A conveyor join engages when the mating end moves at most 0.3 m and turns at most a quarter turn (45° onto a
+    flank). A held join lets go past 0.6 m. The cost is the move plus 0.5 per radian of turn.
+  - A side junction counts up to 0.15 m from the flank (`GUARD_CONTACT_TOLERANCE`). A spur parks 40 mm off it
+    (`SPUR_SIDE_GAP`).
+  - A device seats on a guard rail by projection.
 
 ## Decisions (user, 2026-11-11)
 
 1. **Rust computes the geometry and makes each join; the view finds and shows candidates.**
-   - Rust gives every instance its *interfaces*: its ends (local frames) and, for a host, its rail. They come from the
-     physics' own geometry and are sent in the view.
+   - Rust gives every instance its *interfaces*: its ends and, for a host, its rail. They come from the physics' own
+     geometry and are sent in the view.
    - During a drag the view finds the best join and marks it.
    - On release, Rust computes the exact pose and makes the connection, in one undo step.
    - The agent gets the same joins.
 2. **Heights.** Joined end to end, the moved conveyor's `height` takes the value that puts its mating end on the other's
-   surface (an inclined one included). The notice says so, and undo restores it.
-3. **A join between conveyors exists while the ends touch.** A move that separates them removes the flow, or the merge,
-   in the same undo step. A flow set by hand in the inspector stays allowed.
+   surface, an inclined one included. The notice says so, and undo restores it.
+3. **A join between conveyors exists while their faces are within 0.15 m and on one axis** (OIP's contact tolerance).
+   - A move that takes them further removes the flow or the merge, in the same undo step.
+   - Build accepts any gap: the physics decides whether a product crosses it.
+   - A flow set by hand in the inspector stays allowed.
 4. **Four kinds of join:**
    - conveyor end to conveyor end;
    - a device onto a conveyor's rail;
    - a source or a sink onto an end;
    - the side merge.
 5. **The side merge is a new connection kind,** `merge`: from a spur's `out` onto a host's rail, at a distance along it,
-   on a side. The host's guard opens there, as for a pusher. The published families do not change, and a straight takes
-   several spurs.
+   on a side.
+   - The host's guard opens there, as for a pusher.
+   - The published families do not change.
+   - A straight takes several spurs.
 6. **The merge's 25–32° turn is accepted and documented.** Squaring products again (powered rollers, angled merges) is a
    later phase.
+7. **Ends are the real faces, as in OIP.**
+   - A belt's end is its drum face, 85 mm past each end of its run.
+   - Its physics deck and guards reach that face, as OIP's collider does and as the view already draws them. This
+     removes today's mismatch.
+8. **A join leaves a gap, set by the user, 0 by default.**
+   - The gap is the distance between the two faces.
+   - It is real in the physics: the decks do not reach across it.
 
 ## The design
 
@@ -89,43 +118,59 @@ inspector and undo; ends and mounts are still set by hand. This spec is the rest
 `twinova_physics::interfaces` describes each instance from its definition and parameters, without needing the line to
 be complete.
 
-- **Ends,** each with a name and a frame in the instance's frame (origin on the running surface, x out of the part
-  along the flow), and a direction (`in`, `out`, or either for a rim):
-  - a straight, a roller conveyor or a curve: `in` and `out`;
+- **Ends,** each with a name, a direction (`in`, `out`, or either for a rim) and a frame in the instance's frame. The
+  frame's origin is on the face, at the running surface, and its x points out of the part:
+  - a belt: `in` and `out` on its drum faces, at −85 mm and `length` + 85 mm;
+  - a roller conveyor: `in` and `out` at 0 and `length`;
+  - a curve: `in` and `out` at the tips of its stubs;
   - a turntable: `in` and `out` at its start heading, and the rims `left` and `right` across it, which take no flow;
-  - a source: `out`; a sink: `in`. Joined, each stands at the conveyor's end, on the floor, facing the flow;
+  - a source: `out`; a sink: `in`. Joined, each stands at the conveyor's face, on the floor, facing the flow;
   - a chain transfer and a pusher, once mounted: `out`, at their side exit.
 - **A rail,** on a host:
-  - for a straight, its centreline from 0 to `length`;
-  - for a curve, its arc, in angle;
-  - for a turntable, its lane.
+  - a straight's centreline, from its entry to `length`;
+  - a curve's arc, in angle;
+  - a turntable's lane.
 
   The rail carries the mount rules of Build, so it offers only the devices Build accepts.
-- **One geometry.** The conveyor geometry moves out of `layout()` into one function per instance, and `layout()` and
-  `interfaces` both call it.
+- **One geometry.** The conveyor geometry moves out of `layout()` into one function per instance, and both `layout()`
+  and `interfaces` call it.
+
+### The belt's ends in the physics (decision 7)
+
+- **The deck and the guards** of a straight belt run from −85 mm to `length` + 85 mm, as OIP's collider and Twinova's
+  view do.
+- **A distance along it is unchanged.** A mount's `at`, a source's drop and a sensor's beam still count from the run's
+  start, 0.
+- **The fixtures are re-spaced so their joins stay face to face with no gap.**
+  - A conveyor after a belt moves 85 mm downstream, and a belt after any conveyor 85 mm more.
+  - The new positions come from that formula, written in the fixtures' own scripts, not from the snap code.
+- **The pinned fingerprints and timings move.** Each is pinned again, with this reason.
 
 ### Joins (Rust, `physics::snap`, used by the app and the agent)
 
-- **`join(project, (id, end), (peer, end))`.** It poses `id` so that its end meets the peer's end, facing it. A conveyor
-  also takes the height of decision 2.
-  - When both ends are flow ports of opposite directions, it sets the flow, freeing what each end had.
-  - Onto a turntable rim it sets no flow (`sort_line`'s `belt_c`).
+- **`join(project, (id, end), (peer, end), gap)`.**
+  - It poses `id` so that its end faces the peer's end, on one axis, with `gap` metres between the faces.
+  - A conveyor also takes the height of decision 2.
+  - When both ends are flow ports of opposite directions, it sets the flow, freeing what each end had. Onto a turntable
+    rim it sets no flow (`sort_line`'s `belt_c`).
   - It refuses with a sentence:
     - two ins or two outs;
+    - a gap below 0 or over 0.15 m;
     - a height outside the parameter's range;
     - a host refused by Build's mount rules.
-- **`merge(project, spur, host, at, side)`.**
-  - It poses the spur square to the host's flank, with its exit on the flank at `at`.
-  - The spur takes the host's height.
-  - It sets the `merge` connection.
+- **`merge(project, spur, host, at, side, gap)`.**
+  - It poses the spur square to the host's flank, its exit face `gap` off the flank at `at`. The default gap is 0;
+    OIP's is 40 mm.
+  - The spur takes the host's height, and the `merge` connection is set.
   - The host must be a level, unskewed straight, as for a pusher.
-  - Several spurs on one host must not overlap.
+  - Spurs on one host must not overlap.
 - **A device onto a rail** is 4.5a's `set_mount`, with `at` from the view's projection. A mounted device dragged away
   from every rail is unmounted.
-- **`moved(project, id)`.** After a move or a turn, it removes the flows and merges of `id` whose ends no longer meet
-  (decision 3). It runs inside the same undo step as the move. The agent's `move_instance` goes through it as well.
-- **"Meet"** means within 1 mm and 0.1°. A join is exact in the format's f64; the view rounds poses to the millimetre
-  (4.5a's `pose`).
+- **`moved(project, id)`.** After a move or a turn, it removes the flows and merges of `id` that no longer hold
+  (decision 3): faces more than 0.15 m apart, more than 1 mm off one axis, or more than 0.1° apart. It runs inside the
+  same undo step as the move, and the agent's `move_instance` goes through it too.
+- **Editing a gap.** The inspector shows the gap of each of the selection's flows. Writing it re-joins the selection,
+  which moves, to its peer.
 
 ### The format and Build
 
@@ -135,12 +180,10 @@ be complete.
   - A flow-out port has one peer, a flow or a merge.
 - **Build:**
   - the host's guard opens over the spur's width at `at` (the pusher's `Opening`);
-  - the spur's exit is open.
-- **Build refuses a join that does not meet** (decision 3), naming both ends:
-  - a conveyor-to-conveyor flow whose ends are more than 1 mm or 0.1° apart;
-  - a merge whose spur is not square on its flank.
-
-  The five fixtures pass, as measured.
+  - the spur's exit is open;
+  - Build refuses a merge whose spur is not square to its flank (0.1°) or whose exit face is more than 0.15 m from it,
+    naming both;
+  - a flow's gap is not checked (decision 3).
 - **The view** draws a merge's guard opening, as it draws a pusher's.
 
 ### The view
@@ -152,68 +195,77 @@ be complete.
   - a rail takes a device within 0.3 m of it.
 
   The cheapest candidate wins: the move, plus 0.5 per radian of turn. These are OIP's values.
-- **Feedback:** a marker on the target end, flank point or rail point, and the status line names the join
-  ("joins belt_a.out"). A shown candidate is kept until the drag is 0.6 m from it (OIP's release).
+- **The gap of a new join** is the last one used, 0 at first. A field next to the snap toggle shows it.
+- **Feedback.**
+  - A marker sits on the target face, flank point or rail point.
+  - The status line names the join ("joins belt_a.out, gap 20 mm").
+  - A shown candidate is kept until the drag is 0.6 m from it (OIP's release).
 - **Release** sends `join`, `merge` or `set_mount`. With no candidate it sends 4.5a's move, which `moved` follows.
   Holding Alt places freely, with no candidate.
-- **A mounted device gets the gizmo** (4.5a detached it). On release it slides along its host, moves to another host,
-  or is unmounted.
+- **A mounted device gets the gizmo** (4.5a detached it). On release it slides along its host, moves to another host, or
+  is unmounted.
 
 ### The agent
 
 - `describe` lists each instance's ends and rail.
-- A `join` tool takes two ends, or a spur, a host, a distance and a side.
-- `move_instance` drops the joins it separates.
+- A `join` tool takes two ends and a gap, or a spur, a host, a distance, a side and a gap.
+- `move_instance` drops the joins it breaks.
 
 ## Acceptance
 
 1. **Joins, in Rust tests:**
-   - straight to straight;
-   - straight to curve and curve to straight, left and right;
-   - each turntable end, rims without a flow;
-   - source and sink;
-   - a sink onto a chain transfer's and a pusher's side;
+   - each pair of conveyor families end to end, curves to the left and right;
+   - each turntable end, with no flow at the rims;
+   - source and sink, and a sink onto a chain transfer's and a pusher's side;
    - heights, an inclined mover included;
+   - gaps of 0, 20 mm and 0.15 m, measured face to face;
    - each refusal, with its sentence;
-   - a move that separates removes the flow, one that does not keeps it;
+   - a move within 0.15 m keeps the flow, one beyond removes it;
    - one undo step undoes the join, the height and the flow.
-2. **The fixtures rebuilt by joins:** `curve_line`, `sort_line` and `two_belts_diverter` are rebuilt from the same
-   instances placed anywhere, with joins and mounts only. The fixtures were authored by hand before this spec, so they
-   are the independent reference.
+2. **The belt's faces in the physics:**
+   - the deck reaches 85 mm past each end of the run;
+   - a source's product, a mount's distance and a sensor's beam are where they were along the run;
+   - the gap table above, measured again face to face through the new decks, is recorded in the verification.
+3. **The re-spaced fixtures rebuilt by joins.** `curve_line`, `sort_line` and `two_belts_diverter` are rebuilt from the
+   same instances placed anywhere, with joins (gap 0) and mounts only.
    - Every conveyor's pose equals the fixture's within 1e-6 m and 1e-6 rad.
-   - Every connection equals the fixture's, a mount's distance included.
-   - The poses of sources, sinks and mounted devices are not compared. The physics ignores them, and the fixtures
-     place them by eye: the source of `two_belts_diverter` stands 0.5 m before its belt.
-3. **The merge in the physics:**
-   - the probe's line built through `merge`: 3 of 3 delivered;
-   - tilt under 1°;
+   - Every connection is equal, a mount's distance included.
+   - The poses of sources, sinks and mounted devices are not compared. The physics ignores them, and the fixtures place
+     them by eye.
+4. **The merge in the physics:**
+   - the probe's line built through `merge`: 3 of 3 delivered, tilt under 1°;
    - the turn is recorded, not bounded;
    - Build refuses a merge onto a curve, an inclined host or a skewed one, and one that is not square.
-4. **In the app, on Linux and windows-2022** (`e2e/snapping.mjs`): `two_belts_diverter` is built by hand from an empty
-   project, with drag and snap only. The inspector is used for names and parameters only.
-   - **Placing the conveyors:** belt, roller conveyor (`left_guard` off) and second belt, each dragged near the
-     previous exit.
-   - **Mounting the devices:** the chain transfer onto the roller conveyor, both sensors onto their rails.
+5. **In the app, on Linux and windows-2022** (`e2e/snapping.mjs`): `two_belts_diverter` is built by hand from an empty
+   project, with drag and snap only. The inspector is used for names and parameters.
+   - **Conveyors:** belt, roller conveyor (`left_guard` off) and second belt, each dragged near the previous exit.
+   - **Devices:** the chain transfer onto the roller conveyor, both sensors onto their rails.
    - **Source and sinks:** the source onto the first entry, one sink onto the last exit, the other onto the transfer's
      side.
 
-   Then it builds and runs until both sinks count. The saved scene equals the fixture's:
-   - the conveyors' poses within 1 mm (the view rounds);
-   - the same connections, matched by family and order, as in acceptance 2.
-5. **A merge in the app:** a spur dragged onto a belt's flank, built and run until the host's sink counts.
-6. **Gates** as 4.5a:
-   - cargo mutants on `interfaces`, `snap` and the merge's layout, with no survivor;
+   Then:
+   - one join's gap is set to 20 mm in the inspector, and set back to 0;
+   - it builds and runs until both sinks count;
+   - the saved scene equals the fixture's: conveyors within 1 mm (the view rounds), and the same connections.
+6. **A merge in the app:** a spur dragged onto a belt's flank, built and run until the host's sink counts.
+7. **Gates** as 4.5a:
+   - cargo mutants on `interfaces`, `snap`, the belt's deck and the merge's layout, with no survivor;
    - coverage ≥ 85 %;
    - Stryker ≥ 70 % on the view's candidate search;
    - the file cap and the rest of the Gate 2 set.
 
 ## What this will not prove
 
+- **A drum's curve.**
+  - The decks are boxes to the face, as OIP's. The V between two drums is not modelled.
+  - A gap is a flat hole, harsher than a real drum: a 0.10 m product falls at 85 mm.
 - **Products squared after a merge:**
   - they turn 25–32°, as measured;
   - angled merges (30°, 45°) and powered rollers are a later phase.
-- **Moving a joined chain together:** each part moves alone, and its joins break; there is no multi-select.
+- **Moving a joined chain together:** each part moves alone, and its joins break beyond 0.15 m; there is no
+  multi-select.
 - **Reversing a conveyor on a join:** OIP flips a curve's flow to fit. Twinova refuses two ins or two outs.
+- **OIP's 2 mm roller-curve stub:** Twinova's curves keep their 85 mm stubs.
 - **Grid, face and vertex snapping:** 4.5b snaps by interfaces only.
 - **Families from CAD:** their interfaces would be declared, not computed; that is ROADMAP 9.1.
-- **A turntable's rims at other headings than ±90°:** the rims are at its quarter turns only.
+- **A turntable's rims at headings other than ±90°.**
