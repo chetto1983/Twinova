@@ -33,7 +33,7 @@ Machine: the cloud container with 4 cores. CI: pull request #38.
 | 4 | Colour: OIP's classification cases | white, grey and yellow read 0; near red reads 1; an empty list reads 0; tolerance 0 is exact; the bound is inclusive; the nearer of two wins, the earlier on a tie; an unpainted product reads 0; on the belt: green, none, red in turn | ✅ |
 | 5 | Laser: the distance to the face within 1 mm, `max_range` when clear | 0.17 m to a carton on the centreline, 0.27 m to one 0.1 m further, within 1 mm and 2 mm; 4.0 when clear | ✅ |
 | 6 | Barcode: read once with its code, the count by one; reads closer than 0.25 s give one long pulse; a blocked line does not read twice | three products read in turn as 41, 42 and 43; the pulse lasts 250 ms and the code holds; a product held 3 s under the arch counts once; two products read about 0.1 s apart give one pulse from the first read to 250 ms after the second, and a count of 2 | ✅ |
-| 7 | A line sorting by code and colour in the app on Linux and Windows; no product lost; the fingerprint equal across run modes | `engine/src/line_sensors_tests.rs`: 90 s, conservation every millisecond; red, green and blue each delivered to its own sink or still on the line, every route taken at least 3 times. Step, ×1 and as fast as possible reach the same snapshot and fingerprint. `e2e/code_sort.mjs` on Linux (here) and windows-2022 (CI): each sink counts, and the scanner's count and code and the laser's distance read in the I/O panel | see below |
+| 7 | A line sorting by code and colour in the app on Linux and Windows; no product lost; the fingerprint equal across run modes | `engine/src/line_sensors_tests.rs`: 90 s, conservation every millisecond; red, green and blue each delivered to its own sink or still on the line, every route taken at least 3 times. Step, ×1 and as fast as possible reach the same snapshot and fingerprint. `e2e/code_sort.mjs` on Linux (here) and windows-2022 (CI): each sink counts, and the scanner's count and code and the laser's distance read in the I/O panel | ✅ Linux 4/4 checks (here, debug build under Xvfb); windows-2022 on the PR |
 | 8 | The agent server drives it; the gates are 4.4c's | `agent/tests/code_sort.rs`: the agent runs the line over HTTP until the reject sink counts, reads the scanner's code 3, and sees each carton's size and colour | ✅ |
 
 ### Acceptance 1, measured (2026-11-11, dev and release give the same bits)
@@ -53,6 +53,9 @@ Every product reached its sink.
 
 - **Probe vs tests:** the spec's probe placed boxes by hand and found up to 3.1° on a roller curve between rollers. Fed
   by a source, the same curve turns them within 2.3°, so the test holds 4.4b's 3°.
+
+The screenshot after the run shows red, green and blue cartons on belt In and roller A, a red one on the turntable,
+the scanner's arch over belt B and the I/O panel with the new signals.
 
 ## Found by measuring
 
