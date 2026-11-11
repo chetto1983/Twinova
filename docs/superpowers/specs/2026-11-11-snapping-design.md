@@ -83,7 +83,7 @@ inspector and undo; ends and mounts are still set by hand. This spec is the rest
    - Rust gives every instance its *interfaces*: its ends and, for a host, its rail. They come from the physics' own
      geometry and are sent in the view.
    - During a drag the view finds the best join and marks it.
-   - On release, Rust computes the exact pose and makes the connection, in one undo step.
+   - On release, Rust computes the pose and makes the connection, in one undo step.
    - The agent gets the same joins.
 2. **Heights.** Joined end to end, the moved conveyor's `height` takes the value that puts its mating end on the other's
    surface, an inclined one included. The notice says so, and undo restores it.
@@ -147,6 +147,13 @@ be complete.
 - **The pinned fingerprints and timings move.** Each is pinned again, with this reason.
 
 ### Joins (Rust, `physics::snap`, used by the app and the agent)
+
+- **Precision (amended 2026-11-11, Task 5).** Each instance's ends come from the physics' own geometry, in f32, with
+  the instance at the origin. Poses are composed in f64 (glamx's `DPose3`, the version rapier brings, with its `f64`
+  feature).
+  - A join is accurate to about 1e-7 m and 1e-7 rad, and the error adds up along a chain of joins.
+  - Measured on the rebuilt fixtures: the worst is curve_line's last belt, 8.5e-7 m from the fixture after four
+    joins.
 
 - **`join(project, (id, end), (peer, end), gap)`.**
   - It poses `id` so that its end faces the peer's end, on one axis, with `gap` metres between the faces.
@@ -269,3 +276,7 @@ be complete.
 - **Grid, face and vertex snapping:** 4.5b snaps by interfaces only.
 - **Families from CAD:** their interfaces would be declared, not computed; that is ROADMAP 9.1.
 - **A turntable's rims at headings other than ±90°.**
+- **Joins exact to the micrometre down a long chain.**
+  - Joins are accurate to about 1e-7 m each.
+  - A chain of more than about ten joins may stray more than 1e-6 m from a hand-computed layout.
+  - That is a thousandth of the millimetre the view rounds to.
