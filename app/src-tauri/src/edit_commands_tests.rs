@@ -361,3 +361,23 @@ fn a_spur_merges_through_the_command() {
     assert_eq!(merged.merges, [merge]);
     assert!(undo(app.state()).unwrap().merges.is_empty());
 }
+
+/// A mounted device dragged away from every rail is unmounted and stays where it was released, in one undo step.
+#[test]
+fn a_device_dragged_off_its_rail_is_unmounted_where_it_lands() {
+    let app = app();
+    small_line(&app);
+    let off = send(
+        &app,
+        json!({ "op": "unmount", "device": "sensor_diffuse_1", "position": [1, 0, 3], "rotation": NO_TURN }),
+    )
+    .unwrap();
+    assert!(off.mounts.is_empty());
+    let sensor = off
+        .instances
+        .iter()
+        .find(|i| i.id == "sensor_diffuse_1")
+        .unwrap();
+    assert_eq!(sensor.position, [1.0, 0.0, 3.0]);
+    assert_eq!(undo(app.state()).unwrap().mounts.len(), 1);
+}

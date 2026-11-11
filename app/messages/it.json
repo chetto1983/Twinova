@@ -68,5 +68,13 @@
   "project_new": "Nuovo progetto",
   "undo": "Annulla",
   "redo": "Ripeti",
-  "scene_changed": "La scena è cambiata: fai Build per eseguirla"
+  "scene_changed": "La scena è cambiata: fai Build per eseguirla",
+  "snap_toggle": "Aggancio",
+  "snap_gap": "Interspazio (mm)",
+  "snap_join": "Si aggancia a {peer}, interspazio {gap} mm",
+  "snap_merge": "Si immette sul fianco {side} di {host} a {at} m, interspazio {gap} mm",
+  "snap_left": "sinistro",
+  "snap_right": "destro",
+  "snap_mount": "Si monta su {host} a {at}",
+  "inspector_gap": "Interspazio (mm)"
 }

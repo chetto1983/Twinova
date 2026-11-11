@@ -64,9 +64,38 @@ export interface ProjectView {
   mounts: { device: string; host: string; at: number }[];
   flows: { from: Endpoint; to: Endpoint }[];
   /** Each spur merging onto a straight's flank, `at` along its run (project_commands.rs `MergeView`). */
-  merges: { spur: string; host: string; at: number; side: "left" | "right" }[];
+  merges: { spur: string; host: string; at: number; side: Side }[];
+  /** Each instance's ends and rail, in its own frame (physics interfaces_view.rs). */
+  interfaces: Record<string, Interfaces>;
+  /** What the last edit changed besides what it was asked, such as a joined conveyor's height. */
+  notice: string | null;
   can_undo: boolean;
   can_redo: boolean;
+}
+
+export type Side = "left" | "right";
+
+/** A point and a unit quaternion, its x pointing out. */
+export interface Frame {
+  position: Vec3;
+  rotation: Quat;
+}
+
+export interface End {
+  name: string;
+  direction: "in" | "out" | "either";
+  frame: Frame;
+  /** The host whose frame a mounted device's side exit is in. */
+  on: string | null;
+}
+
+export type Rail =
+  | { kind: "line"; start: Frame; length: number }
+  | { kind: "arc"; centre: Vec3; start: Vec3; sweep: number; right: boolean };
+
+export interface Interfaces {
+  ends: End[];
+  host: { rail: Rail; width: number; accepts: string[]; spurs: boolean } | null;
 }
 
 /** One edit of the open project (edit_commands.rs `Edit`). */
@@ -78,7 +107,10 @@ export type Edit =
   | { op: "set_parameter"; id: string; name: string; value: Value | null }
   | { op: "bind_signal"; id: string; signal: string; address: string | null }
   | { op: "set_mount"; device: string; host: string | null; at: number }
-  | { op: "set_flow"; id: string; port: string; peer: Endpoint | null };
+  | { op: "unmount"; device: string; position: Vec3; rotation: Quat }
+  | { op: "set_flow"; id: string; port: string; peer: Endpoint | null }
+  | { op: "join"; id: string; end: string; peer: Endpoint; gap: number }
+  | { op: "merge"; spur: string; host: string; at: number; side: Side; gap: number };
 
 export interface ParameterRow {
   name: string;

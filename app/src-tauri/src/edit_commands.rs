@@ -53,6 +53,12 @@ pub enum Edit {
         host: Option<String>,
         at: f64,
     },
+    /// A mounted device dragged away from every rail: unmounted, left where it was released.
+    Unmount {
+        device: String,
+        position: Vec3,
+        rotation: Quat,
+    },
     /// `peer` null leaves the port unconnected.
     SetFlow {
         id: String,
@@ -106,6 +112,12 @@ fn apply(project: &mut Project, op: Edit) -> Result<Option<String>, String> {
         Edit::SetMount { device, host, at } => {
             edit::set_mount(project, &device, host.as_deref().map(|h| (h, at)))
         }
+        Edit::Unmount {
+            device,
+            position,
+            rotation,
+        } => edit::set_mount(project, &device, None)
+            .and_then(|()| edit::move_instance(project, &device, position, Some(rotation))),
         Edit::SetFlow { id, port, peer } => edit::set_flow(
             project,
             &id,

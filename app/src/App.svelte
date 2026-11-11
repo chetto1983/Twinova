@@ -2,7 +2,8 @@
   // The app on a project (spec 2026-11-09-component-behaviour-design.md, "The app"): the bundled M3 demo at start, or
   // a project opened from the menu or the command line. Build runs its line with the editor's sources; the panel's
   // buttons come from the project. The catalogue and the inspector edit the scene, each edit one undo step
-  // (spec 2026-11-11-editor-basics-design.md); the running line changes at the next Build.
+  // (spec 2026-11-11-editor-basics-design.md), and parts dragged in the view snap together (2026-11-11-snapping); the
+  // running line changes at the next Build.
   import { onMount } from "svelte";
   import { m } from "./paraglide/messages.js";
   import { currentLocale, languageName, locales, setLanguage, type Locale } from "./lib/i18n.svelte";
@@ -17,6 +18,8 @@
   import ProjectMenu from "./lib/ProjectMenu.svelte";
   import ProjectScene from "./lib/ProjectScene.svelte";
   import SceneTree from "./lib/SceneTree.svelte";
+  import SnapBar from "./lib/SnapBar.svelte";
+  import { candidate, editOf, type Candidate } from "./lib/snapping";
   import { frame, type Edit, type ProjectView, type Quat, type Vec3 } from "./lib/project";
   import type { GizmoMode } from "./lib/sceneEditing";
   import { shortcutOf } from "./lib/shortcuts";
@@ -41,6 +44,10 @@
   let mode = $state<GizmoMode>("translate");
   /** The catalogue family being dragged into the view. */
   let dragging = $state<string | null>(null);
+  /** Snapping: on, the gap a new join leaves (m), and the join a drag would make now. */
+  let snapping = $state(true);
+  let gap = $state(0);
+  let snapTo = $state<Candidate | null>(null);
 
   $effect(() => {
     document.documentElement.dataset.theme = theme;
@@ -104,6 +111,7 @@
     const next = await attempt(() => projects.edit(op));
     if (!next) return false;
     showEdited(next);
+    if (next.notice) notice = next.notice;
     if (op.op === "place") selected = next.instances.find((i) => !before.has(i.id))?.id ?? selected;
     return true;
   }
@@ -118,9 +126,13 @@
     void edit({ op: "move", id, position, rotation });
   }
 
-  function drop(family: string, position: Vec3): void {
+  /** A family dropped from the catalogue lands where it is released, then snaps to what it lands near: two undo steps,
+   *  as it has no interfaces before it is placed. */
+  async function drop(family: string, position: Vec3): Promise<void> {
     dragging = null;
-    void edit({ op: "place", family, position, rotation: [0, 0, 0, 1] });
+    if (!(await edit({ op: "place", family, position, rotation: [0, 0, 0, 1] }))) return;
+    const c = snapping && project && selected ? candidate(project, selected, position, [0, 0, 0, 1]) : null;
+    if (c) await edit(editOf(c, gap));
   }
 
   function onKey(event: KeyboardEvent): void {
@@ -264,7 +276,10 @@
     <main class="grid">
       <Editor bind:sources {status} {error} />
       <section class="panel stage">
-        <header class="panel-head"><h2 class="panel-title">{project.name}</h2></header>
+        <header class="panel-head">
+          <h2 class="panel-title">{project.name}</h2>
+          <SnapBar bind:enabled={snapping} bind:gap candidate={snapTo} />
+        </header>
         <div class="stage-body">
           <ProjectScene
             {project}
@@ -277,8 +292,12 @@
             {mode}
             dropping={dragging}
             onSelect={(id) => (selected = id)}
+            {snapping}
             onMove={move}
             onDrop={drop}
+            onSnap={(c) => void edit(editOf(c, gap))}
+            onUnmount={(device, position, rotation) => void edit({ op: "unmount", device, position, rotation })}
+            onCandidate={(c) => (snapTo = c)}
           />
         </div>
       </section>

@@ -1,6 +1,7 @@
 // Editing in the 3D view (spec 2026-11-11-editor-basics-design.md, "The view"): a click selects the instance under the
 // cursor, or clears the selection on empty floor; three's TransformControls moves the selection on the floor or turns it
 // about +Y in steps of 15°, one edit when the drag ends; a family dragged from the catalogue lands where it is released.
+// While a drag lasts, each pose is reported, and whether Alt is held to place freely (spec 2026-11-11-snapping-design.md).
 // TransformControls emits `dragging-changed` (three 0.187, examples/jsm/controls/TransformControls.js, its
 // "propertyname-changed" events), which hands the pointer from the orbit controls to the gizmo and back.
 import * as THREE from "three";
@@ -20,8 +21,10 @@ const nothing = (): void => {};
 export interface EditingHandlers {
   /** The instance clicked, or null on empty floor. */
   onSelect: (id: string | null) => void;
+  /** The gizmo moved the instance to this pose; `free` while Alt is held. */
+  onDrag: (id: string, position: Vec3, rotation: Quat, free: boolean) => void;
   /** A gizmo drag ended: the instance's new pose. */
-  onMove: (id: string, position: Vec3, rotation: Quat) => void;
+  onMove: (id: string, position: Vec3, rotation: Quat, free: boolean) => void;
   /** The catalogue family being dragged, if any. */
   dropping: () => string | null;
   /** A dragged family released over the floor at `position`. */
@@ -67,7 +70,19 @@ export function sceneEditing(scene: THREE.Scene, content: THREE.Object3D, handle
     const helper = controlsOfGizmo.getHelper();
     scene.add(helper);
     let usedGizmo = false;
+    let free = false;
+    const onAlt = (event: KeyboardEvent): void => {
+      free = event.altKey;
+    };
+    const posed = (report: EditingHandlers["onMove"]): void => {
+      const object = controlsOfGizmo.object;
+      const id = object?.userData.instance;
+      if (!object || typeof id !== "string") return;
+      const placed = pose(object.position.toArray(), object.quaternion.toArray());
+      report(id, placed.position, placed.rotation, free);
+    };
     controlsOfGizmo.addEventListener("change", requestRender);
+    controlsOfGizmo.addEventListener("objectChange", () => posed(handlers.onDrag));
     controlsOfGizmo.addEventListener("dragging-changed", (event) => {
       const dragging = Boolean(event.value);
       controls.enabled = !dragging;
@@ -75,12 +90,7 @@ export function sceneEditing(scene: THREE.Scene, content: THREE.Object3D, handle
         usedGizmo = true;
         return;
       }
-      const object = controlsOfGizmo.object;
-      const id = object?.userData.instance;
-      if (object && typeof id === "string") {
-        const placed = pose(object.position.toArray(), object.quaternion.toArray());
-        handlers.onMove(id, placed.position, placed.rotation);
-      }
+      posed(handlers.onMove);
     });
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
@@ -114,11 +124,15 @@ export function sceneEditing(scene: THREE.Scene, content: THREE.Object3D, handle
     };
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointerup", onUp);
+    window.addEventListener("keydown", onAlt);
+    window.addEventListener("keyup", onAlt);
     showMode();
     attach(target);
     return () => {
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointerup", onUp);
+      window.removeEventListener("keydown", onAlt);
+      window.removeEventListener("keyup", onAlt);
       scene.remove(helper);
       controlsOfGizmo.dispose();
       gizmo = null;

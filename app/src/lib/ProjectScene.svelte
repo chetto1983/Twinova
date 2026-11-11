@@ -4,8 +4,9 @@
   // device's link at its position (a transfer's or a stopper's lift, a pusher's reach, a turntable's angle), a belt's
   // fabric moved by its travel, and the products of the running line at the poses the physics gives them, each a unit
   // box scaled to its size in its paint (engine.rs `Snapshot.actuators`, `Snapshot.conveyors`, `Snapshot.cartons`).
-  // Each instance's group carries its id, so the view picks it; the selection carries the gizmo, unless it is a device
-  // mounted on a host, which moves along its host in the inspector (sceneEditing.ts).
+  // Each instance's group carries its id, so the view picks it; the selection carries the gizmo (sceneEditing.ts). While
+  // it drags, the join it would make is marked (snapping.ts), and its release makes it; a mounted device dragged off
+  // every rail is unmounted where it lands (spec 2026-11-11-snapping-design.md).
   import { untrack } from "svelte";
   import * as THREE from "three";
   import { drawnOf, type Motion } from "./families";
@@ -13,6 +14,7 @@
   import { toObject } from "./meshes";
   import { frame, shapeOf, type ProjectView, type Quat, type Vec3 } from "./project";
   import { sceneEditing, type GizmoMode } from "./sceneEditing";
+  import { candidate, type Candidate } from "./snapping";
   import { yawQuat } from "./oip/parts/part";
   import { pusherLamps } from "./oip/parts/pusher";
   import { paintOf, scaled, scrollOffset, type Carton, type Snapshot } from "./snapshot";
@@ -28,9 +30,13 @@
     framing = 0,
     mode = "translate",
     dropping = null,
+    snapping = true,
     onSelect = () => {},
     onMove = () => {},
     onDrop = () => {},
+    onSnap = () => {},
+    onUnmount = () => {},
+    onCandidate = () => {},
   }: {
     project: ProjectView;
     selected: string | null;
@@ -45,6 +51,14 @@
     onSelect?: (id: string | null) => void;
     onMove?: (id: string, position: Vec3, rotation: Quat) => void;
     onDrop?: (family: string, position: Vec3) => void;
+    /** Snap while dragging. */
+    snapping?: boolean;
+    /** A drag released on a join. */
+    onSnap?: (c: Candidate) => void;
+    /** A mounted device released off every rail. */
+    onUnmount?: (id: string, position: Vec3, rotation: Quat) => void;
+    /** The join a drag would make now, or none. */
+    onCandidate?: (c: Candidate | null) => void;
   } = $props();
 
   const scene = new THREE.Scene();
@@ -53,9 +67,48 @@
   scene.add(content, products);
   /** Each instance's placed group, by id: what the gizmo moves. */
   const placedGroups = new Map<string, THREE.Group>();
+  /** Where a mounted device stands in its host's group, which the gizmo moves (families.ts `offset`). */
+  const deviceOffsets = new Map<string, Vec3>();
+  /** The join the drag would make, held until it lets go (snapping.ts `RELEASE`). */
+  let held: Candidate | null = null;
+  const marker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.06, 16, 12),
+    new THREE.MeshBasicMaterial({ depthTest: false, transparent: true, opacity: 0.85 }),
+  );
+  marker.renderOrder = 1;
+  marker.visible = false;
+  scene.add(marker);
+
+  /** Where `id` stands for snapping at the gizmo's pose: the instance's own pose, or a mounted device's place. */
+  function standing(id: string, position: Vec3, rotation: Quat): Vec3 {
+    const offset = deviceOffsets.get(id);
+    if (!offset) return position;
+    const at = new THREE.Vector3(offset[0], 0, offset[2]).applyQuaternion(new THREE.Quaternion(...rotation));
+    return [position[0] + at.x, position[1] + at.y, position[2] + at.z];
+  }
+
+  function show(c: Candidate | null): void {
+    held = c;
+    marker.visible = c !== null;
+    if (c) marker.position.set(...c.point);
+    onCandidate(c);
+    requestRender();
+  }
+
   const editing = sceneEditing(scene, content, {
     onSelect: (id) => onSelect(id),
-    onMove: (id, position, rotation) => onMove(id, position, rotation),
+    onDrag: (id, position, rotation, free) => {
+      const at = standing(id, position, rotation);
+      show(snapping && !free ? candidate(project, id, at, rotation, held) : null);
+    },
+    onMove: (id, position, rotation, free) => {
+      const at = standing(id, position, rotation);
+      const c = snapping && !free ? candidate(project, id, at, rotation, held) : null;
+      show(null);
+      if (c) onSnap(c);
+      else if (deviceOffsets.has(id)) onUnmount(id, at, rotation);
+      else onMove(id, position, rotation);
+    },
     dropping: () => dropping,
     onDrop: (family, position) => onDrop(family, position),
   });
@@ -109,6 +162,7 @@
     });
     content.clear();
     placedGroups.clear();
+    deviceOffsets.clear();
     links.clear();
     lamps.clear();
     fabrics.clear();
@@ -121,6 +175,7 @@
       if (!def) continue;
       const lit = instance.id === selected;
       const drawn = drawnOf(project, instance);
+      if (drawn && project.mounts.some((m) => m.device === instance.id)) deviceOffsets.set(instance.id, drawn.offset);
       if (drawn) {
         const group = new THREE.Group();
         group.position.set(...drawn.offset);
@@ -172,8 +227,8 @@
       placed.add(mesh);
       place(instance.id, placed);
     }
-    const mounted = project.mounts.some((m) => m.device === selected);
-    editing.attach(selected && !mounted ? (placedGroups.get(selected) ?? null) : null);
+    marker.material.color = token("--scene-selected");
+    editing.attach(selected ? (placedGroups.get(selected) ?? null) : null);
   }
 
   /** Adds an instance's group to the view, named for picking. A mounted device is drawn from its host's pose, so its
@@ -243,6 +298,8 @@
   $effect(() => () => {
     dispose();
     cartonGeometry.dispose();
+    marker.geometry.dispose();
+    marker.material.dispose();
     for (const material of paints.values()) material.dispose();
   });
 </script>
