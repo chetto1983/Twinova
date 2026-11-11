@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildArgs, sourcesOf } from "./sources";
+import { buildArgs, mergeSources, sourcesOf } from "./sources";
 import type { ProjectView } from "./project";
 
 const project = {
@@ -34,5 +34,19 @@ describe("editor sources", () => {
       ],
       behaviours: { "twinova.belt@1": "edited" },
     });
+  });
+
+  it("keeps the texts being edited when the scene changes, adds a new block and drops a gone one", () => {
+    const sources = sourcesOf(project);
+    sources[0].text = "PROGRAM Main (* typed *) END_PROGRAM";
+    const next = {
+      program: project.program,
+      behaviours: { "twinova.pusher@1": "FUNCTION_BLOCK PusherBehaviour END_FUNCTION_BLOCK" },
+    } as unknown as ProjectView;
+    expect(mergeSources(sources, next).map((s) => [s.key, s.text])).toEqual([
+      ["plc/Main.st", "PROGRAM Main (* typed *) END_PROGRAM"],
+      ["plc/Lib.st", "FUNCTION F : INT END_FUNCTION"],
+      ["twinova.pusher@1", "FUNCTION_BLOCK PusherBehaviour END_FUNCTION_BLOCK"],
+    ]);
   });
 });

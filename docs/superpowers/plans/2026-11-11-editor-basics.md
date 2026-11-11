@@ -129,7 +129,7 @@ Rust 2024 (`twinova-project`, the app, `twinova-agent`), Tauri 2, Svelte 5, thre
     - history cleared on open;
     - Build keeps it.
   - Commit `feat(app): edit the open project, with undo`.
-- [ ] **Task 5: the catalogue and the inspector.**
+- [x] **Task 5: the catalogue and the inspector.**
   - The catalogue panel: click and press-drag to place.
   - The inspector's fields by type; signals; flows and mounts.
   - Vitest on the field helpers; i18n.

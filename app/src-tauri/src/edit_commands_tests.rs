@@ -247,3 +247,20 @@ fn opening_another_project_forgets_the_history_and_a_new_project_saves() {
     assert_eq!(reopened.instances, saved.instances);
     assert_eq!(reopened.name, "Untitled");
 }
+
+#[test]
+fn the_catalogue_lists_the_library_in_its_groups() {
+    let entries = catalogue();
+    assert_eq!(entries.len(), 15);
+    assert_eq!(
+        entries[0],
+        CatalogueEntry {
+            key: "twinova.belt@1".into(),
+            group: Group::Conveyors
+        }
+    );
+    assert_eq!(
+        (entries[14].key.as_str(), entries[14].group),
+        ("twinova.sink@1", Group::Flow)
+    );
+}

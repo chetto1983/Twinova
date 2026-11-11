@@ -2,11 +2,12 @@
 //! its history and returns the view, or the edit's error with the project unchanged. The running line changes only at
 //! Build.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::State;
 use twinova_project::Project;
 use twinova_project::edit;
+use twinova_project::library::{self, Group};
 use twinova_project::model::{Controller, Quat, Scene, Vec3};
 
 use crate::project_commands::{Current, ProjectState, ProjectView, replace, view};
@@ -120,6 +121,25 @@ pub fn redo(state: State<'_, ProjectState>) -> Result<ProjectView, String> {
     let current = &mut *guard;
     current.history.redo(&mut current.project);
     Ok(view(current, Vec::new(), false))
+}
+
+/// A family the catalogue offers.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CatalogueEntry {
+    /// `id@version`, as `Edit::Place` takes it.
+    pub key: String,
+    pub group: Group,
+}
+
+/// The library's families, in catalogue order.
+#[tauri::command]
+pub fn catalogue() -> Vec<CatalogueEntry> {
+    (library::families().into_iter())
+        .map(|f| CatalogueEntry {
+            key: f.definition.key(),
+            group: f.group,
+        })
+        .collect()
 }
 
 /// The program a new project starts with.

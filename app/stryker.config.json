@@ -8,7 +8,8 @@
     "src/lib/meshes.ts",
     "src/lib/families.ts",
     "src/lib/openings.ts",
-    "src/lib/materials.ts"
+    "src/lib/materials.ts",
+    "src/lib/inspector.ts"
   ],
   "reporters": ["clear-text", "progress", "json"],
   "thresholds": {

@@ -1,21 +1,23 @@
 <script lang="ts">
   // The app on a project (spec 2026-11-09-component-behaviour-design.md, "The app"): the bundled M3 demo at start, or
   // a project opened from the menu or the command line. Build runs its line with the editor's sources; the panel's
-  // buttons come from the project.
+  // buttons come from the project. The catalogue and the inspector edit the scene, each edit one undo step
+  // (spec 2026-11-11-editor-basics-design.md); the running line changes at the next Build.
   import { onMount } from "svelte";
   import { m } from "./paraglide/messages.js";
   import { currentLocale, languageName, locales, setLanguage, type Locale } from "./lib/i18n.svelte";
   import { readPreference, writePreference } from "./lib/preferences";
   import { backend, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
   import { SPEEDS, formatSpeed, type Snapshot } from "./lib/snapshot";
-  import { buildArgs, sourcesOf, type Source } from "./lib/sources";
+  import { buildArgs, mergeSources, sourcesOf, type Source } from "./lib/sources";
+  import Catalogue from "./lib/Catalogue.svelte";
   import Editor from "./lib/Editor.svelte";
   import Inspector from "./lib/Inspector.svelte";
   import IoPanel from "./lib/IoPanel.svelte";
   import ProjectMenu from "./lib/ProjectMenu.svelte";
   import ProjectScene from "./lib/ProjectScene.svelte";
   import SceneTree from "./lib/SceneTree.svelte";
-  import type { ProjectView } from "./lib/project";
+  import { frame, type Edit, type ProjectView } from "./lib/project";
   import twinovaMark from "./assets/twinova-mark.svg";
 
   let project = $state<ProjectView | null>(null);
@@ -30,6 +32,8 @@
   /** What opening the project reported, and what the last Build warned about. */
   let notice = $state("");
   let warnings = $state<string[]>([]);
+  /** The scene was edited since the last Build. */
+  let changed = $state(false);
 
   $effect(() => {
     document.documentElement.dataset.theme = theme;
@@ -55,6 +59,7 @@
     status = built ? "ok" : "failed";
     if (built) {
       running = false;
+      changed = false;
       snapshot = built.snapshot;
       warnings = built.warnings;
     }
@@ -74,6 +79,36 @@
       .filter(Boolean)
       .join(" ");
     await build();
+  }
+
+  /** The project after an edit, undo or redo: the editor keeps the texts being edited, and a selection the edit removed
+   *  is cleared. */
+  function showEdited(next: ProjectView): void {
+    project = next;
+    sources = mergeSources(sources, next);
+    if (!next.instances.some((i) => i.id === selected)) selected = null;
+    changed = true;
+  }
+
+  /** One edit; false, with the reason shown, when the project refuses it. */
+  async function edit(op: Edit): Promise<boolean> {
+    const before = new Set(project?.instances.map((i) => i.id));
+    const next = await attempt(() => projects.edit(op));
+    if (!next) return false;
+    showEdited(next);
+    if (op.op === "place") selected = next.instances.find((i) => !before.has(i.id))?.id ?? selected;
+    return true;
+  }
+
+  /** A catalogue family, placed on the floor under the view's framing centre. */
+  function place(family: string): void {
+    const [x, , z] = frame(project?.instances ?? []).centre;
+    void edit({ op: "place", family, position: [x, 0, z], rotation: [0, 0, 0, 1] });
+  }
+
+  async function step(action: () => Promise<ProjectView>): Promise<void> {
+    const next = await attempt(action);
+    if (next) showEdited(next);
   }
 
   async function toggleRun(): Promise<void> {
@@ -128,6 +163,9 @@
       {/if}
     </div>
     <div class="row actions">
+      <button class="btn" disabled={!project?.can_undo} onclick={() => step(projects.undo)}>{m.undo()}</button>
+      <button class="btn" disabled={!project?.can_redo} onclick={() => step(projects.redo)}>{m.redo()}</button>
+      <span class="sep"></span>
       <button class="btn" onclick={build}>{m.build()}</button>
       <button class="btn primary" disabled={status !== "ok"} onclick={toggleRun}>
         {running ? m.pause() : m.run()}
@@ -190,6 +228,7 @@
   </header>
   <p class="notice" role="status">
     {notice}
+    {#if changed}{m.scene_changed()}{/if}
     {#each warnings as warning (warning)}<br />{m.build_warning({ warning })}{/each}
   </p>
   {#if project}
@@ -210,8 +249,9 @@
       </section>
       <div class="side">
         <IoPanel {snapshot} onSinkBlocked={(sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked))} />
+        <Catalogue onPlace={place} />
         <SceneTree {project} bind:selected />
-        <Inspector {project} {selected} />
+        <Inspector {project} {selected} onEdit={edit} />
       </div>
     </main>
   {/if}

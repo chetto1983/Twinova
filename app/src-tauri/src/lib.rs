@@ -39,6 +39,7 @@ pub fn run() {
             edit_commands::undo,
             edit_commands::redo,
             edit_commands::new_project,
+            edit_commands::catalogue,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Twinova");

@@ -3,7 +3,7 @@
 
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number];
-type Value = boolean | number | (number | string)[];
+export type Value = boolean | number | (number | string)[];
 
 export interface Instance {
   id: string;
@@ -96,6 +96,9 @@ export interface SignalRow {
 export function family(definitionId: string): string {
   return definitionId.slice(definitionId.lastIndexOf(".") + 1);
 }
+
+/** A family's name as the catalogue shows it: `twinova.sensor_diffuse@1` is `sensor diffuse`. */
+export const familyLabel = (key: string): string => family(key.split("@")[0]).replaceAll("_", " ");
 
 /** A TIME is stored in nanoseconds; it reads best in the largest unit that keeps it whole. */
 export function formatTime(ns: number): string {

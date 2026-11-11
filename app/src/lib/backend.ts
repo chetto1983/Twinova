@@ -22,6 +22,14 @@ export const backend = {
   setSinkBlocked: (sink: number, blocked: boolean) => invoke<Snapshot>("set_sink_blocked", { sink, blocked }),
 };
 
+/** A family the catalogue offers (edit_commands.rs `CatalogueEntry`). */
+export interface CatalogueEntry {
+  key: string;
+  group: "conveyors" | "devices" | "sensors" | "flow";
+}
+
+export const catalogue = () => invoke<CatalogueEntry[]>("catalogue");
+
 export const onSnapshot = (f: (s: Snapshot) => void): Promise<UnlistenFn> =>
   listen<Snapshot>("snapshot", (e) => f(e.payload));
 export const onEngineError = (f: (error: string) => void): Promise<UnlistenFn> =>
