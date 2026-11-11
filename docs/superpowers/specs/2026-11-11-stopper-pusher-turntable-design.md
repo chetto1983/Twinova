@@ -188,6 +188,7 @@ What these probes do not prove:
   - While the deck turns, the lane is the curves' rotating field at the turn's rate. Settled, it runs along the
     deck's angle at the drive's speed.
   - There is no grip and no deck body (measured above).
+  - Its ends have no wall, because the deck turns them (OIP has none).
 - **Signals:**
   - `target_angle`: PLC output, REAL, °; optional, falling back to `angle`.
   - `enable`: PLC output, optional, falling back to TRUE.
@@ -225,7 +226,9 @@ What these probes do not prove:
 3. **Turntable:**
    - a carton turned 90° at 20°/s leaves its place by ≤ 2 mm and its yaw by ≤ 0.5°, and runs out along the new
      heading at the lane's speed;
-   - 90° takes 5.0 s ± 1 ms, OIP's profile;
+   - 90° at 20°/s takes 4 983 ms (amended in Task 2). OIP's profile is 5.0 s if continuous; stepped every
+     millisecond, its braking starts 0.01° late, and its step lands the deck once what is left fits in one step, at
+     0.76°/s;
    - `in_position` is TRUE only when settled;
    - enable off stops it within 3°.
 4. **The line** `sort_line`, run in the app on Linux and Windows:
