@@ -1,6 +1,6 @@
 # Spec: the editor, second part — snapping by interfaces (ROADMAP 4.5b)
 
-Date: 2026-11-11. Status: **draft**, for the user's approval. Amended the same day after the user's remark that real
+Date: 2026-11-11. Status: **approved** (user, 2026-11-11). Amended the same day after the user's remark that real
 conveyors always have a gap between them: OIP's ends read again, gaps measured, decisions 3, 7 and 8.
 
 ROADMAP 4.5 is "Editor: catalogue, drag and drop, snapping by interfaces, move/rotate, signal wiring, undo", accepted
