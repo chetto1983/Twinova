@@ -250,20 +250,26 @@ sessions(async () => {
     await check("Save writes the line to its folder", async () => {
       await click(`//header//button[@aria-haspopup="menu"]`);
       await click(`//button[@role="menuitem"][normalize-space()="Save"]`);
+      // The save is done when the app says so: the manifest goes last and the save marker after it, so a file on disk
+      // is not the end of it, and an app closed before then rolls the save back at the next open (storage.rs).
       await eventually(
         async () => {
-          const scene = JSON.parse(readFileSync(join(folder, "scene.json"), "utf8"));
-          expectEqual(scene.instances.length, 5, "instances");
-          expectEqual(scene.connections.length, 4, "three flows and a mount");
+          const notice = await browser.$(`//p[@role="status"]`).getText();
+          if (!notice.includes(`Saved to ${folder}`)) throw new Error(notice);
         },
         "saved",
-        10_000,
+        15_000,
       );
+      const scene = JSON.parse(readFileSync(join(folder, "scene.json"), "utf8"));
+      expectEqual(scene.instances.length, 5, "instances");
+      expectEqual(scene.connections.length, 4, "three flows and a mount");
     });
   });
   await app("debug", [`--project=${folder}`], async () => {
-    await check("the saved line reopens the same, and builds", async () => {
+    await check("the saved line reopens the same, with nothing rolled back, and builds", async () => {
       await eventually(async () => expectEqual((await treeNames()).length, 5, "tree"), "reopened", 10_000);
+      const notice = await browser.$(`//p[@role="status"]`).getText();
+      if (notice.includes("rolled back")) throw new Error(notice);
       await eventually(
         async () =>
           expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "built"),
