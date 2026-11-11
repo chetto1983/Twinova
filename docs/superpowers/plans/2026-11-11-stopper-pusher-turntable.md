@@ -165,7 +165,8 @@ recommended).
   - enable off stops it within 3° and it resumes;
   - a reversal mid-turn ramps through 0;
   - the lane is held at 0 while turning, and its drive is a conveyor's.
-- [ ] Implement the natives in `field.rs`, the devices in `line.rs`, and `actuators` in `engine.rs`.
+- [ ] Implement the natives in `field.rs`, the devices in `line.rs`, and `actuators` in `engine.rs`. The view reads
+  `actuators` in the same commit, so the app stays whole (amended in Task 3).
 - [ ] Tests (`line_devices_tests.rs`, spec acceptance 4):
   - `sort_line` conserves cartons every millisecond;
   - the split matches the program: every second carton to `sink_c`, every second straight one to `reject`;

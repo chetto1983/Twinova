@@ -198,7 +198,10 @@ What these probes do not prove:
   - OIP's slew, millisecond by millisecond: shortest path, the ramp over 0.5 s, braking onto the target, a 0.3 s stop
     when `enable` drops.
   - The lane's drive, as every conveyor's.
-  - Its outputs: the angle, the rate and `surface_speed`, which is held at 0 while the deck turns.
+  - Its outputs: the angle, the rate and `surface_speed`. The lane's drive ramps to 0 when the deck leaves its
+    position, and to `speed_ref` once it is back, as every conveyor's drive does with `run` (amended in Task 3). With
+    OIP's ramp of 0 the lane stops at once, as OIP's does. While the deck turns, the native model drives the lane by
+    the rotating field whatever its speed.
   - Two fixes on OIP. The deck starts at `angle`, not at 0. A reversal mid-turn ramps through 0 instead of
     reversing within one step.
 - **Sensors:** a diffuse sensor may mount on a turntable. Its beam is fixed, across the lane in the turntable's start
