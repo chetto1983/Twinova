@@ -6,9 +6,10 @@
 //   attribute rebuilds, a shader Twinova does not have), so the fabric tiles and scrolls by texture offset;
 // - the side rails and the guards: the swept unit templates, one instance per side (`steelPiece`);
 // - the floor stands at the belt's stations (legs.ts), and the frame web bolts.
-// Guard openings, holes and mitres, rail extents and cuts, leg rests and exclusions are left out: no Twinova part has
-// them (spec 2026-11-10-curves-belt-options-design.md, decision 3).
+// Holes and mitres, rail extents and cuts, leg rests and exclusions are left out: no Twinova part has them (spec
+// 2026-11-10-curves-belt-options-design.md, decision 3). A guard opens where a pusher stands (openings.ts).
 // The origin is the belt's tail on its conveying surface, x along the flow, y up, z across (left −z).
+import { guardSpans, type Opening } from "../../openings";
 import type { GeometryBuilder } from "../geometry/types";
 import { cylinderTemplate, legStations, stands } from "./legs";
 import type { Instance, MeshPart, V3 } from "./part";
@@ -22,6 +23,8 @@ export interface BeltParams {
   standHeight: number;
   /** Its left (−z) and right guards. */
   guards: readonly [boolean, boolean];
+  /** Where its guards open for the pushers beside it. */
+  openings?: readonly Opening[];
 }
 
 /** The fabric's period along the belt, in metres (OIP `BELT_TEX_PERIOD`). */
@@ -118,7 +121,10 @@ export function beltGeometry(g: GeometryBuilder, p: BeltParams): MeshPart[] {
   const guarded = sides.filter((s) => p.guards[s < 0 ? 0 : 1]);
   if (guarded.length > 0) {
     const guard = g.sweep(guardSection(0, 1), UNIT_X, CAPS);
-    parts.push({ desc: guard, material: "guard", instances: guarded.map((s) => steelPiece(-r, L + r, s, hw + 0.01)) });
+    const pieces = guarded.flatMap((s) =>
+      guardSpans(-r, L + r, s > 0, p.openings ?? []).map(([a, b]) => steelPiece(a, b, s, hw + 0.01)),
+    );
+    parts.push({ desc: guard, material: "guard", instances: pieces });
   }
   // the stands: the end insets and the regular spacing, one centred post on a belt too short for two
   const height = p.standHeight + fb;

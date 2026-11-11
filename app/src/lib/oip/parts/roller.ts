@@ -6,6 +6,7 @@
 // - the side frame, its flanges and the guards: the boxes of examples/parts/roller-conveyor/rig.json;
 // - the floor stands (legs.ts) at its stations along the bed.
 // The origin is the rollers' top (the conveying surface), x along the flow centred on the bed, y up, z across.
+import { guardSpans, type Opening } from "../../openings";
 import type { GeometryBuilder, MeshDescription } from "../geometry/types";
 import { cylinderTemplate, legStations, stands } from "./legs";
 import { type Instance, type MeshPart, type V3, yawQuat } from "./part";
@@ -20,6 +21,8 @@ export interface RollerParams {
   standHeight: number;
   /** Its left (−z) and right guards. */
   guards: readonly [boolean, boolean];
+  /** Where its guards open for the pushers beside it, along it from its entry. */
+  openings?: readonly Opening[];
 }
 
 /** The rendered roller radius and pitch (roller-conveyor/part.js `R`, `PITCH`). */
@@ -52,6 +55,18 @@ export interface Roller {
   yaw: number;
   length: number;
 }
+
+/** A bed's tube radius (its axles that far under the surface) and, when it has them, its axle stubs. */
+export interface RollerBedOptions {
+  radius: number;
+  stub?: { radius: number; length: number; protrude: number };
+}
+
+/** The straight bed's rollers on their axle stubs (roller-conveyor/part.js). */
+export const STRAIGHT_BED: RollerBedOptions = {
+  radius: ROLLER_R,
+  stub: { radius: STUB_R, length: 0.045, protrude: 0.0095 },
+};
 
 function rollerTemplate(g: GeometryBuilder): MeshDescription {
   const walk: V2[] = [];
@@ -127,13 +142,11 @@ function layoutRollerBands(
   return { cord, bands: out.filter((b) => b.span <= minSpan * 1.5) };
 }
 
-/** The bed's rollers: tubes, two axle stubs each, and the drive bands of a powered bed. */
-/** The tubes and their axle stubs, the rollers {x, z, yaw, length} in bed order a radius under the surface. */
-export function rollerBed(g: GeometryBuilder, rollers: readonly Roller[]): MeshPart[] {
-  const R = ROLLER_R;
-  const y = -R; // the 'roller' link: the axles a radius under the conveying surface
-  const sxy = R / ROLLER_TEMPLATE_R;
-  const stub = { radius: STUB_R, length: 0.045, protrude: 0.0095 };
+/** The tubes, and their axle stubs if `o` has them, the rollers {x, z, yaw, length} in bed order a radius under the
+ *  surface. */
+export function rollerBed(g: GeometryBuilder, rollers: readonly Roller[], o: RollerBedOptions): MeshPart[] {
+  const y = -o.radius; // the 'roller' link: the axles a radius under the conveying surface
+  const sxy = o.radius / ROLLER_TEMPLATE_R;
   const bodies: Instance[] = [];
   const stubs: Instance[] = [];
   for (const r of rollers) {
@@ -143,17 +156,17 @@ export function rollerBed(g: GeometryBuilder, rollers: readonly Roller[]): MeshP
       quaternion: q,
       scale: [sxy, sxy, Math.max(0.01, r.length) / ROLLER_TEMPLATE_BODY],
     });
+    if (!o.stub) continue;
     const ax = Math.sin(r.yaw);
     const az = Math.cos(r.yaw);
-    const so = r.length / 2 + stub.protrude;
-    const ss: V3 = [stub.radius, stub.radius, stub.length];
+    const so = r.length / 2 + o.stub.protrude;
+    const ss: V3 = [o.stub.radius, o.stub.radius, o.stub.length];
     stubs.push({ position: [r.x + ax * so, y, r.z + az * so], quaternion: q, scale: ss });
     stubs.push({ position: [r.x - ax * so, y, r.z - az * so], quaternion: q, scale: ss });
   }
-  return [
-    { desc: rollerTemplate(g), material: "roller", instances: bodies },
-    { desc: cylinderTemplate(g, 16), material: "roller", instances: stubs },
-  ];
+  const out: MeshPart[] = [{ desc: rollerTemplate(g), material: "roller", instances: bodies }];
+  if (o.stub) out.push({ desc: cylinderTemplate(g, 16), material: "roller", instances: stubs });
+  return out;
 }
 
 /** A powered bed's drive bands between neighbouring rollers. */
@@ -180,6 +193,15 @@ function rollerBands(g: GeometryBuilder, rollers: readonly Roller[], fullAxle: n
   ];
 }
 
+/** The gap between the drawn rollers of a `length` m bed nearest `at` along it from its entry, where a stopper's blade
+ *  rises (OIP `snapTrack.ts`); the physics snaps to the same gap (layout_devices.rs `roller_gap`). */
+export function rollerGap(length: number, at: number): number {
+  const n = Math.max(2, Math.floor((length - 2 * ROLLER_R) / PITCH) + 1);
+  const first = length / 2 - ((n - 1) / 2) * PITCH + PITCH / 2;
+  const k = Math.min(Math.max(Math.round((at - first) / PITCH), 0), n - 2);
+  return first + k * PITCH;
+}
+
 // ---- roller-conveyor/part.js `layoutRollers`, straight ------------------------------------------------------------
 function layoutRollers(p: RollerParams): Roller[] {
   const axle = p.width - 0.004; // the body recessed just behind the frame walls
@@ -202,8 +224,11 @@ function frame(g: GeometryBuilder, p: RollerParams): MeshPart[] {
     walls.push(g.box([L, p.frameHeight, 0.01], [0, -p.frameHeight / 2 - 0.005, s * (hw + 0.005)]));
     walls.push(g.box([L, 0.005, 0.02], [0, -0.0025, s * (hw + 0.02)]));
     if (!guarded) continue;
-    guards.push(g.box([L, 0.155, 0.005], [0, 0.0725, s * (hw + 0.0125)]));
-    guards.push(g.box([L, 0.005, 0.02], [0, 0.1475, s * (hw + 0.025)]));
+    for (const [a, b] of guardSpans(0, L, s > 0, p.openings ?? [])) {
+      const x = (a + b) / 2 - L / 2;
+      guards.push(g.box([b - a, 0.155, 0.005], [x, 0.0725, s * (hw + 0.0125)]));
+      guards.push(g.box([b - a, 0.005, 0.02], [x, 0.1475, s * (hw + 0.025)]));
+    }
   }
   const out: MeshPart[] = [{ desc: g.merge(...walls), material: "frame" }];
   if (guards.length > 0) out.push({ desc: g.merge(...guards), material: "guard" });
@@ -219,5 +244,5 @@ export function rollerGeometry(g: GeometryBuilder, p: RollerParams): MeshPart[] 
   }));
   const legs = stands(g, p.width / 2, Math.max(0.05, p.standHeight - frameDepth), frameDepth, at);
   const rollers = layoutRollers(p);
-  return [...rollerBed(g, rollers), ...rollerBands(g, rollers, p.width - 0.004), ...frame(g, p), ...legs];
+  return [...rollerBed(g, rollers, STRAIGHT_BED), ...rollerBands(g, rollers, p.width - 0.004), ...frame(g, p), ...legs];
 }

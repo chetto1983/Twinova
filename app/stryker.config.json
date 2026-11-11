@@ -7,6 +7,7 @@
     "src/lib/sources.ts",
     "src/lib/meshes.ts",
     "src/lib/families.ts",
+    "src/lib/openings.ts",
     "src/lib/materials.ts"
   ],
   "reporters": ["clear-text", "progress", "json"],

@@ -13,7 +13,7 @@ import type { GeometryBuilder } from "../geometry/types";
 import { frameBottom, guardSection, railSections } from "./belt";
 import { arcPath, arcStands, type CurveParams } from "./curve";
 import type { MeshPart } from "./part";
-import { type Roller, rollerBed } from "./roller";
+import { type Roller, rollerBed, STRAIGHT_BED } from "./roller";
 
 /** The physics' stub, OIP `ARC_END_EXT` (physics/src/path.rs `STUB`). */
 const STUB = 0.085;
@@ -40,6 +40,6 @@ export function rollerCurveGeometry(g: GeometryBuilder, p: CurveParams): MeshPar
   }
   const parts: MeshPart[] = [{ desc: g.merge(rail(-1), rail(1)), material: "frame" }];
   if (guards.length > 0) parts.push({ desc: g.merge(...guards), material: "guard" });
-  parts.push(...arcStands(g, p, fb), ...rollerBed(g, rollers));
+  parts.push(...arcStands(g, p, fb), ...rollerBed(g, rollers, STRAIGHT_BED));
   return parts;
 }

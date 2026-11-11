@@ -19,6 +19,9 @@ type V2 = readonly [number, number];
 export interface GeometryBuilder {
   /** Sweep a closed `[up, width]` section along a path, the section kept level (sweep.ts). */
   sweep(profile: ReadonlyArray<V2>, path: ReadonlyArray<V3>, opts?: { caps?: boolean }): MeshDescription;
+  /** Round the interior corners of an open polyline with tangent arcs of `radius`, in the X-Y plane (Z carried
+   *  through), `arcSegments` (default 6) per corner; the endpoints are kept (fillet.ts). Feed the result to sweep. */
+  fillet(points: ReadonlyArray<V3>, radius: number, arcSegments?: number): ReadonlyArray<V3>;
   /** Points along an arc in the X-Y plane about `center`, from angle `start` to `end` in `segments` steps. */
   arc(center: V3, radius: number, start: number, end: number, segments?: number): ReadonlyArray<V3>;
   merge(...parts: readonly MeshDescription[]): MeshDescription;

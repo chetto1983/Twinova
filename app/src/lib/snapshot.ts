@@ -76,3 +76,8 @@ export function framingDistance(halfWidth: number, halfHeight: number, vfovDeg: 
   const tanH = tanV * aspect;
   return Math.max(halfWidth / tanH, halfHeight / tanV);
 }
+
+/** `v` times `k`: where a sliding link stands at a device's position. */
+export function scaled(v: readonly [number, number, number], k: number): [number, number, number] {
+  return [v[0] * k, v[1] * k, v[2] * k];
+}
