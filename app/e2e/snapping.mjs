@@ -56,24 +56,26 @@ const near = (a, b, tolerance, what) => {
   if (a.some((v, k) => Math.abs(v - b[k]) > tolerance)) throw new Error(`${what}: ${a} is not ${b} ±${tolerance}`);
 };
 
+/** Where an axis is in an [x, z] pair. */
+const AXIS = { x: 0, z: 1 };
+
 /** Clicks "Frame all" and returns the view it gives `known` instances. */
 async function frameAll(known) {
   await click(`//button[normalize-space()="Frame all"]`);
   return framed(Object.values(known));
 }
 
-/** Drags the selection along `axis` to `to` in hops, framing all before each: a hop goes as far as its release stays
- *  on the canvas, and the part, moving, widens the framing. Each release may snap: the hops end when the part is not
- *  where it was released, or when the last one releases at `to`. Records where it stands. */
-async function dragAlong(known, id, axis, to) {
-  const k = axis === "x" ? 0 : 1;
+/** Drags the selection along `axis` towards `to` in hops, framing all before each: a hop goes as far as its release
+ *  stays on the canvas, and the part, moving, widens the framing. The hops go on until the part stands within
+ *  `close` of `to`, so a release that lands short (the pointer is less exact on some platforms) is followed by
+ *  another; a release that snaps the part ends them once it is within `close`. Records where it stands. */
+async function dragAlong(known, id, axis, to, close) {
+  const k = AXIS[axis];
   for (let hop = 0; hop < 20; hop++) {
     const at = known[id];
-    if (Math.abs(to - at[k]) < 0.003) return;
+    if (Math.abs(to - at[k]) <= close) return;
     const view = await frameAll(known);
-    const step = await reachable(at, axis, to - at[k], view);
-    await dragGizmo(at, axis, step, view);
-    const released = at.map((v, j) => (j === k ? v + step : v));
+    await dragGizmo(at, axis, await reachable(at, axis, to - at[k], view), view);
     known[id] = await eventually(
       async () => {
         const now = await position();
@@ -83,15 +85,16 @@ async function dragAlong(known, id, axis, to) {
       `${id} moved along ${axis}`,
       5_000,
     );
-    const snapped = known[id].some((v, j) => Math.abs(v - released[j]) > 0.01);
-    if (snapped || step === to - at[k]) return;
   }
   throw new Error(`${id} did not reach ${axis} ${to}: it stands at ${known[id]}`);
 }
 
-/** Drags the selection to `to`, along x then z, or `zFirst`: the last release is where it snaps. */
+/** Drags the selection to `to`, along x then z, or `zFirst`: the first axis to within 2 cm, the last until the part
+ *  is within a snap's reach (snapping.ts `REACH`, 0.3 m), where the release that brought it there has snapped it. */
 async function dragTo(known, id, to, zFirst = false) {
-  for (const axis of zFirst ? ["z", "x"] : ["x", "z"]) await dragAlong(known, id, axis, to[axis === "x" ? 0 : 1]);
+  const [first, last] = zFirst ? ["z", "x"] : ["x", "z"];
+  await dragAlong(known, id, first, to[AXIS[first]], 0.02);
+  await dragAlong(known, id, last, to[AXIS[last]], 0.3);
 }
 
 /** Waits until the selection stands at `at`, within `tolerance`, and records it. */
