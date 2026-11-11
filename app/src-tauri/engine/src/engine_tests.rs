@@ -240,3 +240,16 @@ fn a_real_signal_reads_as_a_number() {
         "a DINT still reads as an integer"
     );
 }
+
+/// The engine's fingerprint is its world's: equal for equal runs, different once the cartons have moved.
+#[test]
+fn the_fingerprint_follows_the_line() {
+    let run = |seconds| {
+        let mut engine = started(false);
+        run_for(&mut engine, seconds);
+        engine.fingerprint()
+    };
+    assert_eq!(run(3), run(3));
+    assert_ne!(run(3), run(4));
+    assert_ne!(run(3), engine().fingerprint());
+}
