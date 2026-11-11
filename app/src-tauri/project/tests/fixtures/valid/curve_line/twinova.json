@@ -17,7 +17,7 @@
     "components/twinova.roller_curve@1.st": "92c40282bcb67d4380b4719c42be6a3eaed9b7436ddda30d3ccd6faf1c1efa87",
     "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
     "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
-    "components/twinova.source@1.json": "c41dfb89fd394067b9e71785f51d437262c4625afe95734049d3d75edac2e18e",
+    "components/twinova.source@1.json": "257098bb1e4507d8ae3aaf06957ff5bd825b591277e2a12646bfa4161d57c2c6",
     "plc/Main.st": "c81ceafe7c4cf42ce528a4a9c5504bb7ab949ef608194c3ae67282ae87f59893",
     "scene.json": "4545a666f50af912852ab7649f27c5a38f76f0b64c8bd715077713c6a780f952"
   },

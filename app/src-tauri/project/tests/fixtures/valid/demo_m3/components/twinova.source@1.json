@@ -48,6 +48,78 @@
       "name": "max_count",
       "type": "DINT",
       "unit": null
+    },
+    {
+      "default": 0.3,
+      "max": null,
+      "min": 0.1,
+      "name": "length",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.3,
+      "max": null,
+      "min": 0.1,
+      "name": "width",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.3,
+      "max": null,
+      "min": 0.1,
+      "name": "height",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 2.7,
+      "max": null,
+      "min": 0.01,
+      "name": "mass",
+      "type": "REAL",
+      "unit": "kg"
+    },
+    {
+      "default": false,
+      "max": null,
+      "min": null,
+      "name": "random_size",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": [],
+      "max": null,
+      "min": null,
+      "name": "colors",
+      "type": "COLOR_LIST",
+      "unit": null
+    },
+    {
+      "default": [],
+      "max": null,
+      "min": null,
+      "name": "codes",
+      "type": "DINT_LIST",
+      "unit": null
+    },
+    {
+      "default": false,
+      "max": null,
+      "min": null,
+      "name": "random_order",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": 1,
+      "max": null,
+      "min": null,
+      "name": "seed",
+      "type": "DINT",
+      "unit": null
     }
   ],
   "ports": [

@@ -63,7 +63,7 @@ fn push(w: &mut World, then: usize) -> Real {
         };
         w.set_pusher(0, travel as Real / PUSH_MS as Real);
         w.step();
-        if let Some(&(_, h)) = w.cartons.first() {
+        if let Some(h) = w.products.first().map(|p| p.body) {
             let r = *w.world.bodies[h].rotation();
             worst = worst.max((r * Vector::Y).angle_between(Vector::Y).to_degrees());
         }
@@ -75,7 +75,7 @@ fn push(w: &mut World, then: usize) -> Real {
 fn a_pushed_carton_rides_a_takeaway_away_upright_and_square() {
     let mut w = line(true, vec![]);
     let worst = push(&mut w, 2000);
-    let body = &w.world.bodies[w.cartons[0].1];
+    let body = &w.world.bodies[w.products[0].body];
     let (p, v, r) = (body.translation(), body.linvel(), *body.rotation());
     assert!(worst < 5.0, "tilted up to {worst}°");
     let tilt = (r * Vector::Y).angle_between(Vector::Y).to_degrees();
@@ -242,7 +242,15 @@ fn the_side_exit_reaches_along_the_paddle_and_past_the_hosts_edge() {
         let body = w
             .world
             .insert_body(RigidBodyBuilder::dynamic().translation(Vector::new(x, y, z)));
-        w.reached(Exit::Push(0), body)
+        let product = products::Product {
+            id: 0,
+            body,
+            half: Vector::splat(CARTON_HALF),
+            color: None,
+            code: None,
+            read: false,
+        };
+        w.reached(Exit::Push(0), &product)
     };
     let on = 0.8 + CARTON_HALF;
     let crossed = -(0.3 - CARTON_HALF) - 0.001;

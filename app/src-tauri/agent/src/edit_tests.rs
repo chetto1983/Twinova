@@ -1,6 +1,7 @@
 use super::*;
 use serde_json::json;
 use std::path::Path;
+use twinova_project::model::Item;
 use twinova_project::storage::open_folder;
 
 fn sort_line() -> Project {
@@ -67,6 +68,44 @@ fn a_parameter_takes_a_value_of_its_type_or_its_default_back() {
     for (id, name, value, error) in refusals {
         assert_eq!(
             set_parameter(&mut p, id, name, Some(&value)),
+            Err(error.into())
+        );
+    }
+}
+
+#[test]
+fn a_list_parameter_takes_an_array_of_its_items() {
+    let mut p = sort_line();
+    set_parameter(&mut p, "source", "codes", Some(&json!([3, 1]))).unwrap();
+    set_parameter(&mut p, "source", "colors", Some(&json!(["#ff0000"]))).unwrap();
+    let parameters = &instance(&p, "source").parameters;
+    assert_eq!(
+        parameters["codes"],
+        ParamValue::List(vec![Item::Int(3), Item::Int(1)])
+    );
+    assert_eq!(
+        parameters["colors"],
+        ParamValue::List(vec![Item::Text("#ff0000".into())])
+    );
+    for (name, value, error) in [
+        (
+            "codes",
+            json!(3),
+            "source.codes is a DINT_LIST: 3 is not one",
+        ),
+        (
+            "codes",
+            json!([1.5]),
+            "source.codes is a DINT_LIST: [1.5] is not one",
+        ),
+        (
+            "colors",
+            json!({"red": 1}),
+            "source.colors is a COLOR_LIST: {\"red\":1} is not one",
+        ),
+    ] {
+        assert_eq!(
+            set_parameter(&mut p, "source", name, Some(&value)),
             Err(error.into())
         );
     }

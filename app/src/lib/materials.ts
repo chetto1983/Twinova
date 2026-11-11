@@ -67,6 +67,19 @@ export const SPECS: Record<Material, Spec> = {
   turntableCowl: { color: [0.015, 0.015, 0.017], metalness: 0.1, roughness: 0.55 },
   turntableGrille: { color: [0.004, 0.004, 0.005], metalness: 0, roughness: 0.9 },
   turntableSteel: { color: [0.7, 0.7, 0.72], metalness: 0.9, roughness: 0.28 },
+  // the colour sensor's (examples/parts/color-sensor/part.js: the photo eye's housing, teal with a red window)
+  colorBody: { color: [0, 0.13286832, 0.21404114], metalness: 0, roughness: 0.55 },
+  colorLens: { color: [0.17064494, 0, 0], metalness: 0, roughness: 0.55 },
+  // the laser sensor's (examples/parts/laser-sensor/part.js: amber, lilac, orange, gray)
+  laserAmber: { color: [0.21404114, 0.10048151, 0], metalness: 0, roughness: 0.55 },
+  laserWindow: { color: [0.50196087, 0.50196087, 0.84705955], metalness: 0, roughness: 0.55 },
+  laserDisplay: { color: [0.82757083, 0.13286832, 0], metalness: 0, roughness: 0.45 },
+  laserLed: { color: [0.50196087, 0.50196087, 0.50196087], metalness: 0, roughness: 0.55 },
+  // the barcode scanner's (examples/parts/barcode-scanner/rig.json: housing, cap, head, lens)
+  scannerHousing: { color: [0.479, 0.509, 0.539], metalness: 0.6, roughness: 0.35 },
+  scannerBeam: { color: [0.888, 0.508, 0.005], metalness: 0.1, roughness: 0.45 },
+  scannerHead: { color: [0.06, 0.065, 0.075], metalness: 0.2, roughness: 0.5 },
+  scannerWindow: { color: [0.18, 0.18, 0.18], metalness: 0, roughness: 0.3 },
   turntablePocket: { color: [0.006, 0.006, 0.007], metalness: 0, roughness: 0.95 },
   turntableRim: { color: [0.03, 0.03, 0.035], metalness: 0.4, roughness: 0.6 },
   turntableNameplate: { color: [0.55, 0.56, 0.58], metalness: 0.7, roughness: 0.35 },

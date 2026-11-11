@@ -1,10 +1,12 @@
 // Copied from Open Industry Project at 1e7488c (MIT, Copyright (c) 2024-present Automation Standard LLC and
 // Contributors; THIRD_PARTY_NOTICES.md), typed for TypeScript: the diffuse photo eye's housing and its bracket
-// (examples/parts/_shared/sensorPhotoeye.js `photoeyeHousing`, with sensorOutlines.js `rrect` and `circle`). The
+// (examples/parts/_shared/sensorPhotoeye.js `photoeyeHousing`, with the outlines of outlines.ts), in the diffuse eye's or
+// the colour sensor's paint (examples/parts/color-sensor/part.js). The
 // retro-reflective mode's reflector is OIP's only, and is left out.
 // Part-local metres: +Z the front (the beam axis), y 0 the underside of the connector, the beam at `PHOTOEYE.emitY`.
 import type { GeometryBuilder, MeshDescription } from "../geometry/types";
-import type { MeshPart } from "./part";
+import { circle, rrect } from "./outlines";
+import type { Material, MeshPart } from "./part";
 
 type V2 = readonly [number, number];
 type V3 = readonly [number, number, number];
@@ -30,33 +32,6 @@ const BRACKET = {
   bolts: [-0.06, -0.035], // its two bolts into the wall
   back: 0.046, // u of the plate's back edge
 };
-
-/** A rounded-corner rectangle, for windows and panels. */
-function rrect(x0: number, y0: number, x1: number, y1: number, r: number): V2[] {
-  const pts: V2[] = [];
-  const corners: [number, number, number][] = [
-    [x1 - r, y0 + r, -Math.PI / 2],
-    [x1 - r, y1 - r, 0],
-    [x0 + r, y1 - r, Math.PI / 2],
-    [x0 + r, y0 + r, Math.PI],
-  ];
-  for (const [cx, cy, a0] of corners)
-    for (let k = 0; k <= 3; k++) {
-      const a = a0 + (k * Math.PI) / 6;
-      pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
-    }
-  return pts;
-}
-
-/** A 16-sided circle, for mounting holes. */
-function circle(cy: number, cz: number, r: number): V2[] {
-  const pts: V2[] = [];
-  for (let k = 0; k < 16; k++) {
-    const a = (k * Math.PI) / 8;
-    pts.push([cy + r * Math.cos(a), cz + r * Math.sin(a)]);
-  }
-  return pts;
-}
 
 function hexBolt(g: GeometryBuilder, axis: "x" | "z", center: V3): MeshDescription {
   return g.lathe(
@@ -97,7 +72,16 @@ function sidePlate(
   );
 }
 
-export function photoeyeGeometry(g: GeometryBuilder): MeshPart[] {
+/** The housing's two painted materials: the diffuse eye's, or the colour sensor's teal body and red window (OIP
+ *  `color-sensor/part.js`, the same housing). */
+export interface PhotoeyePaint {
+  body: Material;
+  lens: Material;
+}
+
+const DIFFUSE: PhotoeyePaint = { body: "body", lens: "lens" };
+
+export function photoeyeGeometry(g: GeometryBuilder, paint: PhotoeyePaint = DIFFUSE): MeshPart[] {
   const X = PHOTOEYE.halfX;
   const BACK = PHOTOEYE.back;
   const FRONT = PHOTOEYE.front;
@@ -184,8 +168,8 @@ export function photoeyeGeometry(g: GeometryBuilder): MeshPart[] {
     hexBolt(g, "x", [X + BT, Y1 - 0.012, HZ]),
   );
   return [
-    { desc: body, material: "body" },
-    { desc: lens, material: "lens" },
+    { desc: body, material: paint.body },
+    { desc: lens, material: paint.lens },
     { desc: g.merge(cap, slot, plug, nut), material: "black" },
     { desc: pot, material: "pot" },
     { desc: bracket, material: "steel" },

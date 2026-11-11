@@ -49,7 +49,7 @@ pub(crate) fn scene(scene: &Scene, definitions: &BTreeMap<String, Definition>) -
                     format!("{} has no such parameter", def.key()),
                 ),
                 Some(p) => {
-                    if let Some(problem) = value_problem(p.ty, *value, p.min, p.max) {
+                    if let Some(problem) = value_problem(p.ty, value, p.min, p.max) {
                         err(at(&format!("parameters.{name}")), problem);
                     }
                 }

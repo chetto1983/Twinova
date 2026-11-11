@@ -16,7 +16,7 @@ fn demo(parameters: &[(&str, ParamValue)]) -> Field {
         .find(|i| i.id == "belt_a")
         .unwrap();
     for (name, value) in parameters {
-        belt.parameters.insert((*name).into(), *value);
+        belt.parameters.insert((*name).into(), value.clone());
     }
     let mut field = Field::build(&project).unwrap().unwrap();
     field.set_command("%QX0.0", Value::Bool(true)).unwrap();

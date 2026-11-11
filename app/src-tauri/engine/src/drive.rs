@@ -39,13 +39,8 @@ impl Feedback {
         let real = |name: &str| {
             let inst = inst?;
             let def = project.definitions.get(&inst.definition)?;
-            let default = def
-                .parameters
-                .iter()
-                .find(|p| p.name == name)
-                .map(|p| p.default);
-            match inst.parameters.get(name).copied().or(default) {
-                Some(ParamValue::Real(x)) => Some(x),
+            match inst.parameter(def, name) {
+                Some(ParamValue::Real(x)) => Some(*x),
                 _ => None,
             }
         };

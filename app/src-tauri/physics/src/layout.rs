@@ -11,9 +11,12 @@ use crate::path::arc_length;
 
 #[path = "layout_devices.rs"]
 mod devices;
+#[path = "layout_sensors.rs"]
+mod sensors;
 pub use devices::{PUSHER_OPENING, Pusher, Stopper, Transfer, roller_gap};
+pub use sensors::{Scanner, Sensor, SensorKind};
 use twinova_project::Project;
-use twinova_project::model::{Connection, Definition, Instance, ParamValue};
+use twinova_project::model::{Connection, Definition, Instance, Item, ParamValue, rgb};
 
 /// A belt's grip against a standard carton, the figure a belt datasheet quotes (OIP `BELT_FRICTION`,
 /// `src/core/types/base.ts` at `1e7488c`).
@@ -90,21 +93,49 @@ pub struct Source {
     pub first_ns: i64,
     /// 0 is unlimited.
     pub max_count: i64,
+    pub products: Products,
+}
+
+/// What a source makes (spec 2026-11-11-sensors-products-design.md; OIP `box-spawner/behavior.ts`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Products {
+    /// Length along the flow, width across it, height, m.
+    pub size: Vector,
+    pub mass: Real,
+    /// Each product's size drawn from OIP's range instead.
+    pub random_size: bool,
+    /// Handed out one per product, in step: product n takes colour n and code n.
+    pub colors: Vec<[u8; 3]>,
+    pub codes: Vec<i32>,
+    /// Draw each product's colour and code at random from the lists instead of walking them.
+    pub random_order: bool,
+    pub seed: u32,
+}
+
+/// A source pinned before 4.4d has no product parameters: it makes M3's 0.3 m carton, at the spec's 2.7 kg.
+const DEFAULT_SIZE: Real = 0.3;
+const DEFAULT_MASS: Real = 2.7;
+const DEFAULT_SEED: u32 = 1;
+
+impl Products {
+    /// M3's carton, unpainted and without a code.
+    pub fn carton() -> Self {
+        Self {
+            size: Vector::splat(DEFAULT_SIZE),
+            mass: DEFAULT_MASS,
+            random_size: false,
+            colors: Vec::new(),
+            codes: Vec::new(),
+            random_order: false,
+            seed: DEFAULT_SEED,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Sink {
     pub id: String,
     pub exit: Exit,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Sensor {
-    pub id: String,
-    pub belt: usize,
-    /// Along the belt, from its entry; on a curve, the angle into its arc, in radians.
-    pub at: Real,
-    pub range: Real,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -118,6 +149,7 @@ pub struct Layout {
     pub sources: Vec<Source>,
     pub sinks: Vec<Sink>,
     pub sensors: Vec<Sensor>,
+    pub scanners: Vec<Scanner>,
 }
 
 impl Layout {
@@ -134,18 +166,59 @@ impl Layout {
     }
 }
 
-fn param(inst: &Instance, def: &Definition, name: &str) -> f64 {
-    let value = inst.parameters.get(name).copied().or_else(|| {
-        def.parameters
-            .iter()
-            .find(|p| p.name == name)
-            .map(|p| p.default)
-    });
-    match value {
-        Some(ParamValue::Real(x)) => x,
-        Some(ParamValue::Int(n)) => n as f64,
-        Some(ParamValue::Bool(b)) => f64::from(u8::from(b)),
-        None => 0.0,
+/// A scalar parameter as a number, if the definition has it.
+pub(super) fn number(inst: &Instance, def: &Definition, name: &str) -> Option<f64> {
+    match inst.parameter(def, name)? {
+        ParamValue::Real(x) => Some(*x),
+        ParamValue::Int(n) => Some(*n as f64),
+        ParamValue::Bool(b) => Some(f64::from(u8::from(*b))),
+        ParamValue::List(_) => None,
+    }
+}
+
+pub(super) fn param(inst: &Instance, def: &Definition, name: &str) -> f64 {
+    number(inst, def, name).unwrap_or(0.0)
+}
+
+/// A list parameter's items; none if the definition does not have it.
+fn items<'a>(inst: &'a Instance, def: &'a Definition, name: &str) -> &'a [Item] {
+    match inst.parameter(def, name) {
+        Some(ParamValue::List(items)) => items,
+        _ => &[],
+    }
+}
+
+/// A COLOR_LIST parameter's colours; the format checked its items.
+pub(super) fn colors(inst: &Instance, def: &Definition, name: &str) -> Vec<[u8; 3]> {
+    (items(inst, def, name).iter())
+        .filter_map(|item| match item {
+            Item::Text(t) => rgb(t),
+            Item::Int(_) => None,
+        })
+        .collect()
+}
+
+fn products(inst: &Instance, def: &Definition) -> Products {
+    let real = |name, default: Real| number(inst, def, name).map_or(default, |x| x as Real);
+    Products {
+        size: Vector::new(
+            real("length", DEFAULT_SIZE),
+            real("width", DEFAULT_SIZE),
+            real("height", DEFAULT_SIZE),
+        ),
+        mass: real("mass", DEFAULT_MASS),
+        random_size: param(inst, def, "random_size") != 0.0,
+        // The format checked both lists' items.
+        colors: colors(inst, def, "colors"),
+        codes: (items(inst, def, "codes").iter())
+            .filter_map(|item| match item {
+                Item::Int(n) => i32::try_from(*n).ok(),
+                Item::Text(_) => None,
+            })
+            .collect(),
+        random_order: param(inst, def, "random_order") != 0.0,
+        // A DINT seed's bits, as mulberry32 takes a 32-bit state.
+        seed: number(inst, def, "seed").map_or(DEFAULT_SEED, |n| n as i32 as u32),
     }
 }
 
@@ -213,6 +286,10 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                     | "twinova.source/1"
                     | "twinova.sink/1"
                     | "twinova.sensor_diffuse/1"
+                    | "twinova.sensor_through_beam/1"
+                    | "twinova.sensor_color/1"
+                    | "twinova.sensor_laser/1"
+                    | "twinova.scanner_barcode/1"
             )
         })
         .map(|(i, d)| format!("{} ({})", i.id, d.id))
@@ -283,6 +360,7 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
     let mut sources = Vec::new();
     let mut sinks = Vec::new();
     let mut sensors = Vec::new();
+    let mut scanners = Vec::new();
     for (inst, def) in &instances {
         match def.generator.as_str() {
             "twinova.source/1" => sources.push(Source {
@@ -291,6 +369,7 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                 interval_ns: param(inst, def, "interval") as i64,
                 first_ns: param(inst, def, "first_arrival") as i64,
                 max_count: param(inst, def, "max_count") as i64,
+                products: products(inst, def),
             }),
             "twinova.sink/1" => {
                 let what = format!("{}.in", inst.id);
@@ -312,22 +391,12 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
                     exit,
                 });
             }
-            "twinova.sensor_diffuse/1" => {
-                let (host, at) = devices::mount(project, &inst.id)?;
-                let belt = out.belt(host).ok_or_else(|| {
-                    format!("{} is mounted on {host}, which is not a belt", inst.id)
-                })?;
-                let at = at as Real;
-                sensors.push(Sensor {
-                    id: inst.id.clone(),
-                    belt,
-                    at: if out.belts[belt].arc.is_some() {
-                        at.to_radians()
-                    } else {
-                        at
-                    },
-                    range: param(inst, def, "range") as Real,
-                });
+            "twinova.sensor_diffuse/1"
+            | "twinova.sensor_through_beam/1"
+            | "twinova.sensor_color/1"
+            | "twinova.sensor_laser/1" => sensors.push(sensors::sensor(project, &out, inst, def)?),
+            "twinova.scanner_barcode/1" => {
+                scanners.push(sensors::scanner(project, &out, inst, def)?)
             }
             _ => {}
         }
@@ -335,5 +404,6 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
     out.sources = sources;
     out.sinks = sinks;
     out.sensors = sensors;
+    out.scanners = scanners;
     Ok(out)
 }

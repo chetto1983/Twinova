@@ -2,8 +2,8 @@
   // The 3D view of a project: each instance as OIP's generator draws its family (families.ts), or as its stand-in
   // shape sized from its parameters (project.ts, shapeOf), at its pose, the selected one highlighted; each moving
   // device's link at its position (a transfer's or a stopper's lift, a pusher's reach, a turntable's angle), a belt's
-  // fabric moved by its travel, and the cartons of the running line at the poses the physics gives them (engine.rs
-  // `Snapshot.actuators`, `Snapshot.conveyors`, `Snapshot.cartons`).
+  // fabric moved by its travel, and the products of the running line at the poses the physics gives them, each a unit
+  // box scaled to its size in its paint (engine.rs `Snapshot.actuators`, `Snapshot.conveyors`, `Snapshot.cartons`).
   import * as THREE from "three";
   import { drawnOf, type Motion } from "./families";
   import { materialOf } from "./materials";
@@ -11,7 +11,7 @@
   import { frame, shapeOf, type ProjectView } from "./project";
   import { yawQuat } from "./oip/parts/part";
   import { pusherLamps } from "./oip/parts/pusher";
-  import { CARTON_SIZE_M, scaled, scrollOffset, type Carton, type Snapshot } from "./snapshot";
+  import { paintOf, scaled, scrollOffset, type Carton, type Snapshot } from "./snapshot";
   import Viewport from "./Viewport.svelte";
 
   let {
@@ -34,8 +34,20 @@
   const content = new THREE.Group();
   const products = new THREE.Group();
   scene.add(content, products);
-  const cartonGeometry = new THREE.BoxGeometry(CARTON_SIZE_M, CARTON_SIZE_M, CARTON_SIZE_M);
+  const cartonGeometry = new THREE.BoxGeometry(1, 1, 1);
   const cartonMaterial = new THREE.MeshStandardMaterial({ roughness: 0.9 });
+  /** One material per paint (paintOf), the unpainted one the theme's. */
+  const paints = new Map<string, THREE.MeshStandardMaterial>([["unpainted", cartonMaterial]]);
+
+  function paint(color: Carton["color"]): THREE.MeshStandardMaterial {
+    const key = paintOf(color);
+    let material = paints.get(key);
+    if (!material) {
+      material = new THREE.MeshStandardMaterial({ roughness: 0.9, color: new THREE.Color(key) });
+      paints.set(key, material);
+    }
+    return material;
+  }
   /** One mesh per carton id, kept while the carton lives, so a snapshot moves meshes instead of rebuilding them. */
   const meshes = new Map<number, THREE.Mesh>();
   /** Each moving device's link group, and how it follows the device's position. */
@@ -171,7 +183,8 @@
     for (const c of cartons) {
       let mesh = meshes.get(c.id);
       if (!mesh) {
-        mesh = new THREE.Mesh(cartonGeometry, cartonMaterial);
+        mesh = new THREE.Mesh(cartonGeometry, paint(c.color));
+        mesh.scale.set(...c.size);
         mesh.castShadow = true;
         meshes.set(c.id, mesh);
         products.add(mesh);
@@ -185,7 +198,7 @@
   $effect(() => () => {
     dispose();
     cartonGeometry.dispose();
-    cartonMaterial.dispose();
+    for (const material of paints.values()) material.dispose();
   });
 </script>
 

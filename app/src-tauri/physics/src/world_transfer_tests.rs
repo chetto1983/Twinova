@@ -52,6 +52,7 @@ fn line(side_sink: bool, cartons: i64, interval_ms: i64) -> World {
         sources: vec![source(0, 1_000_000, interval_ms * 1_000_000, cartons)],
         sinks,
         sensors: vec![],
+        scanners: vec![],
     });
     for k in 0..3 {
         w.set_belt_running(k, true);
@@ -107,7 +108,7 @@ fn a_roller_conveyor_carries_at_its_surface_speed() {
     });
     w.set_belt_running(0, true);
     run(&mut w, 2000);
-    let v = w.world.bodies[w.cartons[0].1].linvel();
+    let v = w.world.bodies[w.products[0].body].linvel();
     assert!((v.x - 0.5).abs() < 0.005 && v.z.abs() < 1e-3, "{v:?}");
 }
 
@@ -334,7 +335,9 @@ fn a_line_with_a_transfer_gives_equal_bits_on_every_platform() {
     assert_eq!(first, fingerprint());
     // Pinned on Linux x86-64 (2026-11-10, Coulomb friction, one solver iteration), equal in dev and release; the
     // windows-2022 CI job runs this test too.
-    assert_eq!(first, 0x2c22_4abf_a5e9_0d6c, "{first:#018x}");
+    // Re-pinned 2026-11-11 for 4.4d: the fingerprint covers each product's size, colour, code and read mark, and the
+    // carton's mass is set (2.7 kg) instead of following from its rounded core (1.76 kg).
+    assert_eq!(first, 0x021c_4252_434d_2f94, "{first:#018x}");
 }
 
 /// Two transfers on one roller conveyor, the second carrying to the right: only the raised one takes the carton, at
@@ -372,6 +375,7 @@ fn each_transfer_answers_for_its_own_deck_and_side() {
             },
         ],
         sensors: vec![],
+        scanners: vec![],
     });
     assert_eq!((w.transfers(), w.transfer_id(1)), (2, "second"));
     w.set_transfer(1, 0.25, true);
@@ -387,8 +391,8 @@ fn each_transfer_answers_for_its_own_deck_and_side() {
         travel = (travel + 1).min(RAISE_MS);
         w.set_transfer(1, travel as Real / RAISE_MS as Real, true);
         w.step();
-        if let Some(c) = w.cartons.first() {
-            let body = &w.world.bodies[c.1];
+        if let Some(c) = w.products.first() {
+            let body = &w.world.bodies[c.body];
             if lateral.is_none() && body.translation().z >= 0.1 {
                 lateral = Some(body.linvel().z);
             }

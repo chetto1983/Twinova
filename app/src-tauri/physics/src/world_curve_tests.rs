@@ -4,7 +4,7 @@
 use super::tests::{belt, fixture, run, source};
 use super::*;
 use crate::layout::layout;
-use crate::layout::{Arc, BELT_GRIP, Belt, Sensor, Sink};
+use crate::layout::{Arc, BELT_GRIP, Belt, Sensor, SensorKind, Sink};
 
 /// OIP's roller grip (`CONVEYOR_FRICTION` 0.42 on a roller surface).
 const ROLLER_GRIP: Real = 0.42;
@@ -61,7 +61,7 @@ fn leaving(w: &mut World, at: Real) -> (Real, Real, Real) {
     let frame = w.layout.belts[2].pose;
     for _ in 0..20_000 {
         w.step();
-        let handle = w.cartons[0].1;
+        let handle = w.products[0].body;
         let body = &w.world.bodies[handle];
         let p = frame.inverse_transform_point(body.translation());
         if p.x >= at {
@@ -208,7 +208,7 @@ fn a_sensor_on_a_curve_sees_a_carton_at_its_angle() {
                 id: "s".into(),
                 belt: 0,
                 at,
-                range: 0.7,
+                kind: SensorKind::Diffuse { range: 0.7 },
             }],
             ..Layout::default()
         })
@@ -227,14 +227,18 @@ fn a_sensor_on_a_curve_sees_a_carton_at_its_angle() {
             Some(body),
         );
         w.world.step_with_events(&w.hooks, &());
-        assert_eq!(w.sensor(0), seen, "{shift} m along the arc");
+        assert_eq!(
+            (w.reading(0) == Reading::Detected(true)),
+            seen,
+            "{shift} m along the arc"
+        );
     }
     let mut w = world();
     w.set_belt_running(0, true);
     let mut on = 0;
     for _ in 0..5000 {
         w.step();
-        on += usize::from(w.sensor(0));
+        on += usize::from(w.reading(0) == Reading::Detected(true));
     }
     // 0.3 m of carton, and a little more across a radial beam, at 0.5 m/s.
     assert!((600..800).contains(&on), "seen for {on} ms");
@@ -290,5 +294,7 @@ fn a_line_with_curves_gives_equal_bits_on_every_platform() {
     assert_eq!(first, fingerprint());
     // Pinned on Linux x86-64 (2026-11-10, Coulomb friction, one solver iteration), equal in dev and release; the
     // windows-2022 CI job runs this test too.
-    assert_eq!(first, 0xaba0_61e5_4b1d_fbe2, "{first:#018x}");
+    // Re-pinned 2026-11-11 for 4.4d: the fingerprint covers each product's size, colour, code and read mark, and the
+    // carton's mass is set (2.7 kg) instead of following from its rounded core (1.76 kg).
+    assert_eq!(first, 0x94df_f910_2f56_7273, "{first:#018x}");
 }

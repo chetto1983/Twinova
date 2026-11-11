@@ -18,7 +18,7 @@ fn sort_line(parameters: &[(&str, ParamValue)], signals: &[(&str, &str)]) -> Fie
         .find(|i| i.id == "turntable")
         .unwrap();
     for (name, value) in parameters {
-        turntable.parameters.insert((*name).into(), *value);
+        turntable.parameters.insert((*name).into(), value.clone());
     }
     for (name, address) in signals {
         turntable.signals.insert((*name).into(), (*address).into());

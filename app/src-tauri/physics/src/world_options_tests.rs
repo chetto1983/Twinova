@@ -21,7 +21,7 @@ fn one_conveyor(b: Belt, running: bool) -> World {
 
 /// The carton's position and velocity in the conveyor's frame.
 fn local(w: &World) -> (Vector, Vector) {
-    let (frame, body) = (w.layout.belts[0].pose, &w.world.bodies[w.cartons[0].1]);
+    let (frame, body) = (w.layout.belts[0].pose, &w.world.bodies[w.products[0].body]);
     (
         frame.inverse_transform_point(body.translation()),
         frame.rotation.inverse() * body.linvel(),

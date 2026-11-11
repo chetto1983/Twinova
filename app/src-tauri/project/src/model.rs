@@ -77,15 +77,54 @@ pub enum ParamType {
     BOOL,
     /// Written as integer nanoseconds.
     TIME,
+    /// A list of DINT, such as the codes a source hands out.
+    #[serde(rename = "DINT_LIST")]
+    DintList,
+    /// A list of `#rrggbb` colours, lowercase.
+    #[serde(rename = "COLOR_LIST")]
+    ColorList,
+}
+
+impl ParamType {
+    /// The type as the format writes it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::REAL => "REAL",
+            Self::DINT => "DINT",
+            Self::BOOL => "BOOL",
+            Self::TIME => "TIME",
+            Self::DintList => "DINT_LIST",
+            Self::ColorList => "COLOR_LIST",
+        }
+    }
 }
 
 /// A parameter value as JSON holds it. Integers stay integers, so a TIME in ns or a DINT is exact.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ParamValue {
     Bool(bool),
     Int(i64),
     Real(f64),
+    List(Vec<Item>),
+}
+
+/// An item of a list parameter.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Item {
+    Int(i64),
+    Text(String),
+}
+
+/// The red, green and blue of a `#rrggbb` colour, lowercase as the format stores it.
+pub fn rgb(text: &str) -> Option<[u8; 3]> {
+    let hex = text.strip_prefix('#')?;
+    if hex.len() != 6 || !hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')) {
+        return None;
+    }
+    let channel = |k: usize| u8::from_str_radix(&hex[2 * k..2 * k + 2], 16).ok();
+    Some([channel(0)?, channel(1)?, channel(2)?])
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -207,6 +246,18 @@ pub struct Instance {
     pub signals: BTreeMap<String, String>,
 }
 
+impl Instance {
+    /// A parameter's value: the instance's override, else its definition's default.
+    pub fn parameter<'a>(&'a self, def: &'a Definition, name: &str) -> Option<&'a ParamValue> {
+        self.parameters.get(name).or_else(|| {
+            def.parameters
+                .iter()
+                .find(|p| p.name == name)
+                .map(|p| &p.default)
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Group {
@@ -248,4 +299,53 @@ pub struct PanelButton {
     pub name: String,
     /// A Bit address in the input area, as the controller sees it.
     pub address: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parameter(name: &str, default: f64) -> ParameterDef {
+        ParameterDef {
+            name: name.into(),
+            ty: ParamType::REAL,
+            unit: None,
+            default: ParamValue::Real(default),
+            min: None,
+            max: None,
+        }
+    }
+
+    #[test]
+    fn a_parameter_is_the_instances_override_else_its_own_default() {
+        let def = Definition {
+            id: "twinova.belt".into(),
+            version: 1,
+            origin: Origin {
+                app: "0.1.0".into(),
+            },
+            generator: "twinova.belt/1".into(),
+            parameters: vec![parameter("length", 3.0), parameter("speed", 0.5)],
+            signals: vec![],
+            ports: vec![],
+            nodes: vec![],
+            joints: vec![],
+            behaviour: None,
+        };
+        let mut inst = Instance {
+            id: "belt_a".into(),
+            name: "Belt A".into(),
+            definition: def.key(),
+            position: [0.0; 3],
+            rotation: [0.0, 0.0, 0.0, 1.0],
+            parameters: BTreeMap::new(),
+            signals: BTreeMap::new(),
+        };
+        assert_eq!(inst.parameter(&def, "speed"), Some(&ParamValue::Real(0.5)));
+        assert_eq!(inst.parameter(&def, "length"), Some(&ParamValue::Real(3.0)));
+        assert_eq!(inst.parameter(&def, "width"), None);
+        inst.parameters
+            .insert("speed".into(), ParamValue::Real(0.25));
+        assert_eq!(inst.parameter(&def, "speed"), Some(&ParamValue::Real(0.25)));
+    }
 }
