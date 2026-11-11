@@ -7147,6 +7147,7 @@ dependencies = [
 name = "twinova-physics"
 version = "0.1.0"
 dependencies = [
+ "glamx",
  "rapier3d",
  "serde",
  "twinova-project",

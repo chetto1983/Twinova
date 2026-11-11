@@ -7,7 +7,7 @@ use twinova_project::Project;
 use twinova_project::model::{Connection, Side};
 
 use super::devices::{Fit, shape_problem};
-use super::{Belt, Layout, Opening, faces};
+use super::{Belt, Layout, Opening, conveyor, faces};
 
 /// How far the spur's exit face may stand off the flank (OIP's `GUARD_CONTACT_TOLERANCE`, `src/core/types/base.ts` at
 /// `0572868`), and how far before it, rounding aside.
@@ -64,6 +64,29 @@ pub(super) fn merges(project: &Project, out: &mut Layout) -> Result<(), String> 
         out.belts[spur].closed_exit = false;
     }
     Ok(())
+}
+
+/// Whether `spur`'s merge onto `host` at `at`, on its right or left side, still holds: its exit face meets the flank
+/// as Build requires.
+pub(crate) fn merge_holds(project: &Project, spur: &str, host: &str, at: f64, side: Side) -> bool {
+    let belt = |id: &str| {
+        let inst = project.scene.instances.iter().find(|i| i.id == id)?;
+        conveyor(inst, &project.definitions[&inst.definition])
+    };
+    let (Some(s), Some(h)) = (belt(spur), belt(host)) else {
+        return false;
+    };
+    meeting(&h, faces(&s)[1], at as Real, side == Side::Right).is_none()
+}
+
+/// Every merge's problem, the first one, with the conveyors in the world: what Build would refuse.
+pub(crate) fn merge_problem(project: &Project) -> Option<String> {
+    let mut out = Layout::default();
+    for inst in &project.scene.instances {
+        out.belts
+            .extend(conveyor(inst, &project.definitions[&inst.definition]));
+    }
+    merges(project, &mut out).err()
 }
 
 /// Why a spur's `exit` face does not meet host `h`'s flank at `at`, on its right or left side, if it does not: at `at`

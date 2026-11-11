@@ -5,6 +5,7 @@
 pub mod interfaces;
 pub mod layout;
 pub mod path;
+pub mod snap;
 mod surfaces;
 pub mod world;
 

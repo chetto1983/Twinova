@@ -152,6 +152,11 @@ fn host_problem(project: &Project, host: &Belt, kind: Kind, out_right: bool) -> 
         .then(|| format!("whose {name} guard closes the {device}'s exit: turn {name}_guard off"))
 }
 
+/// Whether a spur may merge onto `host`'s flanks: a level, unskewed straight (layout_merge.rs).
+pub(crate) fn takes_spurs(project: &Project, host: &Belt) -> bool {
+    shape_problem(project, host, Fit::Straight, "spur").is_none()
+}
+
 /// The generators of the mounted devices `host` fits by its shape; Build also checks a side exit's guard.
 pub(crate) fn fitting(project: &Project, host: &Belt) -> Vec<&'static str> {
     [
