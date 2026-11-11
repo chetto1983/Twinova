@@ -72,15 +72,19 @@ and the colliders above as kinematic position-based bodies. Probe: the scratchpa
 
 **Stopper, blade raised at x = 2, a 4 m roller and three cartons:**
 
-| Host speed | Raise | Front against the blade | Residual v | Max tilt | Max rise | Released: at speed after |
-|---|---|---|---|---|---|---|
-| 0.5 m/s | 0.04 | −0.3 mm | 0 | 1.55° | 3.5 mm | 157 ms |
-| 1.0 | 0.04 | −0.6 mm | 0 | 6.55° | 14 mm | 247 ms |
-| 2.0 | 0.04 | −0.3 mm | 0 | 30° | 48 mm | 538 ms |
-| 0.5 | 0.15 | −0.2 mm | 0 | 0.25° | 1 mm | 191 ms |
-| 1.0 | 0.15 | −0.2 mm | 0 | 0.07° | 1 mm | 319 ms |
+| Host speed | Raise | Front against the blade | Residual v | Max tilt | Max rise |
+|---|---|---|---|---|---|
+| 0.5 m/s | 0.04 | −0.3 mm | 0 | 1.55° | 3.5 mm |
+| 1.0 | 0.04 | −0.6 mm | 0 | 6.55° | 14 mm |
+| 2.0 | 0.04 | −0.3 mm | 0 | 30° | 48 mm |
+| 0.5 | 0.15 | −0.2 mm | 0 | 0.25° | 1 mm |
+| 1.0 | 0.15 | −0.2 mm | 0 | 0.07° | 1 mm |
 
 - **It stops a queue dead:** the three cartons stand touching (1.835, 1.536, 1.236).
+- **Released, the front carton is at the host's speed 209 ms after the command** (amended in Task 1, 2026-11-11).
+  The blade's top passes the surface 67 ms into OIP's 0.15 s stroke of 0.09 m, then the rollers bring the carton to
+  0.5 m/s at μg in 121 ms. The probe's first figures (157–538 ms) lowered the blade 0.24 m in 150 ms, 2.7 times OIP's
+  stroke, and are withdrawn.
 - **OIP's default raise of 4 cm is low for this carton above 0.5 m/s.** The impact tips it over the blade's top. OIP's
   own demo raises 0.15.
 - **A blade raised under a carton throws it** (max rise 0.115 m, then on its side). OIP does the same; keeping the
@@ -136,7 +140,9 @@ What these probes do not prove:
 - **Behaviour** `StopperBehaviour`: `lift` slews linearly over `raise_time`, as the chain transfer's does. The native
   model poses the blade at `lift`.
 - **Physics:**
-  - OIP's collider: a kinematic box, 0.03 × (`raise_height` + 0.15) × the blade's width, carton grip 0.6.
+  - OIP's collider: a kinematic box, 0.03 × (`raise_height` + 0.15) × the blade's width.
+  - Its carton grip is √(0.6 × 0.5) = 0.548: OIP's ground friction against its box's, combined as Jolt does by their
+    geometric mean (amended in Task 1; the probe used 0.3).
   - OIP's `baseCollider` is not translated: it lies under the surface, where no carton reaches.
 - **Not taken:** `airPressureHeight`, which is a view offset; the view uses OIP's default.
 
@@ -153,13 +159,16 @@ What these probes do not prove:
   - **The push side's guard opens 0.75 m around the pusher, mesh and collider, as in OIP (decision 2).**
   - The exit side's guard must be off. As on the chain transfer, Build refuses otherwise and names the fix.
 - **Flow:** its `out` port is the side exit, to a sink (a chute) or to a conveyor.
+  - With neither, or with its sink blocked, that side has no wall (amended in Task 1). The paddle's stroke crosses that
+    edge, and a wall there crushed the carton against the paddle (measured). What it pushes there falls beside the
+    conveyor.
 - **Signals:**
   - `extend`: PLC output (OIP's tag).
   - `extended_fb` and `retracted_fb`: PLC inputs, the two ends of the stroke. These are Twinova's additions;
     `retracted_fb` is OIP's green lamp.
 - **Behaviour** `PusherBehaviour`: `reach` slews linearly over `push_time`. The native model poses the paddle at
   `reach × stroke`.
-- **Physics:** OIP's collider, a kinematic box 0.47 × 0.40 × 0.50, carton grip 0.6.
+- **Physics:** OIP's collider, a kinematic box 0.47 × 0.40 × 0.50, with the stopper's carton grip of 0.548.
 - **View:** OIP's machine, with its lamps from the snapshot's reach.
 
 ### `twinova.turntable@1`
@@ -208,7 +217,8 @@ What these probes do not prove:
 
 1. **Stopper.** At 0.5 m/s with OIP's defaults:
    - a queue of three cartons stands against the blade, the front one within 1 mm of it, at rest, tilted < 2°;
-   - lowered, the front carton runs on at the host's speed within 0.2 s of the command;
+   - lowered, the front carton runs on at the host's speed within 0.22 s of the command (amended in Task 1: 67 ms of
+     stroke to the surface and 121 ms at μg; measured 209 ms);
    - `raised_fb` follows the stroke.
 2. **Pusher.** At OIP's 0.25 s, a carton passing at 0.5 m/s is pushed onto a perpendicular takeaway and carried away
    upright (tilt at rest < 1°, max < 5°) and square (yaw ≤ 3°). `extended_fb` and `retracted_fb` follow the stroke.

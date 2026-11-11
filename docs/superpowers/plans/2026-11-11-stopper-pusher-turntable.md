@@ -72,7 +72,9 @@ recommended).
 3. **The stopper's mount position snaps to the gap between the drawn rollers nearest it.** It uses the roller view's
    pitch, 0.075, and its count rule (`roller.ts` `layoutRollers`), in Rust and in TS. The same table of cases tests
    both.
-4. **An unconnected pusher `out` gets a wall along its side exit,** as an unconnected chain transfer's does.
+4. **An unconnected pusher `out`, or a blocked sink there, has no wall** (amended in Task 1). The plan first gave it a
+   wall, as an unconnected chain transfer's. The paddle's stroke crosses that edge, and the wall crushed the carton
+   against the paddle.
 5. **`sort_line`'s turntable turns at 90°/s, not OIP's 20°/s**, so the run is short. Acceptance 3 is proved at 20°/s
    in the field's and the world's tests.
 6. **`sort_line` singulates on an infeed belt before the stopper's roller,** because the probe showed that a blade
@@ -114,18 +116,19 @@ recommended).
   unchanged.
 - [ ] Tests first (`world_stopper_tests.rs`, spec acceptance 1):
   - three cartons queue against a raised blade at 0.5 m/s (front within 1 mm, at rest, tilt < 2°);
-  - lowered, the front carton is at speed within 0.2 s;
+  - lowered, the front carton is at speed within 0.22 s (spec, amended);
   - layout refuses a stopper on a belt, a curve, an inclined or a skewed roller, and names the fix;
   - the mount snaps to the gap, on a table of cases.
 - [ ] Implement `Stopper` and `World::set_stopper(k, lift)`: OIP's blade 0.03 × (raise + 0.15) × (width − 0.03),
-  grip 0.6. The stroke is raise + 0.05, so lowered its top is 5 cm under the surface.
+  grip √(0.6 × 0.5). The stroke is raise + 0.05, so lowered its top is 5 cm under the surface.
 - [ ] Tests first (`world_pusher_tests.rs`, spec acceptance 2):
   - at 0.25 s a passing carton goes to a perpendicular takeaway upright (at rest < 1°, max < 5°) and square (≤ 3°);
-  - a sink on `out` collects it past the host's edge; with `out` unconnected a wall holds it;
+  - a sink on `out` collects it past the host's edge; with `out` unconnected or its sink blocked the carton falls
+    beside the conveyor;
   - the guard on its own side has a 0.75 m opening, collider pieces asserted in `path_tests.rs`;
   - layout refuses a pusher on a curve, an inclined or a skewed host, or with a guard on its exit side.
 - [ ] Implement `Pusher`, `Exit::Push` and `World::set_pusher(k, reach)`: OIP's paddle 0.47 × 0.40 × 0.50, its face
-  1 cm outside the frame, 0.047 above the surface, grip 0.6.
+  1 cm outside the frame, 0.047 above the surface, the same grip.
 - [ ] Gate: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test
   --workspace`; `cargo mutants` on the changed physics files; `bash scripts/check-file-size.sh`.
 - [ ] Commit `feat(physics): OIP's blade stop and pusher as kinematic bodies`.
