@@ -141,7 +141,7 @@ the native sensors (user), the carton's real mass, unpainted products and the le
   - The source definition of every valid fixture gains the product parameters (`migrate_fixtures_4_4d.py`), defaults
     M3's carton; a source pinned without them makes the carton too.
   - Commit `feat(physics): products with size, mass, colour and code`.
-- [ ] **Task 4: the four sensors in physics and the line.**
+- [x] **Task 4: the four sensors in physics and the line.**
   - Tests first:
     - through-beam: in between seen, past the receiver not;
     - colour: OIP's `colorSensorBehavior.test.ts` cases;

@@ -4,7 +4,7 @@
 use super::tests::{belt, fixture, run, source};
 use super::*;
 use crate::layout::layout;
-use crate::layout::{Arc, BELT_GRIP, Belt, Sensor, Sink};
+use crate::layout::{Arc, BELT_GRIP, Belt, Sensor, SensorKind, Sink};
 
 /// OIP's roller grip (`CONVEYOR_FRICTION` 0.42 on a roller surface).
 const ROLLER_GRIP: Real = 0.42;
@@ -208,7 +208,7 @@ fn a_sensor_on_a_curve_sees_a_carton_at_its_angle() {
                 id: "s".into(),
                 belt: 0,
                 at,
-                range: 0.7,
+                kind: SensorKind::Diffuse { range: 0.7 },
             }],
             ..Layout::default()
         })
@@ -227,14 +227,18 @@ fn a_sensor_on_a_curve_sees_a_carton_at_its_angle() {
             Some(body),
         );
         w.world.step_with_events(&w.hooks, &());
-        assert_eq!(w.sensor(0), seen, "{shift} m along the arc");
+        assert_eq!(
+            (w.reading(0) == Reading::Detected(true)),
+            seen,
+            "{shift} m along the arc"
+        );
     }
     let mut w = world();
     w.set_belt_running(0, true);
     let mut on = 0;
     for _ in 0..5000 {
         w.step();
-        on += usize::from(w.sensor(0));
+        on += usize::from(w.reading(0) == Reading::Detected(true));
     }
     // 0.3 m of carton, and a little more across a radial beam, at 0.5 m/s.
     assert!((600..800).contains(&on), "seen for {on} ms");

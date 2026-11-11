@@ -1,7 +1,8 @@
 //! A project's line, run in lockstep on virtual time (spec 2026-11-09-component-behaviour-design.md, "Transport with
 //! physics"; research 16: the fixed-slice lockstep of SIMIT's bus-synchronous mode). Every millisecond:
 //! 1. the physics step (`twinova_physics::World`);
-//! 2. the native models write the controller's inputs: diffuse sensors, sink counters, each conveyor's drive feedback
+//! 2. the native models write the controller's inputs: the sensors and barcode scanners (spec
+//!    2026-11-11-sensors-products-design.md), sink counters, each conveyor's drive feedback
 //!    (`drive.rs`: velocity, encoder and pulse of the millisecond just stepped), the `running` of a belt without a
 //!    behaviour;
 //! 3. the field cycle, which reads the controller's outputs and writes its inputs, the conveyors' surface speeds
@@ -11,7 +12,8 @@
 //! 4. the controller's scan, when its period is due.
 
 use trust_runtime::value::Value;
-use twinova_physics::{STEP_NS, World, layout};
+use twinova_physics::layout::SensorKind;
+use twinova_physics::{Reading, STEP_NS, World, layout};
 use twinova_project::Project;
 
 use crate::controller::{Controller, Port};
@@ -54,8 +56,10 @@ pub struct Line {
     belts: Vec<BeltIo>,
     /// The devices the field moves.
     devices: Vec<Device>,
-    /// Per layout sensor, the controller input its `detected` is bound to.
+    /// Per layout sensor, the controller input its reading is bound to: `detected`, `color` or `distance`.
     sensors: Vec<Option<Port>>,
+    /// Per layout scanner, the controller inputs its `read`, `count` and `code` are bound to.
+    scanners: Vec<[Option<Port>; 3]>,
     /// Per layout sink, the controller input its `count` is bound to.
     sinks: Vec<Option<Port>>,
     /// The controller outputs the field reads and the inputs it writes: the address as the field names it, and the
@@ -175,10 +179,18 @@ impl Line {
             let family = &project.definitions[&instance_of(project, &d.instance).definition].id;
             return Err(format!("{}: {family} needs its behaviour", d.instance));
         }
-        let sensors = layout
-            .sensors
-            .iter()
-            .map(|s| declared(&s.id, "detected"))
+        let sensors = (layout.sensors.iter())
+            .map(|s| {
+                let signal = match s.kind {
+                    SensorKind::Diffuse { .. } | SensorKind::ThroughBeam => "detected",
+                    SensorKind::Color { .. } => "color",
+                    SensorKind::Laser { .. } => "distance",
+                };
+                declared(&s.id, signal)
+            })
+            .collect();
+        let scanners = (layout.scanners.iter())
+            .map(|s| ["read", "count", "code"].map(|signal| declared(&s.id, signal)))
             .collect();
         let sinks = layout
             .sinks
@@ -204,6 +216,7 @@ impl Line {
             belts,
             devices,
             sensors,
+            scanners,
             sinks,
             commands,
             feedback,
@@ -251,7 +264,19 @@ impl Line {
         self.t_ns += STEP_NS;
         let controller = &mut self.controller;
         for (k, address) in self.sensors.iter().enumerate() {
-            input(controller, address, Value::Bool(self.world.sensor(k)))?;
+            let value = match self.world.reading(k) {
+                Reading::Detected(seen) => Value::Bool(seen),
+                // The image is bit-string typed: a DINT at %ID travels as a DWORD (measured 2026-11-08).
+                Reading::Color(index) => Value::DWord(index as u32),
+                Reading::Distance(metres) => real(metres),
+            };
+            input(controller, address, value)?;
+        }
+        for (k, [read, count, code]) in self.scanners.iter().enumerate() {
+            let scan = self.world.scanned(k);
+            input(controller, read, Value::Bool(scan.read))?;
+            input(controller, count, Value::DWord(scan.count))?;
+            input(controller, code, Value::DWord(scan.code as u32))?;
         }
         for (k, address) in self.sinks.iter().enumerate() {
             // The image is bit-string typed: a DINT at %ID travels as a DWORD (measured 2026-11-08).

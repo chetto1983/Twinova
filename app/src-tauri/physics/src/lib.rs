@@ -8,4 +8,4 @@ mod surfaces;
 pub mod world;
 
 pub use layout::{Layout, layout};
-pub use world::{Carton, STEP_NS, World};
+pub use world::{Carton, Reading, STEP_NS, Scan, World};

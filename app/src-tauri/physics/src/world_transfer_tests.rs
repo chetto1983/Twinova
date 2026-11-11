@@ -52,6 +52,7 @@ fn line(side_sink: bool, cartons: i64, interval_ms: i64) -> World {
         sources: vec![source(0, 1_000_000, interval_ms * 1_000_000, cartons)],
         sinks,
         sensors: vec![],
+        scanners: vec![],
     });
     for k in 0..3 {
         w.set_belt_running(k, true);
@@ -374,6 +375,7 @@ fn each_transfer_answers_for_its_own_deck_and_side() {
             },
         ],
         sensors: vec![],
+        scanners: vec![],
     });
     assert_eq!((w.transfers(), w.transfer_id(1)), (2, "second"));
     w.set_transfer(1, 0.25, true);

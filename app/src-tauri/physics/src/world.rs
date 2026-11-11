@@ -23,11 +23,15 @@ use crate::surfaces::{CARTON_FRICTION, Drive, Surfaces, surface};
 mod devices;
 #[path = "world_products.rs"]
 mod products;
+#[path = "world_sensors.rs"]
+mod sensors;
 #[cfg(test)]
 use devices::TRANSFER_BELOW;
 pub use devices::TRANSFER_STROKE;
 use devices::{Devices, side_exit, side_wall};
 use products::{Product, SourceState};
+use sensors::ScannerState;
+pub use sensors::{Reading, Scan, classify};
 
 pub const STEP_NS: i64 = 1_000_000;
 const STEP_S: Real = 0.001;
@@ -35,8 +39,6 @@ const STEP_S: Real = 0.001;
 #[cfg(test)]
 const CARTON_HALF: Real = 0.15;
 const WALL_HEIGHT: Real = 0.4;
-/// The beam of a diffuse sensor, above the running surface.
-const BEAM_HEIGHT: Real = 0.05;
 /// A product as the view draws it.
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Carton {
@@ -69,6 +71,7 @@ pub struct World {
     travels: Vec<f64>,
     /// The devices that move: chain transfers, stoppers and pushers.
     devices: Devices,
+    scanners: Vec<ScannerState>,
 }
 
 /// The wall across an exit: past a conveyor's end, or along a chain transfer's side. A pusher's side has none: its
@@ -161,6 +164,9 @@ impl World {
             .map(|s| SourceState::new(s.first_ns, s.products.seed))
             .collect();
         let sinks = layout.sinks.len();
+        let scanners = (layout.scanners.iter())
+            .map(|_| ScannerState::default())
+            .collect();
         Self {
             world,
             hooks,
@@ -176,6 +182,7 @@ impl World {
             travels: vec![0.0; surfaces.len()],
             surfaces,
             devices,
+            scanners,
         }
     }
 
@@ -256,7 +263,8 @@ impl World {
         self.sources.iter().map(|s| s.made as u64).sum()
     }
 
-    /// One millisecond: the physics step, then the sinks take what reached them and the sources add what is due.
+    /// One millisecond: the physics step, then the sinks take what reached them, the sources add what is due and the
+    /// scanners read.
     pub fn step(&mut self) {
         self.world.step_with_events(&self.hooks, &());
         self.t_ns += STEP_NS;
@@ -271,6 +279,7 @@ impl World {
         for source in 0..self.layout.sources.len() {
             self.feed(source);
         }
+        self.scan();
     }
 
     /// A product's position in a belt's frame.
@@ -316,26 +325,6 @@ impl World {
                     && p.y >= b.height - reach(Vector::Y)
             }
         }
-    }
-
-    /// Whether a carton crosses a diffuse sensor's beam: across its belt, at its mount, above the running surface.
-    pub fn sensor(&self, sensor: usize) -> bool {
-        let s = &self.layout.sensors[sensor];
-        let b = &self.layout.belts[s.belt];
-        let (frame, at) = match b.arc {
-            None => (b.pose, s.at),
-            Some(arc) => (b.pose * arc.frame(b.width, s.at), 0.0),
-        };
-        let origin = frame.transform_point(Vector::new(at, b.height + BEAM_HEIGHT, -b.width / 2.0));
-        let dir = frame.rotation * Vector::Z;
-        self.world
-            .cast_ray(
-                &Ray::new(origin, dir),
-                s.range,
-                true,
-                QueryFilter::only_dynamic(),
-            )
-            .is_some()
     }
 
     /// The products, by id, for the view and the tests.

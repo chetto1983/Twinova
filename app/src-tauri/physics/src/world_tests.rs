@@ -1,5 +1,5 @@
 use super::*;
-use crate::layout::{BELT_GRIP, Belt, Exit, Products, Sensor, Sink, Source, layout};
+use crate::layout::{BELT_GRIP, Belt, Exit, Products, Sensor, SensorKind, Sink, Source, layout};
 use std::path::Path;
 use twinova_project::storage::open_folder;
 
@@ -49,6 +49,7 @@ fn two_belts(speed_b: Real, cartons: i64) -> World {
             exit: Exit::End(1),
         }],
         sensors: vec![],
+        scanners: vec![],
     });
     w.set_belt_running(0, true);
     w.set_belt_running(1, true);
@@ -193,6 +194,7 @@ fn a_closed_exit_holds_products_instead_of_dropping_them() {
         sources: vec![source(0, 1_000_000, 0, 1)],
         sinks: vec![],
         sensors: vec![],
+        scanners: vec![],
     });
     assert_eq!(w.sinks(), 0);
     w.set_belt_running(0, true);
@@ -218,14 +220,15 @@ fn a_sensor_sees_a_carton_while_it_crosses_the_beam() {
             id: "eye".into(),
             belt: 0,
             at: 2.7,
-            range: 0.7,
+            kind: SensorKind::Diffuse { range: 0.7 },
         }],
+        scanners: vec![],
     });
     w.set_belt_running(0, true);
     let (mut on, mut off) = (None, None);
     for ms in 1..=8000 {
         w.step();
-        match (w.sensor(0), on, off) {
+        match ((w.reading(0) == Reading::Detected(true)), on, off) {
             (true, None, _) => on = Some(ms),
             (false, Some(_), None) => off = Some(ms),
             _ => {}
@@ -240,10 +243,10 @@ fn a_sensor_sees_a_carton_while_it_crosses_the_beam() {
         id: "short".into(),
         belt: 0,
         at: 2.7,
-        range: 0.1,
+        kind: SensorKind::Diffuse { range: 0.1 },
     };
     w.layout.sensors = vec![short];
-    assert!(!w.sensor(0));
+    assert!(!(w.reading(0) == Reading::Detected(true)));
 }
 
 #[test]
@@ -307,7 +310,7 @@ fn the_demo_lays_out_its_belt_source_sink_and_sensor() {
             id: "sensor_a".into(),
             belt: 0,
             at: 2.75,
-            range: 0.5
+            kind: SensorKind::Diffuse { range: 0.5 },
         }]
     );
 }
@@ -319,7 +322,7 @@ fn a_family_without_a_model_makes_the_line_unrunnable() {
         .definitions
         .get_mut("twinova.belt@1")
         .unwrap()
-        .generator = "twinova.sensor_through_beam/1".into();
+        .generator = "twinova.light_curtain/1".into();
     assert_eq!(
         layout(&project).unwrap_err(),
         "this build cannot run belt_a (twinova.belt): their families have no model yet (ROADMAP 4.4)"
@@ -408,20 +411,24 @@ fn a_sensor_reaches_as_far_as_its_range() {
                 id: "near".into(),
                 belt: 0,
                 at: CARTON_HALF,
-                range: 0.2,
+                kind: SensorKind::Diffuse { range: 0.2 },
             },
             Sensor {
                 id: "short".into(),
                 belt: 0,
                 at: CARTON_HALF,
-                range: 0.1,
+                kind: SensorKind::Diffuse { range: 0.1 },
             },
         ],
+        scanners: vec![],
     });
     run(&mut w, 100);
     // The beam starts at the belt's edge (z = -0.3); the carton spans z = -0.15..0.15.
-    assert!(w.sensor(0), "0.2 m reaches the carton");
-    assert!(!w.sensor(1), "0.1 m does not");
+    assert!(
+        (w.reading(0) == Reading::Detected(true)),
+        "0.2 m reaches the carton"
+    );
+    assert!(!(w.reading(1) == Reading::Detected(true)), "0.1 m does not");
 }
 
 #[test]
@@ -520,6 +527,7 @@ fn a_sink_takes_only_what_reaches_its_own_belt() {
             exit: Exit::End(0),
         }],
         sensors: vec![],
+        scanners: vec![],
     });
     w.set_belt_running(1, true);
     run(&mut w, 10_000);
