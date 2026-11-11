@@ -30,6 +30,8 @@ twinova-project = { path = "project" }
 # The run engine (spec 2026-11-11-agent-server-design.md), a crate of this workspace without Tauri, which the agent
 # server shares.
 twinova-engine = { path = "engine" }
+# The editor's interfaces and joins (spec 2026-11-11-snapping-design.md), built by the line's own physics geometry.
+twinova-physics = { path = "physics" }
 
 [dev-dependencies]
 # mock_app for the command tests (src/commands_tests.rs), as in chetto1983/ModbusTool.

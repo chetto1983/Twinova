@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::commands::{AppState, build};
-use crate::project_commands::{FlowView, MountView, open_project, save_project};
+use crate::project_commands::{FlowView, MergeView, MountView, open_project, save_project};
 use serde_json::{from_value, json};
 use std::path::Path;
 use tauri::Manager;
@@ -263,4 +263,101 @@ fn the_catalogue_lists_the_library_in_its_groups() {
         (entries[14].key.as_str(), entries[14].group),
         ("twinova.sink@1", Group::Flow)
     );
+}
+
+/// Two belts from a new project, the second scattered: `belt_1` at the origin, `belt_2` elsewhere and turned.
+fn two_belts(app: &tauri::App<MockRuntime>) {
+    new_project(app.state()).unwrap();
+    for (x, z) in [(0.0, 0.0), (5.0, 4.0)] {
+        send(
+            app,
+            json!({ "op": "place", "family": "twinova.belt@1", "position": [x, 0, z], "rotation": [0, 0.5, 0, 0.8660254] }),
+        )
+        .unwrap();
+    }
+    send(
+        app,
+        json!({ "op": "move", "id": "belt_1", "position": [0, 0, 0], "rotation": NO_TURN }),
+    )
+    .unwrap();
+}
+
+/// Snapping through the command (spec 2026-11-11-snapping-design.md): a join poses the part, sets the flow and says
+/// what else it changed; a move that separates it drops the flow; each is one undo step.
+#[test]
+fn joins_and_moves_through_the_command() {
+    let app = app();
+    two_belts(&app);
+    let joined = send(
+        &app,
+        json!({ "op": "join", "id": "belt_2", "end": "in", "peer": ["belt_1", "out"], "gap": 0.02 }),
+    )
+    .unwrap();
+    let flow = FlowView {
+        from: ("belt_1".into(), "out".into()),
+        to: ("belt_2".into(), "in".into()),
+    };
+    assert_eq!(joined.flows, [flow]);
+    assert_eq!(joined.notice, None);
+    let b = joined.instances.iter().find(|i| i.id == "belt_2").unwrap();
+    assert!(
+        (b.position[0] - (3.0 + 0.085 + 0.02 + 0.085)).abs() < 1e-6,
+        "{:?}",
+        b.position
+    );
+    let ends = &joined.interfaces["belt_2"].ends;
+    assert_eq!(
+        ends.iter().map(|e| e.name.as_str()).collect::<Vec<_>>(),
+        ["in", "out"]
+    );
+    assert!(joined.interfaces["belt_1"].host.as_ref().unwrap().spurs);
+    let away = send(
+        &app,
+        json!({ "op": "move", "id": "belt_2", "position": [3.5, 0, 0], "rotation": NO_TURN }),
+    )
+    .unwrap();
+    assert!(away.flows.is_empty(), "0.23 m apart: the join broke");
+    let back = undo(app.state()).unwrap();
+    assert_eq!(back.flows.len(), 1);
+    send(
+        &app,
+        json!({ "op": "set_parameter", "id": "belt_1", "name": "height", "value": 0.9 }),
+    )
+    .unwrap();
+    let raised = send(
+        &app,
+        json!({ "op": "join", "id": "belt_2", "end": "in", "peer": ["belt_1", "out"], "gap": 0 }),
+    )
+    .unwrap();
+    assert_eq!(
+        raised.notice.as_deref(),
+        Some("belt_2's height is now 0.900 m, to meet it")
+    );
+    let refused = send(
+        &app,
+        json!({ "op": "join", "id": "belt_2", "end": "in", "peer": ["belt_1", "in"], "gap": 0 }),
+    );
+    assert_eq!(
+        refused.unwrap_err(),
+        "belt_2.in and belt_1.in both take products in"
+    );
+}
+
+#[test]
+fn a_spur_merges_through_the_command() {
+    let app = app();
+    two_belts(&app);
+    let merged = send(
+        &app,
+        json!({ "op": "merge", "spur": "belt_2", "host": "belt_1", "at": 1.5, "side": "left", "gap": 0 }),
+    )
+    .unwrap();
+    let merge = MergeView {
+        spur: "belt_2".into(),
+        host: "belt_1".into(),
+        at: 1.5,
+        side: twinova_project::model::Side::Left,
+    };
+    assert_eq!(merged.merges, [merge]);
+    assert!(undo(app.state()).unwrap().merges.is_empty());
 }

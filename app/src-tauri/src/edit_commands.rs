@@ -5,10 +5,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::State;
+use twinova_physics::snap;
 use twinova_project::Project;
 use twinova_project::edit;
 use twinova_project::library::{self, Group};
-use twinova_project::model::{Controller, Quat, Scene, Vec3};
+use twinova_project::model::{Controller, Quat, Scene, Side, Vec3};
 
 use crate::project_commands::{Current, ProjectState, ProjectView, replace, view};
 
@@ -58,10 +59,26 @@ pub enum Edit {
         port: String,
         peer: Option<(String, String)>,
     },
+    /// `id`'s `end` posed to face `peer`'s end across `gap` metres, and joined (spec 2026-11-11-snapping-design.md).
+    Join {
+        id: String,
+        end: String,
+        peer: (String, String),
+        gap: f64,
+    },
+    /// Spur `spur` posed square onto `host`'s flank `at` along its run on `side`, `gap` metres off, and merged.
+    Merge {
+        spur: String,
+        host: String,
+        at: f64,
+        side: Side,
+        gap: f64,
+    },
 }
 
-fn apply(project: &mut Project, op: Edit) -> Result<(), String> {
-    match op {
+/// Applies `op`; returns the notice of what it changed besides what it was asked.
+fn apply(project: &mut Project, op: Edit) -> Result<Option<String>, String> {
+    let done = match op {
         Edit::Place {
             family,
             position,
@@ -71,7 +88,8 @@ fn apply(project: &mut Project, op: Edit) -> Result<(), String> {
             id,
             position,
             rotation,
-        } => edit::move_instance(project, &id, position, Some(rotation)),
+        } => edit::move_instance(project, &id, position, Some(rotation))
+            .map(|()| snap::moved(project, &id)),
         Edit::Remove { id } => edit::remove_instance(project, &id),
         Edit::Rename { id, name } => edit::set_name(project, &id, &name),
         Edit::SetParameter { id, name, value } => {
@@ -94,17 +112,31 @@ fn apply(project: &mut Project, op: Edit) -> Result<(), String> {
             &port,
             peer.as_ref().map(|(i, p)| (i.as_str(), p.as_str())),
         ),
-    }
+        Edit::Join { id, end, peer, gap } => {
+            return snap::join(project, (&id, &end), (&peer.0, &peer.1), gap);
+        }
+        Edit::Merge {
+            spur,
+            host,
+            at,
+            side,
+            gap,
+        } => return snap::merge(project, &spur, (&host, at, side), gap),
+    };
+    done.map(|()| None)
 }
 
 #[tauri::command]
 pub fn edit(state: State<'_, ProjectState>, op: Edit) -> Result<ProjectView, String> {
     let mut guard = state.lock()?;
     let current = &mut *guard;
-    current
+    let notice = current
         .history
         .apply(&mut current.project, |p| apply(p, op))?;
-    Ok(view(current, Vec::new(), false))
+    Ok(ProjectView {
+        notice,
+        ..view(current, Vec::new(), false)
+    })
 }
 
 #[tauri::command]

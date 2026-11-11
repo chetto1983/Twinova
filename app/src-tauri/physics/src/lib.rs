@@ -3,6 +3,7 @@
 //! and the state fingerprint can be compared between Linux and Windows.
 
 pub mod interfaces;
+pub mod interfaces_view;
 pub mod layout;
 pub mod path;
 pub mod snap;

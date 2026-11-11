@@ -18,6 +18,8 @@ use twinova_project::model::{Connection, Definition, Endpoint, Instance, PanelBu
 use twinova_project::storage::{open_folder, save_folder};
 use twinova_project::{Opened, Project};
 
+use twinova_physics::interfaces_view::{InterfacesView, interfaces_view};
+
 pub struct ProjectState {
     current: Mutex<Current>,
     /// The folder named on the command line, until the webview asks for it.
@@ -114,6 +116,10 @@ pub struct ProjectView {
     pub flows: Vec<FlowView>,
     /// Each spur merging onto a straight's flank, so the view opens the host's guard there as Build does.
     pub merges: Vec<MergeView>,
+    /// Each instance's ends and rail, for snapping.
+    pub interfaces: BTreeMap<String, InterfacesView>,
+    /// What the last edit changed besides what it was asked, such as a joined conveyor's height.
+    pub notice: Option<String>,
     pub can_undo: bool,
     pub can_redo: bool,
 }
@@ -209,6 +215,8 @@ pub(crate) fn view(
         mounts: mounts(&current.project),
         flows: flows(&current.project),
         merges: merges(&current.project),
+        interfaces: interfaces_view(&current.project),
+        notice: None,
         can_undo: current.history.can_undo(),
         can_redo: current.history.can_redo(),
     }
