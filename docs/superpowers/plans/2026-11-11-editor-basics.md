@@ -134,7 +134,7 @@ Rust 2024 (`twinova-project`, the app, `twinova-agent`), Tauri 2, Svelte 5, thre
   - The inspector's fields by type; signals; flows and mounts.
   - Vitest on the field helpers; i18n.
   - Commit `feat(view): the catalogue and the editable inspector`.
-- [ ] **Task 6: picking and the gizmo.**
+- [x] **Task 6: picking and the gizmo.**
   - Ids on the instance groups; the `Raycaster`; `TransformControls`, translate (x, z) and rotate (+Y, 15°), W and E.
   - Delete, Ctrl+Z, Ctrl+Y.
   - Measure on WebKitGTK (here) and WebView2 (CI E2E).

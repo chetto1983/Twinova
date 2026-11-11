@@ -1,12 +1,13 @@
 <script lang="ts">
   // The catalogue (spec 2026-11-11-editor-basics-design.md, "The view"): the library's families by group. A click
-  // places one in the scene, pinning its definition in the project; dragging one into the view is 4.5a's Task 6.
+  // places one in the scene, pinning its definition in the project; pressed and released over the 3D view, it lands
+  // there. Pointer events, not HTML5 drag and drop, so the view keeps its own pointer handling (OIP does the same).
   import { onMount } from "svelte";
   import { m } from "../paraglide/messages.js";
   import { catalogue, type CatalogueEntry } from "./backend";
   import { familyLabel } from "./project";
 
-  let { onPlace }: { onPlace: (key: string) => void } = $props();
+  let { onPlace, onDrag }: { onPlace: (key: string) => void; onDrag: (key: string) => void } = $props();
 
   let entries = $state<CatalogueEntry[]>([]);
   const GROUPS = [
@@ -28,8 +29,14 @@
       <h3 class="sub">{title()}</h3>
       <div class="cards">
         {#each entries.filter((e) => e.group === group) as entry (entry.key)}
-          <button class="btn card" title={entry.key} onclick={() => onPlace(entry.key)}>{familyLabel(entry.key)}</button
+          <button
+            class="btn card"
+            title={entry.key}
+            onpointerdown={() => onDrag(entry.key)}
+            onclick={() => onPlace(entry.key)}
           >
+            {familyLabel(entry.key)}
+          </button>
         {/each}
       </div>
     {/each}

@@ -17,7 +17,9 @@
   import ProjectMenu from "./lib/ProjectMenu.svelte";
   import ProjectScene from "./lib/ProjectScene.svelte";
   import SceneTree from "./lib/SceneTree.svelte";
-  import { frame, type Edit, type ProjectView } from "./lib/project";
+  import { frame, type Edit, type ProjectView, type Quat, type Vec3 } from "./lib/project";
+  import type { GizmoMode } from "./lib/sceneEditing";
+  import { shortcutOf } from "./lib/shortcuts";
   import twinovaMark from "./assets/twinova-mark.svg";
 
   let project = $state<ProjectView | null>(null);
@@ -34,6 +36,11 @@
   let warnings = $state<string[]>([]);
   /** The scene was edited since the last Build. */
   let changed = $state(false);
+  /** Counts the projects shown, so the view frames each when it opens and not at every edit. */
+  let framing = $state(0);
+  let mode = $state<GizmoMode>("translate");
+  /** The catalogue family being dragged into the view. */
+  let dragging = $state<string | null>(null);
 
   $effect(() => {
     document.documentElement.dataset.theme = theme;
@@ -68,6 +75,7 @@
   async function showProject(next: ProjectView): Promise<void> {
     if (running) await toggleRun();
     project = next;
+    framing += 1;
     sources = sourcesOf(next);
     selected = null;
     snapshot = null;
@@ -106,6 +114,25 @@
     void edit({ op: "place", family, position: [x, 0, z], rotation: [0, 0, 0, 1] });
   }
 
+  function move(id: string, position: Vec3, rotation: Quat): void {
+    void edit({ op: "move", id, position, rotation });
+  }
+
+  function drop(family: string, position: Vec3): void {
+    dragging = null;
+    void edit({ op: "place", family, position, rotation: [0, 0, 0, 1] });
+  }
+
+  function onKey(event: KeyboardEvent): void {
+    const shortcut = shortcutOf(event);
+    if (!shortcut || !project) return;
+    event.preventDefault();
+    if (shortcut === "undo" && project.can_undo) void step(projects.undo);
+    else if (shortcut === "redo" && project.can_redo) void step(projects.redo);
+    else if (shortcut === "remove" && selected) void edit({ op: "remove", id: selected });
+    else if (shortcut === "translate" || shortcut === "rotate") mode = shortcut;
+  }
+
   async function step(action: () => Promise<ProjectView>): Promise<void> {
     const next = await attempt(action);
     if (next) showEdited(next);
@@ -141,6 +168,8 @@
     return () => listeners.forEach((l) => l.then((unlisten) => unlisten()));
   });
 </script>
+
+<svelte:window onkeydown={onKey} onpointerup={() => setTimeout(() => (dragging = null))} />
 
 <div class="shell">
   <header class="top">
@@ -244,12 +273,18 @@
             cartons={snapshot?.cartons ?? []}
             actuators={snapshot?.actuators ?? []}
             conveyors={snapshot?.conveyors ?? []}
+            {framing}
+            {mode}
+            dropping={dragging}
+            onSelect={(id) => (selected = id)}
+            onMove={move}
+            onDrop={drop}
           />
         </div>
       </section>
       <div class="side">
         <IoPanel {snapshot} onSinkBlocked={(sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked))} />
-        <Catalogue onPlace={place} />
+        <Catalogue onPlace={place} onDrag={(family) => (dragging = family)} />
         <SceneTree {project} bind:selected />
         <Inspector {project} {selected} onEdit={edit} />
       </div>
