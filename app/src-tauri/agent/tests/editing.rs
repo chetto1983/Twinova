@@ -227,3 +227,42 @@ async fn save_project_writes_back_to_its_own_folder() {
     );
     c.cancel().await.unwrap();
 }
+
+/// A library family the project does not pin is placed and pinned; a refused add pins nothing.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_agent_places_a_library_family_the_project_does_not_pin() {
+    let c = client().await;
+    ok(&c, "open_project", json!({ "path": fixture("sort_line") })).await;
+    let described = ok(&c, "describe", json!({})).await;
+    let keys = |d: &Value| -> Vec<String> {
+        (d["definitions"].as_array().unwrap().iter())
+            .map(|d| d["key"].as_str().unwrap().to_string())
+            .collect()
+    };
+    assert!(!keys(&described).contains(&"twinova.sensor_laser@1".to_string()));
+    let library = described["library"].as_array().unwrap();
+    assert_eq!(library.len(), 15);
+    assert!(library.contains(&json!({ "key": "twinova.sensor_laser@1", "group": "sensors" })));
+    let bad = json!({ "id": "laser", "definition": "twinova.sensor_laser@1", "position": [0, 0, 0],
+                      "parameters": { "max_range": "far" } });
+    refused(&c, "add_instance", bad).await;
+    assert!(
+        !keys(&ok(&c, "describe", json!({})).await).contains(&"twinova.sensor_laser@1".to_string())
+    );
+    let laser = json!({ "id": "laser", "definition": "twinova.sensor_laser@1", "position": [0, 0, 0],
+                        "parameters": { "max_range": 2.0 } });
+    ok(&c, "add_instance", laser).await;
+    assert!(
+        keys(&ok(&c, "describe", json!({})).await).contains(&"twinova.sensor_laser@1".to_string())
+    );
+    assert_eq!(
+        refused(
+            &c,
+            "add_instance",
+            json!({ "id": "r", "definition": "twinova.robot@1", "position": [0, 0, 0] })
+        )
+        .await,
+        "no family twinova.robot@1 in the library"
+    );
+    c.cancel().await.unwrap();
+}

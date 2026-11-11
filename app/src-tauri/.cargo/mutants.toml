@@ -12,11 +12,12 @@ examine_globs = [
   "engine/src/engine.rs", "engine/src/line.rs", "engine/src/drive.rs", "engine/src/field.rs",
   "engine/src/field_image.rs", "engine/src/controller.rs", "engine/src/build.rs", "engine/src/locate.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
-  "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs",
+  "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs", "project/src/edit.rs",
+  "project/src/history.rs", "project/src/library.rs",
   "physics/src/world.rs", "physics/src/world_devices.rs", "physics/src/world_products.rs",
   "physics/src/world_sensors.rs", "physics/src/layout.rs", "physics/src/layout_devices.rs", "physics/src/layout_sensors.rs",
   "physics/src/path.rs", "physics/src/surfaces.rs",
-  "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/edit.rs", "agent/src/tools_edit.rs",
+  "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/tools_edit.rs",
 ]
 # Equivalent mutants, each with its reason (CLAUDE.md "MUTATION").
 exclude_re = [

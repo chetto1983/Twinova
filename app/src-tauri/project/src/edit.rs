@@ -1,10 +1,15 @@
-//! Edits of a working project (spec 2026-11-11-agent-server-design.md, decision 4). Each checks the names it is given,
-//! the instance, definition, parameter, signal or file, and the value's type against the parameter's, then changes the
-//! project; the format's own checks (ports, addresses, ranges, ST) run at Build, as for a project edited on disk.
+//! Edits of a working project, shared by the app's editor and the agent (specs 2026-11-11-agent-server-design.md,
+//! decision 4, and 2026-11-11-editor-basics-design.md). Each checks the names it is given, the instance, definition,
+//! parameter, signal or file, and the value's type against the parameter's, then changes the project; the format's own
+//! checks (ports, addresses, ranges, ST) run at Build, as for a project edited on disk.
 
 use serde_json::Value;
-use twinova_project::Project;
-use twinova_project::model::{Connection, Definition, Instance, ParamType, ParamValue, Quat, Vec3};
+
+use crate::Project;
+use crate::library;
+use crate::model::{
+    Connection, Definition, Endpoint, Instance, ParamType, ParamValue, PortKind, Quat, Vec3,
+};
 
 fn instance_mut<'a>(project: &'a mut Project, id: &str) -> Result<&'a mut Instance, String> {
     (project.scene.instances.iter_mut())
@@ -185,6 +190,150 @@ pub fn write_source(project: &mut Project, file: &str, text: &str) -> Result<(),
     let key = behaviour_key(file).filter(|k| project.behaviours.contains_key(*k));
     let key = key.ok_or_else(|| format!("no source {file}"))?.to_string();
     project.behaviours.insert(key, text.into());
+    Ok(())
+}
+
+/// Pins a library family in the project, its definition and its block, unless the project already pins that key: a
+/// pinned copy is kept as it is, and upgrading it is explicit (spec 2026-11-08-component-model-design.md).
+pub fn pin(project: &mut Project, key: &str) -> Result<(), String> {
+    if project.definitions.contains_key(key) {
+        return Ok(());
+    }
+    let family = library::family(key).ok_or_else(|| format!("no family {key} in the library"))?;
+    if let Some(block) = family.behaviour {
+        project.behaviours.insert(key.into(), block.into());
+    }
+    project.definitions.insert(key.into(), family.definition);
+    Ok(())
+}
+
+/// Places a family at a pose, pinning it if the project does not have it yet: an instance with no overrides and no
+/// signal bound, named and id'd after the family with the first free number (`belt_1`, `belt_2`, …). Its id.
+pub fn place(
+    project: &mut Project,
+    key: &str,
+    position: Vec3,
+    rotation: Quat,
+) -> Result<String, String> {
+    pin(project, key)?;
+    let short = key.split('@').next().unwrap_or(key);
+    let short = short.rsplit('.').next().unwrap_or(short);
+    let taken = |id: &str| project.scene.instances.iter().any(|i| i.id == id);
+    let id = (1..)
+        .map(|n| format!("{short}_{n}"))
+        .find(|id| !taken(id))
+        .expect("a free id");
+    add_instance(
+        project,
+        Instance {
+            id: id.clone(),
+            name: id.clone(),
+            definition: key.into(),
+            position,
+            rotation,
+            parameters: Default::default(),
+            signals: Default::default(),
+        },
+    )?;
+    Ok(id)
+}
+
+/// Renames an instance; its id, which connections and signals name, stays.
+pub fn set_name(project: &mut Project, id: &str, name: &str) -> Result<(), String> {
+    if name.trim().is_empty() {
+        return Err("a name cannot be empty".into());
+    }
+    instance_mut(project, id)?.name = name.trim().into();
+    Ok(())
+}
+
+/// The name of instance `id`'s first port of `kind`.
+fn port_of(project: &Project, id: &str, kind: PortKind) -> Result<String, String> {
+    let def = definition_of(project, id)?;
+    let port = def.ports.iter().find(|p| p.kind == kind);
+    port.map(|p| p.name.clone())
+        .ok_or_else(|| format!("{id} ({}) has no {kind:?} port", def.key()))
+}
+
+/// Mounts a device on a host at a distance along it (an angle in degrees on a curve), or with `None` unmounts it; a
+/// device has one host, so a mount replaces the one it had.
+pub fn set_mount(
+    project: &mut Project,
+    device: &str,
+    on: Option<(&str, f64)>,
+) -> Result<(), String> {
+    let device_port = port_of(project, device, PortKind::MountDevice)?;
+    let mount = match on {
+        Some((host, at)) => {
+            if !at.is_finite() {
+                return Err(format!("{at} is not a distance along {host}"));
+            }
+            let host_port = port_of(project, host, PortKind::MountHost)?;
+            Some(Connection::Mount {
+                host: (host.into(), host_port),
+                device: (device.into(), device_port.clone()),
+                position: [at, 0.0, 0.0],
+                rotation: [0.0, 0.0, 0.0, 1.0],
+            })
+        }
+        None => None,
+    };
+    project.scene.connections.retain(|c| {
+        !matches!(c, Connection::Mount { device: d, .. } if d.0 == device && d.1 == device_port)
+    });
+    project.scene.connections.extend(mount);
+    Ok(())
+}
+
+/// The flow connection at a port, either end.
+fn flow_at(connection: &Connection, end: &Endpoint) -> bool {
+    matches!(connection, Connection::Flow { from, to } if from == end || to == end)
+}
+
+/// Sets what a flow port feeds or is fed by, or with `None` leaves it unconnected. A flow end has one peer, so the
+/// connections either end had are replaced.
+pub fn set_flow(
+    project: &mut Project,
+    id: &str,
+    port: &str,
+    peer: Option<(&str, &str)>,
+) -> Result<(), String> {
+    let kind_of = |project: &Project, id: &str, port: &str| -> Result<PortKind, String> {
+        let def = definition_of(project, id)?;
+        let found = def.ports.iter().find(|p| p.name == port);
+        found
+            .map(|p| p.kind)
+            .ok_or_else(|| format!("{} has no port {port}", def.key()))
+    };
+    let here: Endpoint = (id.into(), port.into());
+    let kind = kind_of(project, id, port)?;
+    if !matches!(kind, PortKind::FlowIn | PortKind::FlowOut) {
+        return Err(format!("{id}.{port} is not a flow port"));
+    }
+    let flow = match peer {
+        None => None,
+        Some((peer_id, peer_port)) => {
+            let there: Endpoint = (peer_id.into(), peer_port.into());
+            match (kind, kind_of(project, peer_id, peer_port)?) {
+                (PortKind::FlowOut, PortKind::FlowIn) => Some((here.clone(), there)),
+                (PortKind::FlowIn, PortKind::FlowOut) => Some((there, here.clone())),
+                _ => return Err(format!("{id}.{port} cannot flow to {peer_id}.{peer_port}")),
+            }
+        }
+    };
+    let ends: Vec<Endpoint> = std::iter::once(here)
+        .chain(
+            flow.iter()
+                .flat_map(|(from, to)| [from.clone(), to.clone()]),
+        )
+        .collect();
+    (project.scene.connections).retain(|c| !ends.iter().any(|end| flow_at(c, end)));
+    if let Some((from, to)) = flow {
+        project
+            .scene
+            .connections
+            .push(Connection::Flow { from, to });
+    }
     Ok(())
 }
 

@@ -113,7 +113,7 @@ Rust 2024 (`twinova-project`, the app, `twinova-agent`), Tauri 2, Svelte 5, thre
       format crate has no ST compiler);
     - every fixture's copy equals the library's.
   - Commit `feat(project): the component library, embedded`.
-- [ ] **Task 3: shared edits and history.**
+- [x] **Task 3: shared edits and history.**
   - Move `edit.rs` and its tests to `twinova-project`; the agent's tests pass unchanged.
   - Tests first for `place`, `set_name`, `set_mount_at`, `set_flow` and `History`.
   - The agent's `describe` lists the library; its `add_instance` places library families.

@@ -13,8 +13,9 @@ use serde_json::{Value, json};
 use twinova_project::model::{Connection, Instance, Quat, Vec3};
 use twinova_project::storage::save_folder;
 use twinova_project::{Project, encode_project, parse_project};
+use twinova_project::{edit, library};
 
-use crate::{Agent, edit, structured};
+use crate::{Agent, structured};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct SetParameter {
@@ -35,7 +36,7 @@ pub struct BindSignal {
 #[derive(Deserialize, JsonSchema)]
 pub struct AddInstance {
     pub id: String,
-    /// A pinned definition, `id@version` (see describe).
+    /// `id@version`: a definition the project pins, or a family of the library, which is pinned (see describe).
     pub definition: String,
     /// Shown in the app; the id when absent.
     pub name: Option<String>,
@@ -105,12 +106,16 @@ fn describe(p: &Project) -> Value {
             })
         })
         .collect();
+    let library: Vec<Value> = (library::families().iter())
+        .map(|f| json!({ "key": f.definition.key(), "group": f.group }))
+        .collect();
     json!({
         "name": p.name,
         "instances": p.scene.instances,
         "connections": p.scene.connections,
         "panel": p.scene.controller.panel,
         "definitions": definitions,
+        "library": library,
         "program": p.program.iter().map(|(path, _)| path).collect::<Vec<_>>(),
     })
 }
@@ -120,7 +125,8 @@ impl Agent {
     #[tool(
         description = "The working project as the editing tools change it: instances (definition, pose, \
                           parameters, signals), connections, panel buttons, definitions (their parameters, signals, \
-                          ports and behaviour file) and program files."
+                          ports and behaviour file), the library's families add_instance can place, and program \
+                          files."
     )]
     async fn describe(&self) -> Result<CallToolResult, String> {
         let mut session = self.session()?;
@@ -159,14 +165,18 @@ impl Agent {
     }
 
     #[tool(
-        description = "Add an instance of a pinned definition, with its pose, parameters and signals."
+        description = "Add an instance of a pinned definition or of a library family (pinned then), with its pose, \
+                          parameters and signals."
     )]
     async fn add_instance(
         &self,
         Parameters(a): Parameters<AddInstance>,
     ) -> Result<CallToolResult, String> {
         let mut session = self.session()?;
-        let project = session.working()?;
+        let working = session.working()?;
+        // On a copy, so a refused parameter leaves neither the instance nor a newly pinned family behind.
+        let mut project = working.clone();
+        edit::pin(&mut project, &a.definition)?;
         let instance = Instance {
             name: a.name.unwrap_or_else(|| a.id.clone()),
             id: a.id.clone(),
@@ -176,13 +186,11 @@ impl Agent {
             parameters: Default::default(),
             signals: a.signals.unwrap_or_default(),
         };
-        edit::add_instance(project, instance)?;
+        edit::add_instance(&mut project, instance)?;
         for (name, value) in a.parameters.unwrap_or_default() {
-            if let Err(e) = edit::set_parameter(project, &a.id, &name, Some(&value)) {
-                edit::remove_instance(project, &a.id)?;
-                return Err(e);
-            }
+            edit::set_parameter(&mut project, &a.id, &name, Some(&value))?;
         }
+        *working = project;
         structured(&a.id)
     }
 
