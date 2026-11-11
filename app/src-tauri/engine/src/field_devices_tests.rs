@@ -8,7 +8,8 @@ use twinova_project::storage::open_folder;
 
 /// The sort line, with `parameters` and extra `signals` on its turntable.
 fn sort_line(parameters: &[(&str, ParamValue)], signals: &[(&str, &str)]) -> Field {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/sort_line");
+    let dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/sort_line");
     let mut project = open_folder(&dir).unwrap().opened.project;
     let turntable = project
         .scene
@@ -214,7 +215,8 @@ fn a_reversal_ramps_through_zero_and_the_shortest_way_wraps() {
 /// The deck starts at its angle parameter, which OIP ignores; with no PLC writing a target, it stays there.
 #[test]
 fn the_deck_starts_at_its_angle_parameter() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/sort_line");
+    let dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/sort_line");
     let mut project = open_folder(&dir).unwrap().opened.project;
     let turntable = project
         .scene
@@ -237,7 +239,8 @@ fn the_deck_starts_at_its_angle_parameter() {
 /// Build refuses a device's block without the outputs its native model poses it from.
 #[test]
 fn each_device_block_must_declare_what_its_native_model_reads() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/sort_line");
+    let dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/sort_line");
     for (key, block, name, generator) in [
         (
             "twinova.stopper@1",

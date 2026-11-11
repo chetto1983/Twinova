@@ -3,7 +3,7 @@ use std::path::Path;
 use twinova_project::storage::open_folder;
 
 fn demo() -> Project {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/demo_m3");
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/demo_m3");
     open_folder(&dir).unwrap().opened.project
 }
 
@@ -165,7 +165,7 @@ fn a_runtime_fault_stops_every_later_step() {
 #[test]
 fn the_snapshot_carries_each_chain_transfer_s_lift() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("project/tests/fixtures/valid/two_belts_diverter");
+        .join("../project/tests/fixtures/valid/two_belts_diverter");
     let project = open_folder(&dir).unwrap().opened.project;
     let (mut engine, _) = Engine::new(&project).unwrap();
     let lift = |e: &Engine| {
@@ -191,7 +191,7 @@ fn the_snapshot_carries_each_chain_transfer_s_lift() {
 #[test]
 fn the_line_with_its_chain_transfer_runs_alike_under_step_x1_and_as_fast_as_possible() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("project/tests/fixtures/valid/two_belts_diverter");
+        .join("../project/tests/fixtures/valid/two_belts_diverter");
     let project = open_folder(&dir).unwrap().opened.project;
     let fresh = || Engine::new(&project).unwrap().0;
     let mut stepped = fresh();
@@ -225,7 +225,8 @@ fn the_line_with_its_chain_transfer_runs_alike_under_step_x1_and_as_fast_as_poss
 /// A REAL signal reads as its number, not as the bits of the double word it travels in (4.4b's drive feedback).
 #[test]
 fn a_real_signal_reads_as_a_number() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/curve_line");
+    let dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/curve_line");
     let mut engine = Engine::new(&open_folder(&dir).unwrap().opened.project)
         .unwrap()
         .0;
@@ -238,4 +239,17 @@ fn a_real_signal_reads_as_a_number() {
         "0",
         "a DINT still reads as an integer"
     );
+}
+
+/// The engine's fingerprint is its world's: equal for equal runs, different once the cartons have moved.
+#[test]
+fn the_fingerprint_follows_the_line() {
+    let run = |seconds| {
+        let mut engine = started(false);
+        run_for(&mut engine, seconds);
+        engine.fingerprint()
+    };
+    assert_eq!(run(3), run(3));
+    assert_ne!(run(3), run(4));
+    assert_ne!(run(3), engine().fingerprint());
 }

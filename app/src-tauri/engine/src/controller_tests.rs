@@ -3,7 +3,7 @@ use std::path::Path;
 use twinova_project::storage::open_folder;
 
 fn demo() -> Project {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/demo_m3");
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/demo_m3");
     open_folder(&dir).unwrap().opened.project
 }
 
@@ -169,6 +169,34 @@ fn a_runtime_fault_is_an_error_of_the_scan() {
 #[test]
 fn a_syntax_error_is_refused() {
     assert!(Controller::build(&with_program("PROGRAM Main\nx := ;\nEND_PROGRAM\n")).is_err());
+}
+
+/// A compile error names the program file and line it is in, as the field's name a behaviour file's: truST locates
+/// it in bytes of its own source, and labels it with the source's path once asked to.
+#[test]
+fn a_compile_error_names_its_file_and_line() {
+    let error = |files: &[(&str, &str)]| {
+        let mut project = demo();
+        project.program = (files.iter())
+            .map(|(path, text)| ((*path).to_string(), (*text).to_string()))
+            .collect();
+        Controller::build(&project).err().expect("a compile error")
+    };
+    assert_eq!(
+        error(&[(
+            "plc/Main.st",
+            "PROGRAM Main\nVAR x : ; END_VAR\nEND_PROGRAM\n"
+        )]),
+        "expected type at plc/Main.st:2"
+    );
+    let two = error(&[
+        ("plc/Types.st", "TYPE Speed : REAL; END_TYPE\n"),
+        (
+            "plc/Main.st",
+            "PROGRAM Main\nVAR\n  y : BOOL;\n  x : ;\nEND_VAR\nEND_PROGRAM\n",
+        ),
+    ]);
+    assert_eq!(two, "expected type at plc/Main.st:4");
 }
 
 /// What the line writes every millisecond it resolves once at Build (spec

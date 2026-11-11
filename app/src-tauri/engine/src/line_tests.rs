@@ -5,7 +5,7 @@ use twinova_project::storage::open_folder;
 
 fn fixture(name: &str) -> Project {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("project/tests/fixtures/valid")
+        .join("../project/tests/fixtures/valid")
         .join(name);
     open_folder(&dir).unwrap().opened.project
 }

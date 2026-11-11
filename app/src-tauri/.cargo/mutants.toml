@@ -1,17 +1,25 @@
 # cargo mutants configuration (https://mutants.rs). Scope (CLAUDE.md "MUTATION >=70%"; the gate in mutation.yml
-# allows no survivor): the run engine and the line loop, the field runtime and the controller (4.3), the line physics
-# (crate twinova-physics), and the project format's address parser, validation, codec and storage (4.2).
+# allows no survivor): the run engine and the line loop, the field runtime and the controller (4.3; crate twinova-engine), the line physics
+# (crate twinova-physics), the project format's address parser, validation, codec and storage (4.2), and the agent server's sessions and tools
+# (2.7).
 # mutation.yml runs it with --workspace.
+# Every mutant builds with Cargo.toml's `mutants` profile, the test profile without debug info
+# (https://mutants.rs/performance.html). Measured 2026-11-11, per mutant, in place, against the test profile: physics
+# path.rs 2.80 → 2.58 s (build 0.73 → 0.58 s), engine drive.rs 12.37 → 11.35 s (build 1.74 → 1.15 s); the tests, not
+# the builds, are most of the time.
+profile = "mutants"
 examine_globs = [
-  "src/engine.rs", "src/line.rs", "src/drive.rs", "src/field.rs", "src/field_image.rs", "src/controller.rs",
+  "engine/src/engine.rs", "engine/src/line.rs", "engine/src/drive.rs", "engine/src/field.rs",
+  "engine/src/field_image.rs", "engine/src/controller.rs", "engine/src/build.rs", "engine/src/locate.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs",
   "physics/src/world.rs", "physics/src/world_devices.rs", "physics/src/layout.rs", "physics/src/layout_devices.rs",
   "physics/src/path.rs", "physics/src/surfaces.rs",
+  "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/edit.rs", "agent/src/tools_edit.rs",
 ]
 # Equivalent mutants, each with its reason (CLAUDE.md "MUTATION").
 exclude_re = [
   # field_image.rs `place`: the slot only names which of the two counters an area uses; `!=` swaps the names, and each
   # area still counts in a counter of its own.
-  "src/field_image.rs:.*replace == with != in place",
+  "engine/src/field_image.rs:.*replace == with != in place",
 ]

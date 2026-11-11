@@ -70,7 +70,7 @@ fn the_feedback_takes_its_scale_and_pitch_from_the_parameters() {
     use std::path::Path;
     use twinova_project::model::ParamValue;
     use twinova_project::storage::open_folder;
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/demo_m3");
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/demo_m3");
     let mut project = open_folder(&dir).unwrap().opened.project;
     assert_eq!(Feedback::of(&project, "belt_a"), Feedback::new(0.5, 0.0254));
     let belt = project

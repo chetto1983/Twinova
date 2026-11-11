@@ -7,7 +7,7 @@ use std::path::Path;
 use twinova_project::storage::open_folder;
 
 fn demo(parameters: &[(&str, ParamValue)]) -> Field {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/demo_m3");
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/demo_m3");
     let mut project = open_folder(&dir).unwrap().opened.project;
     let belt = project
         .scene
@@ -72,7 +72,7 @@ fn the_ramp_reaches_rated_speed_in_accel_time_and_stops_in_decel_time() {
 /// Acceptance 3: a bound `speed_ref` sets the speed, and at 0 stops the deck with run on (spec, amended in Task 4).
 #[test]
 fn a_bound_speed_ref_sets_the_speed() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/demo_m3");
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/demo_m3");
     let mut project = open_folder(&dir).unwrap().opened.project;
     let belt = project
         .scene

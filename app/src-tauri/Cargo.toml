@@ -7,10 +7,10 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 rust-version = "1.99"
 
-# The project format is its own crate without Tauri, so its tests also run on Windows, where a test binary that links
-# Tauri does not start (0xc0000139, run 42378063592).
+# The project format and the run engine are crates of their own without Tauri, so their tests also run on Windows, where
+# a test binary that links Tauri does not start (0xc0000139, run 42378063592).
 [workspace]
-members = ["project", "physics"]
+members = ["project", "physics", "engine", "agent"]
 
 [lib]
 name = "twinova_lib"
@@ -23,20 +23,17 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# truST at the last commit read that still has its bytecode VM (deleted upstream on 2026-10-24):
-# docs/research/10-st-senza-compilazione.md. MIT OR Apache-2.0.
 # Native dialogs to pick project folders and archives (ROADMAP 4.2), the official plugin. MIT OR Apache-2.0.
 tauri-plugin-dialog = "=2.8.4"
 # The project format (spec 2026-11-08-project-format-design.md), a crate of this workspace without Tauri.
 twinova-project = { path = "project" }
-twinova-physics = { path = "physics" }
-trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }
+# The run engine (spec 2026-11-11-agent-server-design.md), a crate of this workspace without Tauri, which the agent
+# server shares.
+twinova-engine = { path = "engine" }
 
 [dev-dependencies]
 # mock_app for the command tests (src/commands_tests.rs), as in chetto1983/ModbusTool.
 tauri = { version = "2", features = ["test"] }
-# Property tests of the event order (CLAUDE.md, "property-based tests for ... the event queue"). MIT OR Apache-2.0.
-proptest = "1.12"
 # Temporary project folders for the project command tests; the version the lockfile already has.
 tempfile = "=3.27.0"
 
@@ -58,6 +55,14 @@ opt-level = 3
 opt-level = 3
 [profile.dev.package.trust-syntax]
 opt-level = 3
+
+# cargo mutants builds every mutant with this profile (.cargo/mutants.toml): the test profile without debug info, which
+# a mutant's failing test does not need (https://mutants.rs/performance.html). It keeps the dev profile's optimised
+# Rapier and truST (the tests ran as fast). Measured in .cargo/mutants.toml; CI set the same with
+# CARGO_PROFILE_DEV_DEBUG before.
+[profile.mutants]
+inherits = "test"
+debug = "none"
 
 [profile.release]
 codegen-units = 1

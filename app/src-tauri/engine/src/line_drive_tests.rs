@@ -10,7 +10,8 @@ use twinova_project::storage::open_folder;
 const CURVE_A: usize = 3;
 
 fn curve_line() -> Project {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/curve_line");
+    let dir =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/curve_line");
     open_folder(&dir).unwrap().opened.project
 }
 

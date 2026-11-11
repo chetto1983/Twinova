@@ -10,6 +10,7 @@ use std::sync::Mutex;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use tauri::State;
+use twinova_engine::diagnostics;
 use twinova_project::archive::{export_archive, import_archive};
 use twinova_project::model::{Connection, Definition, Instance, PanelButton};
 use twinova_project::storage::{open_folder, save_folder};
@@ -164,14 +165,6 @@ fn opened(folder: Option<PathBuf>, opened: Opened) -> (Current, Vec<String>) {
     )
 }
 
-pub(crate) fn lines(diagnostics: &[twinova_project::Diagnostic]) -> String {
-    diagnostics
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
 fn open(state: &ProjectState, folder: PathBuf) -> Result<ProjectView, String> {
     let result = open_folder(&folder).map_err(|e| e.to_string())?;
     let (current, changed) = opened(Some(folder), result.opened);
@@ -230,7 +223,7 @@ pub fn export_project(state: State<'_, ProjectState>, file: String) -> Result<()
 #[tauri::command]
 pub fn import_project(state: State<'_, ProjectState>, file: String) -> Result<ProjectView, String> {
     let bytes = std::fs::read(Path::new(&file)).map_err(|e| format!("{file}: {e}"))?;
-    let result = import_archive(&bytes).map_err(|d| lines(&d))?;
+    let result = import_archive(&bytes).map_err(|d| diagnostics(&d))?;
     let (current, changed) = opened(None, result);
     replace(&state, current, changed, false)
 }

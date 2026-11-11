@@ -185,6 +185,11 @@ impl Engine {
         self.inputs.push((self.line.time_ns(), input));
     }
 
+    /// The physics world's fingerprint: equal for equal runs, on every platform.
+    pub fn fingerprint(&self) -> u64 {
+        self.line.world().fingerprint()
+    }
+
     pub fn time_ms(&self) -> i64 {
         self.line.time_ns() / NS_PER_MS
     }
