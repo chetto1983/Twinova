@@ -68,7 +68,8 @@ naturale per chiudere la 4.4"). The method is 4.4a's and 4.4b's:
 ## Measured in Rapier (2026-11-11, throwaway worktree, release)
 
 Setup: the 4.4b2 world (Coulomb, one solver iteration, 1 ms), the 0.3 m carton, a 0.6 m roller host with grip 0.42,
-and the colliders above as kinematic position-based bodies. Probe: the scratchpad's `wt44c/.../probe44c.rs`.
+and the colliders above as kinematic position-based bodies. Probe: a throwaway test module (`probe44c.rs`), not kept
+in the repository; the tests of Tasks 1–3 measure the same again.
 
 **Stopper, blade raised at x = 2, a 4 m roller and three cartons:**
 

@@ -110,98 +110,98 @@ recommended).
 
 ### Task 1: the stopper and the pusher in the physics
 
-- [ ] Split `layout.rs`: mounted devices to `layout_devices.rs`, behaviour unchanged. `cargo test -p twinova-physics`
+- [x] Split `layout.rs`: mounted devices to `layout_devices.rs`, behaviour unchanged. `cargo test -p twinova-physics`
   is green with the fingerprints unchanged.
-- [ ] Split `world.rs`: the chain transfer's body and exit to `world_devices.rs`. Tests are green, the fingerprints
+- [x] Split `world.rs`: the chain transfer's body and exit to `world_devices.rs`. Tests are green, the fingerprints
   unchanged.
-- [ ] Tests first (`world_stopper_tests.rs`, spec acceptance 1):
+- [x] Tests first (`world_stopper_tests.rs`, spec acceptance 1):
   - three cartons queue against a raised blade at 0.5 m/s (front within 1 mm, at rest, tilt < 2°);
   - lowered, the front carton is at speed within 0.22 s (spec, amended);
   - layout refuses a stopper on a belt, a curve, an inclined or a skewed roller, and names the fix;
   - the mount snaps to the gap, on a table of cases.
-- [ ] Implement `Stopper` and `World::set_stopper(k, lift)`: OIP's blade 0.03 × (raise + 0.15) × (width − 0.03),
+- [x] Implement `Stopper` and `World::set_stopper(k, lift)`: OIP's blade 0.03 × (raise + 0.15) × (width − 0.03),
   grip √(0.6 × 0.5). The stroke is raise + 0.05, so lowered its top is 5 cm under the surface.
-- [ ] Tests first (`world_pusher_tests.rs`, spec acceptance 2):
+- [x] Tests first (`world_pusher_tests.rs`, spec acceptance 2):
   - at 0.25 s a passing carton goes to a perpendicular takeaway upright (at rest < 1°, max < 5°) and square (≤ 3°);
   - a sink on `out` collects it past the host's edge; with `out` unconnected or its sink blocked the carton falls
     beside the conveyor;
   - the guard on its own side has a 0.75 m opening, collider pieces asserted in `path_tests.rs`;
   - layout refuses a pusher on a curve, an inclined or a skewed host, or with a guard on its exit side.
-- [ ] Implement `Pusher`, `Exit::Push` and `World::set_pusher(k, reach)`: OIP's paddle 0.47 × 0.40 × 0.50, its face
+- [x] Implement `Pusher`, `Exit::Push` and `World::set_pusher(k, reach)`: OIP's paddle 0.47 × 0.40 × 0.50, its face
   1 cm outside the frame, 0.047 above the surface, the same grip.
-- [ ] Gate: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test
+- [x] Gate: `cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test
   --workspace`; `cargo mutants` on the changed physics files; `bash scripts/check-file-size.sh`.
-- [ ] Commit `feat(physics): OIP's blade stop and pusher as kinematic bodies`.
+- [x] Commit `feat(physics): OIP's blade stop and pusher as kinematic bodies`.
 
 ### Task 2: the turntable in the physics
 
-- [ ] Tests first (`world_turntable_tests.rs`, spec acceptance 3):
+- [x] Tests first (`world_turntable_tests.rs`, spec acceptance 3):
   - a carton at rest on the lane, turned 90° at 20°/s with OIP's profile (the test drives angle and rate as the block
     will), leaves its place by ≤ 2 mm and its yaw by ≤ 0.5°;
   - settled at 90°, the lane carries it along the new heading at its speed, into a conveyor at that end;
   - a sensor on the turntable sees across the start frame;
   - the layout places the lane's entry 0.75 × width behind the centre.
-- [ ] Implement:
+- [x] Implement:
   - the conveyor's deck shape (straight, curve, turntable cross);
   - `path::deck` for the cross;
   - `World::set_turntable(k, angle, rate)`: while the rate is not 0 the lane's field turns about the centre at that
     rate; otherwise it runs along the angle at its speed.
-- [ ] Gate as in Task 1, and a fingerprint test for a turntable world.
-- [ ] Commit `feat(physics): OIP's turntable as a conveyor whose flow turns with its deck`.
+- [x] Gate as in Task 1, and a fingerprint test for a turntable world.
+- [x] Commit `feat(physics): OIP's turntable as a conveyor whose flow turns with its deck`.
 
 ### Task 3: fixtures, behaviour blocks, field and line
 
-- [ ] Script `migrate_fixtures_4_4c.py` (scratchpad), canonical JSON as in 4.4b:
+- [x] Script `migrate_fixtures_4_4c.py` (scratchpad), canonical JSON as in 4.4b:
   - the three definitions and their `.st` blocks;
   - the new `valid/sort_line`:
     `source → belt_in → roller_a (stopper) → turntable → belt_b (pusher → reject) → sink_b`, and at 90°
     `turntable → belt_c → sink_c`;
   - its `plc/Main.st`.
   The corpus test opens it.
-- [ ] Tests first (`field_devices_tests.rs`):
+- [x] Tests first (`field_devices_tests.rs`):
   - the stopper's and the pusher's strokes take their time to the millisecond, with feedback at the ends only;
   - the turntable turns 90° at 20°/s in 5.0 s ± 1 ms;
   - `in_position` is TRUE only when settled;
   - enable off stops it within 3° and it resumes;
   - a reversal mid-turn ramps through 0;
   - the lane is held at 0 while turning, and its drive is a conveyor's.
-- [ ] Implement the natives in `field.rs`, the devices in `line.rs`, and `actuators` in `engine.rs`. The view reads
+- [x] Implement the natives in `field.rs`, the devices in `line.rs`, and `actuators` in `engine.rs`. The view reads
   `actuators` in the same commit, so the app stays whole (amended in Task 3).
-- [ ] Tests (`line_devices_tests.rs`, spec acceptance 4):
+- [x] Tests (`line_devices_tests.rs`, spec acceptance 4):
   - `sort_line` conserves cartons every millisecond;
   - the split matches the program: every second carton to `sink_c`, every second straight one to `reject`;
   - the fingerprint is equal across Run ×1, as fast as possible and step by step, and pinned.
-- [ ] Gate: Rust as in Task 1; `cargo mutants` on `field.rs`, `line.rs` and `engine.rs`'s changed functions.
-- [ ] Commit `feat(line): stopper, pusher and turntable behaviours, natives and the sort line`.
+- [x] Gate: Rust as in Task 1; `cargo mutants` on `field.rs`, `line.rs` and `engine.rs`'s changed functions.
+- [x] Commit `feat(line): stopper, pusher and turntable behaviours, natives and the sort line`.
 
 ### Task 4: the view
 
-- [ ] Copy:
+- [x] Copy:
   - OIP's blade stop, diverter and turntable `geometry()`;
   - `fillet`;
   - the turntable's roller bed (radius 0.04, chord-clipped);
   - the two diverter textures.
   Provenance headers, and the files split below 600 lines.
-- [ ] Tests (vitest):
+- [x] Tests (vitest):
   - each generator's bounds against OIP's `rig.json` footprint;
   - the moving tag on the blade, the paddle and the deck;
   - families place the three as the physics does (mount, gap snap, centre);
   - guard openings in the roller and belt views;
   - `actuators` posing.
-- [ ] Implement `families` (split if near 600), `ProjectScene.svelte`'s moving groups, and `snapshot.ts`.
-- [ ] Gate: `npm run check && npm run lint && npm run format:check && npm run check:i18n && npm run deadcode && npm run
+- [x] Implement `families` (split if near 600), `ProjectScene.svelte`'s moving groups, and `snapshot.ts`.
+- [x] Gate: `npm run check && npm run lint && npm run format:check && npm run check:i18n && npm run deadcode && npm run
   dup && npm run coverage && npm run build`; `npm run mutation` on the changed helpers.
-- [ ] Commit `feat(view): OIP's blade stop, pusher and turntable drawn and moving`.
+- [x] Commit `feat(view): OIP's blade stop, pusher and turntable drawn and moving`.
 
 ### Task 5: E2E, soak and documents
 
-- [ ] `e2e/sort.mjs`, registered in `npm run e2e`:
+- [x] `e2e/sort.mjs`, registered in `npm run e2e`:
   - the sort line builds and runs;
   - both sinks and the reject count;
   - `in_position` and the feedback in the I/O panel;
   - a screenshot.
   Linux under `xvfb-run`.
-- [ ] Soak: `npx tauri build --no-bundle && xvfb-run npm run soak -- 45 sort_line`.
-- [ ] Write the verification file `docs/superpowers/verification/2026-11-11-stopper-pusher-turntable.md`, and update
+- [x] Soak: `npx tauri build --no-bundle && xvfb-run npm run soak -- 45 sort_line`.
+- [x] Write the verification file `docs/superpowers/verification/2026-11-11-stopper-pusher-turntable.md`, and update
   the ROADMAP 4.4c row, `CHANGELOG.md` and `THIRD_PARTY_NOTICES.md`.
-- [ ] Push, open the PR, CI green on Linux and Windows, merge (user's standing instruction).
+- [x] Push, open the PR, CI green on Linux and Windows, merge (user's standing instruction).
