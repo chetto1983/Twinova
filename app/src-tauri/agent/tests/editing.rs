@@ -3,54 +3,16 @@
 //! and saves; the saved folder reopens and runs the same. Broken edits fail at build with the format's or the
 //! compiler's message, and the line runs on.
 
-use std::f64::consts::FRAC_1_SQRT_2;
-use std::path::Path;
+mod common;
 
-use rmcp::ServiceExt;
-use rmcp::model::{CallToolRequestParams, CallToolResult, ClientConfig};
-use rmcp::service::{RoleClient, RunningService};
-use rmcp::transport::StreamableHttpClientTransport;
+use std::f64::consts::FRAC_1_SQRT_2;
+
+use common::{fixture, ok, refused};
 use serde_json::{Value, json};
 use twinova_project::storage::open_folder;
 
-type Client = RunningService<RoleClient, ClientConfig>;
-
-async fn call(client: &Client, tool: &str, arguments: Value) -> CallToolResult {
-    let Value::Object(arguments) = arguments else {
-        panic!("arguments are an object")
-    };
-    let params = CallToolRequestParams::new(tool.to_string()).with_arguments(arguments);
-    client
-        .call_tool(params)
-        .await
-        .expect("the call reaches the server")
-}
-
-async fn ok(client: &Client, tool: &str, arguments: Value) -> Value {
-    let result = call(client, tool, arguments).await;
-    assert_ne!(result.is_error, Some(true), "{tool}: {:?}", result.content);
-    result.structured_content.expect("a structured answer")
-}
-
-async fn refused(client: &Client, tool: &str, arguments: Value) -> String {
-    let result = call(client, tool, arguments).await;
-    assert_eq!(result.is_error, Some(true), "{tool} succeeded");
-    result.content[0]
-        .as_text()
-        .expect("a text message")
-        .text
-        .clone()
-}
-
-async fn client() -> Client {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let uri = format!("http://{}/mcp", listener.local_addr().unwrap());
-    tokio::spawn(async move { axum::serve(listener, twinova_agent::http_router()).await });
-    let transport = StreamableHttpClientTransport::from_uri(uri);
-    ClientConfig::default()
-        .serve(transport)
-        .await
-        .expect("an MCP session")
+async fn client() -> common::Client {
+    common::http().await.0
 }
 
 /// Belt C runs along −z from (4.45, 0, −0.45) for 2 m: belt D continues it for 2 m, and the turned sink moves to its end.
@@ -72,8 +34,7 @@ fn program_with_belt_d(program: &str) -> String {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn an_agent_extends_the_sort_line_builds_runs_and_saves_it() {
-    let fixture =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/sort_line");
+    let fixture = fixture("sort_line");
     let saved = tempfile::tempdir().unwrap();
     let c = client().await;
     assert_eq!(
@@ -224,8 +185,7 @@ async fn an_agent_extends_the_sort_line_builds_runs_and_saves_it() {
 /// save_project without a path writes back to the folder the project was opened from.
 #[tokio::test(flavor = "multi_thread")]
 async fn save_project_writes_back_to_its_own_folder() {
-    let fixture =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../project/tests/fixtures/valid/demo_m3");
+    let fixture = fixture("demo_m3");
     let copy = tempfile::tempdir().unwrap();
     for entry in std::fs::read_dir(&fixture).unwrap() {
         let entry = entry.unwrap();

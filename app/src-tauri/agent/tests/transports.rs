@@ -3,51 +3,14 @@
 //! until every sink has counted; the fingerprint is the one the engine gives on its own for the same run; errors are
 //! tool errors and the server keeps serving; two HTTP sessions keep two lines.
 
-use std::path::{Path, PathBuf};
+mod common;
 
+use common::{Client, fixture, http, http_client, ok, refused};
 use rmcp::ServiceExt;
-use rmcp::model::{CallToolRequestParams, CallToolResult, ClientConfig};
-use rmcp::service::{RoleClient, RunningService};
-use rmcp::transport::{ConfigureCommandExt, StreamableHttpClientTransport, TokioChildProcess};
-use serde_json::{Value, json};
+use rmcp::model::ClientConfig;
+use rmcp::transport::{ConfigureCommandExt, TokioChildProcess};
+use serde_json::json;
 use twinova_project::storage::open_folder;
-
-type Client = RunningService<RoleClient, ClientConfig>;
-
-fn fixture(name: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../project/tests/fixtures/valid")
-        .join(name)
-}
-
-async fn call(client: &Client, tool: &str, arguments: Value) -> CallToolResult {
-    let Value::Object(arguments) = arguments else {
-        panic!("arguments are an object")
-    };
-    let params = CallToolRequestParams::new(tool.to_string()).with_arguments(arguments);
-    client
-        .call_tool(params)
-        .await
-        .expect("the call reaches the server")
-}
-
-/// A tool's structured answer, or the panic of a tool error with its message.
-async fn ok(client: &Client, tool: &str, arguments: Value) -> Value {
-    let result = call(client, tool, arguments).await;
-    assert_ne!(result.is_error, Some(true), "{tool}: {:?}", result.content);
-    result.structured_content.expect("a structured answer")
-}
-
-/// A tool error's message.
-async fn refused(client: &Client, tool: &str, arguments: Value) -> String {
-    let result = call(client, tool, arguments).await;
-    assert_eq!(result.is_error, Some(true), "{tool} succeeded");
-    result.content[0]
-        .as_text()
-        .expect("a text message")
-        .text
-        .clone()
-}
 
 async fn stdio() -> Client {
     let command =
@@ -57,22 +20,6 @@ async fn stdio() -> Client {
         .serve(transport)
         .await
         .expect("an MCP session on stdio")
-}
-
-/// The HTTP router on a loopback port of its own, and a client of it.
-async fn http() -> (Client, String) {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let uri = format!("http://{}/mcp", listener.local_addr().unwrap());
-    tokio::spawn(async move { axum::serve(listener, twinova_agent::http_router()).await });
-    (http_client(&uri).await, uri)
-}
-
-async fn http_client(uri: &str) -> Client {
-    let transport = StreamableHttpClientTransport::from_uri(uri.to_string());
-    ClientConfig::default()
-        .serve(transport)
-        .await
-        .expect("an MCP session on HTTP")
 }
 
 /// The engine on its own, run to `time_ms`: its fingerprint.

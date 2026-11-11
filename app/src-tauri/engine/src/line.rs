@@ -372,3 +372,7 @@ mod drive_tests;
 #[cfg(test)]
 #[path = "line_devices_tests.rs"]
 mod devices_tests;
+
+#[cfg(test)]
+#[path = "line_sensors_tests.rs"]
+mod sensors_tests;

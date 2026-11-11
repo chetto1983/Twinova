@@ -80,4 +80,15 @@ and build inside the app, on Windows and Linux.
   scan or until a condition holds, reads its signals, presses buttons, blocks sinks, saves and restores states and
   compares fingerprints; it also edits the scene (parameters, signals, instances, connections, ST sources), builds it
   as the app does and saves it. `.mcp.json` registers it for agents working in this repository.
+- Products and four new sensors (ROADMAP 4.4d), after Open Industry Project (MIT):
+  - a source makes products of a size, a mass, a colour and a code: colours and codes from lists, walked in turn or
+    drawn at random, sizes set or drawn from OIP's range, all from a seed, the same on every platform;
+  - a through-beam sees what passes between its emitter and its receiver;
+  - a colour sensor tells the PLC which listed colour it sees, as a number (0 for none);
+  - a laser reports the distance to what it sees, in metres;
+  - a barcode scanner over a conveyor reads each product's code once, with a quarter-second pulse and a count;
+  - products are drawn at their size and colour, and the sensors as OIP draws them;
+  - a parameter can be a list of numbers or of colours;
+  - a sorting line by code and colour (`code_sort_line`) uses them all.
+- A carton now weighs the 2.7 kg it was meant to: the physics gave it 1.76 kg. Every run's numbers change slightly.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

@@ -1,0 +1,45 @@
+{
+  "app": "0.1.0",
+  "components": [
+    "components/twinova.belt@1.json",
+    "components/twinova.pusher@1.json",
+    "components/twinova.roller@1.json",
+    "components/twinova.scanner_barcode@1.json",
+    "components/twinova.sensor_color@1.json",
+    "components/twinova.sensor_diffuse@1.json",
+    "components/twinova.sensor_laser@1.json",
+    "components/twinova.sensor_through_beam@1.json",
+    "components/twinova.sink@1.json",
+    "components/twinova.source@1.json",
+    "components/twinova.stopper@1.json",
+    "components/twinova.turntable@1.json"
+  ],
+  "files": {
+    "components/twinova.belt@1.json": "4f0e7245eb15416fba20508485b743f198e5a4a03a1ffe0036554c20a01a29ac",
+    "components/twinova.belt@1.st": "5f73cdc71d1e4f6307fcdc8690ac7a411ae06cfd59c6f0ea1686f17f188929f0",
+    "components/twinova.pusher@1.json": "7445c6d2f7c4299432952e71b0b5a1bc30404f4a483b28142db603330d8fe496",
+    "components/twinova.pusher@1.st": "7fb87dd52f62b3e089698a521bd345527d44d2f0792337b483f568e9cb028229",
+    "components/twinova.roller@1.json": "e73639d40e788052454d393ae45cd2e12a531d6d0fa2d5e63d156f43cff417b1",
+    "components/twinova.roller@1.st": "47b2b8b33d16bef69d8ab143c4e3ce3ba9c9fb8dc06b544d7990f099f678e088",
+    "components/twinova.scanner_barcode@1.json": "e0f61b4a8d946688097a62a4644f7705b29518479b578f1b55c50377a95bf154",
+    "components/twinova.sensor_color@1.json": "c2778d465650915eb5233a91fa8e8abf501979feacf444083e5b747f4239c99b",
+    "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
+    "components/twinova.sensor_laser@1.json": "09e7c227a68d02425c970a309ba04304afe26c206ec1fda5ae90da2accf46e73",
+    "components/twinova.sensor_through_beam@1.json": "824e64b3fadef03ef5424d3ebeaed65ba18ea76e5c87e7243bde35c7a67effea",
+    "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
+    "components/twinova.source@1.json": "257098bb1e4507d8ae3aaf06957ff5bd825b591277e2a12646bfa4161d57c2c6",
+    "components/twinova.stopper@1.json": "f2e7301c41708860bd63abe63aa11bb0b7bb1a00ce94898e04173e22122b37bf",
+    "components/twinova.stopper@1.st": "ee54b3e774bf8658ff4805ab132b58f52d5f674fe82bbb78c85d870ca73644bd",
+    "components/twinova.turntable@1.json": "45a7ac885f4891a21c588391c3b5fe94930e6e74a6bdc2c1044d3ace2293f63b",
+    "components/twinova.turntable@1.st": "08c0985af17a5c8d238b451bdd6d37e297f55aa5a2bb9b6628e07bb775451726",
+    "plc/Main.st": "b53424e797ac13dd9220b6563efd2f2b0ddc76ca7bc4506a88d3b0be596e9248",
+    "scene.json": "dc1204b5b5f3df076c5f6bf25fb53e05f02682ea568c3f229973243b325d9502"
+  },
+  "format": "twinova-project",
+  "name": "Code and colour sort line",
+  "program": [
+    "plc/Main.st"
+  ],
+  "scene": "scene.json",
+  "version": 1
+}

@@ -1,0 +1,66 @@
+{
+  "behaviour": {
+    "function_block": "StopperBehaviour"
+  },
+  "generator": "twinova.stopper/1",
+  "id": "twinova.stopper",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": 0.04,
+      "max": 0.5,
+      "min": 0.02,
+      "name": "raise_height",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 150000000,
+      "max": 2000000000.0,
+      "min": 20000000.0,
+      "name": "raise_time",
+      "type": "TIME",
+      "unit": "ns"
+    }
+  ],
+  "ports": [
+    {
+      "kind": "mount_device",
+      "name": "mount"
+    }
+  ],
+  "signals": [
+    {
+      "direction": "plc_output",
+      "name": "stop",
+      "type": "BOOL"
+    },
+    {
+      "direction": "plc_input",
+      "name": "raised_fb",
+      "type": "BOOL"
+    }
+  ],
+  "version": 1
+}

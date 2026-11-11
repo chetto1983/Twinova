@@ -154,7 +154,7 @@ the native sensors (user), the carton's real mass, unpainted products and the le
   - Products scaled and coloured; the four housings copied from OIP with the notice; family shapes; vitest and
     Stryker.
   - Commit `feat(view): products at their size and colour, and the new sensors`.
-- [ ] **Task 6: the code-and-colour sort line.**
+- [x] **Task 6: the code-and-colour sort line.**
   - Fixture by script; its program; line tests (no product lost; the fingerprint equal across run modes); the agent
     drives it; `e2e/code_sort.mjs` on Linux, Windows in CI.
   - Commit `feat(fixtures): a line sorting by code and colour`.
