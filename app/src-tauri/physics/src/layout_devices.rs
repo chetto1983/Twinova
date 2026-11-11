@@ -72,12 +72,26 @@ enum Kind {
     Pusher,
 }
 
+/// The conveyors a host may be for what it carries: a roller conveyor, or any straight one.
+#[derive(Clone, Copy)]
+pub(super) enum Fit {
+    Rollers,
+    Straight,
+}
+
 impl Kind {
     fn name(self) -> &'static str {
         match self {
             Kind::Transfer => "chain transfer",
             Kind::Stopper => "stopper",
             Kind::Pusher => "pusher",
+        }
+    }
+
+    fn fit(self) -> Fit {
+        match self {
+            Kind::Transfer | Kind::Stopper => Fit::Rollers,
+            Kind::Pusher => Fit::Straight,
         }
     }
 }
@@ -93,26 +107,27 @@ pub fn roller_gap(length: Real, at: Real) -> Real {
     first + k * ROLLER_PITCH
 }
 
-/// Why `host` cannot carry a `kind` by its shape, if it cannot: the generators it fits, level and unskewed.
-fn shape_problem(project: &Project, host: &Belt, kind: Kind) -> Option<String> {
+/// Why `host` cannot carry a `name` that fits `fit` by its shape, if it cannot: the generators it fits, level and
+/// unskewed.
+pub(super) fn shape_problem(
+    project: &Project,
+    host: &Belt,
+    fit: Fit,
+    name: &str,
+) -> Option<String> {
     let inst = project.scene.instances.iter().find(|i| i.id == host.id);
     let inst = inst.expect("an instance of the layout");
     let def = definition_of(project, &host.id);
-    let fits = match kind {
-        Kind::Transfer | Kind::Stopper => def.generator == "twinova.roller/1",
-        Kind::Pusher => matches!(
-            def.generator.as_str(),
-            "twinova.roller/1" | "twinova.belt/1"
-        ),
+    let generator = def.generator.as_str();
+    let problem = match fit {
+        Fit::Rollers => (generator != "twinova.roller/1").then_some("a roller conveyor"),
+        Fit::Straight => (!matches!(generator, "twinova.roller/1" | "twinova.belt/1"))
+            .then_some("a straight conveyor"),
     };
-    if !fits {
-        return Some(match kind {
-            Kind::Pusher => "which is not a straight conveyor".into(),
-            _ => "which is not a roller conveyor".into(),
-        });
+    if let Some(conveyor) = problem {
+        return Some(format!("which is not {conveyor}"));
     }
     if param(inst, def, "incline") != 0.0 || host.skew != 0.0 {
-        let name = kind.name();
         return Some(format!(
             "which is not level and square: a {name} fits a level, unskewed conveyor"
         ));
@@ -122,7 +137,7 @@ fn shape_problem(project: &Project, host: &Belt, kind: Kind) -> Option<String> {
 
 /// Why `host` cannot carry a `kind`, if it cannot: its shape, and for a device with a side exit, a guard across it.
 fn host_problem(project: &Project, host: &Belt, kind: Kind, out_right: bool) -> Option<String> {
-    if let Some(problem) = shape_problem(project, host, kind) {
+    if let Some(problem) = shape_problem(project, host, kind.fit(), kind.name()) {
         return Some(problem);
     }
     if matches!(kind, Kind::Stopper) {
@@ -145,7 +160,7 @@ pub(crate) fn fitting(project: &Project, host: &Belt) -> Vec<&'static str> {
         (Kind::Pusher, "twinova.pusher/1"),
     ]
     .into_iter()
-    .filter(|(kind, _)| shape_problem(project, host, *kind).is_none())
+    .filter(|(kind, _)| shape_problem(project, host, kind.fit(), kind.name()).is_none())
     .map(|(_, generator)| generator)
     .collect()
 }

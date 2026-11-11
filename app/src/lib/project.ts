@@ -63,6 +63,8 @@ export interface ProjectView {
   /** Each mounted device's host and position along it (project_commands.rs `MountView`). */
   mounts: { device: string; host: string; at: number }[];
   flows: { from: Endpoint; to: Endpoint }[];
+  /** Each spur merging onto a straight's flank, `at` along its run (project_commands.rs `MergeView`). */
+  merges: { spur: string; host: string; at: number; side: "left" | "right" }[];
   can_undo: boolean;
   can_redo: boolean;
 }

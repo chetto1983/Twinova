@@ -11,11 +11,14 @@ use rapier3d::prelude::{Pose, Real, Rotation, Vector};
 mod conveyor;
 #[path = "layout_devices.rs"]
 mod devices;
+#[path = "layout_merge.rs"]
+mod merge;
 #[path = "layout_sensors.rs"]
 mod sensors;
-pub(crate) use conveyor::conveyor;
+pub(crate) use conveyor::{conveyor, faces};
 pub use devices::{PUSHER_OPENING, Pusher, Stopper, Transfer, roller_gap};
 pub(crate) use devices::{add, device, fitting};
+pub use merge::MERGE_REACH;
 pub(crate) use sensors::scanner_fits;
 pub use sensors::{Scanner, Sensor, SensorKind};
 use twinova_project::Project;
@@ -322,6 +325,7 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
         }
         out.belts.push(belt);
     }
+    merge::merges(project, &mut out)?;
     devices::devices(project, &instances, &mut out)?;
     let belt_at = |end: (&str, &str), what: &str| -> Result<usize, String> {
         let peer = flow_peer(project, end).ok_or_else(|| format!("{} is not connected", what))?;

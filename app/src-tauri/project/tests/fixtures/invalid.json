@@ -10,5 +10,7 @@
   "overlapping_addresses": "%IB0 overlaps the address of",
   "bool_on_double_word": "a BOOL signal needs a Bit address, not %ID0",
   "input_on_output_area": "a PlcInput signal needs a Input address, not %QX0.5",
-  "unknown_field": "unknown field `colour`"
+  "unknown_field": "unknown field `colour`",
+  "merge_two_peers": "belt_s.out has 2 peers",
+  "merge_bad_at": "-1 is not a distance along belt_a"
 }

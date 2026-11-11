@@ -1,7 +1,7 @@
 //! One conveyor, from its family and parameters: its pose, size, guards and arc. The line's layout and the editor's
 //! interfaces both build their conveyors here (spec 2026-11-11-snapping-design.md, "One geometry").
 
-use rapier3d::prelude::{Pose, Real, Vector};
+use rapier3d::prelude::{Pose, Real, Rotation, Vector};
 use twinova_project::model::{Definition, Instance};
 
 use super::{Arc, BELT_FACE, BELT_GRIP, Belt, TURNTABLE_LANE, degrees, inclined, param, pose};
@@ -60,4 +60,18 @@ pub(crate) fn conveyor(inst: &Instance, def: &Definition) -> Option<Belt> {
             0.0
         },
     })
+}
+
+/// A conveyor's entry and exit faces, at its running surface, each with x out of the conveyor: a straight's faces (a
+/// belt's drums, `face` past its run), a curve's stub tips.
+pub(crate) fn faces(b: &Belt) -> [Pose; 2] {
+    let surface = b.pose * Pose::from_translation(Vector::new(0.0, b.height, 0.0));
+    let back = Pose::from_rotation(Rotation::from_rotation_y(std::f32::consts::PI));
+    match b.arc {
+        Some(arc) => [surface * back, surface * arc.end(b.width)],
+        None => [
+            surface * Pose::from_translation(Vector::new(-b.face, 0.0, 0.0)) * back,
+            surface * Pose::from_translation(Vector::new(b.length + b.face, 0.0, 0.0)),
+        ],
+    }
 }

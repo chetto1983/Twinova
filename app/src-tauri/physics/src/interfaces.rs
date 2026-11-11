@@ -8,7 +8,9 @@ use std::collections::BTreeMap;
 use rapier3d::prelude::{Pose, Real, Rotation, Vector};
 use twinova_project::Project;
 
-use crate::layout::{Belt, Exit, Layout, add, conveyor, device, fitting, pose, scanner_fits};
+use crate::layout::{
+    Belt, Exit, Layout, add, conveyor, device, faces, fitting, pose, scanner_fits,
+};
 use crate::world::side_exit;
 
 /// The sensors, which any conveyor carries.
@@ -139,24 +141,11 @@ fn across(right: bool) -> Rotation {
 /// A conveyor's ends: in and out on its faces, and a turntable's rims across its lane.
 fn conveyor_ends(b: &Belt) -> Vec<End> {
     let surface = b.pose * at(0.0, b.height, 0.0);
-    let mut ends = match b.arc {
-        Some(arc) => vec![
-            end("in", Direction::In, surface * turned(1.0)),
-            end("out", Direction::Out, surface * arc.end(b.width)),
-        ],
-        None => vec![
-            end(
-                "in",
-                Direction::In,
-                surface * at(-b.face, 0.0, 0.0) * turned(1.0),
-            ),
-            end(
-                "out",
-                Direction::Out,
-                surface * at(b.length + b.face, 0.0, 0.0),
-            ),
-        ],
-    };
+    let [entry, exit] = faces(b);
+    let mut ends = vec![
+        end("in", Direction::In, entry),
+        end("out", Direction::Out, exit),
+    ];
     if b.turntable {
         let half = b.length / 2.0;
         for (name, right) in [("left", false), ("right", true)] {

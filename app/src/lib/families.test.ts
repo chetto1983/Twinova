@@ -22,6 +22,7 @@ const project = {
   mounts: scene.connections
     .filter((c) => c.kind === "mount")
     .map((c) => ({ device: c.device![0], host: c.host![0], at: c.position![0] })),
+  merges: [] as ProjectView["merges"],
 } as ProjectView;
 const drawn = (id: string) =>
   drawnOf(

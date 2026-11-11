@@ -24,6 +24,7 @@ const project = {
   mounts: scene.connections
     .filter((c) => c.kind === "mount")
     .map((c) => ({ device: c.device![0], host: c.host![0], at: c.position![0] })),
+  merges: [] as ProjectView["merges"],
 } as ProjectView;
 const instance = (id: string) => scene.instances.find((i) => i.id === id)!;
 const drawn = (id: string, view: ProjectView = project) => drawnOf(view, instance(id))!;
@@ -74,6 +75,24 @@ describe("the 4.4c devices in the view", () => {
       [-0.085, 1.125],
       [1.875, 3.085],
     ]);
+  });
+
+  it("opens a host's guard over a merging spur's width, on its side, as the physics does", () => {
+    const view = {
+      ...project,
+      instances: [...project.instances, { ...instance("belt_c"), id: "spur", parameters: { width: 0.5 } }],
+      merges: [{ spur: "spur", host: "belt_b", at: 0.5, side: "right" as const }],
+    };
+    // Belt B has no left guard; its right one opens for the pusher at 1.5 m and for the spur at 0.5 m.
+    const guards = drawn("belt_b", view).parts.find((p) => p.material === "guard")!;
+    expect(
+      guards.instances!.map((i) => [i.position[0], i.position[0] + i.scale![0]].map((x) => +x.toFixed(4))),
+    ).toEqual([
+      [-0.085, 0.25],
+      [0.75, 1.125],
+      [1.875, 3.085],
+    ]);
+    expect(guards.instances!.every((i) => i.position[2] > 0)).toBe(true);
   });
 
   it("turns the turntable's deck about its centre, and stands its photocell still across its start lane", () => {

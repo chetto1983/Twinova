@@ -53,6 +53,29 @@ fn a_project_opens_into_a_view_of_its_instances() {
     assert!(view.changed_outside.is_empty() && !view.recovered);
 }
 
+/// The view lists each merge, so the webview opens the host's guard where Build does.
+#[test]
+fn a_view_lists_the_spurs_merging_onto_a_flank() {
+    let app = app();
+    let view = open_project(app.state(), fixture("valid", "merge_line")).unwrap();
+    assert_eq!(
+        view.merges,
+        [MergeView {
+            spur: "belt_s".into(),
+            host: "belt_a".into(),
+            at: 2.0,
+            side: Side::Right,
+        }]
+    );
+    assert_eq!(
+        view.flows.len(),
+        2,
+        "the spur's exit is a merge, not a flow"
+    );
+    let view = open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
+    assert!(view.merges.is_empty());
+}
+
 #[test]
 fn a_project_that_fails_to_open_keeps_the_current_one() {
     let app = app();

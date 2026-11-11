@@ -84,15 +84,22 @@ function host(project: ProjectView, device: string): { instance: Instance; at: n
   return mount && instance ? { instance, at: mount.at } : null;
 }
 
-/** The openings the pushers mounted on a conveyor cut in its guards, 0.75 m about each on its side (physics
- *  layout_devices.rs `PUSHER_OPENING`). */
+/** The openings cut in a conveyor's guards: 0.75 m about each pusher mounted on it, on its side (physics
+ *  layout_devices.rs `PUSHER_OPENING`), and each spur's width where it merges (physics layout_merge.rs). */
 function openings(project: ProjectView, on: Instance): Opening[] {
-  return project.mounts.flatMap((m) => {
+  const pushers = project.mounts.flatMap((m) => {
     const device = m.host === on.id ? project.instances.find((i) => i.id === m.device) : undefined;
     const def = device ? project.definitions[device.definition] : undefined;
     if (!device || !def || def.generator !== "twinova.pusher/1") return [];
     return [{ right: !flag(device, def, "out_right", false), centre: m.at, length: PUSHER_OPENING }];
   });
+  const spurs = project.merges.flatMap((m) => {
+    const spur = m.host === on.id ? project.instances.find((i) => i.id === m.spur) : undefined;
+    const def = spur ? project.definitions[spur.definition] : undefined;
+    if (!spur || !def) return [];
+    return [{ right: m.side === "right", centre: m.at, length: real(spur, def, "width", 0.6) }];
+  });
+  return [...pushers, ...spurs];
 }
 
 /** A conveyor's left (−z) and right guards. */

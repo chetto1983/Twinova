@@ -8,7 +8,7 @@ use serde_json::Value;
 use crate::Project;
 use crate::library;
 use crate::model::{
-    Connection, Definition, Endpoint, Instance, ParamType, ParamValue, PortKind, Quat, Vec3,
+    Connection, Definition, Endpoint, Instance, ParamType, ParamValue, PortKind, Quat, Side, Vec3,
 };
 
 fn instance_mut<'a>(project: &'a mut Project, id: &str) -> Result<&'a mut Instance, String> {
@@ -122,6 +122,7 @@ fn touches(connection: &Connection, id: &str) -> bool {
     match connection {
         Connection::Flow { from, to } => from.0 == id || to.0 == id,
         Connection::Mount { host, device, .. } => host.0 == id || device.0 == id,
+        Connection::Merge { from, host, .. } => from.0 == id || host.0 == id,
     }
 }
 
@@ -142,6 +143,7 @@ fn ends(connection: &Connection) -> [&str; 2] {
     match connection {
         Connection::Flow { from, to } => [&from.0, &to.0],
         Connection::Mount { host, device, .. } => [&host.0, &device.0],
+        Connection::Merge { from, host, .. } => [&from.0, &host.0],
     }
 }
 
@@ -285,13 +287,17 @@ pub fn set_mount(
     Ok(())
 }
 
-/// The flow connection at a port, either end.
+/// The flow or merge at a flow port: a flow at either end, a merge at its spur's exit.
 fn flow_at(connection: &Connection, end: &Endpoint) -> bool {
-    matches!(connection, Connection::Flow { from, to } if from == end || to == end)
+    match connection {
+        Connection::Flow { from, to } => from == end || to == end,
+        Connection::Merge { from, .. } => from == end,
+        Connection::Mount { .. } => false,
+    }
 }
 
-/// Sets what a flow port feeds or is fed by, or with `None` leaves it unconnected. A flow end has one peer, so the
-/// connections either end had are replaced.
+/// Sets what a flow port feeds or is fed by, or with `None` leaves it unconnected. A flow end has one peer, a flow or a
+/// merge, so the connections either end had are replaced.
 pub fn set_flow(
     project: &mut Project,
     id: &str,
@@ -334,6 +340,34 @@ pub fn set_flow(
             .connections
             .push(Connection::Flow { from, to });
     }
+    Ok(())
+}
+
+/// Merges spur `id`'s exit onto host `on.0`'s flank, `on.1` along its run, on side `on.2`, or with `None` takes the
+/// merge away. The exit has one peer, so the flow or merge it had is replaced; the host keeps its other spurs.
+pub fn set_merge(
+    project: &mut Project,
+    id: &str,
+    on: Option<(&str, f64, Side)>,
+) -> Result<(), String> {
+    let exit: Endpoint = (id.into(), port_of(project, id, PortKind::FlowOut)?);
+    let merge = match on {
+        Some((host, at, side)) => {
+            if !at.is_finite() || at < 0.0 {
+                return Err(format!("{at} is not a distance along {host}"));
+            }
+            let host_port = port_of(project, host, PortKind::MountHost)?;
+            Some(Connection::Merge {
+                from: exit.clone(),
+                host: (host.into(), host_port),
+                at,
+                side,
+            })
+        }
+        None => None,
+    };
+    (project.scene.connections).retain(|c| !flow_at(c, &exit));
+    project.scene.connections.extend(merge);
     Ok(())
 }
 

@@ -3,7 +3,7 @@ use crate::layout::{BELT_GRIP, Belt, Exit, Products, Sensor, SensorKind, Sink, S
 use std::path::Path;
 use twinova_project::storage::open_folder;
 
-pub(super) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bool) -> Belt {
+pub(crate) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bool) -> Belt {
     Belt {
         id: id.into(),
         pose: Pose::from_translation(Vector::new(x, 0.0, 0.0)),

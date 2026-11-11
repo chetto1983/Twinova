@@ -148,6 +148,9 @@ fn sort_line() -> Project {
             !gone.contains(&from.0.as_str()) && !gone.contains(&to.0.as_str())
         }
         Connection::Mount { device, .. } => !gone.contains(&device.0.as_str()),
+        Connection::Merge { from, host, .. } => {
+            !gone.contains(&from.0.as_str()) && !gone.contains(&host.0.as_str())
+        }
     });
     project
 }

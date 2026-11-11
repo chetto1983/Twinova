@@ -17,7 +17,7 @@ const definitions: Record<string, Definition> = Object.fromEntries(
 );
 const instance = (id: string) => scene.instances.find((i) => i.id === id)!;
 const project = (mounts: ProjectView["mounts"] = []) =>
-  ({ instances: scene.instances, definitions, mounts }) as ProjectView;
+  ({ instances: scene.instances, definitions, mounts, merges: [] as ProjectView["merges"] }) as ProjectView;
 
 /** Where a point of the drawing lands in its instance's frame. */
 function placed(id: string, point: THREE.Vector3, edit: Partial<Instance> = {}): THREE.Vector3 {

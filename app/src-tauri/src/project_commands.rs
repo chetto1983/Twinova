@@ -14,7 +14,7 @@ use tauri::State;
 use twinova_engine::diagnostics;
 use twinova_project::archive::{export_archive, import_archive};
 use twinova_project::history::History;
-use twinova_project::model::{Connection, Definition, Endpoint, Instance, PanelButton};
+use twinova_project::model::{Connection, Definition, Endpoint, Instance, PanelButton, Side};
 use twinova_project::storage::{open_folder, save_folder};
 use twinova_project::{Opened, Project};
 
@@ -112,6 +112,8 @@ pub struct ProjectView {
     pub mounts: Vec<MountView>,
     /// Each flow connection, for the inspector's ports.
     pub flows: Vec<FlowView>,
+    /// Each spur merging onto a straight's flank, so the view opens the host's guard there as Build does.
+    pub merges: Vec<MergeView>,
     pub can_undo: bool,
     pub can_redo: bool,
 }
@@ -129,7 +131,34 @@ fn flows(project: &Project) -> Vec<FlowView> {
                 from: from.clone(),
                 to: to.clone(),
             }),
-            Connection::Mount { .. } => None,
+            _ => None,
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct MergeView {
+    pub spur: String,
+    pub host: String,
+    pub at: f64,
+    pub side: Side,
+}
+
+fn merges(project: &Project) -> Vec<MergeView> {
+    (project.scene.connections.iter())
+        .filter_map(|c| match c {
+            Connection::Merge {
+                from,
+                host,
+                at,
+                side,
+            } => Some(MergeView {
+                spur: from.0.clone(),
+                host: host.0.clone(),
+                at: *at,
+                side: *side,
+            }),
+            _ => None,
         })
         .collect()
 }
@@ -179,6 +208,7 @@ pub(crate) fn view(
         panel: current.project.scene.controller.panel.clone(),
         mounts: mounts(&current.project),
         flows: flows(&current.project),
+        merges: merges(&current.project),
         can_undo: current.history.can_undo(),
         can_redo: current.history.can_redo(),
     }
