@@ -28,6 +28,7 @@ pub(crate) fn conveyor(arc: Option<Arc>, guards: [bool; 2]) -> Belt {
         skew: 0.0,
         openings: Vec::new(),
         turntable: false,
+        face: 0.0,
     }
 }
 
@@ -317,6 +318,49 @@ fn a_pusher_opens_the_guard_on_its_side_about_its_position() {
         left[0].pose.translation.x - 1.0 - left[0].half.x,
         0.475
     ));
+}
+
+/// A belt's drum faces (spec 2026-11-11-snapping-design.md, decision 7): its deck and guards reach `face` past each end
+/// of its run, about the run's centre, as OIP's belt collider reaches its drum faces; an opening keeps its place along
+/// the run.
+#[test]
+fn a_belt_deck_and_guards_reach_its_drum_faces() {
+    use crate::layout::Opening;
+    let mut belt = conveyor(None, [true; 2]);
+    belt.face = 0.085;
+    let (piece, _) = deck(&belt)[0];
+    assert!(
+        near(piece.half.x, 1.585) && near(piece.pose.translation.x, 2.5),
+        "{piece:?}"
+    );
+    for g in guards(&belt) {
+        assert!(
+            near(g.half.x, 1.585) && near(g.pose.translation.x, 2.5),
+            "{g:?}"
+        );
+    }
+    belt.openings = vec![Opening {
+        right: true,
+        centre: 1.0,
+        length: 0.75,
+    }];
+    let right: Vec<(Real, Real)> = guards(&belt)
+        .iter()
+        .filter(|p| p.pose.translation.z > 2.0)
+        .map(|p| {
+            let x = p.pose.translation.x - 1.0;
+            (x - p.half.x, x + p.half.x)
+        })
+        .collect();
+    assert_eq!(right.len(), 2, "{right:?}");
+    assert!(
+        near(right[0].0, -0.085) && near(right[0].1, 0.625),
+        "{right:?}"
+    );
+    assert!(
+        near(right[1].0, 1.375) && near(right[1].1, 3.085),
+        "{right:?}"
+    );
 }
 
 /// OIP's turntable deck: the lane from rim to rim along its start heading, and two caps that overlap it by 2 cm and

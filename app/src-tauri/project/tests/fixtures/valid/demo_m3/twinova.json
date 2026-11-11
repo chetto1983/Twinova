@@ -13,7 +13,7 @@
     "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
     "components/twinova.source@1.json": "257098bb1e4507d8ae3aaf06957ff5bd825b591277e2a12646bfa4161d57c2c6",
     "plc/Main.st": "76936d5f42b305491df9c8bc07a7dc6208fe2ac69bdfc19420f7508fb9ee21dd",
-    "scene.json": "cc6b521a7178445be17e3f273479006a035d9090a355193156b36e43fe328c70"
+    "scene.json": "3d7f3706802586c88e80d48c7f58b06403e9b8f65490d4c58457a07aee0eea21"
   },
   "format": "twinova-project",
   "name": "M3 demo",

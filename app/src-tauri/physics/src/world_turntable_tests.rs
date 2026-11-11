@@ -169,7 +169,8 @@ fn the_sort_line_lays_its_turntable_out_as_a_lane_from_rim_to_rim() {
     let t = &l.belts[k];
     assert!(t.turntable && !t.closed_exit && t.guards == [false; 2]);
     assert!((t.length - 0.9).abs() < 1e-6 && (t.width - 0.6).abs() < 1e-6 && t.grip == 0.42);
-    assert!((t.pose.translation - Vector::new(4.0, 0.0, 0.0)).length() < 1e-6);
+    // Roller A, after belt In's 85 mm drum face, puts the turntable's rim at 4.085 m.
+    assert!((t.pose.translation - Vector::new(4.085, 0.0, 0.0)).length() < 1e-6);
     let s = l.sensors.iter().find(|s| s.id == "s_turn").unwrap();
     assert_eq!((s.belt, s.at), (k, 0.6));
     assert!(!l.belts[l.belt("roller_a").unwrap()].closed_exit);

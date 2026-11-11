@@ -188,7 +188,7 @@ describe("geometry", () => {
 
   it("frames the footprint of the scene", () => {
     expect(frame([])).toEqual({ centre: [0, 0, 0], radius: 1 });
-    expect(frame(scene.instances)).toEqual({ centre: [3.25, 0.8, -0.3], radius: 4.75 });
+    expect(frame(scene.instances)).toEqual({ centre: [3.3775, 0.8, -0.3], radius: (7.255 + 0.5) / 2 + 1 });
     expect(frame([sinkAt(2), sinkAt(10)])).toEqual({ centre: [-0.5, 0.8, 6], radius: 5 });
   });
 });

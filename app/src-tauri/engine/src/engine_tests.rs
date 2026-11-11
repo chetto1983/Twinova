@@ -98,7 +98,8 @@ fn a_blocked_sink_trips_the_jam() {
     let mut engine = started(true);
     let history = run_for(&mut engine, 10);
     let jam = history.iter().position(|s| s.jam == Some(true)).unwrap();
-    assert!((670..700).contains(&jam), "jam at scan {jam}");
+    // The second carton trips it, the first held clear of the photocell at the drum face (`line_tests.rs`).
+    assert!((880..910).contains(&jam), "jam at scan {jam}");
     assert!(history.last().unwrap().sinks[0].blocked);
 }
 

@@ -47,14 +47,14 @@ describe("the 4.4c devices in the view", () => {
 
   it("raises the stopper's blade in its gap by its raise and 5 cm", () => {
     const d = drawn("stopper");
-    expect([d.position, d.offset, d.motion]).toEqual([[2, 0, 0], [1.6375, 0.8, 0], { slide: [0, 0.09, 0] }]);
+    expect([d.position, d.offset, d.motion]).toEqual([[2.085, 0, 0], [1.6375, 0.8, 0], { slide: [0, 0.09, 0] }]);
     expect(moving("stopper")).toBeGreaterThan(0);
   });
 
   it("stands the pusher beside belt B with its paddle face 2 cm outside the belt, pushing across it", () => {
     const d = drawn("pusher");
     // OIP's face is at −1.103 along its push: 0.3 + 0.0205 from belt B's centreline, as the physics's paddle.
-    expect(d.position).toEqual([4.9, 0, 0]);
+    expect(d.position).toEqual([5.07, 0, 0]);
     expect(d.offset[0]).toBe(1.5);
     expect(d.offset[1]).toBeCloseTo(0.6, 9);
     expect(d.offset[2] - 1.103).toBeCloseTo(0.3205, 9);
@@ -78,7 +78,7 @@ describe("the 4.4c devices in the view", () => {
 
   it("turns the turntable's deck about its centre, and stands its photocell still across its start lane", () => {
     const d = drawn("turntable");
-    expect([d.position, d.offset, d.motion]).toEqual([[4.45, 0, 0], [0, 0.8, 0], { turn: true }]);
+    expect([d.position, d.offset, d.motion]).toEqual([[4.535, 0, 0], [0, 0.8, 0], { turn: true }]);
     expect(moving("turntable")).toBeGreaterThan(0);
     expect(drawn("turntable").parts.some((p) => p.material === "leg" && !p.link)).toBe(true);
     // The beam 0.6 m along the lane from its entry, 0.45 m behind the centre: 0.15 m past the centre.

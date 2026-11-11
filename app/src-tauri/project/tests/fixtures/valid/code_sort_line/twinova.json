@@ -33,7 +33,7 @@
     "components/twinova.turntable@1.json": "45a7ac885f4891a21c588391c3b5fe94930e6e74a6bdc2c1044d3ace2293f63b",
     "components/twinova.turntable@1.st": "08c0985af17a5c8d238b451bdd6d37e297f55aa5a2bb9b6628e07bb775451726",
     "plc/Main.st": "b53424e797ac13dd9220b6563efd2f2b0ddc76ca7bc4506a88d3b0be596e9248",
-    "scene.json": "dc1204b5b5f3df076c5f6bf25fb53e05f02682ea568c3f229973243b325d9502"
+    "scene.json": "ea33688354b09aa763c90065515d355e475f21eef87509a9b65d3fa4849010e3"
   },
   "format": "twinova-project",
   "name": "Code and colour sort line",

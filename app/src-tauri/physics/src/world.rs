@@ -93,11 +93,11 @@ fn exit_wall(layout: &Layout, exit: Exit) -> Option<ColliderBuilder> {
     )
 }
 
-/// A frame along which a conveyor's exit lies, and how far: a straight conveyor's own, at its length; a curve's exit
+/// A frame along which a conveyor's exit lies, and how far: a straight conveyor's own, at its end face; a curve's exit
 /// stub tip.
 fn exit_frame(b: &Belt) -> (Pose, Real) {
     match b.arc {
-        None => (b.pose, b.length),
+        None => (b.pose, b.length + b.face),
         Some(arc) => (b.pose * arc.end(b.width), 0.0),
     }
 }

@@ -340,7 +340,7 @@
       "name": "Roller A",
       "parameters": {},
       "position": [
-        2.0,
+        2.085,
         0.0,
         0.0
       ],
@@ -361,7 +361,7 @@
       "name": "Stopper",
       "parameters": {},
       "position": [
-        3.6375,
+        3.7225,
         0.0,
         0.0
       ],
@@ -384,7 +384,7 @@
         "rotation_speed": 90.0
       },
       "position": [
-        4.45,
+        4.535,
         0.0,
         0.0
       ],
@@ -410,7 +410,7 @@
         "length": 3.0
       },
       "position": [
-        4.9,
+        5.07,
         0.0,
         0.0
       ],
@@ -431,7 +431,7 @@
       "name": "Pusher",
       "parameters": {},
       "position": [
-        6.4,
+        6.57,
         0.0,
         0.3
       ],
@@ -455,9 +455,9 @@
         "length": 2.0
       },
       "position": [
-        4.45,
+        4.535,
         0.0,
-        -0.45
+        -0.535
       ],
       "rotation": [
         0.0,
@@ -476,7 +476,7 @@
       "name": "Straight sink",
       "parameters": {},
       "position": [
-        7.9,
+        8.155,
         0.0,
         0.0
       ],
@@ -496,9 +496,9 @@
       "name": "Turned sink",
       "parameters": {},
       "position": [
-        4.45,
+        4.535,
         0.0,
-        -2.45
+        -2.62
       ],
       "rotation": [
         0.0,
@@ -516,7 +516,7 @@
       "name": "Reject sink",
       "parameters": {},
       "position": [
-        6.4,
+        6.57,
         0.0,
         -0.9
       ],
@@ -556,7 +556,7 @@
       "name": "Stopper photocell",
       "parameters": {},
       "position": [
-        3.45,
+        3.535,
         0.0,
         0.0
       ],
@@ -576,7 +576,7 @@
       "name": "Turntable photocell",
       "parameters": {},
       "position": [
-        4.6,
+        4.685,
         0.0,
         0.0
       ],
@@ -596,7 +596,7 @@
       "name": "Pusher photocell",
       "parameters": {},
       "position": [
-        6.55,
+        6.72,
         0.0,
         0.0
       ],
@@ -616,7 +616,7 @@
       "name": "Colour sensor",
       "parameters": {},
       "position": [
-        3.4,
+        3.485,
         0.0,
         0.0
       ],
@@ -636,7 +636,7 @@
       "name": "Barcode scanner",
       "parameters": {},
       "position": [
-        5.5,
+        5.67,
         0.0,
         0.0
       ],
@@ -658,9 +658,9 @@
       "name": "Laser on belt C",
       "parameters": {},
       "position": [
-        4.45,
+        4.535,
         0.0,
-        -1.45
+        -1.535
       ],
       "rotation": [
         0.0,

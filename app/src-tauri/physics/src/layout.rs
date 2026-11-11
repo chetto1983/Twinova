@@ -22,6 +22,11 @@ use twinova_project::model::{Connection, Definition, Instance, Item, ParamValue,
 /// `src/core/types/base.ts` at `1e7488c`).
 pub const BELT_GRIP: Real = 0.7;
 
+/// How far a belt's end drums reach past its run: OIP's `BELT_HEIGHT / 2` (`src/core/types/base.ts` at `0572868`),
+/// where its snap ends and its collider stop, and where Twinova's view draws them (spec 2026-11-11-snapping-design.md,
+/// decision 7).
+pub const BELT_FACE: Real = 0.085;
+
 /// A conveyor, belt or rollers, straight or curved: a deck with a surface velocity. OIP draws a roller conveyor's
 /// rollers only; its physics is one deck (`examples/parts/roller-conveyor/behavior.ts` at `1e7488c`).
 #[derive(Debug, Clone, PartialEq)]
@@ -51,6 +56,9 @@ pub struct Belt {
     /// It is a turntable's lane: OIP's static cross for a deck, and a flow that turns with the deck
     /// (`World::set_turntable`).
     pub turntable: bool,
+    /// How far a straight conveyor's deck and guards reach past each end of its run, to its end faces: `BELT_FACE` for a
+    /// belt, 0 for rollers. A distance along it still counts from its run's start.
+    pub face: Real,
 }
 
 /// A turntable's lane along its start heading, in widths: OIP's deck is 1.5 widths across (`turntable-conveyor/part.js`
@@ -349,6 +357,11 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
             openings: Vec::new(),
             skew: degrees(inst, def, "skew"),
             turntable,
+            face: if def.generator == "twinova.belt/1" {
+                BELT_FACE
+            } else {
+                0.0
+            },
         });
     }
     devices::devices(project, &instances, &mut out)?;
