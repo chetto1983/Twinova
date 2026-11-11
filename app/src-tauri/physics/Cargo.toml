@@ -13,5 +13,8 @@ publish = false
 # physics"; research 15): the version truST already brings, Apache-2.0. enhanced-determinism gives the same bits on
 # every platform.
 rapier3d = { version = "=0.36.1", features = ["enhanced-determinism"] }
+# The editor's joins compose poses in f64 (spec 2026-11-11-snapping-design.md): rapier's own math crate, the version it
+# brings (MIT OR Apache-2.0), with its f64 types (DPose3) switched on.
+glamx = { version = "=0.3.1", features = ["f64"] }
 serde = { version = "1", features = ["derive"] }
 twinova-project = { path = "../project" }

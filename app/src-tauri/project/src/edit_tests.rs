@@ -385,7 +385,7 @@ fn flows(p: &Project) -> Vec<(String, String)> {
                 format!("{}.{}", from.0, from.1),
                 format!("{}.{}", to.0, to.1),
             )),
-            Connection::Mount { .. } => None,
+            _ => None,
         })
         .collect()
 }
@@ -430,4 +430,89 @@ fn a_flow_port_has_one_peer_set_from_either_end() {
             "{id}.{port}"
         );
     }
+}
+
+fn merge_line() -> Project {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/valid/merge_line");
+    open_folder(&dir).unwrap().opened.project
+}
+
+fn merges(p: &Project) -> Vec<&Connection> {
+    (p.scene.connections.iter())
+        .filter(|c| matches!(c, Connection::Merge { .. }))
+        .collect()
+}
+
+#[test]
+fn a_spur_merges_onto_a_host_and_its_exit_keeps_one_peer() {
+    let mut p = merge_line();
+    set_merge(&mut p, "belt_s", Some(("belt_a", 1.25, Side::Left))).unwrap();
+    assert_eq!(
+        merges(&p),
+        [&Connection::Merge {
+            from: ("belt_s".into(), "out".into()),
+            host: ("belt_a".into(), "rail".into()),
+            at: 1.25,
+            side: Side::Left,
+        }]
+    );
+    // A flow from the spur's exit replaces its merge, and a merge replaces that flow again.
+    set_flow(&mut p, "belt_s", "out", Some(("sink", "in"))).unwrap();
+    assert!(merges(&p).is_empty());
+    assert!(flows(&p).contains(&("belt_s.out".into(), "sink.in".into())));
+    assert!(!flows(&p).contains(&("belt_a.out".into(), "sink.in".into())));
+    set_merge(&mut p, "belt_s", Some(("belt_a", 2.0, Side::Right))).unwrap();
+    assert!(!flows(&p).iter().any(|(from, _)| from == "belt_s.out"));
+    assert_eq!(merges(&p).len(), 1);
+    // Freeing the host's own ports leaves its spurs alone.
+    set_flow(&mut p, "belt_a", "in", None).unwrap();
+    assert_eq!(merges(&p).len(), 1);
+    // At the start of the run is a distance along it, which the format accepts too.
+    set_merge(&mut p, "belt_s", Some(("belt_a", 0.0, Side::Right))).unwrap();
+    crate::parse_project(&crate::encode_project(&p)).unwrap();
+    set_merge(&mut p, "belt_s", None).unwrap();
+    assert!(merges(&p).is_empty());
+    let refusals = [
+        (
+            "belt_s",
+            Some(("belt_a", -0.5, Side::Right)),
+            "-0.5 is not a distance along belt_a",
+        ),
+        (
+            "belt_s",
+            Some(("belt_a", f64::NAN, Side::Right)),
+            "NaN is not a distance along belt_a",
+        ),
+        (
+            "belt_s",
+            Some(("sink", 1.0, Side::Right)),
+            "has no MountHost port",
+        ),
+        (
+            "sink",
+            Some(("belt_a", 1.0, Side::Right)),
+            "has no FlowOut port",
+        ),
+    ];
+    for (spur, on, message) in refusals {
+        let error = set_merge(&mut p, spur, on).unwrap_err();
+        assert!(error.contains(message), "{error}");
+    }
+}
+
+#[test]
+fn removing_a_spur_or_its_host_takes_its_merge_away() {
+    for id in ["belt_s", "belt_a"] {
+        let mut p = merge_line();
+        assert_eq!(ends(merges(&p)[0]), ["belt_s", "belt_a"]);
+        remove_instance(&mut p, id).unwrap();
+        assert!(merges(&p).is_empty(), "{id}");
+    }
+    let mut p = merge_line();
+    remove_instance(&mut p, "sink").unwrap();
+    assert_eq!(
+        merges(&p).len(),
+        1,
+        "a merge touches only its spur and host"
+    );
 }

@@ -7,13 +7,20 @@
 
 use rapier3d::prelude::{Pose, Real, Rotation, Vector};
 
-use crate::path::arc_length;
-
+#[path = "layout_conveyor.rs"]
+mod conveyor;
 #[path = "layout_devices.rs"]
 mod devices;
+#[path = "layout_merge.rs"]
+mod merge;
 #[path = "layout_sensors.rs"]
 mod sensors;
+pub(crate) use conveyor::{conveyor, faces};
 pub use devices::{PUSHER_OPENING, Pusher, Stopper, Transfer, roller_gap};
+pub(crate) use devices::{add, device, fitting, takes_spurs};
+pub use merge::MERGE_REACH;
+pub(crate) use merge::{merge_holds, merge_problem};
+pub(crate) use sensors::scanner_fits;
 pub use sensors::{Scanner, Sensor, SensorKind};
 use twinova_project::Project;
 use twinova_project::model::{Connection, Definition, Instance, Item, ParamValue, rgb};
@@ -21,6 +28,11 @@ use twinova_project::model::{Connection, Definition, Instance, Item, ParamValue,
 /// A belt's grip against a standard carton, the figure a belt datasheet quotes (OIP `BELT_FRICTION`,
 /// `src/core/types/base.ts` at `1e7488c`).
 pub const BELT_GRIP: Real = 0.7;
+
+/// How far a belt's end drums reach past its run: OIP's `BELT_HEIGHT / 2` (`src/core/types/base.ts` at `0572868`),
+/// where its snap ends and its collider stop, and where Twinova's view draws them (spec 2026-11-11-snapping-design.md,
+/// decision 7).
+pub const BELT_FACE: Real = 0.085;
 
 /// A conveyor, belt or rollers, straight or curved: a deck with a surface velocity. OIP draws a roller conveyor's
 /// rollers only; its physics is one deck (`examples/parts/roller-conveyor/behavior.ts` at `1e7488c`).
@@ -51,6 +63,9 @@ pub struct Belt {
     /// It is a turntable's lane: OIP's static cross for a deck, and a flow that turns with the deck
     /// (`World::set_turntable`).
     pub turntable: bool,
+    /// How far a straight conveyor's deck and guards reach past each end of its run, to its end faces: `BELT_FACE` for a
+    /// belt, 0 for rollers. A distance along it still counts from its run's start.
+    pub face: Real,
 }
 
 /// A turntable's lane along its start heading, in widths: OIP's deck is 1.5 widths across (`turntable-conveyor/part.js`
@@ -222,7 +237,7 @@ fn products(inst: &Instance, def: &Definition) -> Products {
     }
 }
 
-fn pose(inst: &Instance) -> Pose {
+pub(crate) fn pose(inst: &Instance) -> Pose {
     let [x, y, z] = inst.position.map(|v| v as Real);
     let [qx, qy, qz, qw] = inst.rotation.map(|v| v as Real);
     Pose::from_parts(Vector::new(x, y, z), Rotation::from_xyzw(qx, qy, qz, qw))
@@ -302,55 +317,16 @@ pub fn layout(project: &Project) -> Result<Layout, String> {
     }
     let mut out = Layout::default();
     for (inst, def) in &instances {
-        let real = |name| param(inst, def, name) as Real;
-        let (width, height) = (real("width"), real("height"));
-        let (grip, arc) = match def.generator.as_str() {
-            "twinova.belt/1" => (BELT_GRIP, None),
-            "twinova.roller/1" | "twinova.turntable/1" => (real("friction"), None),
-            "twinova.belt_curve/1" | "twinova.roller_curve/1" => {
-                let arc = Arc {
-                    inner_radius: real("inner_radius"),
-                    sweep: degrees(inst, def, "sweep"),
-                    right: real("turn_right") != 0.0,
-                };
-                (real("friction"), Some(arc))
-            }
-            _ => continue,
+        let Some(mut belt) = conveyor(inst, def) else {
+            continue;
         };
-        let turntable = def.generator == "twinova.turntable/1";
-        let (pose, length) = if turntable {
-            let half = TURNTABLE_LANE * width / 2.0;
-            (
-                pose(inst) * Pose::from_translation(Vector::new(-half, 0.0, 0.0)),
-                2.0 * half,
-            )
-        } else {
-            let length = arc.map_or_else(|| real("length"), |a| arc_length(&a, width));
-            (
-                inclined(pose(inst), length, height, degrees(inst, def, "incline")),
-                length,
-            )
-        };
-        if turntable {
+        belt.closed_exit &= flow_peer(project, (&inst.id, "out")).is_none();
+        if belt.turntable {
             out.turntables.push(out.belts.len());
         }
-        out.belts.push(Belt {
-            id: inst.id.clone(),
-            pose,
-            length,
-            width,
-            height,
-            speed: real("speed"),
-            grip,
-            // A turntable's ends have no wall: its deck turns them (OIP has none).
-            closed_exit: !turntable && flow_peer(project, (&inst.id, "out")).is_none(),
-            arc,
-            guards: [real("left_guard") != 0.0, real("right_guard") != 0.0],
-            openings: Vec::new(),
-            skew: degrees(inst, def, "skew"),
-            turntable,
-        });
+        out.belts.push(belt);
     }
+    merge::merges(project, &mut out)?;
     devices::devices(project, &instances, &mut out)?;
     let belt_at = |end: (&str, &str), what: &str| -> Result<usize, String> {
         let peer = flow_peer(project, end).ok_or_else(|| format!("{} is not connected", what))?;

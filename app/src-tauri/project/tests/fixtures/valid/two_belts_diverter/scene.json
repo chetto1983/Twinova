@@ -195,7 +195,7 @@
         "left_guard": false
       },
       "position": [
-        3.0,
+        3.085,
         0.0,
         0.0
       ],
@@ -216,7 +216,7 @@
       "name": "Chain transfer",
       "parameters": {},
       "position": [
-        4.0,
+        4.085,
         0.0,
         0.0
       ],
@@ -239,7 +239,7 @@
         "length": 2.0
       },
       "position": [
-        5.0,
+        5.17,
         0.0,
         0.0
       ],
@@ -260,7 +260,7 @@
       "name": "Normal sink",
       "parameters": {},
       "position": [
-        7.0,
+        7.255,
         0.0,
         0.0
       ],
@@ -280,7 +280,7 @@
       "name": "Reject sink",
       "parameters": {},
       "position": [
-        4.0,
+        4.085,
         0.0,
         -0.6
       ],
@@ -300,7 +300,7 @@
       "name": "Sensor a",
       "parameters": {},
       "position": [
-        4.0,
+        4.085,
         0.0,
         0.0
       ],
@@ -320,7 +320,7 @@
       "name": "Sensor b",
       "parameters": {},
       "position": [
-        5.5,
+        5.67,
         0.0,
         0.0
       ],

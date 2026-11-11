@@ -22,6 +22,7 @@ const project = {
   mounts: scene.connections
     .filter((c) => c.kind === "mount")
     .map((c) => ({ device: c.device![0], host: c.host![0], at: c.position![0] })),
+  merges: [] as ProjectView["merges"],
 } as ProjectView;
 const drawn = (id: string) =>
   drawnOf(
@@ -74,14 +75,14 @@ describe("the families OIP's generators draw", () => {
 
   it("centres a roller conveyor on its length, the rollers' top at its height", () => {
     const d = drawn("roller_r")!;
-    expect([d.position, d.offset, d.motion]).toEqual([[3, 0, 0], [1, 0.8, 0], undefined]);
+    expect([d.position, d.offset, d.motion]).toEqual([[3.085, 0, 0], [1, 0.8, 0], undefined]);
     expect(d.parts[0].material).toBe("roller");
   });
 
   it("hangs a chain transfer from its host, 3 cm under the rollers at its mount, lifted by its stroke", () => {
     const d = drawn("chain_transfer")!;
     expect([d.position, d.offset[0], d.offset[2], d.motion]).toEqual([
-      [3, 0, 0],
+      [3.085, 0, 0],
       1,
       0,
       { slide: [0, TRANSFER_STROKE, 0] },
@@ -92,7 +93,7 @@ describe("the families OIP's generators draw", () => {
 
   it("seats a photo eye beside its host's edge, the lens on the physics' beam", () => {
     const d = drawn("sensor_a")!;
-    expect(d.position).toEqual([3, 0, 0]);
+    expect(d.position).toEqual([3.085, 0, 0]);
     // the beam 0.05 above the rollers, the lens at emitY 0.1 above the eye's origin, its face 20 mm out from the edge
     expect(d.offset[0]).toBe(1);
     expect(d.offset[1]).toBeCloseTo(0.8 + 0.05 - 0.1, 9);
@@ -101,7 +102,7 @@ describe("the families OIP's generators draw", () => {
 
   it("finds each device's own mount", () => {
     const d = drawn("sensor_b")!;
-    expect([d.position, d.offset[0]]).toEqual([[5, 0, 0], 1.5]);
+    expect([d.position, d.offset[0]]).toEqual([[5.17, 0, 0], 1.5]);
   });
 
   it("leaves the other families, and an unmounted device, to their stand-ins", () => {

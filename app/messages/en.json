@@ -68,5 +68,13 @@
   "project_new": "New project",
   "undo": "Undo",
   "redo": "Redo",
-  "scene_changed": "The scene changed: Build to run it"
+  "scene_changed": "The scene changed: Build to run it",
+  "snap_toggle": "Snap",
+  "snap_gap": "Gap (mm)",
+  "snap_join": "Joins {peer}, gap {gap} mm",
+  "snap_merge": "Merges onto {host}'s {side} flank at {at} m, gap {gap} mm",
+  "snap_left": "left",
+  "snap_right": "right",
+  "snap_mount": "Mounts on {host} at {at}",
+  "inspector_gap": "Gap (mm)"
 }

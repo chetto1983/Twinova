@@ -157,9 +157,19 @@ pub(crate) fn scene(scene: &Scene, definitions: &BTreeMap<String, Definition>) -
                 }
                 (host, PortKind::MountHost, device, PortKind::MountDevice)
             }
+            Connection::Merge { from, host, at, .. } => {
+                if !at.is_finite() || *at < 0.0 {
+                    err(
+                        format!("connections[{i}]"),
+                        format!("{at} is not a distance along {}", host.0),
+                    );
+                }
+                (host, PortKind::MountHost, from, PortKind::FlowOut)
+            }
         };
-        // A host may carry several devices (two sensors on one belt); a flow end and a device have one peer.
-        let host = matches!(c, Connection::Mount { .. });
+        // A host may carry several devices (two sensors on one belt) and spurs; a flow end, a spur's exit and a device
+        // have one peer.
+        let host = matches!(c, Connection::Mount { .. } | Connection::Merge { .. });
         for (end, kind, single) in [(a, a_kind, !host), (b, b_kind, true)] {
             match instances
                 .get(end.0.as_str())

@@ -3,7 +3,7 @@ use crate::layout::{BELT_GRIP, Belt, Exit, Products, Sensor, SensorKind, Sink, S
 use std::path::Path;
 use twinova_project::storage::open_folder;
 
-pub(super) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bool) -> Belt {
+pub(crate) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bool) -> Belt {
     Belt {
         id: id.into(),
         pose: Pose::from_translation(Vector::new(x, 0.0, 0.0)),
@@ -18,6 +18,7 @@ pub(super) fn belt(id: &str, x: Real, length: Real, speed: Real, closed_exit: bo
         skew: 0.0,
         openings: Vec::new(),
         turntable: false,
+        face: 0.0,
     }
 }
 
@@ -266,7 +267,7 @@ fn equal_runs_give_equal_bits_on_every_platform() {
     assert_eq!(first, 0x6e1f_b275_927f_76a9, "{first:#018x}");
 }
 
-pub(super) fn fixture(name: &str) -> twinova_project::Project {
+pub(crate) fn fixture(name: &str) -> twinova_project::Project {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../project/tests/fixtures/valid")
         .join(name);
@@ -392,6 +393,59 @@ fn a_carton_is_delivered_when_its_front_reaches_the_exit() {
     assert_eq!(w.delivered(0), 1);
     assert!(
         (4.999..5.0).contains(&last_front),
+        "the step before: front at {last_front}"
+    );
+}
+
+/// A belt's exit is its drum face (spec 2026-11-11-snapping-design.md, decision 7): its wall stands there, a carton is
+/// delivered when its front reaches it, and two belts butted face to face carry it across.
+#[test]
+fn a_belt_ends_at_its_drum_face() {
+    let mut a = belt("a", 1.0, 3.0, 0.5, true);
+    a.face = 0.085;
+    let line = Layout {
+        belts: vec![a.clone()],
+        ..Layout::default()
+    };
+    let aabb = exit_wall(&line, Exit::End(0))
+        .unwrap()
+        .build()
+        .compute_aabb();
+    assert!((aabb.mins.x - 4.085).abs() < 1e-5, "{aabb:?}");
+    a.closed_exit = false;
+    let mut b = belt("b", 3.0 + 2.0 * 0.085, 2.0, 0.5, false);
+    b.face = 0.085;
+    a.pose = Pose::IDENTITY;
+    let mut w = World::new(Layout {
+        belts: vec![a, b],
+        sources: vec![source(0, 1_000_000, 1_000_000_000, 1)],
+        sinks: vec![Sink {
+            id: "sink".into(),
+            exit: Exit::End(1),
+        }],
+        ..Layout::default()
+    });
+    w.set_belt_running(0, true);
+    w.set_belt_running(1, true);
+    let mut last_front = 0.0;
+    let mut lift: f32 = 0.0;
+    for ms in 1..=20_000 {
+        if w.delivered(0) > 0 {
+            break;
+        }
+        if let Some(c) = w.cartons().first() {
+            last_front = c.position[0] + CARTON_HALF;
+            if ms > 200 {
+                lift = lift.max((c.position[1] - (0.8 + CARTON_HALF)).abs());
+            }
+        }
+        w.step();
+    }
+    assert_eq!(w.delivered(0), 1);
+    assert!(lift < 0.0005, "level across the faces: {lift} m");
+    let face = 3.17 + 2.0 + 0.085;
+    assert!(
+        (face - 0.001..face).contains(&last_front),
         "the step before: front at {last_front}"
     );
 }

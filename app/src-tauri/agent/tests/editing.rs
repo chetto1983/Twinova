@@ -15,7 +15,8 @@ async fn client() -> common::Client {
     common::http().await.0
 }
 
-/// Belt C runs along −z from (4.45, 0, −0.45) for 2 m: belt D continues it for 2 m, and the turned sink moves to its end.
+/// Belt C runs along −z from (4.535, 0, −0.535) for 2 m, its drum face 85 mm past: belt D continues it face to face for
+/// 2 m (its origin 85 mm past its own face), and the turned sink moves to its end.
 const QUARTER_LEFT: [f64; 4] = [0.0, FRAC_1_SQRT_2, 0.0, FRAC_1_SQRT_2];
 
 fn flow(from: (&str, &str), to: (&str, &str)) -> Value {
@@ -50,7 +51,7 @@ async fn an_agent_extends_the_sort_line_builds_runs_and_saves_it() {
     assert_eq!(belt["behaviour"], json!("components/twinova.belt@1.st"));
 
     let add = json!({
-        "id": "belt_d", "definition": "twinova.belt@1", "position": [4.45, 0.0, -2.45], "rotation": QUARTER_LEFT,
+        "id": "belt_d", "definition": "twinova.belt@1", "position": [4.535, 0.0, -2.705], "rotation": QUARTER_LEFT,
         "parameters": { "length": 2.0 }, "signals": { "run": "%QX0.7", "running": "%IX1.5" },
     });
     ok(&c, "add_instance", add).await;
@@ -60,7 +61,7 @@ async fn an_agent_extends_the_sort_line_builds_runs_and_saves_it() {
     ok(
         &c,
         "move_instance",
-        json!({ "id": "sink_c", "position": [4.45, 0.0, -4.45] }),
+        json!({ "id": "sink_c", "position": [4.535, 0.0, -4.79] }),
     )
     .await;
     ok(

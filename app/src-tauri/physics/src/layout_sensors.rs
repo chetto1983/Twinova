@@ -7,7 +7,7 @@ use twinova_project::Project;
 use twinova_project::model::{Definition, Instance};
 
 use super::devices::mount;
-use super::{Layout, colors, number, param};
+use super::{Belt, Layout, colors, number, param};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Sensor {
@@ -89,6 +89,11 @@ pub(super) fn sensor(
     })
 }
 
+/// Whether a barcode scanner's arch stands over `host`: a straight one.
+pub(crate) fn scanner_fits(host: &Belt) -> bool {
+    host.arc.is_none()
+}
+
 pub(super) fn scanner(
     project: &Project,
     out: &Layout,
@@ -96,7 +101,7 @@ pub(super) fn scanner(
     def: &Definition,
 ) -> Result<Scanner, String> {
     let (belt, at) = mounted(project, out, inst)?;
-    if out.belts[belt].arc.is_some() {
+    if !scanner_fits(&out.belts[belt]) {
         return Err(format!(
             "{} is mounted on {}, a curve: a barcode scanner stands over a straight conveyor",
             inst.id, out.belts[belt].id

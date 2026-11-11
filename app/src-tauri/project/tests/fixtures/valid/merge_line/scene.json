@@ -1,0 +1,140 @@
+{
+  "connections": [
+    {
+      "from": [
+        "source",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "belt_s",
+        "in"
+      ]
+    },
+    {
+      "at": 2.0,
+      "from": [
+        "belt_s",
+        "out"
+      ],
+      "host": [
+        "belt_a",
+        "rail"
+      ],
+      "kind": "merge",
+      "side": "right"
+    },
+    {
+      "from": [
+        "belt_a",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "sink",
+        "in"
+      ]
+    }
+  ],
+  "controller": {
+    "panel": [
+      {
+        "address": "%IX1.0",
+        "name": "Start"
+      },
+      {
+        "address": "%IX1.1",
+        "name": "Stop"
+      }
+    ]
+  },
+  "groups": [],
+  "instances": [
+    {
+      "definition": "twinova.source@1",
+      "id": "source",
+      "name": "Source",
+      "parameters": {},
+      "position": [
+        2.0,
+        0.0,
+        2.385
+      ],
+      "rotation": [
+        0.0,
+        0.7071068,
+        0.0,
+        0.7071068
+      ],
+      "signals": {}
+    },
+    {
+      "definition": "twinova.belt@1",
+      "id": "belt_a",
+      "name": "Main belt",
+      "parameters": {
+        "length": 4.0,
+        "speed": 0.5
+      },
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "run": "%QX0.0",
+        "running": "%IX0.1"
+      }
+    },
+    {
+      "definition": "twinova.sink@1",
+      "id": "sink",
+      "name": "Sink",
+      "parameters": {},
+      "position": [
+        4.085,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "count": "%ID4"
+      }
+    },
+    {
+      "definition": "twinova.belt@1",
+      "id": "belt_s",
+      "name": "Spur",
+      "parameters": {
+        "length": 2.0,
+        "speed": 0.5
+      },
+      "position": [
+        2.0,
+        0.0,
+        2.385
+      ],
+      "rotation": [
+        0.0,
+        0.7071068,
+        0.0,
+        0.7071068
+      ],
+      "signals": {
+        "run": "%QX0.1",
+        "running": "%IX0.2"
+      }
+    }
+  ]
+}

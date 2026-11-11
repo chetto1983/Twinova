@@ -77,7 +77,7 @@ impl Arc {
     }
 
     /// The centre the arc turns about, in the curve's frame.
-    fn centre(&self, width: Real) -> Vector {
+    pub(crate) fn centre(&self, width: Real) -> Vector {
         Vector::new(STUB, 0.0, -self.turn() * self.radius(width))
     }
 
@@ -123,7 +123,7 @@ pub fn deck(belt: &Belt) -> Vec<(Piece, Motion)> {
     let (pose, w) = (belt.pose, belt.width);
     let y = belt.height - DECK_THICKNESS / 2.0;
     let Some(arc) = belt.arc else {
-        let half = Vector::new(belt.length, DECK_THICKNESS, w) / 2.0;
+        let half = Vector::new(belt.length + 2.0 * belt.face, DECK_THICKNESS, w) / 2.0;
         let centre = Vector::new(belt.length / 2.0, y, 0.0);
         let along = Motion::Along(pose.rotation);
         let mut out = vec![(placed(pose, centre, half), along)];
@@ -194,7 +194,8 @@ pub fn guards(belt: &Belt) -> Vec<Piece> {
     out
 }
 
-/// The stretches of a straight conveyor's guard, left or right, between the openings the pushers beside it cut.
+/// The stretches of a straight conveyor's guard, left or right, from face to face, between the openings the pushers
+/// beside it cut.
 fn spans(belt: &Belt, right: bool) -> Vec<(Real, Real)> {
     let mut cuts: Vec<(Real, Real)> = (belt.openings.iter())
         .filter(|o| o.right == right)
@@ -202,15 +203,15 @@ fn spans(belt: &Belt, right: bool) -> Vec<(Real, Real)> {
         .collect();
     cuts.sort_by(|a, b| a.0.total_cmp(&b.0));
     let mut out = Vec::new();
-    let mut from: Real = 0.0;
+    let (mut from, to) = (-belt.face, belt.length + belt.face);
     for (start, end) in cuts {
         if start > from {
-            out.push((from, start.min(belt.length)));
+            out.push((from, start.min(to)));
         }
         from = from.max(end);
     }
-    if from < belt.length {
-        out.push((from, belt.length));
+    if from < to {
+        out.push((from, to));
     }
     out
 }

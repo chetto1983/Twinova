@@ -83,7 +83,7 @@ pub(super) struct Devices {
 /// A side exit: along `host` at `at`, as far each way as `span`, past the edge `edge` from its centreline, to its
 /// right or its left.
 #[derive(Clone, Copy)]
-pub(super) struct Side {
+pub(crate) struct Side {
     pub host: usize,
     pub at: Real,
     pub span: Real,
@@ -94,7 +94,7 @@ pub(super) struct Side {
 /// The side exit of a chain transfer or a pusher: the deck's span or the paddle's. A product counts while it overlaps it
 /// (`World::reached`), as a chute beside the transfer catches what the chains drag off (measured 2026-11-10: with the
 /// deck's own span, a queue standing over a raised transfer spilled the cartons it half carried onto the floor).
-pub(super) fn side_exit(layout: &Layout, exit: Exit) -> Option<Side> {
+pub(crate) fn side_exit(layout: &Layout, exit: Exit) -> Option<Side> {
     match exit {
         Exit::End(_) => None,
         Exit::Side(k) => {

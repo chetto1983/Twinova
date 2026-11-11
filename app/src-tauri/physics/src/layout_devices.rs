@@ -72,12 +72,26 @@ enum Kind {
     Pusher,
 }
 
+/// The conveyors a host may be for what it carries: a roller conveyor, or any straight one.
+#[derive(Clone, Copy)]
+pub(super) enum Fit {
+    Rollers,
+    Straight,
+}
+
 impl Kind {
     fn name(self) -> &'static str {
         match self {
             Kind::Transfer => "chain transfer",
             Kind::Stopper => "stopper",
             Kind::Pusher => "pusher",
+        }
+    }
+
+    fn fit(self) -> Fit {
+        match self {
+            Kind::Transfer | Kind::Stopper => Fit::Rollers,
+            Kind::Pusher => Fit::Straight,
         }
     }
 }
@@ -93,30 +107,38 @@ pub fn roller_gap(length: Real, at: Real) -> Real {
     first + k * ROLLER_PITCH
 }
 
-/// Why `host` cannot carry a `kind`, if it cannot: the generators it fits, level and unskewed, and for those with a
-/// side exit, no guard across it.
-fn host_problem(project: &Project, host: &Belt, kind: Kind, out_right: bool) -> Option<String> {
+/// Why `host` cannot carry a `name` that fits `fit` by its shape, if it cannot: the generators it fits, level and
+/// unskewed.
+pub(super) fn shape_problem(
+    project: &Project,
+    host: &Belt,
+    fit: Fit,
+    name: &str,
+) -> Option<String> {
     let inst = project.scene.instances.iter().find(|i| i.id == host.id);
     let inst = inst.expect("an instance of the layout");
     let def = definition_of(project, &host.id);
-    let fits = match kind {
-        Kind::Transfer | Kind::Stopper => def.generator == "twinova.roller/1",
-        Kind::Pusher => matches!(
-            def.generator.as_str(),
-            "twinova.roller/1" | "twinova.belt/1"
-        ),
+    let generator = def.generator.as_str();
+    let problem = match fit {
+        Fit::Rollers => (generator != "twinova.roller/1").then_some("a roller conveyor"),
+        Fit::Straight => (!matches!(generator, "twinova.roller/1" | "twinova.belt/1"))
+            .then_some("a straight conveyor"),
     };
-    if !fits {
-        return Some(match kind {
-            Kind::Pusher => "which is not a straight conveyor".into(),
-            _ => "which is not a roller conveyor".into(),
-        });
+    if let Some(conveyor) = problem {
+        return Some(format!("which is not {conveyor}"));
     }
     if param(inst, def, "incline") != 0.0 || host.skew != 0.0 {
-        let name = kind.name();
         return Some(format!(
             "which is not level and square: a {name} fits a level, unskewed conveyor"
         ));
+    }
+    None
+}
+
+/// Why `host` cannot carry a `kind`, if it cannot: its shape, and for a device with a side exit, a guard across it.
+fn host_problem(project: &Project, host: &Belt, kind: Kind, out_right: bool) -> Option<String> {
+    if let Some(problem) = shape_problem(project, host, kind.fit(), kind.name()) {
+        return Some(problem);
     }
     if matches!(kind, Kind::Stopper) {
         return None;
@@ -128,6 +150,24 @@ fn host_problem(project: &Project, host: &Belt, kind: Kind, out_right: bool) -> 
     };
     host.guards[side]
         .then(|| format!("whose {name} guard closes the {device}'s exit: turn {name}_guard off"))
+}
+
+/// Whether a spur may merge onto `host`'s flanks: a level, unskewed straight (layout_merge.rs).
+pub(crate) fn takes_spurs(project: &Project, host: &Belt) -> bool {
+    shape_problem(project, host, Fit::Straight, "spur").is_none()
+}
+
+/// The generators of the mounted devices `host` fits by its shape; Build also checks a side exit's guard.
+pub(crate) fn fitting(project: &Project, host: &Belt) -> Vec<&'static str> {
+    [
+        (Kind::Transfer, "twinova.chain_transfer/1"),
+        (Kind::Stopper, "twinova.stopper/1"),
+        (Kind::Pusher, "twinova.pusher/1"),
+    ]
+    .into_iter()
+    .filter(|(kind, _)| shape_problem(project, host, kind.fit(), kind.name()).is_none())
+    .map(|(_, generator)| generator)
+    .collect()
 }
 
 /// The host and the position along it of a mounted device.
@@ -148,67 +188,94 @@ pub(super) fn mount<'a>(project: &'a Project, device: &str) -> Result<(&'a str, 
         .ok_or_else(|| format!("{device} is not mounted"))
 }
 
-/// Adds the mounted devices of `instances` to `out`, whose conveyors are laid out: a pusher also opens its side's guard
-/// on its host.
+/// A mounted device, laid out on its host.
+pub(crate) enum Device {
+    Transfer(Transfer),
+    Stopper(Stopper),
+    Pusher(Pusher),
+}
+
+/// The device `inst` is, on its host in `out`, whose conveyors are laid out; none if its family is not a mounted device.
+pub(crate) fn device(
+    project: &Project,
+    inst: &Instance,
+    def: &Definition,
+    out: &Layout,
+) -> Result<Option<Device>, String> {
+    let kind = match def.generator.as_str() {
+        "twinova.chain_transfer/1" => Kind::Transfer,
+        "twinova.stopper/1" => Kind::Stopper,
+        "twinova.pusher/1" => Kind::Pusher,
+        _ => return Ok(None),
+    };
+    let real = |name| param(inst, def, name) as Real;
+    let (host, at) = mount(project, &inst.id)?;
+    let out_right = real("out_right") != 0.0;
+    let problem = match out.belt(host) {
+        Some(k) => host_problem(project, &out.belts[k], kind, out_right),
+        None => Some("which is not a conveyor".into()),
+    };
+    if let Some(problem) = problem {
+        return Err(format!("{} is mounted on {host}, {problem}", inst.id));
+    }
+    let host = out.belt(host).expect("checked");
+    let (id, at) = (inst.id.clone(), at as Real);
+    Ok(Some(match kind {
+        Kind::Transfer => Device::Transfer(Transfer {
+            id,
+            host,
+            at,
+            along: (param(inst, def, "chains") * param(inst, def, "distance")) as Real,
+            across: real("lane_length"),
+            speed: real("speed"),
+            out_right,
+            closed_exit: flow_peer(project, (&inst.id, "out")).is_none(),
+        }),
+        Kind::Stopper => {
+            let b = &out.belts[host];
+            Device::Stopper(Stopper {
+                id,
+                host,
+                at: roller_gap(b.length, at),
+                width: b.width - BLADE_CLEARANCE,
+                raise: real("raise_height"),
+            })
+        }
+        Kind::Pusher => Device::Pusher(Pusher {
+            id,
+            host,
+            at,
+            stroke: real("stroke"),
+            out_right,
+        }),
+    }))
+}
+
+/// Adds a device to `out`: a pusher also opens its side's guard on its host.
+pub(crate) fn add(out: &mut Layout, device: Device) {
+    match device {
+        Device::Transfer(t) => out.transfers.push(t),
+        Device::Stopper(s) => out.stoppers.push(s),
+        Device::Pusher(p) => {
+            out.belts[p.host].openings.push(super::Opening {
+                right: !p.out_right,
+                centre: p.at,
+                length: PUSHER_OPENING,
+            });
+            out.pushers.push(p);
+        }
+    }
+}
+
+/// Adds the mounted devices of `instances` to `out`, whose conveyors are laid out.
 pub(super) fn devices(
     project: &Project,
     instances: &[(&Instance, &Definition)],
     out: &mut Layout,
 ) -> Result<(), String> {
     for (inst, def) in instances {
-        let kind = match def.generator.as_str() {
-            "twinova.chain_transfer/1" => Kind::Transfer,
-            "twinova.stopper/1" => Kind::Stopper,
-            "twinova.pusher/1" => Kind::Pusher,
-            _ => continue,
-        };
-        let real = |name| param(inst, def, name) as Real;
-        let (host, at) = mount(project, &inst.id)?;
-        let out_right = real("out_right") != 0.0;
-        let problem = match out.belt(host) {
-            Some(k) => host_problem(project, &out.belts[k], kind, out_right),
-            None => Some("which is not a conveyor".into()),
-        };
-        if let Some(problem) = problem {
-            return Err(format!("{} is mounted on {host}, {problem}", inst.id));
-        }
-        let host = out.belt(host).expect("checked");
-        let (id, at) = (inst.id.clone(), at as Real);
-        match kind {
-            Kind::Transfer => out.transfers.push(Transfer {
-                id,
-                host,
-                at,
-                along: (param(inst, def, "chains") * param(inst, def, "distance")) as Real,
-                across: real("lane_length"),
-                speed: real("speed"),
-                out_right,
-                closed_exit: flow_peer(project, (&inst.id, "out")).is_none(),
-            }),
-            Kind::Stopper => {
-                let b = &out.belts[host];
-                out.stoppers.push(Stopper {
-                    id,
-                    host,
-                    at: roller_gap(b.length, at),
-                    width: b.width - BLADE_CLEARANCE,
-                    raise: real("raise_height"),
-                });
-            }
-            Kind::Pusher => {
-                out.belts[host].openings.push(super::Opening {
-                    right: !out_right,
-                    centre: at,
-                    length: PUSHER_OPENING,
-                });
-                out.pushers.push(Pusher {
-                    id,
-                    host,
-                    at,
-                    stroke: real("stroke"),
-                    out_right,
-                });
-            }
+        if let Some(device) = device(project, inst, def, out)? {
+            add(out, device);
         }
     }
     Ok(())

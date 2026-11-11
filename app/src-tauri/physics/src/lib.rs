@@ -2,8 +2,11 @@
 //! as a Rapier world stepped every millisecond. A crate of its own, without Tauri, so its tests run on every platform
 //! and the state fingerprint can be compared between Linux and Windows.
 
+pub mod interfaces;
+pub mod interfaces_view;
 pub mod layout;
 pub mod path;
+pub mod snap;
 mod surfaces;
 pub mod world;
 

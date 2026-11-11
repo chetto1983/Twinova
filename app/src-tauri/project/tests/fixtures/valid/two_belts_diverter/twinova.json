@@ -19,7 +19,7 @@
     "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
     "components/twinova.source@1.json": "257098bb1e4507d8ae3aaf06957ff5bd825b591277e2a12646bfa4161d57c2c6",
     "plc/Main.st": "50644176ce250bbea79f13be22753e328e185d89ee870df3ceb8b4704a9e6143",
-    "scene.json": "e8882856983f5a6f385390d6e00d303cd5dfccb3c1d7f83fe3768830ecaddf9b"
+    "scene.json": "3eb3b5d22dd23e5ec30cf1063e419f9a1a39cb62e76539e201cb5f872a553d23"
   },
   "format": "twinova-project",
   "name": "Two belts and a chain transfer",

@@ -4,7 +4,7 @@
 use super::tests::{belt, fixture, run, source};
 use super::*;
 use crate::layout::layout;
-use crate::layout::{Arc, BELT_GRIP, Belt, Sensor, SensorKind, Sink};
+use crate::layout::{Arc, BELT_FACE, BELT_GRIP, Belt, Sensor, SensorKind, Sink};
 
 /// OIP's roller grip (`CONVEYOR_FRICTION` 0.42 on a roller surface).
 const ROLLER_GRIP: Real = 0.42;
@@ -265,9 +265,11 @@ fn the_curve_line_lays_out_its_curves_and_runs() {
     let curve_a = &l.belts[3];
     assert_eq!((curve_a.grip, l.belts[4].grip), (0.7, 0.42));
     assert_eq!(curve_a.guards, [true; 2]);
+    // Curve A's exit meets belt B's entry face, its drum's, 85 mm before the start of its run.
     let end = curve_a.pose * curve_a.arc.unwrap().end(curve_a.width);
+    let belt_b = &l.belts[1];
     assert!(
-        (end.translation - l.belts[1].pose.translation).length() < 1e-4,
+        (end.translation - belt_b.pose * Vector::new(-BELT_FACE, 0.0, 0.0)).length() < 1e-4,
         "curve A hands over to belt B"
     );
     let mut w = World::new(l);
@@ -296,5 +298,6 @@ fn a_line_with_curves_gives_equal_bits_on_every_platform() {
     // windows-2022 CI job runs this test too.
     // Re-pinned 2026-11-11 for 4.4d: the fingerprint covers each product's size, colour, code and read mark, and the
     // carton's mass is set (2.7 kg) instead of following from its rounded core (1.76 kg).
-    assert_eq!(first, 0x94df_f910_2f56_7273, "{first:#018x}");
+    // Re-pinned 2026-11-11 for 4.5b: the belts' decks reach their drum faces and the fixture is re-spaced to match.
+    assert_eq!(first, 0xf799_d853_be7f_8f7f, "{first:#018x}");
 }

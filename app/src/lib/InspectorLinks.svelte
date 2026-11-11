@@ -1,9 +1,11 @@
 <script lang="ts">
-  // The inspector's links of the selected instance: what each of its flow ports feeds or is fed by, and, for a device,
-  // the conveyor it is mounted on and how far along it (an angle in degrees on a curve). Snapping sets these in 4.5b.
+  // The inspector's links of the selected instance: what each of its flow ports feeds or is fed by, and between two
+  // conveyors the gap between their faces, which re-joins the selection when written; for a device, the conveyor it is
+  // mounted on and how far along it (an angle in degrees on a curve). Snapping sets them too (snapping.ts).
   import { m } from "../paraglide/messages.js";
   import { flowPorts, hostsFor, mountOf, mountsOnAHost } from "./inspector";
   import type { Edit, Endpoint, Instance, ProjectView } from "./project";
+  import { flowGap } from "./snapping";
 
   let {
     project,
@@ -25,6 +27,19 @@
     void onEdit({ op: "set_mount", device: instance.id, host: host || null, at: mount?.at ?? 0 });
   }
 
+  /** The gap of a port's flow, in metres, when it joins two conveyors. */
+  function gapOf(port: string, out: boolean, peer: Endpoint | null): number | null {
+    if (!peer) return null;
+    const mine: Endpoint = [instance.id, port];
+    return out ? flowGap(project, mine, peer) : flowGap(project, peer, mine);
+  }
+
+  async function setGap(port: string, peer: Endpoint, text: string, field: HTMLInputElement): Promise<void> {
+    const mm = Number(text.replace(",", "."));
+    const op: Edit = { op: "join", id: instance.id, end: port, peer, gap: mm / 1000 };
+    if (!(Number.isFinite(mm) && (await onEdit(op)))) field.value = field.defaultValue;
+  }
+
   async function setAt(text: string, field: HTMLInputElement): Promise<void> {
     const at = Number(text.replace(",", "."));
     const ok =
@@ -44,6 +59,19 @@
           {#each p.candidates as c (key(c))}<option value={key(c)}>{key(c)}</option>{/each}
         </select>
       </dd>
+      {@const gap = gapOf(p.port, p.kind === "flow_out", p.peer)}
+      {#if gap !== null && p.peer}
+        {@const peer = p.peer}
+        <dt class="muted">{m.inspector_gap()}</dt>
+        <dd>
+          <input
+            class="data"
+            aria-label={`${p.port} ${m.inspector_gap()}`}
+            value={Math.round(gap * 1000)}
+            onchange={(e) => setGap(p.port, peer, e.currentTarget.value, e.currentTarget)}
+          />
+        </dd>
+      {/if}
     {/each}
   </dl>
 {/if}

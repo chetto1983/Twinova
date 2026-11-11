@@ -89,10 +89,11 @@ fn a_blocked_sink_covers_the_photocell_and_trips_the_jam() {
             jam_at = Some(ms);
         }
     }
-    // The first carton reaches the wall at about 5.4 s and covers the photocell at 2.75 m from about 4.9 s, and keeps
-    // covering it held there; the jam latches 2 s of cover with the motor on later.
+    // The wall stands at the belt's drum face, 3.085 m (4.5b), so the first carton held there spans 2.785 to 3.085 m and
+    // clears the photocell at 2.75 m. The second, 2 s behind and held against it, covers the photocell; the jam
+    // latches 2 s of cover with the motor on later.
     let jam_at = jam_at.expect("a jam");
-    assert!((6_700..7_000).contains(&jam_at), "jam at {jam_at} ms");
+    assert!((8_900..9_000).contains(&jam_at), "jam at {jam_at} ms");
     assert!(!bit(&line, "%QX0.0"), "the jam stops the motor");
     assert_eq!(line.world().delivered(0), 0);
 }

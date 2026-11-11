@@ -10,7 +10,9 @@ use rmcp::{tool, tool_router};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use twinova_project::model::{Connection, Instance, Quat, Vec3};
+use twinova_physics::interfaces_view::interfaces_view;
+use twinova_physics::snap;
+use twinova_project::model::{Connection, Instance, Quat, Side, Vec3};
 use twinova_project::storage::save_folder;
 use twinova_project::{Project, encode_project, parse_project};
 use twinova_project::{edit, library};
@@ -58,15 +60,34 @@ pub struct MoveInstance {
 }
 
 #[derive(Deserialize, JsonSchema)]
+pub struct Join {
+    /// The part that moves.
+    pub id: String,
+    /// Its end that meets the other: `in`, `out`, or a turntable's `left` or `right`. A spur merges by its `out`.
+    pub end: Option<String>,
+    /// The part it joins, which stays where it is.
+    pub peer: String,
+    /// The peer's end to face. Leave it out to merge onto the peer's flank instead, with `at` and `side`.
+    pub peer_end: Option<String>,
+    /// To merge: how far along the peer's run, in metres.
+    pub at: Option<f64>,
+    /// To merge: the peer's `left` or `right` flank, looking along its flow.
+    pub side: Option<String>,
+    /// Metres between the two faces, 0 to 0.15; 0 when absent.
+    pub gap: Option<f64>,
+}
+
+#[derive(Deserialize, JsonSchema)]
 pub struct Id {
     pub id: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ConnectionArgs {
-    /// As stored in scene.json: `{"kind": "flow", "from": [instance, port], "to": [instance, port]}` or
+    /// As stored in scene.json: `{"kind": "flow", "from": [instance, port], "to": [instance, port]}`,
     /// `{"kind": "mount", "host": [instance, "rail"], "device": [instance, "mount"], "position": [at, 0, 0],
-    /// "rotation": [0, 0, 0, 1]}`.
+    /// "rotation": [0, 0, 0, 1]}` or `{"kind": "merge", "from": [spur, "out"], "host": [instance, "rail"], "at": m,
+    /// "side": "left" | "right"}`.
     pub connection: Value,
 }
 
@@ -116,6 +137,7 @@ fn describe(p: &Project) -> Value {
         "panel": p.scene.controller.panel,
         "definitions": definitions,
         "library": library,
+        "interfaces": interfaces_view(p),
         "program": p.program.iter().map(|(path, _)| path).collect::<Vec<_>>(),
     })
 }
@@ -125,8 +147,9 @@ impl Agent {
     #[tool(
         description = "The working project as the editing tools change it: instances (definition, pose, \
                           parameters, signals), connections, panel buttons, definitions (their parameters, signals, \
-                          ports and behaviour file), the library's families add_instance can place, and program \
-                          files."
+                          ports and behaviour file), the library's families add_instance can place, program files, \
+                          and each instance's interfaces for join: its ends and, on a conveyor, its rail (frames in \
+                          the instance's own frame)."
     )]
     async fn describe(&self) -> Result<CallToolResult, String> {
         let mut session = self.session()?;
@@ -200,8 +223,42 @@ impl Agent {
         Parameters(a): Parameters<MoveInstance>,
     ) -> Result<CallToolResult, String> {
         let mut session = self.session()?;
-        edit::move_instance(session.working()?, &a.id, a.position, a.rotation)?;
+        let working = session.working()?;
+        edit::move_instance(working, &a.id, a.position, a.rotation)?;
+        snap::moved(working, &a.id);
         structured(&a.id)
+    }
+
+    #[tool(
+        description = "Snap a part to another (see describe's interfaces): turn and move `id` so that its `end` \
+                          faces the peer's `peer_end` across `gap` metres and join them with a flow (a conveyor also \
+                          takes the height that meets the other); or, with `at` and `side` instead of `peer_end`, \
+                          merge spur `id` square onto the peer's flank. Returns what else it changed."
+    )]
+    async fn join(&self, Parameters(a): Parameters<Join>) -> Result<CallToolResult, String> {
+        let mut session = self.session()?;
+        let working = session.working()?;
+        let gap = a.gap.unwrap_or(0.0);
+        let notice = match (a.peer_end, a.at) {
+            (Some(peer_end), None) => {
+                let end = a.end.ok_or("give the moving part's end")?;
+                snap::join(working, (&a.id, &end), (&a.peer, &peer_end), gap)?
+            }
+            (None, Some(at)) => {
+                let side = match a.side.as_deref() {
+                    Some("left") => Side::Left,
+                    Some("right") => Side::Right,
+                    _ => return Err("give side, left or right, to merge".into()),
+                };
+                snap::merge(working, &a.id, (&a.peer, at, side), gap)?
+            }
+            _ => {
+                return Err(
+                    "give peer_end to join two ends, or at and side to merge onto a flank".into(),
+                );
+            }
+        };
+        structured(&json!({ "notice": notice }))
     }
 
     #[tool(description = "Remove an instance with its connections.")]

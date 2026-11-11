@@ -28,7 +28,8 @@ mod sensors;
 #[cfg(test)]
 use devices::TRANSFER_BELOW;
 pub use devices::TRANSFER_STROKE;
-use devices::{Devices, side_exit, side_wall};
+pub(crate) use devices::side_exit;
+use devices::{Devices, side_wall};
 use products::{Product, SourceState};
 use sensors::ScannerState;
 pub use sensors::{Reading, Scan, classify};
@@ -93,11 +94,11 @@ fn exit_wall(layout: &Layout, exit: Exit) -> Option<ColliderBuilder> {
     )
 }
 
-/// A frame along which a conveyor's exit lies, and how far: a straight conveyor's own, at its length; a curve's exit
+/// A frame along which a conveyor's exit lies, and how far: a straight conveyor's own, at its end face; a curve's exit
 /// stub tip.
 fn exit_frame(b: &Belt) -> (Pose, Real) {
     match b.arc {
-        None => (b.pose, b.length),
+        None => (b.pose, b.length + b.face),
         Some(arc) => (b.pose * arc.end(b.width), 0.0),
     }
 }
@@ -372,7 +373,7 @@ impl World {
 
 #[cfg(test)]
 #[path = "world_tests.rs"]
-mod tests;
+pub(crate) mod tests;
 
 #[cfg(test)]
 #[path = "world_transfer_tests.rs"]

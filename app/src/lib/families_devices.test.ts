@@ -24,6 +24,7 @@ const project = {
   mounts: scene.connections
     .filter((c) => c.kind === "mount")
     .map((c) => ({ device: c.device![0], host: c.host![0], at: c.position![0] })),
+  merges: [] as ProjectView["merges"],
 } as ProjectView;
 const instance = (id: string) => scene.instances.find((i) => i.id === id)!;
 const drawn = (id: string, view: ProjectView = project) => drawnOf(view, instance(id))!;
@@ -47,14 +48,14 @@ describe("the 4.4c devices in the view", () => {
 
   it("raises the stopper's blade in its gap by its raise and 5 cm", () => {
     const d = drawn("stopper");
-    expect([d.position, d.offset, d.motion]).toEqual([[2, 0, 0], [1.6375, 0.8, 0], { slide: [0, 0.09, 0] }]);
+    expect([d.position, d.offset, d.motion]).toEqual([[2.085, 0, 0], [1.6375, 0.8, 0], { slide: [0, 0.09, 0] }]);
     expect(moving("stopper")).toBeGreaterThan(0);
   });
 
   it("stands the pusher beside belt B with its paddle face 2 cm outside the belt, pushing across it", () => {
     const d = drawn("pusher");
     // OIP's face is at −1.103 along its push: 0.3 + 0.0205 from belt B's centreline, as the physics's paddle.
-    expect(d.position).toEqual([4.9, 0, 0]);
+    expect(d.position).toEqual([5.07, 0, 0]);
     expect(d.offset[0]).toBe(1.5);
     expect(d.offset[1]).toBeCloseTo(0.6, 9);
     expect(d.offset[2] - 1.103).toBeCloseTo(0.3205, 9);
@@ -76,9 +77,27 @@ describe("the 4.4c devices in the view", () => {
     ]);
   });
 
+  it("opens a host's guard over a merging spur's width, on its side, as the physics does", () => {
+    const view = {
+      ...project,
+      instances: [...project.instances, { ...instance("belt_c"), id: "spur", parameters: { width: 0.5 } }],
+      merges: [{ spur: "spur", host: "belt_b", at: 0.5, side: "right" as const }],
+    };
+    // Belt B has no left guard; its right one opens for the pusher at 1.5 m and for the spur at 0.5 m.
+    const guards = drawn("belt_b", view).parts.find((p) => p.material === "guard")!;
+    expect(
+      guards.instances!.map((i) => [i.position[0], i.position[0] + i.scale![0]].map((x) => +x.toFixed(4))),
+    ).toEqual([
+      [-0.085, 0.25],
+      [0.75, 1.125],
+      [1.875, 3.085],
+    ]);
+    expect(guards.instances!.every((i) => i.position[2] > 0)).toBe(true);
+  });
+
   it("turns the turntable's deck about its centre, and stands its photocell still across its start lane", () => {
     const d = drawn("turntable");
-    expect([d.position, d.offset, d.motion]).toEqual([[4.45, 0, 0], [0, 0.8, 0], { turn: true }]);
+    expect([d.position, d.offset, d.motion]).toEqual([[4.535, 0, 0], [0, 0.8, 0], { turn: true }]);
     expect(moving("turntable")).toBeGreaterThan(0);
     expect(drawn("turntable").parts.some((p) => p.material === "leg" && !p.link)).toBe(true);
     // The beam 0.6 m along the lane from its entry, 0.45 m behind the centre: 0.15 m past the centre.

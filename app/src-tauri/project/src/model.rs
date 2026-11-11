@@ -284,6 +284,22 @@ pub enum Connection {
         position: Vec3,
         rotation: Quat,
     },
+    /// A spur's exit onto a straight's flank, `at` along its run, on its `side` of the flow (spec
+    /// 2026-11-11-snapping-design.md, decision 5).
+    Merge {
+        from: Endpoint,
+        host: Endpoint,
+        at: f64,
+        side: Side,
+    },
+}
+
+/// A side of a conveyor, looking along its flow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Side {
+    Left,
+    Right,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

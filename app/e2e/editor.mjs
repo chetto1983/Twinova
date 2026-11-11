@@ -10,12 +10,23 @@
 //
 //   npx tauri build --debug --no-bundle && node e2e/editor.mjs [screenshot-dir]
 
-import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import * as THREE from "three";
 import { app, browser, button, check, click, eventually, expectEqual, bit, selectSpeed, sessions } from "./helpers.mjs";
+import {
+  choose,
+  clickAt,
+  drag,
+  emptyProject,
+  fieldValue,
+  onScreen,
+  place,
+  select,
+  selectedName,
+  setField,
+  setProgram,
+  treeNames,
+} from "./editing.mjs";
 
 const shots = process.argv[2] ? resolve(process.argv[2]) : null;
 
@@ -23,102 +34,6 @@ async function screenshot(name) {
   if (!shots) return;
   mkdirSync(shots, { recursive: true });
   await browser.saveScreenshot(join(shots, `${name}.png`));
-}
-
-// ---------- an empty project, written by hand ----------
-
-const json = (value) => JSON.stringify(value, null, 2) + "\n";
-const sha256 = (text) => createHash("sha256").update(text).digest("hex");
-
-function emptyProject() {
-  const folder = join(mkdtempSync(join(tmpdir(), "twinova-editor-")), "line");
-  const files = {
-    "scene.json": json({ connections: [], controller: { panel: [] }, groups: [], instances: [] }),
-    "plc/Main.st": "PROGRAM Main\nEND_PROGRAM\n",
-  };
-  mkdirSync(join(folder, "plc"), { recursive: true });
-  for (const [path, text] of Object.entries(files)) writeFileSync(join(folder, path), text);
-  const manifest = {
-    app: "0.1.0",
-    components: [],
-    files: Object.fromEntries(Object.entries(files).map(([path, text]) => [path, sha256(text)])),
-    format: "twinova-project",
-    name: "Hand-built line",
-    program: ["plc/Main.st"],
-    scene: "scene.json",
-    version: 1,
-  };
-  writeFileSync(join(folder, "twinova.json"), json(manifest));
-  return folder;
-}
-
-// ---------- the UI ----------
-
-const inspector = `//section[contains(@class,"inspector")]`;
-const canvas = `//section[contains(@class,"stage")]//canvas`;
-const treeNames = () =>
-  browser.execute(() =>
-    [...document.querySelectorAll("section.tree button > span:first-child")].map((span) => span.textContent),
-  );
-const selectedName = async () => {
-  const field = await browser.$(`${inspector}//input[@aria-label="Name"]`);
-  return (await field.isExisting()) ? field.getValue() : null;
-};
-
-async function place(label) {
-  await click(`//section[contains(@class,"catalogue")]//button[normalize-space()="${label}"]`);
-}
-
-async function select(name) {
-  await click(`//section[contains(@class,"tree")]//button[span[1][normalize-space()="${name}"]]`);
-  await eventually(async () => expectEqual(await selectedName(), name, "selected"), "select", 5_000);
-}
-
-/** Types into an inspector field and leaves it, which commits it. */
-async function setField(label, text) {
-  const field = await browser.$(`${inspector}//input[@aria-label="${label}"]`);
-  await field.setValue(text);
-  await browser.keys("Tab");
-}
-
-async function choose(label, option) {
-  await (await browser.$(`${inspector}//select[@aria-label="${label}"]`)).selectByVisibleText(option);
-}
-
-const fieldValue = async (label) => (await browser.$(`${inspector}//input[@aria-label="${label}"]`)).getValue();
-
-/** Where a world point lands on the canvas, as an offset from its centre, with Viewport.svelte's camera on an empty
- *  project. */
-async function onScreen(x, y, z) {
-  const element = await browser.$(canvas);
-  const { width, height } = await element.getSize();
-  const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 500);
-  const tanV = Math.tan((40 * Math.PI) / 360);
-  const distance = Math.max(1 / (tanV * camera.aspect), 1 / tanV);
-  camera.position.copy(new THREE.Vector3(0.35, 0.6, 1).normalize().multiplyScalar(distance));
-  camera.lookAt(0, 0, 0);
-  camera.updateMatrixWorld();
-  const p = new THREE.Vector3(x, y, z).project(camera);
-  return { origin: element, x: Math.round((p.x * width) / 2), y: Math.round((-p.y * height) / 2) };
-}
-
-async function clickAt(point) {
-  await browser
-    .action("pointer")
-    .move({ duration: 0, ...point })
-    .down()
-    .up()
-    .perform();
-}
-
-async function drag(from, to) {
-  await browser
-    .action("pointer")
-    .move({ duration: 0, ...from })
-    .down()
-    .move({ duration: 300, ...to })
-    .up()
-    .perform();
 }
 
 const PROGRAM = `PROGRAM Main
@@ -135,14 +50,7 @@ run_2 := TRUE;
 END_PROGRAM
 `;
 
-const setProgram = (text) =>
-  browser.execute((t) => {
-    const area = document.querySelector("textarea");
-    area.value = t;
-    area.dispatchEvent(new Event("input", { bubbles: true }));
-  }, text);
-
-const folder = emptyProject();
+const folder = emptyProject("Hand-built line");
 
 sessions(async () => {
   await app("debug", [`--project=${folder}`], async () => {

@@ -36,7 +36,14 @@ fn read_folder(root: &Path) -> Files {
 
 #[test]
 fn every_valid_fixture_opens_and_is_written_back_byte_for_byte() {
-    for name in ["demo_m3", "two_belts_diverter", "curve_line", "sort_line"] {
+    for name in [
+        "demo_m3",
+        "two_belts_diverter",
+        "curve_line",
+        "sort_line",
+        "code_sort_line",
+        "merge_line",
+    ] {
         let files = read_folder(&fixtures("valid").join(name));
         let opened = parse_project(&files).unwrap_or_else(|d| panic!("{name}: {d:?}"));
         assert!(
