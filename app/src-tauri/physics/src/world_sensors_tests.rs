@@ -93,7 +93,8 @@ fn a_through_beam_sees_a_product_between_its_heads_only() {
 
 #[test]
 fn a_through_beam_reaches_across_the_conveyor_and_no_further() {
-    // A product beside the conveyor, past the receiver, is not seen; one at the far edge is.
+    // The lenses stand 20 mm out from each bed edge, at z ±0.32: a product whose near face is 10 mm inside the
+    // receiver's lens is seen, one whose near face is 10 mm past it is not.
     let mut w = line(
         Products::carton(),
         vec![sensor(0.15, SensorKind::ThroughBeam)],
@@ -102,16 +103,16 @@ fn a_through_beam_reaches_across_the_conveyor_and_no_further() {
     run(&mut w, 2);
     assert_eq!(w.reading(0), Reading::Detected(true));
     let body = w.products[0].body;
-    let at = |z: Real| Vector::new(0.15, 0.95, z);
-    w.world.bodies[body].set_translation(at(0.35 + 0.15 - 0.01), true);
-    assert_eq!(
-        w.reading(0),
-        Reading::Detected(true),
-        "its near face 10 mm inside the receiver's lens"
-    );
-    w.world.bodies[body].set_translation(at(0.32 + 0.15 + 0.01), true);
-    w.world.step_with_events(&w.hooks, &());
-    assert_eq!(w.reading(0), Reading::Detected(false), "past the receiver");
+    for (near_face, seen) in [(0.31, true), (0.33, false)] {
+        let centre = Vector::new(0.15, 0.95, near_face + 0.15);
+        w.world.bodies[body].set_translation(centre, true);
+        w.world.step_with_events(&w.hooks, &());
+        assert_eq!(
+            w.reading(0),
+            Reading::Detected(seen),
+            "near face at z {near_face}"
+        );
+    }
 }
 
 #[test]
@@ -498,4 +499,18 @@ fn a_long_product_is_read_when_its_centre_enters_the_window() {
         (centre - (2.0 - 0.1)).abs() < 0.002,
         "read with its centre at {centre}"
     );
+}
+
+/// The scan line runs across the whole conveyor: a product against its far guard is read too.
+#[test]
+fn a_scanner_reads_a_product_anywhere_across_its_conveyor() {
+    let mut w = line(Products::carton(), vec![], vec![scanner(0.15)]);
+    w.set_belt_running(0, false);
+    run(&mut w, 2);
+    assert_eq!(w.scanned(0).count, 1, "on the centreline");
+    let body = w.products[0].body;
+    w.products[0].read = false;
+    w.world.bodies[body].set_translation(Vector::new(0.15, 0.95, 0.17), true);
+    run(&mut w, 2);
+    assert_eq!(w.scanned(0).count, 2, "against the far guard");
 }
