@@ -52,6 +52,7 @@ async function inspectsTheScene(scene) {
 
 async function roundTrip(name) {
   console.log(`Open, save and reopen ${name}`);
+  const source = join(fixtures, "valid", name);
   const folder = fixtureCopy(name);
   // Re-indented as an editor would, without touching a value (JSON.stringify would write 2.0 as 2): the open reports
   // it and the save writes the canonical form back.
