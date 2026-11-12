@@ -40,10 +40,10 @@ pre-commit:
 pre-push:
   parallel: true
   commands:
+    # Only the crates the pushed files touch, and those that depend on them; CI tests the whole workspace.
     cargo-test:
       glob: "app/src-tauri/**"
-      root: "app/src-tauri/"
-      run: cargo test --workspace
+      run: bash scripts/test-pushed-crates.sh {push_files}
     vitest:
       glob: "app/{src/**,package.json,vite.config.ts}"
       root: "app/"
