@@ -35,6 +35,10 @@ twinova-physics = { path = "physics" }
 # Watching the project folder for sources saved in VS Code (spec 2026-11-12-st-vscode-design.md). CC0-1.0; the version
 # trust-runtime's `full` feature already builds, so no crate is added.
 notify = "=8.2.1"
+# The in-app ST editor's diagnostics, hover and completion (spec 2026-11-12-st-editor-design.md): truST's language
+# frontend at v0.39.0, followed upstream as the 2.6 policy says (spec 2026-11-07-trust-upstream-policy-design.md). The
+# runtime stays at 6405915, so trust-syntax, trust-hir and trust-ide are built at both revisions. MIT OR Apache-2.0.
+trust-wasm-analysis = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "5eb7f8cd9c137840a5a5db8049edae99c481ace9" }
 
 [dev-dependencies]
 # mock_app for the command tests (src/commands_tests.rs), as in chetto1983/ModbusTool.

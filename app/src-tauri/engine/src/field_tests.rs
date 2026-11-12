@@ -394,3 +394,29 @@ fn the_configuration_alone_is_the_generated_source_after_its_blocks() {
     }
     assert_eq!(config_source(&none).unwrap(), None);
 }
+
+/// The variables the configuration places, whose E202 an editor leaves out: on the diverter line, the belt's and the
+/// roller conveyor's `run`, `speed_ref` and `running`, the chain transfer's `popup` and `raised_fb`; each placed in every
+/// instance, as `place` places them. A definition no instance uses has none.
+#[test]
+fn the_placed_variables_are_those_of_every_instance() {
+    let project = fixture("two_belts_diverter");
+    let placed = placed_variables(&project);
+    let names = |key: &str| placed[key].iter().cloned().collect::<Vec<_>>();
+    assert_eq!(names("twinova.belt@1"), ["run", "running", "speed_ref"]);
+    assert_eq!(names("twinova.chain_transfer@1"), ["popup", "raised_fb"]);
+    assert_eq!(names("twinova.roller@1"), ["run", "running", "speed_ref"]);
+    let devices = behaving(&project);
+    let all = place(&devices).unwrap();
+    for (key, names) in &placed {
+        for (inst, _) in devices.iter().filter(|(i, _)| &i.definition == key) {
+            for name in names {
+                assert!(
+                    all.iter()
+                        .any(|p| p.instance.id == inst.id && &p.signal.name == name),
+                    "{key} {name}"
+                );
+            }
+        }
+    }
+}

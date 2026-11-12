@@ -149,6 +149,19 @@ pub fn config_source(project: &Project) -> Result<Option<String>, String> {
     configuration(&devices).map(Some)
 }
 
+/// The block variables the generated configuration places, by definition key: the `AT %I*` and `AT %Q*` an editor
+/// that checks one file at a time reports as unmapped (E202; spec 2026-11-12-st-editor-design.md, decision 3). Every
+/// instance places all its block's signals, the bound ones and then the unbound optional ones (`field_image.rs`,
+/// `place`), so a block's set is its signals.
+pub fn placed_variables(project: &Project) -> BTreeMap<String, BTreeSet<String>> {
+    (behaving(project).into_iter())
+        .map(|(inst, def)| {
+            let names = block_signals(def).map(|s| s.name.clone()).collect();
+            (inst.definition.clone(), names)
+        })
+        .collect()
+}
+
 fn configuration(devices: &[(&Instance, &Definition)]) -> Result<String, String> {
     let mut out = String::from("PROGRAM Field\nVAR\n");
     for (inst, def) in devices {
