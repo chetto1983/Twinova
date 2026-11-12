@@ -10,7 +10,18 @@
 
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { app, browser, check, click, eventually, expectEqual, fixtureCopy, root, sessions } from "./helpers.mjs";
+import {
+  app,
+  browser,
+  check,
+  click,
+  eventually,
+  expectEqual,
+  fixtureCopy,
+  root,
+  selectLanguage,
+  sessions,
+} from "./helpers.mjs";
 
 const fixtures = join(root, "src-tauri/project/tests/fixtures");
 const VALID = ["demo_m3", "two_belts_diverter"];
@@ -18,14 +29,12 @@ const INVALID = JSON.parse(readFileSync(join(fixtures, "invalid.json"), "utf8"))
 
 const textOf = async (selector) => (await browser.$(selector)).getText();
 const treeNames = () =>
-  browser.execute(() =>
-    [...document.querySelectorAll("section.tree button > span:first-child")].map((span) => span.textContent),
-  );
+  browser.execute(() => [...document.querySelectorAll("section.tree .item-name")].map((span) => span.textContent));
 const notice = () => textOf(`//p[@role="status"]`);
 const projectButton = `//header//button[@aria-haspopup="menu"]`;
 
 async function shows(selector, what) {
-  await eventually(async () => expectEqual(await browser.$(selector).isExisting(), true, what), what, 10_000);
+  await eventually(async () => expectEqual(await browser.$(selector).isDisplayed(), true, what), what, 10_000);
 }
 
 /** The manifest and every file it lists: what a save writes and what the fixture holds. */
@@ -80,6 +89,20 @@ async function roundTrip(name) {
         10_000,
       );
     });
+    await check("a saved notice follows later language changes", async () => {
+      await selectLanguage("Italiano");
+      await eventually(
+        async () => expectEqual((await notice()).includes(`Salvato in ${folder}`), true, "Italian notice"),
+        "Italian notice",
+        5000,
+      );
+      await selectLanguage("English");
+      await eventually(
+        async () => expectEqual((await notice()).includes(`Saved to ${folder}`), true, "English notice"),
+        "English notice",
+        5000,
+      );
+    });
   });
   await check("the saved folder holds the fixture's bytes", () => {
     const saved = Object.fromEntries(projectFiles(folder));
@@ -121,7 +144,8 @@ async function refused(name, diagnostic) {
     await check("the M3 demo stays current and built", async () => {
       const current = await textOf(projectButton);
       if (!current.startsWith("M3 demo")) throw new Error(`the current project is "${current}"`);
-      await shows("//*[normalize-space()='Built: ready to run']", "build");
+      await shows("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']", "build");
+      expectEqual(await browser.$(".statusbar .error-status").isDisplayed(), true, "opening error remains visible");
     });
   });
 }

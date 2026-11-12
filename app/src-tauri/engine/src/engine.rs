@@ -124,6 +124,10 @@ fn actuators(world: &World) -> Vec<ActuatorState> {
 }
 
 impl Engine {
+    pub fn scan_timing(&self) -> crate::timing::ScanTiming {
+        self.line.controller().timing()
+    }
+
     /// The engine of `project` at time zero, with the warnings Build shows.
     pub fn new(project: &Project) -> Result<(Self, Vec<String>), String> {
         let (line, warnings) = Line::build(project)?;

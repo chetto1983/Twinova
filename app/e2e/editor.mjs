@@ -124,12 +124,18 @@ sessions(async () => {
     await check("the line builds", () =>
       eventually(
         async () =>
-          expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "built"),
+          expectEqual(
+            await browser
+              .$("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']")
+              .isExisting(),
+            true,
+            "built",
+          ),
         "build",
         10_000,
       ),
     );
-    await click(`//button[normalize-space()="Frame all"]`);
+    await click(`//button[@aria-label="Frame all"]`);
     await screenshot("editor-line-built");
     await selectSpeed("Max");
     await click(button("Run"));
@@ -180,7 +186,13 @@ sessions(async () => {
       if (notice.includes("rolled back")) throw new Error(notice);
       await eventually(
         async () =>
-          expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "built"),
+          expectEqual(
+            await browser
+              .$("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']")
+              .isExisting(),
+            true,
+            "built",
+          ),
         "build",
         10_000,
       );

@@ -4,10 +4,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type { Edit, ProjectView } from "./project";
-import type { Built, Snapshot } from "./snapshot";
+import type { Built, Snapshot, ScanTiming } from "./snapshot";
 import type { DiskSources } from "./sources";
 
 export const backend = {
+  scanTiming: () => invoke<ScanTiming>("scan_timing"),
   /** Builds the current project with the editor's sources (commands.rs `build`). */
   build: (program: [string, string][], behaviours: Record<string, string>) =>
     invoke<Built>("build", { program, behaviours }),

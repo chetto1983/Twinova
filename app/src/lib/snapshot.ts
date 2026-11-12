@@ -44,6 +44,14 @@ export interface Built {
   warnings: string[];
 }
 
+export interface ScanTiming {
+  scans: number;
+  last_us: number;
+  average_us: number;
+  maximum_us: number;
+  interval_ms: number;
+}
+
 /** The key of a product's paint, one material each: `#rrggbb`, or `unpainted` for the theme's product colour. */
 export const paintOf = (color: Carton["color"]): string =>
   color ? `#${color.map((c) => c.toString(16).padStart(2, "0")).join("")}` : "unpainted";

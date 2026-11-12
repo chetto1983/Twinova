@@ -56,6 +56,13 @@ fn with_engine<T>(
     f(engine)
 }
 
+#[tauri::command]
+pub fn scan_timing(
+    state: State<'_, AppState>,
+) -> Result<twinova_engine::timing::ScanTiming, String> {
+    with_engine(&state, |e| Ok(e.scan_timing()))
+}
+
 /// Puts `engine` in place of the current one, stopped, for `project`.
 fn install(state: &AppState, project: Project, engine: Engine) -> Result<Snapshot, String> {
     state.running.store(false, Ordering::SeqCst);

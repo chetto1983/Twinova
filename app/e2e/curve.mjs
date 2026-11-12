@@ -35,7 +35,13 @@ sessions(() =>
     await check("the line builds", () =>
       eventually(
         async () =>
-          expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "status"),
+          expectEqual(
+            await browser
+              .$("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']")
+              .isExisting(),
+            true,
+            "status",
+          ),
         "build",
         10_000,
       ),

@@ -11,6 +11,15 @@ and build inside the app, on Windows and Linux.
 
 ### Added
 
+- Scene-first IDE layout: scene tree and history on the left, a full-height inspector on the right,
+  and a resizable Parts / PLC / Problems / Watch dock below. Compact icon transport controls show
+  measured simulation speed. Parts use rendered 3D thumbnails; the viewport includes a warehouse,
+  counters and editing tools. The inspector supports filtering, collapsible sections, numeric fields
+  with drag adjustment, fine keyboard increments, units and PLC/TAG signal badges. Scene visibility
+  and edit locks are session-local. Build status stays visible alongside errors, and UI notices
+  follow language changes without restarting the simulation.
+- PLC organizer and live scan timing (last, average and maximum wall-clock execution cost), kept
+  outside deterministic simulation snapshots. Structured Text remains the supported editing language.
 - A desktop app (Tauri 2, Svelte 5) with a 3D belt conveyor: cartons arrive every 2 s, ride the
   belt at 0.5 m/s, accumulate and leave into a sink at the end; a photocell near the end.
 - Transport is rigid-body physics (Rapier, deterministic across Linux and Windows): the belt moves

@@ -1,5 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["e2e/ui-preview.js"],
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": ["@inlang/plugin-message-format", "@inlang/plugin-m-function-matcher"],
   "ignoreBinaries": ["tauri-driver"]

@@ -55,7 +55,13 @@ sessions(() =>
     await check("the line builds, and its folder has the files for VS Code", async () => {
       await eventually(
         async () =>
-          expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "built"),
+          expectEqual(
+            await browser
+              .$("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']")
+              .isExisting(),
+            true,
+            "built",
+          ),
         "build",
         10_000,
       );

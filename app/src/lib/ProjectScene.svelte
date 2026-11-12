@@ -24,6 +24,8 @@
     project,
     selected,
     theme,
+    hidden = [],
+    locked = [],
     cartons,
     actuators,
     conveyors,
@@ -41,6 +43,8 @@
     project: ProjectView;
     selected: string | null;
     theme: string;
+    hidden?: string[];
+    locked?: string[];
     cartons: Carton[];
     actuators: Snapshot["actuators"];
     conveyors: Snapshot["conveyors"];
@@ -171,6 +175,7 @@
   function build(): void {
     dispose();
     for (const instance of project.instances) {
+      if (hidden.includes(instance.id)) continue;
       const def = project.definitions[instance.definition];
       if (!def) continue;
       const lit = instance.id === selected;
@@ -228,7 +233,7 @@
       place(instance.id, placed);
     }
     marker.material.color = token("--scene-selected");
-    editing.attach(selected ? (placedGroups.get(selected) ?? null) : null);
+    editing.attach(selected && !locked.includes(selected) ? (placedGroups.get(selected) ?? null) : null);
   }
 
   /** Adds an instance's group to the view, named for picking. A mounted device is drawn from its host's pose, so its
@@ -244,7 +249,7 @@
   });
 
   $effect(() => {
-    void [project, selected, theme];
+    void [project, selected, theme, hidden, locked];
     build();
     cartonMaterial.color = token("--scene-product");
     requestRender();

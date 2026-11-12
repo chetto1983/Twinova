@@ -1,0 +1,148 @@
+import {
+  browser,
+  button,
+  check,
+  click,
+  dock,
+  eventually,
+  expectEqual,
+  out,
+  session,
+  virtualSeconds,
+} from "./helpers.mjs";
+
+const changeSource = async (text) =>
+  browser.execute((t) => {
+    const area = document.querySelector("textarea");
+    area.value = t;
+    area.dispatchEvent(new Event("input", { bubbles: true }));
+  }, text);
+
+await session("debug", async () => {
+  await check("the IDE gives the scene the centre and has no horizontal page overflow", async () => {
+    await browser.$(".stage canvas").waitForExist({ timeout: 30000 });
+    const layout = await browser.execute(() => {
+      const left = document.querySelector(".left-sidebar").getBoundingClientRect();
+      const stage = document.querySelector(".stage").getBoundingClientRect();
+      const right = document.querySelector(".right-sidebar").getBoundingClientRect();
+      const dockBounds = document.querySelector(".dock").getBoundingClientRect();
+      return {
+        overflow: document.documentElement.scrollWidth > innerWidth,
+        ordered: left.right <= stage.left + 1 && stage.right <= right.left + 1,
+        dockBelow: dockBounds.top >= stage.bottom - 1,
+      };
+    });
+    expectEqual([layout.overflow, layout.ordered, layout.dockBelow], [false, true, true], "layout");
+  });
+  await check("catalogue previews are generated for placeable equipment", async () => {
+    await browser.waitUntil(async () => (await browser.$$(".preview img")).length >= 5, { timeout: 30000 });
+  });
+  await browser.saveScreenshot(`${out}/workspace.png`);
+  await click('.tree .item[title^="Belt A"]');
+  await check("the inspector filters and edits a real project parameter", async () => {
+    await browser.$('input[aria-label="Filter properties…"]').setValue("speed");
+    expectEqual(await browser.$('input[aria-label="length"]').isExisting(), false, "filtered length");
+    await browser.$('input[aria-label="speed"]').setValue("0.75");
+    await browser.keys("Tab");
+    await eventually(
+      async () => expectEqual(await browser.$('input[aria-label="speed"]').getValue(), "0.75", "speed"),
+      "edit",
+      5000,
+    );
+    await browser.$('input[aria-label="Filter properties…"]').click();
+    await browser.keys(["Control", "a"]);
+    await browser.keys("Backspace");
+    await click(button("Undo"));
+    await eventually(
+      async () => expectEqual(await browser.$('input[aria-label="speed"]').getValue(), "0.5", "undo speed"),
+      "undo",
+      5000,
+    );
+  });
+  await check("numeric scrubbing is one undo step and supports fine keyboard increments", async () => {
+    const handle = await browser.$('button[aria-label="Adjust speed"]');
+    await browser
+      .action("pointer")
+      .move({ origin: handle })
+      .down()
+      .move({ origin: handle, x: 30, duration: 200 })
+      .up()
+      .perform();
+    await eventually(
+      async () => expectEqual(await browser.$('input[aria-label="speed"]').getValue(), "0.8", "scrubbed"),
+      "scrub",
+      5000,
+    );
+    await click(button("Undo"));
+    await eventually(
+      async () => expectEqual(await browser.$('input[aria-label="speed"]').getValue(), "0.5", "one undo"),
+      "undo scrub",
+      5000,
+    );
+    await browser.$('input[aria-label="speed"]').click();
+    await browser.keys(["Shift", "ArrowUp"]);
+    await eventually(
+      async () => expectEqual(await browser.$('input[aria-label="speed"]').getValue(), "0.501", "fine step"),
+      "fine step",
+      5000,
+    );
+    await click(button("Undo"));
+  });
+  await check("locking prevents inspector edits and keyboard deletion", async () => {
+    await click('button[aria-label="Lock editing Belt A"]');
+    expectEqual(await browser.$('input[aria-label="speed"]').isEnabled(), false, "locked");
+    await browser.keys("Delete");
+    expectEqual(await browser.$('.tree .item[title^="Belt A"]').isExisting(), true, "locked object still present");
+    await click('button[aria-label="Unlock editing Belt A"]');
+  });
+  await check("PLC sources open in the bottom dock", async () => {
+    await dock("plc");
+    expectEqual(await browser.$("textarea").isDisplayed(), true, "ST editor");
+    expectEqual(await browser.$(".organizer").isDisplayed(), true, "organizer");
+  });
+  await browser.saveScreenshot(`${out}/plc.png`);
+  await click(button("Build"));
+  await click(button("Run"));
+  await click(button("Start"));
+  await check("Watch shows measured runtime costs and simulation speed", async () => {
+    await dock("watch");
+    await eventually(
+      async () => {
+        const timing = await browser.$(".timing").getText();
+        if (!timing.includes("µs") && !timing.includes(" ms")) throw new Error(timing);
+        if (timing.includes("—")) throw new Error("no measured scan timing");
+        const speed = await browser.$(".actual").getText();
+        if (!/^~\d+\.\d+×$/.test(speed)) throw new Error(`no measured speed: ${speed}`);
+      },
+      "runtime telemetry",
+      10000,
+    );
+  });
+  await browser.saveScreenshot(`${out}/watch.png`);
+  await check("a failed build opens Problems and the old running line can still be paused", async () => {
+    const original = await browser.execute(() => document.querySelector("textarea").value);
+    await changeSource("PROGRAM Main\nthis is invalid\nEND_PROGRAM");
+    const before = await virtualSeconds("Virtual time");
+    await click(button("Build"));
+    await browser.$("#panel-problems .error-line").waitForDisplayed({ timeout: 10000 });
+    expectEqual(await browser.$(button("Pause")).isEnabled(), true, "Pause after failed build");
+    expectEqual(await browser.$(".statusbar .build-status").isDisplayed(), true, "build status remains visible");
+    expectEqual(await browser.$(".statusbar .build-status").getText(), "Previous build loaded", "runtime build status");
+    expectEqual(
+      await browser.$(".statusbar .error-status").isDisplayed(),
+      true,
+      "error remains visible alongside build",
+    );
+    await browser.saveScreenshot(`${out}/failed-build.png`);
+    await eventually(
+      async () => {
+        if ((await virtualSeconds("Virtual time")) <= before) throw new Error("old line stopped");
+      },
+      "old line runs",
+      5000,
+    );
+    await click(button("Pause"));
+    await changeSource(original);
+    await click(button("Build"));
+  });
+});

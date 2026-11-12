@@ -13,7 +13,7 @@
   }: {
     project: ProjectView;
     onChange: (next: ProjectView) => void;
-    onNotice: (text: string) => void;
+    onNotice: (text: () => string) => void;
     onError: (text: string) => void;
   } = $props();
 
@@ -37,13 +37,13 @@
     const next = await saved;
     if (next) {
       onChange(next);
-      onNotice([m.project_saved({ folder: next.folder ?? "" }), next.notice].filter(Boolean).join(" "));
+      onNotice(() => [m.project_saved({ folder: next.folder ?? "" }), next.notice].filter(Boolean).join(" "));
     }
   }
 
   async function exportArchive(): Promise<void> {
     const file = await projects.exportArchive();
-    if (file) onNotice(m.project_exported({ file }));
+    if (file) onNotice(() => m.project_exported({ file }));
   }
 
   async function importArchive(): Promise<void> {

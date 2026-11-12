@@ -7,10 +7,9 @@
   // the running line (2026-11-12-st-vscode): the program online, a behaviour by a rebuild.
   import { onMount } from "svelte";
   import { m } from "./paraglide/messages.js";
-  import { currentLocale, languageName, locales, setLanguage, type Locale } from "./lib/i18n.svelte";
   import { readPreference, writePreference } from "./lib/preferences";
   import { backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
-  import { SPEEDS, formatSpeed, type Snapshot } from "./lib/snapshot";
+  import { deliveredOf, formatTime, type Snapshot } from "./lib/snapshot";
   import {
     buildArgs,
     builtFrom,
@@ -20,11 +19,7 @@
     type DiskSources,
     type Source,
   } from "./lib/sources";
-  import Catalogue from "./lib/Catalogue.svelte";
-  import Editor from "./lib/Editor.svelte";
   import Inspector from "./lib/Inspector.svelte";
-  import IoPanel from "./lib/IoPanel.svelte";
-  import ProjectMenu from "./lib/ProjectMenu.svelte";
   import ProjectScene from "./lib/ProjectScene.svelte";
   import SceneTree from "./lib/SceneTree.svelte";
   import SnapBar from "./lib/SnapBar.svelte";
@@ -32,7 +27,28 @@
   import { frame, type Edit, type ProjectView, type Quat, type Vec3 } from "./lib/project";
   import type { GizmoMode } from "./lib/sceneEditing";
   import { shortcutOf } from "./lib/shortcuts";
-  import twinovaMark from "./assets/twinova-mark.svg";
+  import Toolbar from "./lib/Toolbar.svelte";
+  import WorkspaceDock from "./lib/WorkspaceDock.svelte";
+  import { Box, Move, RotateCw, CircleCheck, AlertCircle } from "@lucide/svelte";
+  let hidden = $state<string[]>([]);
+  let locked = $state<string[]>([]);
+  let history = $state<{ label: string; time: string }[]>([]);
+  let ratio = $state<number | null>(null);
+  let paceStart: { wall: number; virtual: number } | null = null;
+  function receiveSnapshot(s: Snapshot): void {
+    const wall = performance.now();
+    if (running && paceStart && s.time_ms >= paceStart.virtual) {
+      const elapsed = wall - paceStart.wall;
+      if (elapsed >= 500) {
+        ratio = (s.time_ms - paceStart.virtual) / elapsed;
+        paceStart = { wall, virtual: s.time_ms };
+      }
+    } else paceStart = { wall, virtual: s.time_ms };
+    snapshot = s;
+  }
+  function toggleFlag(list: string[], id: string): string[] {
+    return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+  }
 
   let project = $state<ProjectView | null>(null);
   let sources = $state<Source[]>([]);
@@ -44,7 +60,8 @@
   let theme = $state(readPreference("theme") === "light" ? "light" : "dark");
   let selected = $state<string | null>(null);
   /** What opening the project reported, and what the last Build warned about. */
-  let notice = $state("");
+  let notice = $state<string | (() => string)>("");
+  const noticeText = $derived(typeof notice === "function" ? notice() : notice);
   let warnings = $state<string[]>([]);
   /** The scene was edited since the last Build. */
   let changed = $state(false);
@@ -92,18 +109,22 @@
   async function showProject(next: ProjectView): Promise<void> {
     if (running) await toggleRun();
     project = next;
+    hidden = [];
+    locked = [];
+    history = [];
     framing += 1;
     sources = sourcesOf(next);
     selected = null;
     snapshot = null;
     warnings = [];
-    notice = [
-      next.recovered ? m.project_recovered() : "",
-      next.changed_outside.length > 0 ? m.project_changed_outside({ files: next.changed_outside.join(", ") }) : "",
-      next.notice ?? "",
-    ]
-      .filter(Boolean)
-      .join(" ");
+    notice = () =>
+      [
+        next.recovered ? m.project_recovered() : "",
+        next.changed_outside.length > 0 ? m.project_changed_outside({ files: next.changed_outside.join(", ") }) : "",
+        next.notice ?? "",
+      ]
+        .filter(Boolean)
+        .join(" ");
     await build();
   }
 
@@ -113,7 +134,7 @@
   async function fromFolder(disk: DiskSources): Promise<void> {
     const next = fromDisk(sources, disk);
     if (next.held.length > 0) {
-      notice = m.disk_held({ files: next.held.join(", ") });
+      notice = () => m.disk_held({ files: next.held.join(", ") });
       return;
     }
     sources = next.sources;
@@ -124,13 +145,13 @@
       sources = builtFrom(sources);
       snapshot = result.snapshot;
       warnings = result.warnings;
-      notice = m.disk_changed_online({ time: (result.snapshot.time_ms / 1000).toFixed(2) });
+      notice = () => m.disk_changed_online({ time: (result.snapshot.time_ms / 1000).toFixed(2) });
       return;
     }
     const wasRunning = running;
     await build();
     if (status !== "ok") return;
-    notice = m.disk_rebuilt();
+    notice = () => m.disk_rebuilt();
     if (wasRunning) await toggleRun();
   }
 
@@ -145,10 +166,15 @@
 
   /** One edit; false, with the reason shown, when the project refuses it. */
   async function edit(op: Edit): Promise<boolean> {
+    if ("id" in op && locked.includes(op.id)) return false;
     const before = new Set(project?.instances.map((i) => i.id));
     const next = await attempt(() => projects.edit(op));
     if (!next) return false;
     showEdited(next);
+    history = [
+      { label: op.op.replaceAll("_", " ") + ("id" in op ? " · " + op.id : ""), time: new Date().toLocaleTimeString() },
+      ...history,
+    ].slice(0, 100);
     if (next.notice) notice = next.notice;
     if (op.op === "place") selected = next.instances.find((i) => !before.has(i.id))?.id ?? selected;
     return true;
@@ -190,9 +216,11 @@
 
   async function toggleRun(): Promise<void> {
     if (running) {
-      await backend.pause();
+      await attempt(backend.pause);
       running = false;
     } else if (await attempt(() => backend.run(speed)).then(() => !error)) {
+      paceStart = { wall: performance.now(), virtual: snapshot?.time_ms ?? 0 };
+      ratio = null;
       running = true;
     }
   }
@@ -211,7 +239,7 @@
       if (failed) error = failed;
     });
     const listeners = [
-      onSnapshot((s) => (snapshot = s)),
+      onSnapshot(receiveSnapshot),
       onStopped(() => (running = false)),
       onDiskSources((disk) => void fromFolder(disk)),
       onEngineError((e) => (error = m.engine_error({ error: e }))),
@@ -223,107 +251,50 @@
 <svelte:window onkeydown={onKey} onpointerup={() => setTimeout(() => (dragging = null))} />
 
 <div class="shell">
-  <header class="top">
-    <div class="brand">
-      <span class="brand-lockup" style="background-color: #101214">
-        <img src={twinovaMark} alt="" />
-        <span
-          class="name"
-          style="color: #eef2f6; font-family: 'Atkinson Hyperlegible Next', ui-sans-serif, system-ui, sans-serif"
-          >Twinova</span
-        >
-      </span>
-      {#if project}
-        <ProjectMenu
-          {project}
-          onChange={showProject}
-          onNotice={(text) => (notice = text)}
-          onError={(text) => (error = text)}
-        />
-      {/if}
-    </div>
-    <div class="row actions">
-      <button class="btn" disabled={!project?.can_undo} onclick={() => step(projects.undo)}>{m.undo()}</button>
-      <button class="btn" disabled={!project?.can_redo} onclick={() => step(projects.redo)}>{m.redo()}</button>
-      <span class="sep"></span>
-      <button class="btn" onclick={build}>{m.build()}</button>
-      <button class="btn primary" disabled={status !== "ok"} onclick={toggleRun}>
-        {running ? m.pause() : m.run()}
-      </button>
-      <select class="speed" aria-label={m.speed()} bind:value={speed} disabled={running}>
-        {#each SPEEDS as option (option)}
-          <option value={option}>{formatSpeed(option, currentLocale(), m.speed_max())}</option>
-        {/each}
-      </select>
-      <button
-        class="btn"
-        disabled={status !== "ok"}
-        onclick={() => replace(backend.step).then(() => (running = false))}
-      >
-        {m.step()}
-      </button>
-      <button
-        class="btn"
-        disabled={status !== "ok"}
-        onclick={() => replace(backend.reset).then(() => (running = false))}
-      >
-        {m.reset()}
-      </button>
-      <button class="btn" disabled={status !== "ok"} onclick={() => attempt(backend.saveState)}>
-        {m.save_state()}
-      </button>
-      <button
-        class="btn"
-        disabled={status !== "ok"}
-        onclick={() => replace(backend.restoreState).then(() => (running = false))}
-      >
-        {m.restore_state()}
-      </button>
-      {#if project && project.panel.length > 0}
-        <span class="sep"></span>
-        {#each project.panel as button (button.address)}
-          <button class="btn" disabled={status !== "ok"} onclick={() => attempt(() => backend.press(button.address))}>
-            {button.name}
-          </button>
-        {/each}
-      {/if}
-    </div>
-    <div class="row">
-      <select
-        class="lang"
-        aria-label={m.language()}
-        value={currentLocale()}
-        onchange={(e) => setLanguage(e.currentTarget.value as Locale)}
-      >
-        {#each locales as locale (locale)}<option value={locale}>{languageName(locale)}</option>{/each}
-      </select>
-      <button
-        class="btn ghost icon"
-        aria-label={m.theme_switch()}
-        onclick={() => (theme = theme === "dark" ? "light" : "dark")}
-      >
-        {theme === "dark" ? "☾" : "☀"}
-      </button>
-    </div>
-  </header>
-  <p class="notice" role="status">
-    {notice}
-    {#if changed}{m.scene_changed()}{/if}
-    {#each warnings as warning (warning)}<br />{m.build_warning({ warning })}{/each}
-  </p>
+  <Toolbar
+    {project}
+    {running}
+    ready={snapshot !== null}
+    bind:speed
+    bind:theme
+    {ratio}
+    onBuild={build}
+    onRun={toggleRun}
+    onStop={() => replace(backend.reset).then(() => (running = false))}
+    onStep={() => replace(backend.step).then(() => (running = false))}
+    onUndo={() => step(projects.undo)}
+    onRedo={() => step(projects.redo)}
+    onSave={() => attempt(backend.saveState)}
+    onRestore={() => replace(backend.restoreState).then(() => (running = false))}
+    onProject={showProject}
+    onNotice={(text) => (notice = text)}
+    onError={(text) => (error = text)}
+  />
   {#if project}
-    <main class="grid">
-      <Editor bind:sources {status} {error} />
-      <section class="panel stage">
-        <header class="panel-head">
-          <h2 class="panel-title">{project.name}</h2>
-          <SnapBar bind:enabled={snapping} bind:gap candidate={snapTo} />
+    <main class="workspace">
+      <aside class="left-sidebar">
+        <SceneTree
+          {project}
+          bind:selected
+          {hidden}
+          {locked}
+          {history}
+          onVisibility={(id) => (hidden = toggleFlag(hidden, id))}
+          onLock={(id) => (locked = toggleFlag(locked, id))}
+        />
+      </aside>
+      <section class="stage">
+        <header class="scene-header">
+          <Box size={14} /><span>{project.name}</span>{#if changed}<span class="modified" title={m.scene_changed()}
+            ></span>{/if}<span class="spacer"></span><span class="muted">{m.ui_view()}</span>
         </header>
         <div class="stage-body">
           <ProjectScene
             {project}
             {selected}
             {theme}
+            {hidden}
+            {locked}
             cartons={snapshot?.cartons ?? []}
             actuators={snapshot?.actuators ?? []}
             conveyors={snapshot?.conveyors ?? []}
@@ -338,110 +309,239 @@
             onUnmount={(device, position, rotation) => void edit({ op: "unmount", device, position, rotation })}
             onCandidate={(c) => (snapTo = c)}
           />
+          <div class="edit-tools">
+            <button
+              class="icon-button"
+              class:active={mode === "translate"}
+              title={m.ui_move()}
+              aria-label={m.ui_move()}
+              aria-pressed={mode === "translate"}
+              onclick={() => (mode = "translate")}><Move size={17} /></button
+            >
+            <button
+              class="icon-button"
+              class:active={mode === "rotate"}
+              title={m.ui_rotate()}
+              aria-label={m.ui_rotate()}
+              aria-pressed={mode === "rotate"}
+              onclick={() => (mode = "rotate")}><RotateCw size={17} /></button
+            >
+          </div>
+          <div class="scene-counters">
+            <span># {m.ui_cases()} <b>{snapshot?.cartons.length ?? 0}</b></span><span
+              ># {m.ui_delivered()} <b>{deliveredOf(snapshot)}</b></span
+            >
+          </div>
+          <div class="view-footer">
+            <span>{m.ui_scene_help()}</span><SnapBar bind:enabled={snapping} bind:gap candidate={snapTo} />
+          </div>
         </div>
       </section>
-      <div class="side">
-        <IoPanel {snapshot} onSinkBlocked={(sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked))} />
-        <Catalogue onPlace={place} onDrag={(family) => (dragging = family)} />
-        <SceneTree {project} bind:selected />
-        <Inspector {project} {selected} onEdit={edit} />
-      </div>
+      <aside class="right-sidebar">
+        <Inspector {project} {selected} locked={selected !== null && locked.includes(selected)} onEdit={edit} />
+      </aside>
+      <WorkspaceDock
+        {project}
+        bind:sources
+        {status}
+        {error}
+        {warnings}
+        notice={noticeText}
+        {snapshot}
+        onPlace={place}
+        onDrag={(family) => (dragging = family)}
+        onSinkBlocked={(sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked))}
+        onPress={(address) => attempt(() => backend.press(address))}
+      />
     </main>
   {/if}
+  <footer class="statusbar">
+    <span class="status"
+      ><span class="led" class:on={running}></span>{running
+        ? m.ui_running()
+        : status === "ok"
+          ? m.ui_ready()
+          : m.ui_stopped()}</span
+    >
+    <span class="divider"></span><span class="data">{formatTime(snapshot?.time_ms ?? 0)}</span>
+    <p class="status-notice" role="status" title={noticeText}>{noticeText}</p>
+    {#if error}<AlertCircle size={13} /><span class="error-status" title={error}>{error}</span>{/if}
+    {#if changed}<span class="scene-status">{m.scene_changed()}</span>{/if}
+    {#if snapshot}<CircleCheck size={13} />{/if}<span class="build-status"
+      >{status === "ok"
+        ? m.built_ok()
+        : snapshot
+          ? m.ui_previous_build()
+          : status === "failed"
+            ? m.build_failed()
+            : m.not_built()}</span
+    >
+    <span class="divider"></span><span>{project?.instances.length ?? 0} {m.ui_objects()}</span><span class="divider"
+    ></span><span>truST · IEC 61131-3</span>
+  </footer>
 </div>
 
 <style>
-  /* A column, so the optional status line does not shift the main grid into an auto-sized row, and min-width: 0 so the
-     header's buttons wrap instead of widening the page (the Windows E2E window is 1028 px wide, run 42524833751). */
   .shell {
     display: flex;
     flex-direction: column;
-    min-width: 0;
     height: 100%;
-    gap: 12px;
-    padding: 12px;
+    min-width: 0;
   }
-  .top {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
-  }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .brand-lockup {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 38px;
-    padding: 4px 10px 4px 6px;
-    border: 1px solid #343c46;
-    border-radius: 10px;
-    box-shadow: 0 5px 16px rgb(0 0 0 / 0.18);
-  }
-  .brand img {
-    width: 26px;
-    height: 26px;
-    object-fit: contain;
-  }
-  .name {
-    display: inline-flex;
-    align-items: baseline;
-    font-size: 18px;
-    font-weight: 720;
-    line-height: 1;
-    letter-spacing: -0.02em;
-  }
-  .actions {
+  .workspace {
     flex: 1;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .sep {
-    width: 1px;
-    height: 24px;
-    background: var(--color-border);
-  }
-  .lang,
-  .speed {
-    width: auto;
-  }
-  .grid {
-    flex: 1;
-    display: grid;
-    grid-template-columns: minmax(320px, 1fr) minmax(420px, 2fr) minmax(240px, 0.8fr);
-    gap: 12px;
     min-height: 0;
+    display: grid;
+    grid-template-columns: 224px minmax(280px, 1fr) 292px;
+    grid-template-rows: minmax(200px, 1fr) auto;
   }
-  .notice {
-    margin: 0;
-    padding: 8px 12px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface-2);
-    color: var(--color-text-muted);
-  }
-  .notice:empty {
-    display: none;
-  }
-  .side {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+  .left-sidebar,
+  .right-sidebar {
     min-height: 0;
     overflow: auto;
+    background: var(--color-surface);
+  }
+  .left-sidebar {
+    border-right: 1px solid var(--color-border);
+  }
+  .right-sidebar {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    border-left: 1px solid var(--color-border);
   }
   .stage {
     display: flex;
     flex-direction: column;
+    min-width: 0;
     min-height: 0;
+  }
+  .scene-header {
+    height: 35px;
+    padding: 0 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+    font-size: 11px;
+  }
+  .modified {
+    width: 5px;
+    height: 5px;
+    background: var(--color-warning);
+    border-radius: 50%;
   }
   .stage-body {
     flex: 1;
     min-height: 0;
-    padding: 12px;
+    position: relative;
+  }
+  .edit-tools {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    padding: 3px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-popover);
+  }
+  .scene-counters {
+    position: absolute;
+    top: 65px;
+    left: 12px;
+    display: flex;
+    gap: 6px;
+    pointer-events: none;
+  }
+  .scene-counters span {
+    padding: 4px 9px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in oklab, var(--color-surface) 92%, transparent);
+    border-radius: 12px;
+    font-size: 10px;
+  }
+  .scene-counters b {
+    margin-left: 8px;
+    font-family: var(--font-mono);
+  }
+  .view-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    background: color-mix(in oklab, var(--color-surface) 90%, transparent);
+    border-top: 1px solid var(--color-border);
+    padding: 5px 10px;
+    font-size: 10px;
+    color: var(--color-text-faint);
+  }
+  .view-footer :global(input) {
+    height: 23px;
+    font-size: 10px;
+  }
+  .statusbar {
+    min-height: 27px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-faint);
+    font-size: 10px;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--color-text-muted);
+  }
+  .divider {
+    width: 1px;
+    height: 12px;
+    background: var(--color-border);
+    margin: 0 4px;
+  }
+  .error-status {
+    max-width: 40vw;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--color-danger);
+  }
+  .build-status {
+    flex: none;
+    white-space: nowrap;
+    color: var(--color-text-muted);
+  }
+  .scene-status {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .status-notice {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (max-width: 1200px) {
+    .workspace {
+      grid-template-columns: 190px minmax(260px, 1fr) 260px;
+    }
+    .view-footer > span {
+      display: none;
+    }
   }
 </style>

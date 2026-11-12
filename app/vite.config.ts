@@ -17,7 +17,8 @@ export default defineConfig({
     svelte(),
   ],
   clearScreen: false,
-  server: { port: 1420, strictPort: true },
+  server: { port: 1420, strictPort: true, watch: { ignored: ["**/src-tauri/target/**"] } },
+  optimizeDeps: { entries: ["index.html", "e2e/ui-preview.html"] },
   // three.js alone is ~600 kB; a desktop app loads it from disk, so the web-oriented 500 kB warning does not apply.
   build: { target: "es2022", chunkSizeWarningLimit: 800 },
   test: {

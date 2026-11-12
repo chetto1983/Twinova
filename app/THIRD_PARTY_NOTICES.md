@@ -42,5 +42,6 @@ Transitive dependencies carry their own licenses in their packages.
 | serde, serde_json | MIT OR Apache-2.0 | <https://github.com/serde-rs> |
 | webkit2gtk (Linux) | MIT | <https://github.com/tauri-apps/webkit2gtk-rs> |
 | three | MIT | <https://github.com/mrdoob/three.js> |
+| @lucide/svelte 1.72.0 | ISC (Lucide), MIT (Feather-derived icons) | <https://github.com/lucide-icons/lucide> |
 | @tauri-apps/api | MIT OR Apache-2.0 | <https://github.com/tauri-apps/tauri> |
 | svelte (build-time) | MIT | <https://github.com/sveltejs/svelte> |

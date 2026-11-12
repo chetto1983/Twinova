@@ -61,7 +61,7 @@ const AXIS = { x: 0, z: 1 };
 
 /** Clicks "Frame all" and returns the view it gives `known` instances. */
 async function frameAll(known) {
-  await click(`//button[normalize-space()="Frame all"]`);
+  await click(`//button[@aria-label="Frame all"]`);
   return framed(Object.values(known));
 }
 
@@ -210,7 +210,8 @@ sessions(async () => {
     await check(
       "the sink dragged to belt B's exit snaps onto it, then the second photocell mounts on belt B",
       async () => {
-        await dropAt("sink", ...rel(6.0, 1.5), await frameAll(known));
+        // Keep the staging point on the wider viewport before dragging towards the far exit.
+        await dropAt("sink", ...rel(5.5, 0.5), await frameAll(known));
         known.sink_1 = await eventually(position, "sink placed", 5_000);
         // Across first, away from the camera, where the far end stays in view.
         await dragTo(known, "sink_1", rel(7.4, 0.05), true);
@@ -243,7 +244,13 @@ sessions(async () => {
     await check("the line builds", () =>
       eventually(
         async () =>
-          expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "built"),
+          expectEqual(
+            await browser
+              .$("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']")
+              .isExisting(),
+            true,
+            "built",
+          ),
         "build",
         10_000,
       ),
@@ -308,7 +315,9 @@ sessions(async () => {
     const known = { source: [2, 2.385], belt_a: [0, 0], sink: [4.085, 0], belt_s: [2, 2.385] };
     await check("the spur dragged off the flank and back merges again, and its cartons reach the sink", async () => {
       await select("Spur");
-      const view = framed(Object.values(known));
+      // Give the front-facing gizmo room for the return grab after moving the spur towards the camera.
+      await click(button("Collapse panel"));
+      const view = await frameAll(known);
       await dragGizmo(known.belt_s, "z", 0.5, view);
       await eventually(async () => near(await position(), [2, 2.885], 0.05, "spur off"), "off", 5_000);
       await dragGizmo([2, 2.885], "z", -0.46, view);
@@ -316,7 +325,13 @@ sessions(async () => {
       await click(button("Build"));
       await eventually(
         async () =>
-          expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "built"),
+          expectEqual(
+            await browser
+              .$("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']")
+              .isExisting(),
+            true,
+            "built",
+          ),
         "build",
         10_000,
       );

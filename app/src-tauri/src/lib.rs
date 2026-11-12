@@ -30,6 +30,7 @@ pub fn run() {
         ))
         .invoke_handler(tauri::generate_handler![
             commands::build,
+            commands::scan_timing,
             commands::change_program,
             commands::reset,
             commands::step,

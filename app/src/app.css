@@ -50,10 +50,10 @@
   --color-info: #aecbfa;
   --color-ring: #8ab4f8;
   /* The 3D scene: a dim plant hall, so the parts read against it. */
-  --scene-sky: #2b313a;
+  --scene-sky: #87949f;
   --scene-hemi-sky: #7d8894;
   --scene-hemi-ground: #4a453e;
-  --scene-floor: #3b3f45;
+  --scene-floor: #747c80;
   --scene-grid: #5f6772;
 }
 
@@ -98,11 +98,11 @@
   --scene-selected: #3d8bfd;
   --color-accent-soft: color-mix(in oklab, var(--color-accent) 55%, transparent);
   --color-danger-soft: color-mix(in oklab, var(--color-danger) 15%, transparent);
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-pill: 999px;
-  --font-display: Fraunces, Georgia, serif;
+  --font-display: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Commit Mono", ui-monospace, SFMono-Regular, monospace;
   --shadow-popover: 0 18px 44px rgb(0 0 0 / 0.18);
@@ -111,7 +111,7 @@
   --motion-base: 220ms;
   --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--color-text);
   background: var(--color-bg);
@@ -149,31 +149,29 @@ body {
 
 .panel {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  animation: enter var(--motion-base) var(--motion-ease-out) both;
-  animation-delay: calc(var(--i, 0) * 50ms);
+  border: 0;
+  border-radius: 0;
 }
 
 .panel-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 52px;
-  padding: 10px 16px;
+  min-height: 35px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .panel-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 17px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--color-text);
 }
 
 .panel-body {
-  padding: 16px;
+  padding: 12px;
 }
 
 @keyframes enter {
@@ -204,13 +202,13 @@ input,
 select {
   width: 100%;
   min-width: 0;
-  height: 36px;
+  height: 30px;
   padding: 0 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface-3);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--color-text);
   outline: none;
@@ -451,4 +449,97 @@ input[type="checkbox"] {
     animation: none !important;
     transition: none !important;
   }
+}
+
+.icon-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 29px;
+  height: 28px;
+  flex: none;
+  border: 0;
+  border-radius: 4px;
+  padding: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.icon-button:hover:not(:disabled) {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+.icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.icon-button.active {
+  background: var(--color-accent);
+  color: var(--color-ring);
+}
+.panel-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 35px;
+  flex: none;
+  border-bottom: 1px solid var(--color-border);
+}
+.panel-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0 13px;
+  background: transparent;
+  color: var(--color-text-faint);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.panel-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--color-ring);
+  color: var(--color-text);
+  background: var(--color-accent-soft);
+}
+.panel-tabs button:hover {
+  color: var(--color-text);
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text-faint);
+}
+.search-field input {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  height: 28px;
+  font-size: 11px;
+}
+.search-field:focus-within {
+  outline: 1px solid var(--color-ring);
+}
+.search-field input:focus-visible {
+  box-shadow: none;
+}
+.search-field svg {
+  flex: none;
+}
+button svg {
+  pointer-events: none;
+}
+summary {
+  cursor: pointer;
+}
+summary:focus-visible {
+  outline: 1px solid var(--color-ring);
+  outline-offset: -2px;
 }

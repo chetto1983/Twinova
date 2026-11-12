@@ -11,6 +11,8 @@
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import { ViewHelper } from "three/examples/jsm/helpers/ViewHelper.js";
   import { m } from "../paraglide/messages.js";
+  import { Grid2X2, Scan } from "@lucide/svelte";
+  import { warehouse } from "./warehouse";
   import type { Interaction } from "./picking";
   import { framingDistance } from "./snapshot";
 
@@ -18,7 +20,7 @@
     scene,
     target,
     halfWidth,
-    halfHeight = 1,
+    halfHeight = 1.6,
     theme,
     requestRender = $bindable(() => {}),
     interact,
@@ -49,6 +51,7 @@
   const floorMaterial = new THREE.MeshStandardMaterial({ roughness: 0.95 });
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), floorMaterial);
   let gridHelper: THREE.GridHelper | null = null;
+  let building: ReturnType<typeof warehouse> | null = null;
   key.position.set(-8.1, 16.4, 8.1);
   fill.position.set(10, 14, -10);
   key.castShadow = true;
@@ -67,7 +70,14 @@
 
   /** Sizes the floor, the grid and the key light's shadow frustum to the scene around `target`. */
   function layoutHall(): void {
-    const extent = Math.max(halfWidth * 4, 10);
+    const extent = Math.max(halfWidth * 4, 12);
+    if (building) {
+      hall.remove(building.group);
+      building.dispose();
+    }
+    building = warehouse(extent);
+    building.group.position.set(target.x, 0, target.z);
+    hall.add(building.group);
     floor.scale.set(extent, extent, 1);
     floor.position.set(target.x, 0, target.z);
     key.target.position.set(target.x, 0, target.z);
@@ -106,17 +116,21 @@
   }
 
   $effect(() => {
-    void [theme, grid, halfWidth, target];
+    void [halfWidth, target];
     layoutHall();
-    paintHall();
     reframe();
+    requestRender();
+  });
+  $effect(() => {
+    void [theme, grid, halfWidth, target];
+    paintHall();
     requestRender();
   });
 
   onMount(() => {
     scene.add(hall);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.autoClear = false;
@@ -147,18 +161,23 @@
         requestRender();
       }
     });
-    reframe = () => {
+    const resize = () => {
       const { clientWidth: w, clientHeight: h } = host;
       renderer.setSize(w, h);
       camera.aspect = w / Math.max(h, 1);
       camera.updateProjectionMatrix();
+      requestRender();
+    };
+    reframe = () => {
+      resize();
       controls.target.copy(target);
       const distance = framingDistance(halfWidth, halfHeight, camera.fov, camera.aspect);
       camera.position.copy(target).addScaledVector(VIEW_DIRECTION, distance);
       controls.update();
       requestRender();
     };
-    const observer = new ResizeObserver(reframe);
+    reframe();
+    const observer = new ResizeObserver(resize);
     observer.observe(host);
     const release = interact?.({ camera, canvas: renderer.domElement, controls, requestRender });
     return () => {
@@ -168,6 +187,11 @@
       gizmo.dispose();
       controls.dispose();
       renderer.dispose();
+      building?.dispose();
+      floor.geometry.dispose();
+      floorMaterial.dispose();
+      gridHelper?.dispose();
+      key.dispose();
       scene.remove(hall);
     };
   });
@@ -175,8 +199,19 @@
 
 <div class="view" bind:this={host}>
   <div class="tools">
-    <button class="btn ghost" aria-pressed={grid} onclick={() => (grid = !grid)}>{m.view_grid()}</button>
-    <button class="btn ghost" onclick={() => (onFrameAll ? onFrameAll() : reframe())}>{m.view_frame()}</button>
+    <button
+      class="icon-button"
+      title={m.view_grid()}
+      aria-label={m.view_grid()}
+      aria-pressed={grid}
+      onclick={() => (grid = !grid)}><Grid2X2 size={16} /></button
+    >
+    <button
+      class="icon-button"
+      title={m.view_frame()}
+      aria-label={m.view_frame()}
+      onclick={() => (onFrameAll ? onFrameAll() : reframe())}><Scan size={16} /></button
+    >
   </div>
 </div>
 
@@ -185,21 +220,24 @@
     position: relative;
     width: 100%;
     height: 100%;
-    min-height: 320px;
-    border-radius: var(--radius-sm);
+    min-height: 0;
     overflow: hidden;
   }
   .tools {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 12px;
+    left: 82px;
     display: flex;
-    gap: 6px;
+    gap: 2px;
+    padding: 3px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
   }
-  .tools .btn {
+  .tools .icon-button {
     background: color-mix(in oklab, var(--color-surface) 80%, transparent);
   }
-  .tools .btn[aria-pressed="true"] {
+  .tools .icon-button[aria-pressed="true"] {
     background: var(--color-accent);
     color: var(--color-on-accent);
   }

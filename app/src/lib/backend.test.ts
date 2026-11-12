@@ -30,6 +30,7 @@ describe("backend bridge", () => {
     await backend.pause();
     await backend.press("%IX1.0");
     await backend.setSinkBlocked(0, true);
+    await backend.scanTiming();
     expect(invoke.mock.calls).toEqual([
       [
         "build",
@@ -48,6 +49,7 @@ describe("backend bridge", () => {
       ["pause"],
       ["press", { address: "%IX1.0" }],
       ["set_sink_blocked", { sink: 0, blocked: true }],
+      ["scan_timing"],
     ]);
   });
 

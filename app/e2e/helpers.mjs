@@ -23,6 +23,7 @@ export const out = process.env.E2E_OUT
   ? (mkdirSync(process.env.E2E_OUT, { recursive: true }), process.env.E2E_OUT)
   : mkdtempSync(join(tmpdir(), "twinova-e2e-"));
 const driverLog = join(out, "tauri-driver.log");
+const driverPort = Number(process.env.E2E_PORT ?? 4444);
 const results = [];
 export let browser;
 
@@ -61,13 +62,30 @@ export function expectEqual(actual, expected, what) {
 
 // ---------- the UI ----------
 
-export const button = (text) => `//header//button[normalize-space()="${text}"]`;
-export const click = async (selector) => (await browser.$(selector)).click();
+export const button = (text) => `//button[@aria-label="${text}" or normalize-space()="${text}"]`;
+export const dock = async (tab) => {
+  const target = await browser.$(`#dock-${tab}`);
+  if ((await target.getAttribute("aria-selected")) !== "true") await target.click();
+};
+export const click = async (selector) => {
+  const element = await browser.$(selector);
+  if ((await element.isExisting()) && !(await element.isDisplayed())) {
+    const panel = await browser.execute((node) => node.closest('[role="tabpanel"]')?.id, element);
+    if (panel) await dock(panel.replace("panel-", ""));
+  }
+  await element.click();
+};
 const text = async (selector) => (await browser.$(selector)).getText();
 /** The value cell of an I/O row, by its exact name: a scene signal (`belt_a.run`, the same in every language) or M3's
  * jam. Exact, because `belt_a.run` is also the start of `belt_a.running`. */
-export const bit = (name) => text(`//li[contains(@class,"row")][.//span[normalize-space()="${name}"]]/span[last()]`);
-export const value = (term) => text(`//dt[normalize-space()="${term}"]/following-sibling::dd[1]`);
+export const bit = async (name) => {
+  await dock("watch");
+  return text(`//li[contains(@class,"row")][.//span[normalize-space()="${name}"]]/span[last()]`);
+};
+export const value = async (term) => {
+  await dock("watch");
+  return text(`//dt[normalize-space()="${term}"]/following-sibling::dd[1]`);
+};
 /** Virtual time "m:ss.cc" in seconds. Text that is not a time throws: a NaN would make every comparison false and
  * let a check pass on nothing (run 42524833751, where the cell read as empty). */
 export const virtualSeconds = async (term) => {
@@ -88,6 +106,7 @@ async function whenStarted() {
     await browser.waitUntil(async () => Boolean(await browser.execute(() => document.documentElement.dataset.theme)), {
       timeout: 30_000,
     });
+    await selectLanguage("English");
   } catch (e) {
     await browser.saveScreenshot(join(out, "not-started.png")).catch(() => {});
     console.error("tauri-driver output (last 4 KB):\n" + readFileSync(driverLog, "utf8").slice(-4096));
@@ -98,9 +117,12 @@ async function whenStarted() {
 /** Starts tauri-driver, runs `body`, which starts the app with `app` as often as it needs, and exits 1 on a failed
  * check. */
 export async function sessions(body) {
-  const driver = spawn("tauri-driver", [], { stdio: ["ignore", openSync(driverLog, "w"), openSync(driverLog, "a")] });
+  const driver = spawn("tauri-driver", ["--port", String(driverPort), "--native-port", String(driverPort + 1)], {
+    stdio: ["ignore", openSync(driverLog, "w"), openSync(driverLog, "a")],
+  });
   await sleep(2000);
   try {
+    if (driver.exitCode !== null) throw new Error(`tauri-driver exited: ${readFileSync(driverLog, "utf8")}`);
     await body();
   } finally {
     driver.kill();
@@ -112,11 +134,12 @@ export async function sessions(body) {
 
 /** Starts the app built in `profile` (debug or release) with the command-line `args`, runs `body` and closes it. */
 export async function app(profile, args, body) {
+  const target = process.env.CARGO_TARGET_DIR ? resolve(process.env.CARGO_TARGET_DIR) : join(root, "src-tauri/target");
   browser = await remote({
     hostname: "127.0.0.1",
-    port: 4444,
+    port: driverPort,
     logLevel: "error",
-    capabilities: { "tauri:options": { application: join(root, "src-tauri/target", profile, APP), args } },
+    capabilities: { "tauri:options": { application: join(target, profile, APP), args } },
   });
   try {
     await whenStarted();

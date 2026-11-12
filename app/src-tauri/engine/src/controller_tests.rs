@@ -55,6 +55,23 @@ fn a_scan_reads_its_inputs_and_writes_its_outputs_by_address() {
 }
 
 #[test]
+fn execution_timing_counts_real_scans_and_resets_on_program_change() {
+    let project = with_program(BELT);
+    let (mut controller, _) = Controller::build(&project).unwrap();
+    assert_eq!(controller.timing().scans, 0);
+    assert_eq!(controller.timing().interval_ms, 10.0);
+    for _ in 0..3 {
+        controller.scan().unwrap();
+    }
+    let timing = controller.timing();
+    assert_eq!(timing.scans, 3);
+    assert!(timing.maximum_us >= timing.last_us);
+    assert!(timing.maximum_us >= timing.average_us);
+    controller.reload(&project).unwrap();
+    assert_eq!(controller.timing().scans, 0);
+}
+
+#[test]
 fn a_panel_press_holds_its_bit_for_one_scan() {
     let (mut c, _) = Controller::build(&demo()).unwrap();
     c.press("%IX1.0");

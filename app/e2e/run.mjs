@@ -38,7 +38,13 @@ async function lineScenario() {
   await check("the demo builds on start", () =>
     eventually(
       async () =>
-        expectEqual(await browser.$("//*[normalize-space()='Built: ready to run']").isExisting(), true, "status"),
+        expectEqual(
+          await browser
+            .$("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']")
+            .isExisting(),
+          true,
+          "status",
+        ),
       "build",
       10_000,
     ),
@@ -151,7 +157,9 @@ async function behaviourScenario() {
   await check("the belt's behaviour, edited to a 500 ms start delay, reports running 500 ms after run", async () => {
     await setEditorText(original.replace("PT := start_delay", "PT := T#500ms"));
     await click(button("Build"));
-    await browser.$("//*[normalize-space()='Built: ready to run']").waitForExist({ timeout: 10_000 });
+    await browser
+      .$("//footer[contains(@class,'statusbar')]/span[normalize-space()='Built: ready to run']")
+      .waitForExist({ timeout: 10_000 });
     await click(button("Start"));
     let run = null;
     let running = null;

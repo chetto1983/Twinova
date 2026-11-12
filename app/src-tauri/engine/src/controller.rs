@@ -9,6 +9,7 @@ use twinova_project::Project;
 use twinova_project::model::SignalType;
 
 use crate::locate::locate_in_files;
+use crate::timing::ScanTiming;
 
 /// The scan period of a program that declares no periodic `TASK`: M1's 10 ms.
 pub const DEFAULT_SCAN_NS: i64 = 10_000_000;
@@ -40,6 +41,7 @@ impl Port {
 }
 
 pub struct Controller {
+    timing: ScanTiming,
     harness: TestHarness,
     scan_ns: i64,
     declared: Vec<Declared>,
@@ -98,6 +100,7 @@ impl Controller {
             })
             .collect();
         let controller = Self {
+            timing: ScanTiming::default(),
             harness,
             scan_ns,
             declared,
@@ -153,6 +156,7 @@ impl Controller {
         let sources: Vec<&str> = project.program.iter().map(|(_, t)| t.as_str()).collect();
         (self.harness.reload_sources(&sources)).map_err(|e| located(project, &e))?;
         self.scan_ns = checked.scan_ns;
+        self.timing = ScanTiming::default();
         self.declared = checked.declared;
         for (area, bytes) in images {
             // The new image reaches as far as the new program declares: a byte past it is one it does not declare.
@@ -213,6 +217,13 @@ impl Controller {
         self.scan_ns
     }
 
+    pub fn timing(&self) -> ScanTiming {
+        ScanTiming {
+            interval_ms: self.scan_ns as f64 / 1_000_000.0,
+            ..self.timing.clone()
+        }
+    }
+
     /// `address` parsed, when the program declares a variable there: what the line writes every millisecond, resolved
     /// once at Build (spec 2026-11-10-solver-substeps-io-links-design.md, decision 2).
     pub fn declared_at(&self, address: &str) -> Option<Port> {
@@ -262,7 +273,9 @@ impl Controller {
         }
         self.harness
             .advance_time(Duration::from_nanos(self.scan_ns));
+        let started = std::time::Instant::now();
         let cycle = self.harness.cycle();
+        self.timing.record(started.elapsed());
         for address in &pressed {
             self.write(address, Value::Bool(false))?;
         }

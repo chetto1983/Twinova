@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as THREE from "three";
-import { browser, click, eventually, expectEqual } from "./helpers.mjs";
+import { browser, click, dock, eventually, expectEqual } from "./helpers.mjs";
 
 const json = (value) => JSON.stringify(value, null, 2) + "\n";
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
@@ -37,12 +37,11 @@ export function emptyProject(name) {
 
 export const inspector = `//section[contains(@class,"inspector")]`;
 export const canvas = `//section[contains(@class,"stage")]//canvas`;
-const catalogueButton = (label) => `//section[contains(@class,"catalogue")]//button[normalize-space()="${label}"]`;
+const catalogueButton = (label) =>
+  `//section[contains(@class,"catalogue")]//button[.//span[contains(@class,"name") and normalize-space()="${label}"]]`;
 
 export const treeNames = () =>
-  browser.execute(() =>
-    [...document.querySelectorAll("section.tree button > span:first-child")].map((span) => span.textContent),
-  );
+  browser.execute(() => [...document.querySelectorAll("section.tree .item-name")].map((span) => span.textContent));
 
 export const selectedName = async () => {
   const field = await browser.$(`${inspector}//input[@aria-label="Name"]`);
@@ -50,7 +49,15 @@ export const selectedName = async () => {
 };
 
 /** A catalogue family placed by a click, under the view's framing centre. */
-export const place = (label) => click(catalogueButton(label));
+async function catalogueCategory(label) {
+  await dock("parts");
+  const category = /source|sink/.test(label) ? "Products" : /sensor|scanner/.test(label) ? "Devices" : "Equipment";
+  await click(`//div[contains(@class,"categories")]//button[normalize-space()="${category}"]`);
+}
+export const place = async (label) => {
+  await catalogueCategory(label);
+  await click(catalogueButton(label));
+};
 
 export async function select(name) {
   await click(`//section[contains(@class,"tree")]//button[span[1][normalize-space()="${name}"]]`);
@@ -92,7 +99,7 @@ async function camera(view) {
   const { width, height } = await element.getSize();
   const cam = new THREE.PerspectiveCamera(40, width / height, 0.1, 500);
   const tanV = Math.tan((40 * Math.PI) / 360);
-  const distance = Math.max(view.halfWidth / (tanV * cam.aspect), 1 / tanV);
+  const distance = Math.max(view.halfWidth / (tanV * cam.aspect), 1.6 / tanV);
   const target = new THREE.Vector3(...view.target);
   cam.position.copy(new THREE.Vector3(0.35, 0.6, 1).normalize().multiplyScalar(distance).add(target));
   cam.lookAt(target);
@@ -135,9 +142,11 @@ export async function drag(from, to) {
 
 /** A family dragged from the catalogue and released over the floor at (x, z). */
 export async function dropAt(label, x, z, view) {
+  await catalogueCategory(label);
+  if (!(await inView(x, 0, z, view))) throw new Error(`Drop point for ${label} is outside the viewport: ${x}, ${z}`);
+  const before = (await treeNames()).length;
   const from = await browser.$(catalogueButton(label));
-  // The side column scrolls on its own as the inspector grows; the canvas stays where it is.
-  await from.scrollIntoView({ block: "center" });
+  await from.scrollIntoView({ block: "nearest", inline: "center" });
   await browser
     .action("pointer")
     .move({ duration: 0, origin: from })
@@ -145,6 +154,11 @@ export async function dropAt(label, x, z, view) {
     .move({ duration: 300, ...(await onScreen(x, 0, z, view)) })
     .up()
     .perform();
+  await eventually(
+    async () => expectEqual((await treeNames()).length, before + 1, "placed instance count"),
+    "drop",
+    5000,
+  );
 }
 
 /** Where the selection's gizmo is grabbed to drag it along world `axis` ("x" or "z") from `at` ([x, z], where the
