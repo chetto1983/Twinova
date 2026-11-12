@@ -77,8 +77,16 @@ pub fn build(
     let mut project = projects.project()?;
     project.program = program;
     project.behaviours = behaviours;
-    let (project, engine, warnings) = twinova_engine::build(&project)?;
+    let (project, engine, mut warnings) = twinova_engine::build(&project)?;
     projects.set_sources(&project)?;
+    if let Some(folder) = projects.folder()? {
+        let written = crate::lsp_files::write(&folder, &project);
+        warnings.extend(
+            written
+                .err()
+                .map(|e| format!("the files for VS Code were not written: {e}")),
+        );
+    }
     let snapshot = install(&state, project, engine)?;
     Ok(Built { snapshot, warnings })
 }

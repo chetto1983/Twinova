@@ -14,14 +14,14 @@ import {
   check,
   eventually,
   expectEqual,
+  fixtureCopy,
   click,
-  root,
   selectSpeed,
   sessions,
 } from "./helpers.mjs";
 
 const shots = process.argv[2] ? resolve(process.argv[2]) : null;
-const folder = join(root, "src-tauri/project/tests/fixtures/valid/two_belts_diverter");
+const folder = fixtureCopy("two_belts_diverter");
 
 async function screenshot(name) {
   if (!shots) return;

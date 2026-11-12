@@ -134,13 +134,29 @@ fn generate(project: &Project) -> Result<(String, Spans), String> {
         spans.push((start, out.len(), format!("components/{key}.st")));
         out.push('\n');
     }
-    out.push_str("PROGRAM Field\nVAR\n");
-    for (inst, def) in &devices {
+    out.push_str(&configuration(&devices)?);
+    Ok((out, spans))
+}
+
+/// The generated `PROGRAM Field` and `CONFIGURATION Twinova` alone, without the blocks, for an editor that reads the
+/// blocks from their own files (spec 2026-11-12-st-vscode-design.md, "Files for the LSP"); `None` when no device has a
+/// behaviour, as `Field::build`.
+pub fn config_source(project: &Project) -> Result<Option<String>, String> {
+    let devices = behaving(project);
+    if devices.is_empty() {
+        return Ok(None);
+    }
+    configuration(&devices).map(Some)
+}
+
+fn configuration(devices: &[(&Instance, &Definition)]) -> Result<String, String> {
+    let mut out = String::from("PROGRAM Field\nVAR\n");
+    for (inst, def) in devices {
         let block = &def.behaviour.as_ref().expect("filtered").function_block;
         let _ = writeln!(out, "    {} : {block};", inst.id);
     }
     out.push_str("END_VAR\n");
-    for (inst, _) in &devices {
+    for (inst, _) in devices {
         let _ = writeln!(out, "{}();", inst.id);
     }
     out.push_str("END_PROGRAM\n\nCONFIGURATION Twinova\nRESOURCE Devices ON PLC\n");
@@ -148,7 +164,7 @@ fn generate(project: &Project) -> Result<(String, Spans), String> {
     let _ = writeln!(out, "    PROGRAM {PROGRAM} WITH Cycle : Field;");
     out.push_str("END_RESOURCE\n");
     let mut config = String::new();
-    for placed in place(&devices)? {
+    for placed in place(devices)? {
         let _ = writeln!(
             config,
             "    {PROGRAM}.{}.{} AT {} : {};",
@@ -164,7 +180,7 @@ fn generate(project: &Project) -> Result<(String, Spans), String> {
         out.push_str("END_VAR\n");
     }
     out.push_str("END_CONFIGURATION\n");
-    Ok((out, spans))
+    Ok(out)
 }
 
 /// The field compiles one generated source, so each location of truST's message is rewritten as the behaviour file and

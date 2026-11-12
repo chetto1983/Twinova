@@ -371,3 +371,26 @@ fn an_address_the_field_does_not_have_is_refused() {
             .starts_with("%QX0.0: ")
     );
 }
+
+/// The configuration an editor reads beside the blocks (spec 2026-11-12-st-vscode-design.md, "Files for the LSP") is
+/// the field's generated source without its blocks: one instance per behaving device and its `VAR_CONFIG`.
+#[test]
+fn the_configuration_alone_is_the_generated_source_after_its_blocks() {
+    let project = fixture("two_belts_diverter");
+    let (text, spans) = generate(&project).unwrap();
+    let config = config_source(&project).unwrap().unwrap();
+    assert_eq!(text[spans.last().unwrap().1 + 1..], config);
+    for line in [
+        "PROGRAM Field\nVAR\n    belt_a : BeltBehaviour;\n    belt_b : BeltBehaviour;\n",
+        "    chain_transfer : ChainTransferBehaviour;\n    roller_r : RollerBehaviour;\nEND_VAR\n",
+        "VAR_CONFIG\n    F.belt_a.run AT ",
+        "END_VAR\nEND_CONFIGURATION\n",
+    ] {
+        assert!(config.contains(line), "{line:?} in\n{config}");
+    }
+    let mut none = project.clone();
+    for def in none.definitions.values_mut() {
+        def.behaviour = None;
+    }
+    assert_eq!(config_source(&none).unwrap(), None);
+}

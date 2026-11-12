@@ -214,3 +214,31 @@ fn run_as_fast_as_possible_publishes_a_snapshot_a_frame() {
     // 33 ms, with room for a loaded machine; a frame slept whole gives 58 ms.
     assert!(frame < Duration::from_millis(48), "{frame:?} a snapshot");
 }
+
+/// Build refreshes VS Code's files in the project's folder (`lsp_files.rs`); one it cannot write is a warning, and the
+/// line still builds.
+#[test]
+fn build_writes_the_files_for_vscode_or_warns() {
+    let app = app();
+    let (dir, folder) = crate::test_fixtures::copied("two_belts_diverter");
+    crate::project_commands::open_project(app.state(), folder).unwrap();
+    let field = dir.path().join(crate::lsp_files::FIELD);
+    std::fs::remove_file(&field).unwrap();
+    assert!(
+        build_demo(&app)
+            .warnings
+            .iter()
+            .all(|w| !w.contains("VS Code"))
+    );
+    assert!(field.is_file());
+    std::fs::remove_file(&field).unwrap();
+    std::fs::create_dir(&field).unwrap();
+    let warnings = build_demo(&app).warnings;
+    assert!(
+        warnings
+            .iter()
+            .any(|w| w
+                .starts_with("the files for VS Code were not written: .twinova/lsp/field.st: ")),
+        "{warnings:?}"
+    );
+}

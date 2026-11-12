@@ -15,13 +15,13 @@ import {
   click,
   eventually,
   expectEqual,
-  root,
+  fixtureCopy,
   selectSpeed,
   sessions,
 } from "./helpers.mjs";
 
 const shots = process.argv[2] ? resolve(process.argv[2]) : null;
-const folder = join(root, "src-tauri/project/tests/fixtures/valid/curve_line");
+const folder = fixtureCopy("curve_line");
 
 async function screenshot(name) {
   if (!shots) return;

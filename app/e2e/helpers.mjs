@@ -3,12 +3,20 @@
 
 import { remote } from "webdriverio";
 import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, openSync, readFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, openSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 export const root = resolve(import.meta.dirname, "..");
+
+/** A copy of valid fixture `name` in a new temporary folder. Opening a folder writes VS Code's files into it
+ *  (src-tauri/src/lsp_files.rs), and the corpus checks that a fixture holds only its project's files. */
+export function fixtureCopy(name) {
+  const folder = join(mkdtempSync(join(tmpdir(), "twinova-fixture-")), name);
+  cpSync(join(root, "src-tauri/project/tests/fixtures/valid", name), folder, { recursive: true });
+  return folder;
+}
 const APP = process.platform === "win32" ? "twinova.exe" : "twinova";
 /** Failure screenshots and the driver's log; E2E_OUT names a folder CI uploads when a run fails. */
 export const out = process.env.E2E_OUT

@@ -1,7 +1,10 @@
 pub mod commands;
 pub mod demo;
 pub mod edit_commands;
+pub mod lsp_files;
 pub mod project_commands;
+#[cfg(test)]
+mod test_fixtures;
 pub mod webview_locale;
 
 pub fn run() {

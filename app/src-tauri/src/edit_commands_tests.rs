@@ -5,7 +5,6 @@ use super::*;
 use crate::commands::{AppState, build};
 use crate::project_commands::{FlowView, MergeView, MountView, open_project, save_project};
 use serde_json::{from_value, json};
-use std::path::Path;
 use tauri::Manager;
 use tauri::test::{MockRuntime, mock_app};
 
@@ -234,9 +233,7 @@ fn moving_renaming_unmounting_and_removing_through_the_command() {
 fn opening_another_project_forgets_the_history_and_a_new_project_saves() {
     let app = app();
     small_line(&app);
-    let fixture =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("project/tests/fixtures/valid/demo_m3");
-    let view = open_project(app.state(), fixture.display().to_string()).unwrap();
+    let view = open_project(app.state(), crate::test_fixtures::copied("demo_m3").1).unwrap();
     assert!(!view.can_undo && !view.can_redo);
     assert!(!undo(app.state()).unwrap().can_redo, "nothing to undo");
     small_line(&app);

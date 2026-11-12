@@ -8,10 +8,9 @@
 //
 // Needs what e2e/run.mjs needs.
 
-import { cpSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { app, browser, check, click, eventually, expectEqual, root, sessions } from "./helpers.mjs";
+import { app, browser, check, click, eventually, expectEqual, fixtureCopy, root, sessions } from "./helpers.mjs";
 
 const fixtures = join(root, "src-tauri/project/tests/fixtures");
 const VALID = ["demo_m3", "two_belts_diverter"];
@@ -53,9 +52,7 @@ async function inspectsTheScene(scene) {
 
 async function roundTrip(name) {
   console.log(`Open, save and reopen ${name}`);
-  const source = join(fixtures, "valid", name);
-  const folder = join(mkdtempSync(join(tmpdir(), "twinova-project-")), name);
-  cpSync(source, folder, { recursive: true });
+  const folder = fixtureCopy(name);
   // Re-indented as an editor would, without touching a value (JSON.stringify would write 2.0 as 2): the open reports
   // it and the save writes the canonical form back.
   const authored = readFileSync(join(folder, "scene.json"), "utf8");

@@ -2,6 +2,8 @@ use super::*;
 use tauri::Manager;
 use tauri::test::{MockRuntime, mock_app};
 
+use crate::test_fixtures::copied;
+
 fn app() -> tauri::App<MockRuntime> {
     let app = mock_app();
     app.manage(ProjectState::default());
@@ -24,7 +26,8 @@ fn path(dir: &tempfile::TempDir, name: &str) -> String {
 #[test]
 fn a_project_opens_into_a_view_of_its_instances() {
     let app = app();
-    let view = open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
+    let (_dir, folder) = copied("two_belts_diverter");
+    let view = open_project(app.state(), folder.clone()).unwrap();
     assert_eq!(view.name, "Two belts and a chain transfer");
     assert_eq!(view.instances.len(), 9);
     assert_eq!(
@@ -49,7 +52,7 @@ fn a_project_opens_into_a_view_of_its_instances() {
             mount("chain_transfer", "roller_r", 1.0)
         ]
     );
-    assert_eq!(view.folder, Some(fixture("valid", "two_belts_diverter")));
+    assert_eq!(view.folder, Some(folder));
     assert!(view.changed_outside.is_empty() && !view.recovered);
 }
 
@@ -57,7 +60,7 @@ fn a_project_opens_into_a_view_of_its_instances() {
 #[test]
 fn a_view_lists_the_spurs_merging_onto_a_flank() {
     let app = app();
-    let view = open_project(app.state(), fixture("valid", "merge_line")).unwrap();
+    let view = open_project(app.state(), copied("merge_line").1).unwrap();
     assert_eq!(
         view.merges,
         [MergeView {
@@ -72,14 +75,14 @@ fn a_view_lists_the_spurs_merging_onto_a_flank() {
         2,
         "the spur's exit is a merge, not a flow"
     );
-    let view = open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
+    let view = open_project(app.state(), copied("two_belts_diverter").1).unwrap();
     assert!(view.merges.is_empty());
 }
 
 #[test]
 fn a_project_that_fails_to_open_keeps_the_current_one() {
     let app = app();
-    open_project(app.state(), fixture("valid", "demo_m3")).unwrap();
+    open_project(app.state(), copied("demo_m3").1).unwrap();
     let error = open_project(app.state(), fixture("invalid", "overlapping_addresses")).unwrap_err();
     assert!(error.contains("overlaps the address of"), "{error}");
     assert!(open_project(app.state(), fixture("valid", "no_such_project")).is_err());
@@ -94,7 +97,7 @@ fn a_project_that_fails_to_open_keeps_the_current_one() {
 #[test]
 fn save_as_then_open_gives_the_same_project() {
     let app = app();
-    let first = open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
+    let first = open_project(app.state(), copied("two_belts_diverter").1).unwrap();
     let dir = tempfile::tempdir().unwrap();
     let saved = save_project(app.state(), path(&dir, "line")).unwrap();
     assert_eq!(saved.folder, Some(path(&dir, "line")));
@@ -106,7 +109,7 @@ fn save_as_then_open_gives_the_same_project() {
 #[test]
 fn an_exported_archive_imports_back_without_a_folder() {
     let app = app();
-    let first = open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
+    let first = open_project(app.state(), copied("two_belts_diverter").1).unwrap();
     let dir = tempfile::tempdir().unwrap();
     export_project(app.state(), path(&dir, "line.zip")).unwrap();
     let imported = import_project(app.state(), path(&dir, "line.zip")).unwrap();
@@ -152,7 +155,7 @@ fn the_app_starts_on_the_bundled_demo_with_its_sources_and_panel() {
 #[test]
 fn an_export_to_an_unwritable_path_says_where() {
     let app = app();
-    open_project(app.state(), fixture("valid", "demo_m3")).unwrap();
+    open_project(app.state(), copied("demo_m3").1).unwrap();
     let dir = tempfile::tempdir().unwrap();
     let target = path(&dir, "no/such/dir/x.zip");
     assert!(
@@ -197,9 +200,8 @@ fn the_launch_folder_is_the_first_argument_that_is_not_a_switch() {
 #[test]
 fn the_launch_folder_opens_once() {
     let app = mock_app();
-    app.manage(ProjectState::launching(Some(
-        fixture("valid", "demo_m3").into(),
-    )));
+    let (_dir, folder) = copied("demo_m3");
+    app.manage(ProjectState::launching(Some(folder.into())));
     let view = open_launch_project(app.state()).unwrap().unwrap();
     assert_eq!(view.name, "M3 demo");
     assert_eq!(open_launch_project(app.state()), Ok(None));
@@ -220,11 +222,43 @@ fn a_launch_folder_that_fails_reports_and_leaves_the_demo() {
 #[test]
 fn the_demo_comes_back_as_shipped() {
     let app = app();
-    open_project(app.state(), fixture("valid", "two_belts_diverter")).unwrap();
+    open_project(app.state(), copied("two_belts_diverter").1).unwrap();
     let view = open_demo(app.state()).unwrap();
     assert_eq!((view.name.as_str(), view.folder), ("M3 demo", None));
     assert_eq!(
         app.state::<ProjectState>().project().unwrap(),
         crate::demo::demo()
+    );
+}
+
+/// Opening or saving a folder gives it VS Code's files (`lsp_files.rs`); a failure to write them is a notice, and the
+/// project opens all the same.
+#[test]
+fn a_folder_opened_or_saved_gets_the_files_for_vscode() {
+    let app = app();
+    let (dir, folder) = copied("two_belts_diverter");
+    let opened = open_project(app.state(), folder).unwrap();
+    assert_eq!(opened.notice, None);
+    for file in [crate::lsp_files::CONFIG, crate::lsp_files::FIELD] {
+        assert!(dir.path().join(file).is_file(), "{file}");
+    }
+    let saved_to = tempfile::tempdir().unwrap();
+    let saved = save_project(app.state(), path(&saved_to, "line")).unwrap();
+    assert_eq!(saved.notice, None);
+    assert!(
+        saved_to
+            .path()
+            .join("line")
+            .join(crate::lsp_files::FIELD)
+            .is_file()
+    );
+    let (blocked, folder) = copied("two_belts_diverter");
+    std::fs::create_dir_all(blocked.path().join(crate::lsp_files::FIELD)).unwrap();
+    let opened = open_project(app.state(), folder).unwrap();
+    assert_eq!(opened.name, "Two belts and a chain transfer");
+    let notice = opened.notice.unwrap();
+    assert!(
+        notice.starts_with("The files for VS Code were not written: .twinova/lsp/field.st: "),
+        "{notice}"
     );
 }

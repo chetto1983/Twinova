@@ -10,8 +10,7 @@
 //
 //   npx tauri build --debug --no-bundle && node e2e/snapping.mjs [screenshot-dir]
 
-import { cpSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   app,
@@ -22,6 +21,7 @@ import {
   click,
   eventually,
   expectEqual,
+  fixtureCopy,
   root,
   selectSpeed,
   sessions,
@@ -136,8 +136,7 @@ const flowsOf = (scene, name) =>
     .toSorted();
 
 const folder = emptyProject("Line with a diverter, by hand");
-const merging = join(mkdtempSync(join(tmpdir(), "twinova-merge-")), "line");
-cpSync(fixture("merge_line"), merging, { recursive: true });
+const merging = fixtureCopy("merge_line");
 
 sessions(async () => {
   await app("debug", [`--project=${folder}`], async () => {

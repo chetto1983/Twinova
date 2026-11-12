@@ -52,6 +52,11 @@ impl ProjectState {
         Ok(())
     }
 
+    /// The folder the current project was opened from or saved to.
+    pub(crate) fn folder(&self) -> Result<Option<PathBuf>, String> {
+        Ok(self.lock()?.folder.clone())
+    }
+
     pub(crate) fn lock(&self) -> Result<std::sync::MutexGuard<'_, Current>, String> {
         self.current
             .lock()
@@ -237,10 +242,21 @@ fn opened(folder: Option<PathBuf>, opened: Opened) -> (Current, Vec<String>) {
     (Current::new(opened.project, folder), opened.changed_outside)
 }
 
+/// The files that let VS Code's truST extension read `folder` (`lsp_files.rs`); a failure is a notice, since the
+/// project itself opened or saved.
+fn for_vscode(folder: &Path, project: &Project) -> Option<String> {
+    let written = crate::lsp_files::write(folder, project);
+    written
+        .err()
+        .map(|e| format!("The files for VS Code were not written: {e}"))
+}
+
 fn open(state: &ProjectState, folder: PathBuf) -> Result<ProjectView, String> {
     let result = open_folder(&folder).map_err(|e| e.to_string())?;
+    let notice = for_vscode(&folder, &result.opened.project);
     let (current, changed) = opened(Some(folder), result.opened);
-    replace(state, current, changed, result.recovered)
+    let shown = replace(state, current, changed, result.recovered)?;
+    Ok(ProjectView { notice, ..shown })
 }
 
 /// The project the app shows: the demo at start, else the last one opened or imported.
@@ -282,8 +298,12 @@ pub fn save_project(state: State<'_, ProjectState>, folder: String) -> Result<Pr
     let mut current = state.lock()?;
     let folder = PathBuf::from(folder);
     save_folder(&folder, &current.project).map_err(|e| e.to_string())?;
+    let notice = for_vscode(&folder, &current.project);
     current.folder = Some(folder);
-    Ok(view(&current, Vec::new(), false))
+    Ok(ProjectView {
+        notice,
+        ..view(&current, Vec::new(), false)
+    })
 }
 
 #[tauri::command]
