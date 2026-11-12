@@ -112,4 +112,15 @@ and build inside the app, on Windows and Linux.
 - A belt's deck and guards now reach its drum faces, 85 mm past its run, as it is drawn and as Open Industry Project's
   physics has them. Saved scenes from before join belts at their runs: their drums overlap their neighbours by 85 mm
   until the parts are snapped again.
+- ST in VS Code (ROADMAP 4.6): edit a project's `.st` files in VS Code, with truST's extension from the Marketplace,
+  while Twinova runs the line ([guide](docs/vscode.md)):
+  - a line program saved outside Twinova goes online into the running line: the PLC takes it between two scans, as
+    a warm restart (RETAIN variables and time kept, the rest reinitialised; the outputs hold until the first scan),
+    and the plant goes on;
+  - a component's behaviour saved outside rebuilds the line from zero, and Run goes on;
+  - a file changed on disk while it has edits in Twinova's editor is held, with a notice, until those edits are built
+    or reverted; an edited tab is marked;
+  - opening, saving or building a project folder writes `trust-lsp.toml` and `.twinova/lsp/field.st`, so the
+    extension reads the project without false errors in the program; the blocks keep three false E202 errors, a
+    limit of truST's per-file check.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

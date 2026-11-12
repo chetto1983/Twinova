@@ -106,6 +106,7 @@ Linux requires WebKitGTK 4.1 and the remaining Tauri packages. The embedded star
 | [Roadmap](ROADMAP.md) | Milestones, phases, acceptance criteria, and current status |
 | [Research index](docs/research/00-indice.md) | Clean-room product, engine, PLC, ecosystem, and component-catalog research (Italian) |
 | [Changelog](CHANGELOG.md) | Shipped behavior and future release text |
+| [ST in VS Code](docs/vscode.md) | Editing a project's Structured Text in VS Code while the line runs |
 | [Engineering guide](CLAUDE.md) | Architecture rules, pinned dependencies, validation gates, and commit discipline |
 | [Designs and plans](docs/superpowers/) | Approved specifications, implementation plans, and verification records |
 
