@@ -91,6 +91,28 @@ pub fn build(
     Ok(Built { snapshot, warnings })
 }
 
+/// An online change of the line program (spec 2026-11-12-st-vscode-design.md, decision 1): the engine takes `program`
+/// between two ticks of Run, the plant going on; the project takes it for Save, and the built project for Reset
+/// (decision 9). On an error nothing changes.
+#[tauri::command]
+pub fn change_program(
+    state: State<'_, AppState>,
+    projects: State<'_, ProjectState>,
+    program: Vec<(String, String)>,
+) -> Result<Built, String> {
+    let (warnings, snapshot) = with_engine(&state, |e| {
+        let warnings = e.change_program(program.clone())?;
+        Ok((warnings, e.snapshot()))
+    })?;
+    let mut project = projects.project()?;
+    project.program = program.clone();
+    projects.set_sources(&project)?;
+    if let Some(built) = state.built.lock().map_err(poisoned)?.as_mut() {
+        built.program = program;
+    }
+    Ok(Built { snapshot, warnings })
+}
+
 /// Back to time zero with the last built project.
 #[tauri::command]
 pub fn reset(state: State<'_, AppState>) -> Result<Snapshot, String> {

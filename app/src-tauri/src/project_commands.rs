@@ -6,7 +6,7 @@
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use serde::Serialize;
 use std::collections::BTreeMap;
@@ -20,10 +20,14 @@ use twinova_project::{Opened, Project};
 
 use twinova_physics::interfaces_view::{InterfacesView, interfaces_view};
 
+use crate::watch::SourceWatch;
+
 pub struct ProjectState {
     current: Mutex<Current>,
     /// The folder named on the command line, until the webview asks for it.
     launch: Mutex<Option<PathBuf>>,
+    /// The watch of the current project's folder, once the app has set it up (`lib.rs`); none in the commands' tests.
+    watch: OnceLock<SourceWatch>,
 }
 
 impl Default for ProjectState {
@@ -37,7 +41,23 @@ impl ProjectState {
         Self {
             current: Mutex::new(Current::new(crate::demo::demo(), None)),
             launch: Mutex::new(folder),
+            watch: OnceLock::new(),
         }
+    }
+
+    /// Starts watching the current project's folder, and every folder it moves to.
+    pub fn set_watch(&self, watch: SourceWatch) {
+        if self.watch.set(watch).is_err() {
+            unreachable!("the app sets its watch once, at setup");
+        }
+    }
+
+    /// Watches `folder`, or nothing; a failure is a notice, since the project itself opened or saved.
+    fn follow(&self, folder: Option<&Path>) -> Option<String> {
+        let followed = self.watch.get().map_or(Ok(()), |w| w.follow(folder));
+        followed
+            .err()
+            .map(|e| format!("Changes made outside Twinova are not followed: {e}"))
     }
 
     pub(crate) fn project(&self) -> Result<Project, String> {
@@ -227,15 +247,23 @@ pub(crate) fn view(
     }
 }
 
+/// Makes `current` the project, and watches its folder.
 pub(crate) fn replace(
     state: &ProjectState,
     current: Current,
     changed: Vec<String>,
     recovered: bool,
 ) -> Result<ProjectView, String> {
+    let notice = state.follow(current.folder.as_deref());
     let shown = view(&current, changed, recovered);
     *state.lock()? = current;
-    Ok(shown)
+    Ok(ProjectView { notice, ..shown })
+}
+
+/// The notices of one command, one a line; none when there is none.
+fn notices(all: [Option<String>; 2]) -> Option<String> {
+    let lines: Vec<String> = all.into_iter().flatten().collect();
+    (!lines.is_empty()).then(|| lines.join("\n"))
 }
 
 fn opened(folder: Option<PathBuf>, opened: Opened) -> (Current, Vec<String>) {
@@ -253,9 +281,10 @@ fn for_vscode(folder: &Path, project: &Project) -> Option<String> {
 
 fn open(state: &ProjectState, folder: PathBuf) -> Result<ProjectView, String> {
     let result = open_folder(&folder).map_err(|e| e.to_string())?;
-    let notice = for_vscode(&folder, &result.opened.project);
+    let written = for_vscode(&folder, &result.opened.project);
     let (current, changed) = opened(Some(folder), result.opened);
     let shown = replace(state, current, changed, result.recovered)?;
+    let notice = notices([written, shown.notice.clone()]);
     Ok(ProjectView { notice, ..shown })
 }
 
@@ -298,7 +327,10 @@ pub fn save_project(state: State<'_, ProjectState>, folder: String) -> Result<Pr
     let mut current = state.lock()?;
     let folder = PathBuf::from(folder);
     save_folder(&folder, &current.project).map_err(|e| e.to_string())?;
-    let notice = for_vscode(&folder, &current.project);
+    let notice = notices([
+        for_vscode(&folder, &current.project),
+        state.follow(Some(&folder)),
+    ]);
     current.folder = Some(folder);
     Ok(ProjectView {
         notice,

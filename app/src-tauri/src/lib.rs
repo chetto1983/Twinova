@@ -5,12 +5,19 @@ pub mod lsp_files;
 pub mod project_commands;
 #[cfg(test)]
 mod test_fixtures;
+pub mod watch;
 pub mod webview_locale;
+
+use tauri::Manager;
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            let handle = app.handle().clone();
+            let watch = watch::SourceWatch::new(move |folder| watch::settled(&handle, folder));
+            app.state::<project_commands::ProjectState>()
+                .set_watch(watch);
             #[cfg(target_os = "linux")]
             webview_locale::apply(app)?;
             #[cfg(not(target_os = "linux"))]
@@ -23,6 +30,7 @@ pub fn run() {
         ))
         .invoke_handler(tauri::generate_handler![
             commands::build,
+            commands::change_program,
             commands::reset,
             commands::step,
             commands::press,

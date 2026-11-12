@@ -242,3 +242,47 @@ fn build_writes_the_files_for_vscode_or_warns() {
         "{warnings:?}"
     );
 }
+
+/// An online change (spec 2026-11-12-st-vscode-design.md, decisions 1 and 9): the running engine goes on with the new
+/// program, the project saves it, and Reset starts from it; a change that fails leaves everything as it was.
+#[test]
+fn change_program_swaps_the_running_program_for_save_and_reset() {
+    let app = app();
+    let (program, _) = sources(&app);
+    let state = app.state::<AppState>();
+    assert_eq!(
+        change_program(app.state(), app.state(), program.clone()).unwrap_err(),
+        "build the project first"
+    );
+    let built = build_demo(&app);
+    for _ in 0..10 {
+        step(app.state()).unwrap();
+    }
+    let edited = vec![(
+        program[0].0.clone(),
+        program[0].1.replace("PT := T#2S", "PT := T#3S"),
+    )];
+    let changed = change_program(app.state(), app.state(), edited.clone()).unwrap();
+    assert_eq!(changed.warnings, built.warnings);
+    assert_eq!(changed.snapshot.time_ms, 100, "the line goes on");
+    assert_eq!(
+        app.state::<ProjectState>().project().unwrap().program,
+        edited
+    );
+    let broken = vec![(
+        program[0].0.clone(),
+        "PROGRAM Main\nx := ;\nEND_PROGRAM\n".to_string(),
+    )];
+    assert!(change_program(app.state(), app.state(), broken).is_err());
+    assert_eq!(
+        app.state::<ProjectState>().project().unwrap().program,
+        edited
+    );
+    assert_eq!(reset(app.state()).unwrap().time_ms, 0);
+    let engine = state.engine.lock().unwrap();
+    assert_eq!(
+        engine.as_ref().unwrap().program(),
+        edited,
+        "Reset starts from the new program"
+    );
+}

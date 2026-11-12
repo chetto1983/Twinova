@@ -262,3 +262,46 @@ fn a_folder_opened_or_saved_gets_the_files_for_vscode() {
         "{notice}"
     );
 }
+
+/// The watch follows the project's folder: the one opened or saved to, none for the demo; a folder it cannot watch is a
+/// notice.
+#[test]
+fn the_watch_follows_the_project_s_folder() {
+    let app = app();
+    let (tx, quiet) = std::sync::mpsc::channel();
+    let state = app.state::<ProjectState>();
+    state.set_watch(SourceWatch::new(move |folder| {
+        tx.send(folder.to_path_buf()).unwrap()
+    }));
+    let wait = std::time::Duration::from_secs(10);
+    let nothing = std::time::Duration::from_millis(1_500);
+    let (dir, folder) = copied("two_belts_diverter");
+    open_project(app.state(), folder).unwrap();
+    std::fs::write(dir.path().join("plc/Main.st"), "(* edited *)\n").unwrap();
+    assert_eq!(quiet.recv_timeout(wait).unwrap(), dir.path());
+    let saved = tempfile::tempdir().unwrap();
+    save_project(app.state(), path(&saved, "line")).unwrap();
+    std::fs::write(saved.path().join("line/plc/Main.st"), "(* edited *)\n").unwrap();
+    assert_eq!(quiet.recv_timeout(wait).unwrap(), saved.path().join("line"));
+    open_demo(app.state()).unwrap();
+    std::fs::write(saved.path().join("line/plc/Main.st"), "(* again *)\n").unwrap();
+    assert!(
+        quiet.recv_timeout(nothing).is_err(),
+        "the demo has no folder"
+    );
+    let notice = state.follow(Some(Path::new("/no/such/folder"))).unwrap();
+    assert!(
+        notice.starts_with("Changes made outside Twinova are not followed: /no/such/folder: "),
+        "{notice}"
+    );
+}
+
+#[test]
+fn a_command_s_notices_are_one_a_line() {
+    assert_eq!(notices([None, None]), None);
+    assert_eq!(notices([Some("a".into()), None]).as_deref(), Some("a"));
+    assert_eq!(
+        notices([Some("a".into()), Some("b".into())]).as_deref(),
+        Some("a\nb")
+    );
+}
