@@ -121,7 +121,10 @@ Proposed by this spec, for approval:
      from `field::config_source`;
   2. collect each shown file's diagnostics;
   3. filter them (decision 3).
-- **`hover(file, position)` and `completion(file, position)`** on the last texts analysed.
+- **`hover(file, text, position)` and `completion(file, text, position)`** on the text the editor holds now: each
+  replaces `file`'s document first when the text changed, and errs on a file not analysed. Amended 2026-11-12: on the
+  last texts analysed, a completion asked within the 300 ms debounce of decision 6 reads the text before the last
+  keystrokes (measured in `analysis_tests.rs`: a variable declared a moment ago was not offered).
 - **The filter is a pure function:**
   - it drops W010 and W011;
   - it drops an E202 when the variable its range names is placed by the configuration's `VAR_CONFIG` for every instance
