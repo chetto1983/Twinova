@@ -189,11 +189,3 @@ export async function reachable(at, axis, by, view) {
     step /= 2;
   }
 }
-
-/** Replaces the program in the ST editor. */
-export const setProgram = (text) =>
-  browser.execute((t) => {
-    const area = document.querySelector("textarea");
-    area.value = t;
-    area.dispatchEvent(new Event("input", { bubbles: true }));
-  }, text);

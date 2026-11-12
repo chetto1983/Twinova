@@ -16,14 +16,16 @@ import {
   button,
   check,
   click,
+  editorText,
   eventually,
   expectEqual,
   selectLanguage,
   selectSpeed,
   session,
+  setEditorText,
+  textOf,
   value,
   virtualSeconds,
-  textOf,
 } from "./helpers.mjs";
 
 const shots = process.argv[2] ? resolve(process.argv[2]) : null;
@@ -141,15 +143,6 @@ async function languageScenario() {
   await screenshot("italian");
   await selectLanguage("English");
 }
-
-/** The text of the editor's open tab, and a replacement for it that Svelte sees (an input event). */
-const editorText = () => browser.execute(() => document.querySelector("textarea").value);
-const setEditorText = (text) =>
-  browser.execute((t) => {
-    const area = document.querySelector("textarea");
-    area.value = t;
-    area.dispatchEvent(new Event("input", { bubbles: true }));
-  }, text);
 
 async function behaviourScenario() {
   console.log("A component's behaviour edited and rebuilt (ROADMAP 4.3)");

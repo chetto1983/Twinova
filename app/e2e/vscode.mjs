@@ -14,15 +14,16 @@ import {
   button,
   check,
   click,
+  editorText,
   eventually,
   expectEqual,
   fixtureCopy,
   selectSpeed,
   sessions,
-  virtualSeconds,
+  setEditorText,
   textOf,
+  virtualSeconds,
 } from "./helpers.mjs";
-import { setProgram } from "./editing.mjs";
 
 const folder = fixtureCopy("two_belts_diverter");
 const main = join(folder, "plc/Main.st");
@@ -42,7 +43,6 @@ const noticeSays = (words) =>
   );
 const time = () => virtualSeconds("Virtual time");
 const tab = (label) => click(`//button[@role="tab"][normalize-space()="${label}"]`);
-const editorText = () => browser.execute(() => document.querySelector("textarea").value);
 
 /** Writes `text` to `path` as an editor that saves atomically does: a temporary beside it, renamed over it. */
 function renameOver(path, text) {
@@ -103,7 +103,7 @@ sessions(() =>
 
     await check("an edit made in Twinova holds a change on disk until it is reverted", async () => {
       await tab("plc/Main.st");
-      await setProgram(`${original}(* typed in Twinova *)\n`);
+      await setEditorText(`${original}(* typed in Twinova *)\n`);
       writeFileSync(main, stopped);
       await noticeSays("changed on disk while edited here");
       expectEqual(await bit("belt_b.run"), "TRUE", "nothing taken");

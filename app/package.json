@@ -18,7 +18,7 @@
     "deadcode": "npm run -s i18n && knip",
     "dup": "jscpd",
     "mutation": "npm run -s i18n && stryker run",
-    "e2e": "node e2e/workspace.mjs && node e2e/run.mjs && node e2e/project.mjs && node e2e/line.mjs && node e2e/curve.mjs && node e2e/sort.mjs && node e2e/code_sort.mjs && node e2e/editor.mjs && node e2e/snapping.mjs && node e2e/vscode.mjs",
+    "e2e": "node e2e/workspace.mjs && node e2e/run.mjs && node e2e/project.mjs && node e2e/line.mjs && node e2e/curve.mjs && node e2e/sort.mjs && node e2e/code_sort.mjs && node e2e/editor.mjs && node e2e/editor_st.mjs && node e2e/snapping.mjs && node e2e/vscode.mjs",
     "e2e:ui": "node e2e/workspace-preview.mjs",
     "e2e:workspace": "node e2e/workspace.mjs",
     "soak": "node e2e/soak.mjs",
