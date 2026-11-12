@@ -1,6 +1,7 @@
 # Spec: ST in VS Code (ROADMAP 4.6)
 
-Date: 2026-11-12. Status: **draft**, for the user's approval.
+Date: 2026-11-12. Status: **approved** (user, 2026-11-12), with decisions 6 to 9. Amended the same day: VS Code itself
+is tested by the user on a Windows virtual machine, from an MSI that CI builds for the pull request (acceptance 8).
 
 ROADMAP 4.6 is "the scene's programs are `.st` files in a project folder, rebuilt on save; VS Code with truST's
 `trust-lsp` extension is the external editor", accepted by "edit in VS Code, save, the running scene picks up the new
@@ -216,7 +217,7 @@ Proposed by this spec, for approval:
 | 5 | The watcher | Writing in place and writing a temporary then renaming (the two ways editors save) give one change each, 250 ms after the last event; Twinova's own Save gives none; a behaviour gives a rebuild at time zero, still running; unbuilt edits in a tab hold the change with a notice |
 | 6 | Files for the LSP | On every valid fixture, opened then saved: `trust-lsp.toml` and `.twinova/lsp/field.st` written; the probe on the pin and on the Marketplace server finds no error in `plc/*.st`, and in `components/*.st` only E202 |
 | 7 | In the app | `e2e/vscode.mjs`: open a fixture folder, Run, write `plc/Main.st` as an editor does; the scene goes on without a reset, the I/O panel shows the new rule, the editor's tab shows the text; then a behaviour file: a rebuild at time zero. Linux here, windows-2022 in CI |
-| 8 | With VS Code itself | Once, here: VS Code and the Marketplace extension under Xvfb (`@vscode/test-electron`, downloaded at the plan's first task with the user's agreement), an edit typed and saved through VS Code's own save; the scene picks it up. It records how VS Code writes the file |
+| 8 | With VS Code itself, on Windows | The user, on a Windows virtual machine: the pull request's MSI installed, VS Code with the Marketplace extension, a fixture's folder opened in both. An edit to `plc/Main.st` saved in VS Code is picked up online, a behaviour's rebuilds; the diagnostics are those of acceptance 6. The outcome is recorded in the verification file |
 | 9 | Gates | fmt, clippy, coverage ≥ 85 %, cargo mutants without survivors on `change_program`, the line's binding and the watcher's filter; svelte-check, oxlint, knip, jscpd, i18n, Stryker ≥ 70 % on the editor's helpers |
 
 ## What this will not prove
