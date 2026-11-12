@@ -1,15 +1,18 @@
 // The Tauri commands of src-tauri/src/commands.rs, project_commands.rs and edit_commands.rs, and the events of the Run
-// loop.
+// loop and of the project folder's watch.
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type { Edit, ProjectView } from "./project";
 import type { Built, Snapshot } from "./snapshot";
+import type { DiskSources } from "./sources";
 
 export const backend = {
   /** Builds the current project with the editor's sources (commands.rs `build`). */
   build: (program: [string, string][], behaviours: Record<string, string>) =>
     invoke<Built>("build", { program, behaviours }),
+  /** An online change of the line program while the plant goes on (commands.rs `change_program`). */
+  changeProgram: (program: [string, string][]) => invoke<Built>("change_program", { program }),
   reset: () => invoke<Snapshot>("reset"),
   step: () => invoke<Snapshot>("step"),
   /** `speed` times the wall clock, or as fast as possible when null. */
@@ -35,6 +38,9 @@ export const onSnapshot = (f: (s: Snapshot) => void): Promise<UnlistenFn> =>
 export const onEngineError = (f: (error: string) => void): Promise<UnlistenFn> =>
   listen<string>("engine-error", (e) => f(e.payload));
 export const onStopped = (f: () => void): Promise<UnlistenFn> => listen("stopped", () => f());
+/** The project's sources, saved in its folder outside Twinova (watch.rs). */
+export const onDiskSources = (f: (disk: DiskSources) => void): Promise<UnlistenFn> =>
+  listen<DiskSources>("disk-sources", (e) => f(e.payload));
 
 /** An archive is the project folder zipped (spec 2026-11-08-project-format-design.md, decision 1). */
 const ARCHIVE = [{ name: "Twinova project", extensions: ["zip"] }];

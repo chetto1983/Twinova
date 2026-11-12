@@ -3,14 +3,23 @@
   // a project opened from the menu or the command line. Build runs its line with the editor's sources; the panel's
   // buttons come from the project. The catalogue and the inspector edit the scene, each edit one undo step
   // (spec 2026-11-11-editor-basics-design.md), and parts dragged in the view snap together (2026-11-11-snapping); the
-  // running line changes at the next Build.
+  // running line changes at the next Build. Sources saved in the project's folder outside Twinova, as in VS Code, reach
+  // the running line (2026-11-12-st-vscode): the program online, a behaviour by a rebuild.
   import { onMount } from "svelte";
   import { m } from "./paraglide/messages.js";
   import { currentLocale, languageName, locales, setLanguage, type Locale } from "./lib/i18n.svelte";
   import { readPreference, writePreference } from "./lib/preferences";
-  import { backend, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
+  import { backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
   import { SPEEDS, formatSpeed, type Snapshot } from "./lib/snapshot";
-  import { buildArgs, mergeSources, sourcesOf, type Source } from "./lib/sources";
+  import {
+    buildArgs,
+    builtFrom,
+    fromDisk,
+    mergeSources,
+    sourcesOf,
+    type DiskSources,
+    type Source,
+  } from "./lib/sources";
   import Catalogue from "./lib/Catalogue.svelte";
   import Editor from "./lib/Editor.svelte";
   import Inspector from "./lib/Inspector.svelte";
@@ -72,6 +81,7 @@
     });
     status = built ? "ok" : "failed";
     if (built) {
+      sources = builtFrom(sources);
       running = false;
       changed = false;
       snapshot = built.snapshot;
@@ -90,10 +100,38 @@
     notice = [
       next.recovered ? m.project_recovered() : "",
       next.changed_outside.length > 0 ? m.project_changed_outside({ files: next.changed_outside.join(", ") }) : "",
+      next.notice ?? "",
     ]
       .filter(Boolean)
       .join(" ");
     await build();
+  }
+
+  /** Sources saved in the folder outside Twinova (watch.rs): taken unless a changed file has edits here (decision 6); a
+   *  program goes online into the running line, a behaviour rebuilds it and Run goes on. Before the first Build there is
+   *  no line to change, so it builds. */
+  async function fromFolder(disk: DiskSources): Promise<void> {
+    const next = fromDisk(sources, disk);
+    if (next.held.length > 0) {
+      notice = m.disk_held({ files: next.held.join(", ") });
+      return;
+    }
+    sources = next.sources;
+    if (disk.kind === "program" && snapshot) {
+      const result = await attempt(() => backend.changeProgram(disk.program));
+      status = result ? "ok" : "failed";
+      if (!result) return;
+      sources = builtFrom(sources);
+      snapshot = result.snapshot;
+      warnings = result.warnings;
+      notice = m.disk_changed_online({ time: (result.snapshot.time_ms / 1000).toFixed(2) });
+      return;
+    }
+    const wasRunning = running;
+    await build();
+    if (status !== "ok") return;
+    notice = m.disk_rebuilt();
+    if (wasRunning) await toggleRun();
   }
 
   /** The project after an edit, undo or redo: the editor keeps the texts being edited, and a selection the edit removed
@@ -175,6 +213,7 @@
     const listeners = [
       onSnapshot((s) => (snapshot = s)),
       onStopped(() => (running = false)),
+      onDiskSources((disk) => void fromFolder(disk)),
       onEngineError((e) => (error = m.engine_error({ error: e }))),
     ];
     return () => listeners.forEach((l) => l.then((unlisten) => unlisten()));

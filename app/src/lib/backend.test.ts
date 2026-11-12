@@ -10,7 +10,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open, save }));
 
-import { backend, onEngineError, onSnapshot, onStopped, projects } from "./backend";
+import { backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./backend";
 
 describe("backend bridge", () => {
   beforeEach(() => {
@@ -20,6 +20,7 @@ describe("backend bridge", () => {
 
   it("calls the Rust commands registered in lib.rs with their argument names", async () => {
     await backend.build([["plc/Main.st", "PROGRAM Main END_PROGRAM"]], { "twinova.belt@1": "FUNCTION_BLOCK B" });
+    await backend.changeProgram([["plc/Main.st", "PROGRAM Main END_PROGRAM"]]);
     await backend.reset();
     await backend.step();
     await backend.run(2);
@@ -37,6 +38,7 @@ describe("backend bridge", () => {
           behaviours: { "twinova.belt@1": "FUNCTION_BLOCK B" },
         },
       ],
+      ["change_program", { program: [["plc/Main.st", "PROGRAM Main END_PROGRAM"]] }],
       ["reset"],
       ["step"],
       ["run", { speed: 2 }],
@@ -54,11 +56,13 @@ describe("backend bridge", () => {
     await onSnapshot((s) => seen.push(s));
     await onEngineError((e) => seen.push(e));
     await onStopped(() => seen.push("stopped"));
-    expect(listen.mock.calls.map((c) => c[0])).toEqual(["snapshot", "engine-error", "stopped"]);
-    for (const [i, payload] of [{ time_ms: 10 }, "boom", null].entries()) {
+    await onDiskSources((d) => seen.push(d));
+    expect(listen.mock.calls.map((c) => c[0])).toEqual(["snapshot", "engine-error", "stopped", "disk-sources"]);
+    const disk = { kind: "program", program: [], behaviours: {} };
+    for (const [i, payload] of [{ time_ms: 10 }, "boom", null, disk].entries()) {
       listen.mock.calls[i][1]({ payload });
     }
-    expect(seen).toEqual([{ time_ms: 10 }, "boom", "stopped"]);
+    expect(seen).toEqual([{ time_ms: 10 }, "boom", "stopped", disk]);
   });
 });
 

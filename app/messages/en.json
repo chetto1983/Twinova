@@ -76,5 +76,10 @@
   "snap_left": "left",
   "snap_right": "right",
   "snap_mount": "Mounts on {host} at {at}",
-  "inspector_gap": "Gap (mm)"
+  "inspector_gap": "Gap (mm)",
+  "editor_revert": "Revert",
+  "editor_edited": "Edited here since the last Build",
+  "disk_changed_online": "Saved outside Twinova: the PLC took the new program online at {time} s; the plant went on.",
+  "disk_rebuilt": "Saved outside Twinova: a behaviour changed, so the line was rebuilt from zero.",
+  "disk_held": "{files} changed on disk while edited here: Build to keep Twinova's text, or Revert to take the disk's at its next save."
 }

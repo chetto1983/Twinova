@@ -1,9 +1,10 @@
 <script lang="ts">
   // The ST sources of the project, one tab each: the line program's files, then the behaviour block of each
   // definition that has one (spec 2026-11-09-component-behaviour-design.md, "The app"). A definition's block serves
-  // every instance of it. Build sends them all.
+  // every instance of it. Build sends them all. A tab edited here since its last Build or save outside Twinova is
+  // marked, and Revert takes its text back (spec 2026-11-12-st-vscode-design.md, decision 6).
   import { m } from "../paraglide/messages.js";
-  import type { Source } from "./sources";
+  import { edited, type Source } from "./sources";
 
   let {
     sources = $bindable(),
@@ -27,12 +28,24 @@
   <div class="panel-body body">
     <div class="tabs" role="tablist">
       {#each sources as source, i (source.key)}
-        <button role="tab" class="tab" aria-selected={source === current} onclick={() => (active = i)}>
+        <button
+          role="tab"
+          class="tab"
+          class:edited={edited(source)}
+          title={edited(source) ? m.editor_edited() : undefined}
+          aria-selected={source === current}
+          onclick={() => (active = i)}
+        >
           {source.label}
         </button>
       {/each}
     </div>
-    <p class="muted hint">{current?.kind === "behaviour" ? m.editor_hint_behaviour() : m.editor_hint()}</p>
+    <div class="row">
+      <p class="muted hint">{current?.kind === "behaviour" ? m.editor_hint_behaviour() : m.editor_hint()}</p>
+      {#if current && edited(current)}
+        <button class="btn ghost" onclick={() => (current.text = current.base)}>{m.editor_revert()}</button>
+      {/if}
+    </div>
     {#if current}
       <textarea class="data" spellcheck="false" bind:value={current.text} aria-label={current.label}></textarea>
     {/if}
@@ -66,6 +79,16 @@
     color: var(--color-text-muted);
     font-size: 12.5px;
     cursor: pointer;
+  }
+  /* Outside the label's text, so a tab keeps its name for assistive technology and the E2E. */
+  .tab.edited::after {
+    content: " •";
+  }
+  .row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
   }
   .tab[aria-selected="true"] {
     background: var(--color-surface-3);

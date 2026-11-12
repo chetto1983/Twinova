@@ -37,7 +37,7 @@
     const next = await saved;
     if (next) {
       onChange(next);
-      onNotice(m.project_saved({ folder: next.folder ?? "" }));
+      onNotice([m.project_saved({ folder: next.folder ?? "" }), next.notice].filter(Boolean).join(" "));
     }
   }
 

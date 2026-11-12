@@ -76,5 +76,10 @@
   "snap_left": "sinistro",
   "snap_right": "destro",
   "snap_mount": "Si monta su {host} a {at}",
-  "inspector_gap": "Interspazio (mm)"
+  "inspector_gap": "Interspazio (mm)",
+  "editor_revert": "Ripristina",
+  "editor_edited": "Modificato qui dopo l'ultimo Build",
+  "disk_changed_online": "Salvato fuori da Twinova: il PLC ha preso il nuovo programma online a {time} s; l'impianto è andato avanti.",
+  "disk_rebuilt": "Salvato fuori da Twinova: un comportamento è cambiato, quindi la linea è stata ricostruita da zero.",
+  "disk_held": "{files} cambiato su disco mentre era modificato qui: Build per tenere il testo di Twinova, o Ripristina per prendere quello del disco al suo prossimo salvataggio."
 }

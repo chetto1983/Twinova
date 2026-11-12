@@ -45,6 +45,7 @@ vi.mock("./backend", () => ({
   onSnapshot: vi.fn().mockResolvedValue(() => {}),
   onStopped: vi.fn().mockResolvedValue(() => {}),
   onEngineError: vi.fn().mockResolvedValue(() => {}),
+  onDiskSources: vi.fn().mockResolvedValue(() => {}),
 }));
 
 describe("paintOf", () => {
