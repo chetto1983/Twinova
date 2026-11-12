@@ -161,6 +161,16 @@ Proposed by this spec, for approval:
      an undeclared one is a warning;
   3. the scan period is taken again from the program's tasks;
   4. `Line` binds the addresses again, with the code `Line::build` uses, split out so both share it.
+- **The process image is carried over** (amended 2026-11-12, Task 2):
+  - truST's reload starts from an empty image, and a new runtime's outputs read zero until its first scan;
+  - so the inputs and outputs are copied into it, and the outputs hold until the new program's first scan, as a PLC's
+    do through an online change;
+  - `write_io` accepts `%Q` inside the image the new program admits (measured), and the scan then overwrites every
+    bound output;
+  - an input the line wrote for the old program and does not write for the new one is cleared, so it reads zero, as
+    after Build.
+- **A latched output that is not RETAIN drops at the first scan.** The demo's `motor` does, and its belt stops; declared
+  `RETAIN`, it keeps running. This is the warm restart's semantics, tested.
 - **On any error nothing changes:** the old program keeps running, and the error carries the file and line as Build's
   does.
 - **On success the change is recorded as an input** `(time, Program(sources))`, in order with the presses and the sink
