@@ -1,6 +1,6 @@
 # Spec: the in-app ST editor (ROADMAP 4.7)
 
-Date: 2026-11-12. Status: **draft**, for the user's approval.
+Date: 2026-11-12. Status: **approved** (user, 2026-11-12), decisions 1 to 7.
 
 ROADMAP 4.7: "In-app ST editor for who has no VS Code (classrooms): Monaco with diagnostics, hover and completion from
 truST's `BrowserAnalysisEngine` (`trust-wasm-analysis`) through Tauri commands". It is accepted by:
