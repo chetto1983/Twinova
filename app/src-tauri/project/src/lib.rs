@@ -9,6 +9,7 @@ pub mod edit;
 pub mod history;
 pub mod library;
 pub mod model;
+pub mod sources;
 pub mod storage;
 mod validate;
 mod validate_scene;

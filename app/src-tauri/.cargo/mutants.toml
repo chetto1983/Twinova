@@ -14,7 +14,7 @@ examine_globs = [
   "engine/src/line_bind.rs", "src/watch.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs", "project/src/edit.rs",
-  "project/src/history.rs", "project/src/library.rs",
+  "project/src/history.rs", "project/src/library.rs", "project/src/sources.rs",
   "physics/src/world.rs", "physics/src/world_devices.rs", "physics/src/world_products.rs",
   "physics/src/world_sensors.rs", "physics/src/layout.rs", "physics/src/layout_conveyor.rs", "physics/src/layout_devices.rs",
   "physics/src/layout_sensors.rs", "physics/src/layout_merge.rs", "physics/src/interfaces.rs",

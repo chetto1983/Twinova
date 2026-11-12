@@ -3,11 +3,15 @@ use notify::event::{
     AccessKind, AccessMode, CreateKind, DataChange, Event, EventKind, ModifyKind, RemoveKind,
     RenameMode,
 };
+use std::collections::BTreeMap;
+use std::fs;
 use std::sync::mpsc::Receiver;
 use std::time::Instant;
 use tauri::test::{MockRuntime, mock_app};
 use tauri::{App, Listener};
-use twinova_project::storage::{open_folder, save_folder};
+use twinova_project::Project;
+use twinova_project::sources::{DiskSources, Kind};
+use twinova_project::storage::open_folder;
 
 use crate::project_commands::open_project;
 use crate::test_fixtures::copied;
@@ -78,71 +82,6 @@ fn only_a_change_outside_twinova_s_own_state_is_relevant() {
         .add_path(PathBuf::from("/p/line/.twinova/x"))
         .add_path(PathBuf::from("/p/line/plc/Main.st"));
     assert!(relevant(folder, &renamed), "either end of a rename");
-}
-
-#[test]
-fn sources_equal_to_the_project_s_are_no_change() {
-    let (_dir, folder) = copied("two_belts_diverter");
-    let mut project = project(&folder);
-    assert_eq!(changed(&project, Path::new(&folder)), None);
-    save_folder(Path::new(&folder), &project).unwrap();
-    assert_eq!(
-        changed(&project, Path::new(&folder)),
-        None,
-        "Twinova's own Save"
-    );
-    project.program[0].1.push_str("(* edited in Twinova *)\n");
-    let disk = changed(&project, Path::new(&folder)).unwrap();
-    assert_eq!(
-        disk.kind,
-        Kind::Program,
-        "the project changed, the disk did not"
-    );
-}
-
-#[test]
-fn a_program_that_changed_on_disk_is_an_online_change() {
-    let (_dir, folder) = copied("two_belts_diverter");
-    let project = project(&folder);
-    let text = project.program[0].1.replace("count MOD 3", "count MOD 2");
-    fs::write(main_st(&folder), &text).unwrap();
-    let disk = changed(&project, Path::new(&folder)).unwrap();
-    assert_eq!(disk.kind, Kind::Program);
-    assert_eq!(disk.program, [("plc/Main.st".to_string(), text)]);
-    assert_eq!(disk.behaviours, project.behaviours);
-}
-
-#[test]
-fn a_behaviour_that_changed_on_disk_is_a_rebuild_with_every_source() {
-    let (_dir, folder) = copied("two_belts_diverter");
-    let project = project(&folder);
-    let program = project.program[0].1.replace("count MOD 3", "count MOD 2");
-    fs::write(main_st(&folder), &program).unwrap();
-    let belt = Path::new(&folder).join("components/twinova.belt@1.st");
-    let block = project.behaviours["twinova.belt@1"].replace("(* Twinova", "(* Our");
-    fs::write(&belt, &block).unwrap();
-    let disk = changed(&project, Path::new(&folder)).unwrap();
-    assert_eq!(disk.kind, Kind::Behaviours);
-    assert_eq!(disk.behaviours["twinova.belt@1"], block);
-    assert_eq!(disk.program[0].1, program);
-}
-
-#[test]
-fn a_source_that_cannot_be_read_as_text_yet_waits_for_the_next_change() {
-    let (_dir, folder) = copied("two_belts_diverter");
-    let project = project(&folder);
-    fs::remove_file(main_st(&folder)).unwrap();
-    assert_eq!(
-        changed(&project, Path::new(&folder)),
-        None,
-        "replaced, not there yet"
-    );
-    fs::write(main_st(&folder), [0x50, 0xC3]).unwrap();
-    assert_eq!(
-        changed(&project, Path::new(&folder)),
-        None,
-        "half a character"
-    );
 }
 
 #[test]

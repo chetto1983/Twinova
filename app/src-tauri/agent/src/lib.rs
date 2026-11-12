@@ -53,7 +53,9 @@ impl ServerHandler for Agent {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
             "Twinova's run engine. open_project builds a project folder at time zero; step and run_until advance \
              virtual time; snapshot and read show the line; press and block_sink drive it as a user does. describe \
-             shows the project; the editing tools change it and take effect at build; save_project writes it.",
+             shows the project; the editing tools change it and take effect at build; save_project writes it. \
+             change_program swaps the running program online; reload_sources takes the sources saved in the \
+             project's folder outside Twinova (VS Code), as the app does.",
         )
     }
 }

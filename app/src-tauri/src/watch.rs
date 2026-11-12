@@ -1,11 +1,9 @@
 //! Watching the open project's folder (spec 2026-11-12-st-vscode-design.md, "Watching the folder"). A `notify` watcher
 //! reports any change in the folder but Twinova's own state; once the folder has been quiet for `QUIET`, the sources the
-//! project lists are read again, and those that differ from the project's are sent to the webview as `disk-sources`,
-//! which applies them (plan 2026-11-12-st-vscode.md, decision 1). Twinova's own Save writes what the project holds, so
-//! it changes nothing.
+//! project lists are read again (`twinova_project::sources`), and those that differ from the project's are sent to the
+//! webview as `disk-sources`, which applies them (plan 2026-11-12-st-vscode.md, decision 1). Twinova's own Save writes
+//! what the project holds, so it changes nothing.
 
-use std::collections::BTreeMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
@@ -13,32 +11,14 @@ use std::thread;
 use std::time::Duration;
 
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
-use twinova_project::Project;
+use twinova_project::sources::changed;
 
 use crate::project_commands::ProjectState;
 
 /// How long the folder stays quiet before it is read: truST's own debounce for the files it watches
 /// (`trust-runtime/src/control.rs`, `HMI_DESCRIPTOR_WATCH_DEBOUNCE`).
 pub const QUIET: Duration = Duration::from_millis(250);
-
-/// What a change on disk asks for: an online change of the program, or a rebuild when a behaviour changed (decisions 1
-/// and 2).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Kind {
-    Program,
-    Behaviours,
-}
-
-/// The project's sources as its folder holds them.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct DiskSources {
-    pub kind: Kind,
-    pub program: Vec<(String, String)>,
-    pub behaviours: BTreeMap<String, String>,
-}
 
 /// Whether `event` may have changed a source: anything but a read, in `folder` but outside Twinova's state, `.twinova/`,
 /// where Save keeps its copies and the language server its cache. Linux reports reads too, Twinova's own reading of
@@ -49,36 +29,6 @@ pub fn relevant(folder: &Path, event: &notify::Event) -> bool {
             .is_ok_and(|inside| !inside.starts_with(".twinova"))
     };
     !matches!(event.kind, EventKind::Access(_)) && event.paths.iter().any(inside)
-}
-
-/// The sources `project` lists, as `folder` holds them, when they differ from the project's; `None` when they are
-/// equal, or when one cannot be read as text, as while an editor replaces it: the change that ends the write reads them
-/// again.
-pub fn changed(project: &Project, folder: &Path) -> Option<DiskSources> {
-    let read = |path: &str| fs::read_to_string(folder.join(path)).ok();
-    let program = (project.program.iter())
-        .map(|(path, _)| Some((path.clone(), read(path)?)))
-        .collect::<Option<Vec<_>>>()?;
-    let behaviours = (project.behaviours.keys())
-        .map(|key| {
-            Some((
-                key.clone(),
-                read(&project.definitions[key].behaviour_path())?,
-            ))
-        })
-        .collect::<Option<BTreeMap<_, _>>>()?;
-    let kind = if behaviours != project.behaviours {
-        Kind::Behaviours
-    } else if program != project.program {
-        Kind::Program
-    } else {
-        return None;
-    };
-    Some(DiskSources {
-        kind,
-        program,
-        behaviours,
-    })
 }
 
 /// Sends the current project's sources from disk to the webview when they changed; nothing when `folder` is no longer

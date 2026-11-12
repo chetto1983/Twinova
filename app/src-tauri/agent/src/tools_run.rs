@@ -10,6 +10,7 @@ use rmcp::{tool, tool_router};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use twinova_engine::engine::{Engine, Snapshot};
+use twinova_project::sources::Kind;
 
 use crate::{Agent, structured};
 
@@ -65,6 +66,21 @@ pub struct BlockSink {
     /// A sink by id.
     pub sink: String,
     pub blocked: bool,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ChangeProgram {
+    /// The line program's files as (path, text), in order, as the project lists them (`plc/Main.st`, …).
+    pub program: Vec<(String, String)>,
+}
+
+/// An online change's or a reload's answer: what was taken, Build's warnings, and the line then.
+#[derive(Serialize)]
+struct Changed {
+    /// `program` (online, the plant went on), `behaviours` (rebuilt at time zero), or null (nothing changed).
+    taken: Option<Kind>,
+    warnings: Vec<String>,
+    state: Snapshot,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -236,6 +252,44 @@ impl Agent {
         let (k, _) = sink(&state(engine), &a.sink)?;
         engine.set_sink_blocked(k, a.blocked);
         structured(&a.blocked)
+    }
+
+    #[tool(
+        description = "Change the line program online, as a PLC download in RUN: the PLC takes it between two scans \
+                          with a warm restart (RETAIN variables and time kept, the rest reinitialised; the outputs \
+                          hold until its first scan) while the plant goes on. A program Build would refuse is an \
+                          error and changes nothing. Answers Build's warnings and the line's state."
+    )]
+    async fn change_program(
+        &self,
+        Parameters(a): Parameters<ChangeProgram>,
+    ) -> Result<CallToolResult, String> {
+        let mut session = self.session()?;
+        let warnings = session.change_program(a.program)?;
+        let state = state(session.engine()?);
+        structured(&Changed {
+            taken: Some(Kind::Program),
+            warnings,
+            state,
+        })
+    }
+
+    #[tool(
+        description = "Take the ST sources as the project's folder holds them now, as the app does when they are \
+                          saved outside it (VS Code): a changed program goes online (see change_program), a changed \
+                          behaviour rebuilds the line at time zero. Answers what was taken (null when the files equal \
+                          the running sources), Build's warnings and the line's state."
+    )]
+    async fn reload_sources(&self) -> Result<CallToolResult, String> {
+        let mut session = self.session()?;
+        let reloaded = session.reload_sources()?;
+        let state = state(session.engine()?);
+        let (taken, warnings) = reloaded.map_or((None, Vec::new()), |r| (Some(r.kind), r.warnings));
+        structured(&Changed {
+            taken,
+            warnings,
+            state,
+        })
     }
 
     #[tool(description = "Keep the line's current state; answers its id for restore_state.")]

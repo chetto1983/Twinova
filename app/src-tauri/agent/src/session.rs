@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use twinova_engine::engine::{Engine, Saved};
 use twinova_project::Project;
+use twinova_project::sources::{Kind, changed};
 use twinova_project::storage::open_folder;
 
 #[derive(Default)]
@@ -25,6 +26,13 @@ pub struct Session {
 pub struct Opened {
     pub name: String,
     pub instances: Vec<(String, String)>,
+    pub warnings: Vec<String>,
+}
+
+/// What `reload_sources` took from the folder: an online change or a rebuild, and Build's warnings.
+#[derive(Debug, serde::Serialize)]
+pub struct Reloaded {
+    pub kind: Kind,
     pub warnings: Vec<String>,
 }
 
@@ -68,6 +76,44 @@ impl Session {
         let built = self.built.as_ref().ok_or(NO_PROJECT)?;
         self.engine = Some(Engine::new(built)?.0);
         Ok(())
+    }
+
+    /// An online change of the running program (spec 2026-11-12-st-vscode-design.md, decisions 1 and 9): the engine
+    /// takes it between two scans while the plant goes on; the working and built projects take it, so `build`, `reset`
+    /// and `save_project` keep it. On an error nothing changes. Returns Build's warnings for the new program.
+    pub fn change_program(
+        &mut self,
+        program: Vec<(String, String)>,
+    ) -> Result<Vec<String>, String> {
+        let warnings = self.engine()?.change_program(program.clone())?;
+        self.working()?.program = program.clone();
+        if let Some(built) = self.built.as_mut() {
+            built.program = program;
+        }
+        Ok(warnings)
+    }
+
+    /// The sources as the project's folder holds them, taken as the app takes them once its folder is quiet: a changed
+    /// program goes online, a changed behaviour rebuilds at time zero. `None` when they equal the running ones.
+    pub fn reload_sources(&mut self) -> Result<Option<Reloaded>, String> {
+        let folder = self.folder.clone().ok_or(NO_PROJECT)?;
+        let built = self.built.as_ref().ok_or(NO_PROJECT)?;
+        let Some(disk) = changed(built, &folder) else {
+            return Ok(None);
+        };
+        let warnings = match disk.kind {
+            Kind::Program => self.change_program(disk.program)?,
+            Kind::Behaviours => {
+                let working = self.working()?;
+                working.program = disk.program;
+                working.behaviours = disk.behaviours;
+                self.build()?.warnings
+            }
+        };
+        Ok(Some(Reloaded {
+            kind: disk.kind,
+            warnings,
+        }))
     }
 
     /// Keeps the running line's state; its id for `restore`.
