@@ -47,9 +47,10 @@ export interface Completion {
 export const analysis = {
   analyze: (program: [string, string][], behaviours: Record<string, string>) =>
     invoke<Problems>("analyze", { program, behaviours }),
-  hover: (file: string, line: number, column: number) => invoke<string | null>("hover", { file, line, column }),
-  completion: (file: string, line: number, column: number) =>
-    invoke<Completion[]>("completion", { file, line, column }),
+  hover: (file: string, text: string, line: number, column: number) =>
+    invoke<string | null>("hover", { file, text, line, column }),
+  completion: (file: string, text: string, line: number, column: number) =>
+    invoke<Completion[]>("completion", { file, text, line, column }),
 };
 
 export const onSnapshot = (f: (s: Snapshot) => void): Promise<UnlistenFn> =>

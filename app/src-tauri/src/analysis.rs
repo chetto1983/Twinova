@@ -18,9 +18,37 @@ use twinova_project::Project;
 use crate::lsp_files::FIELD;
 use crate::project_commands::ProjectState;
 
-/// The analysis engine, holding the texts of the last `analyze`.
+/// The analysis engine and the documents it holds.
 #[derive(Default)]
-pub struct AnalysisState(Mutex<BrowserAnalysisEngine>);
+pub struct Analysis {
+    engine: BrowserAnalysisEngine,
+    documents: Vec<DocumentInput>,
+}
+
+#[derive(Default)]
+pub struct AnalysisState(Mutex<Analysis>);
+
+impl Analysis {
+    fn replace(&mut self, documents: Vec<DocumentInput>) -> Result<(), String> {
+        (self.engine.replace_documents(documents.clone())).map_err(|e| e.to_string())?;
+        self.documents = documents;
+        Ok(())
+    }
+
+    /// Takes `text` as `file`'s, when it changed since the last analysis: hover and completion answer on what the editor
+    /// holds now, not on the texts of the analysis debounced 300 ms behind the typing (decision 6).
+    fn with_text(&mut self, file: &str, text: String) -> Result<(), String> {
+        let mut documents = self.documents.clone();
+        let Some(document) = documents.iter_mut().find(|d| d.uri == file) else {
+            return Err(format!("{file} is not analysed"));
+        };
+        if document.text == text {
+            return Ok(());
+        }
+        document.text = text;
+        self.replace(documents)
+    }
+}
 
 /// A diagnostic as the editor shows it: 1-based lines, and columns in UTF-16 units from 1, as Monaco counts them (the
 /// engine counts both from 0, the column in UTF-16 units: `trust-wasm-analysis`, `offset_to_position`).
@@ -65,7 +93,7 @@ fn shown(diagnostics: Vec<DiagnosticItem>, text: &str, placed: &BTreeSet<String>
 
 /// Analyses `project`'s sources: each shown file's problems, by path.
 pub fn analyze_project(
-    engine: &mut BrowserAnalysisEngine,
+    analysis: &mut Analysis,
     project: &Project,
 ) -> Result<BTreeMap<String, Vec<Problem>>, String> {
     let shown_files: Vec<(String, String)> = (project.program.iter().cloned())
@@ -88,9 +116,7 @@ pub fn analyze_project(
             text: config,
         });
     }
-    engine
-        .replace_documents(documents)
-        .map_err(|e| e.to_string())?;
+    analysis.replace(documents)?;
     let placed = placed_variables(project);
     let none = BTreeSet::new();
     let placed_in = |file: &str| {
@@ -101,7 +127,7 @@ pub fn analyze_project(
     };
     (shown_files.iter())
         .map(|(file, text)| {
-            let found = engine.diagnostics(file).map_err(|e| e.to_string())?;
+            let found = (analysis.engine.diagnostics(file)).map_err(|e| e.to_string())?;
             Ok((file.clone(), shown(found, text, placed_in(file))))
         })
         .collect()
@@ -137,44 +163,48 @@ pub fn analyze(
         behaviours,
         ..projects.project()?
     };
-    let mut engine = state.0.lock().map_err(|_| "analysis lock poisoned")?;
-    analyze_project(&mut engine, &project)
+    let mut analysis = state.0.lock().map_err(|_| "analysis lock poisoned")?;
+    analyze_project(&mut analysis, &project)
 }
 
-/// What a symbol of the last analysed texts is, in Markdown.
+/// What a symbol of `file` is, in Markdown, `text` being the file as the editor holds it now.
 #[tauri::command]
 pub fn hover(
     state: State<'_, AnalysisState>,
     file: String,
+    text: String,
     line: u32,
     column: u32,
 ) -> Result<Option<String>, String> {
-    let engine = state.0.lock().map_err(|_| "analysis lock poisoned")?;
+    let mut analysis = state.0.lock().map_err(|_| "analysis lock poisoned")?;
+    analysis.with_text(&file, text)?;
     let request = HoverRequest {
         uri: file,
         position: position(line, column),
     };
-    Ok(engine
+    Ok((analysis.engine)
         .hover(request)
         .map_err(|e| e.to_string())?
         .map(|h| h.contents))
 }
 
-/// What may be typed at a place of the last analysed texts.
+/// What may be typed at a place of `file`, `text` being the file as the editor holds it now.
 #[tauri::command]
 pub fn completion(
     state: State<'_, AnalysisState>,
     file: String,
+    text: String,
     line: u32,
     column: u32,
 ) -> Result<Vec<Completion>, String> {
-    let engine = state.0.lock().map_err(|_| "analysis lock poisoned")?;
+    let mut analysis = state.0.lock().map_err(|_| "analysis lock poisoned")?;
+    analysis.with_text(&file, text)?;
     let request = CompletionRequest {
         uri: file,
         position: position(line, column),
         limit: None,
     };
-    let items = engine.completion(request).map_err(|e| e.to_string())?;
+    let items = (analysis.engine.completion(request)).map_err(|e| e.to_string())?;
     Ok(items
         .into_iter()
         .map(|c| Completion {

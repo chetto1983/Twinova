@@ -55,8 +55,8 @@ describe("backend bridge", () => {
 
   it("calls the analysis commands of analysis.rs with their argument names", async () => {
     await analysis.analyze([["plc/Main.st", "PROGRAM Main END_PROGRAM"]], { "twinova.belt@1": "FUNCTION_BLOCK B" });
-    await analysis.hover("plc/Main.st", 3, 5);
-    await analysis.completion("plc/Main.st", 4, 9);
+    await analysis.hover("plc/Main.st", "PROGRAM Main", 3, 5);
+    await analysis.completion("plc/Main.st", "PROGRAM M", 4, 9);
     expect(invoke.mock.calls).toEqual([
       [
         "analyze",
@@ -65,8 +65,8 @@ describe("backend bridge", () => {
           behaviours: { "twinova.belt@1": "FUNCTION_BLOCK B" },
         },
       ],
-      ["hover", { file: "plc/Main.st", line: 3, column: 5 }],
-      ["completion", { file: "plc/Main.st", line: 4, column: 9 }],
+      ["hover", { file: "plc/Main.st", text: "PROGRAM Main", line: 3, column: 5 }],
+      ["completion", { file: "plc/Main.st", text: "PROGRAM M", line: 4, column: 9 }],
     ]);
   });
 

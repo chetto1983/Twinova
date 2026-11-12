@@ -131,7 +131,7 @@ fn a_column_after_accented_letters_counts_utf16_units() {
 fn hover_tells_a_variable_s_type_and_completion_offers_the_declared_ones() {
     let (app, project) = opened("two_belts_diverter");
     analyzed(&app, &project);
-    let text = &project.program[0].1;
+    let text = project.program[0].1.clone();
     let (line, column) = text
         .lines()
         .enumerate()
@@ -140,7 +140,7 @@ fn hover_tells_a_variable_s_type_and_completion_offers_the_declared_ones() {
                 .map(|c| (n as u32 + 1, c as u32 + 16))
         })
         .unwrap();
-    let shown = hover(app.state(), MAIN.into(), line, column)
+    let shown = hover(app.state(), MAIN.into(), text.clone(), line, column)
         .unwrap()
         .unwrap();
     assert!(
@@ -148,16 +148,47 @@ fn hover_tells_a_variable_s_type_and_completion_offers_the_declared_ones() {
         "{shown}"
     );
     assert_eq!(
-        hover(app.state(), MAIN.into(), 1, 1).unwrap(),
+        hover(app.state(), MAIN.into(), text.clone(), 1, 1).unwrap(),
         None,
         "a comment has no hover"
     );
-    let offered = completion(app.state(), MAIN.into(), line, column + 3).unwrap();
+    let offered = completion(app.state(), MAIN.into(), text.clone(), line, column + 3).unwrap();
     let labels: Vec<&str> = offered.iter().map(|c| c.label.as_str()).collect();
     assert!(
         labels.contains(&"detected_a") && labels.contains(&"detected_b"),
         "{labels:?}"
     );
     assert!(offered.iter().all(|c| !c.insert_text.is_empty()));
-    assert!(hover(app.state(), "plc/Nowhere.st".into(), 1, 1).is_err());
+    let error = hover(app.state(), "plc/Nowhere.st".into(), String::new(), 1, 1).unwrap_err();
+    assert_eq!(error, "plc/Nowhere.st is not analysed");
+}
+
+/// Completion answers on the text the editor holds now, though the debounced analysis has not run on it yet: a
+/// variable declared a moment ago is offered.
+#[test]
+fn completion_reads_the_text_typed_since_the_last_analysis() {
+    let (app, project) = opened("two_belts_diverter");
+    analyzed(&app, &project);
+    let typed = project.program[0]
+        .1
+        .replace(
+            "    count : DINT;\n",
+            "    count : DINT;\n    zz_fresh : BOOL;\n",
+        )
+        .replace("belt_b_run := TRUE;", "belt_b_run := TRUE;\nzz_");
+    let line = typed.lines().position(|l| l == "zz_").unwrap() as u32 + 1;
+    let offered = completion(app.state(), MAIN.into(), typed.clone(), line, 4).unwrap();
+    assert!(offered.iter().any(|c| c.label == "zz_fresh"), "{offered:?}");
+    let stale = completion(
+        app.state(),
+        MAIN.into(),
+        project.program[0].1.clone(),
+        line,
+        4,
+    )
+    .unwrap();
+    assert!(
+        stale.iter().all(|c| c.label != "zz_fresh"),
+        "the text sent back replaces it again"
+    );
 }

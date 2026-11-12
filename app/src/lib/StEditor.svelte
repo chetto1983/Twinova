@@ -1,9 +1,23 @@
 <script lang="ts" module>
   // Monaco 0.57.0, the editor core only, with its own Structured Text language (spec 2026-11-12-st-editor-design.md,
   // decisions 1 and 2, `languages/definitions/st`, registered here as its `register.js` would), its worker through
-  // Vite, and hover and completion from truST's analysis (analysis.rs).
+  // Vite, and hover and completion from truST's analysis (analysis.rs), on the text the model holds now: the analysis
+  // that feeds the markers waits for a pause in typing.
   import * as monaco from "monaco-editor/editor/editor.api.js";
   import { conf, language } from "monaco-editor/languages/definitions/st/st.js";
+  // The editor API alone has no hover nor suggest: Monaco's ESM build adds each feature by importing its contribution
+  // (measured: `getAction("editor.action.showHover")` was undefined without it). These are what a programmer expects.
+  import "monaco-editor/editor/contrib/hover/browser/hoverContribution.js";
+  import "monaco-editor/editor/contrib/suggest/browser/suggestController.js";
+  import "monaco-editor/editor/contrib/gotoError/browser/gotoError.js";
+  import "monaco-editor/editor/contrib/bracketMatching/browser/bracketMatching.js";
+  import "monaco-editor/editor/contrib/comment/browser/comment.js";
+  import "monaco-editor/editor/contrib/find/browser/findController.js";
+  import "monaco-editor/editor/contrib/folding/browser/folding.js";
+  import "monaco-editor/editor/contrib/clipboard/browser/clipboard.js";
+  import "monaco-editor/editor/contrib/contextmenu/browser/contextmenu.js";
+  import "monaco-editor/editor/contrib/linesOperations/browser/linesOperations.js";
+  import "monaco-editor/editor/contrib/wordHighlighter/browser/wordHighlighter.js";
   // oxlint-disable-next-line import/default -- Vite's `?worker` import has a default export the linter cannot see.
   import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
   import { analysis } from "./backend";
@@ -23,7 +37,8 @@
 
   monaco.languages.registerHoverProvider(ST, {
     provideHover: async (model, position) => {
-      const shown = await analysis.hover(fileOfModel(model), position.lineNumber, position.column).catch(() => null);
+      const { lineNumber, column } = position;
+      const shown = await analysis.hover(fileOfModel(model), model.getValue(), lineNumber, column).catch(() => null);
       return shown ? { contents: [{ value: shown }] } : null;
     },
   });
@@ -31,7 +46,9 @@
     provideCompletionItems: async (model, position) => {
       const word = model.getWordUntilPosition(position);
       const range = new monaco.Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
-      const items = await analysis.completion(fileOfModel(model), position.lineNumber, position.column).catch(() => []);
+      const items = await analysis
+        .completion(fileOfModel(model), model.getValue(), position.lineNumber, position.column)
+        .catch(() => []);
       const kinds = monaco.languages.CompletionItemKind as unknown as Record<string, number>;
       return {
         suggestions: items.map((c) => ({

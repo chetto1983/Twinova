@@ -6,18 +6,30 @@
     "suspicious": "error",
     "perf": "warn"
   },
-  "env": { "builtin": true, "browser": true },
+  "env": {
+    "builtin": true,
+    "browser": true
+  },
   "rules": {
-    "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }]
+    "import/no-unassigned-import": [
+      "error",
+      {
+        "allow": ["**/*.css", "monaco-editor/editor/contrib/**"]
+      }
+    ]
   },
   "overrides": [
     {
       "files": ["**/*.test.ts"],
-      "rules": { "import/no-named-as-default-member": "off" }
+      "rules": {
+        "import/no-named-as-default-member": "off"
+      }
     },
     {
       "files": ["e2e/**"],
-      "rules": { "no-await-in-loop": "off" }
+      "rules": {
+        "no-await-in-loop": "off"
+      }
     }
   ],
   "ignorePatterns": [
