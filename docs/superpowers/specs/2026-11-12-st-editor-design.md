@@ -79,18 +79,22 @@ truST's `BrowserAnalysisEngine` (`trust-wasm-analysis`) through Tauri commands".
 
 ### Highlighting
 
-- Monaco highlights through Monarch tokenizers; TextMate grammars need extra libraries (`vscode-textmate` and an
-  Oniguruma wasm).
-- truST's VS Code extension ships `syntaxes/st.tmLanguage.json`: 4.7 KB, 8 rules, MIT OR Apache-2.0.
+- **Monaco ships Structured Text among its basic languages,** for the editor core too:
+  - `monaco-editor/languages/definitions/st`: id `st`, aliases `scl` and `stl`, a Monarch tokenizer;
+  - it is registered by importing its `register.js`.
+- **Measured on Twinova's sources (vitest, happy-dom)** (amended 2026-11-12, the user pointed to it):
+  - `VAR`/`END_VAR`, keywords, types, `TRUE`;
+  - comments `(* *)` and `//`;
+  - `T#1500MS`, `16#FF`, `%IX0.0`.
+
+  Only the `*` of a partial address `%I*` stays plain.
 
 ## Decisions (user, 2026-11-12)
 
 1. **Monaco 0.57.0,** the editor core only, as measured.
-2. **Highlighting by a Monarch tokenizer translated from truST's `st.tmLanguage.json`** (MIT OR Apache-2.0, cited):
-   - keywords and types;
-   - comments `(* *)` and `//`;
-   - strings and numbers, `T#` literals included;
-   - IEC addresses (`%IX0.0`, `%Q*`).
+2. **Highlighting by Monaco's own Structured Text** (`languages/definitions/st`), registered as it is. A first draft
+   translated truST's grammar into a tokenizer of our own: the user pointed out that Monaco has ST, and the measurement
+   above confirmed it, so no tokenizer is written.
 3. **The diagnostics shown are VS Code's,** with the same filter as the `trust-lsp.toml` Twinova writes (no W010 or
    W011). The false E202 "requires VAR_CONFIG mapping" are left out where Twinova's generated configuration places
    that variable. The real errors stay.
@@ -131,7 +135,7 @@ Proposed by this spec, for approval:
 
 - **`Editor.svelte` mounts Monaco** in place of the textarea. Its model per tab follows `sources`, so the decisions of
   4.6 (edited tabs, Revert, held disk changes) are unchanged.
-- **`st.ts` (Monarch)** registers the `st` language and its tokenizer.
+- **Monaco's `st` language** is registered by importing its `register.js`.
 - **`analysis.ts`:**
   - the debounce;
   - the markers from the diagnostics;
@@ -160,9 +164,9 @@ Proposed by this spec, for approval:
 | 2 | Hover and completion | `analysis.rs` tests and `e2e/editor_st.mjs`: a variable's type on hover, a declared variable and a keyword offered |
 | 3 | Monaco on WebKitGTK | the E2E on Linux, and windows-2022 in CI; the mount time, the bundle and the idle CPU of the release build (`npm run soak`) compared with `main` |
 | 4 | The frontend `rev` | `rev = 5eb7f8c` for the four crates; the PR lists the 148 commits; runtime and E2E unchanged |
-| 5 | Highlighting | the Monarch tokens of each fixture's sources checked against a table of expected token types |
+| 5 | Highlighting | Monaco's `st` tokens on a reference text covering each rule, checked in a unit test |
 | 6 | The 4.6 behaviour kept | `e2e/vscode.mjs` 5/5: disk changes, held edits, Revert |
-| 7 | Gates | fmt, clippy, coverage ≥ 85 %, cargo mutants on `analysis.rs`, Stryker ≥ 70 % on `analysis.ts` and `st.ts`, svelte-check, oxlint, knip, jscpd, i18n |
+| 7 | Gates | fmt, clippy, coverage ≥ 85 %, cargo mutants on `analysis.rs`, Stryker ≥ 70 % on `analysis.ts`, svelte-check, oxlint, knip, jscpd, i18n |
 
 ## What this will not prove
 
