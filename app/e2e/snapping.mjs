@@ -25,6 +25,7 @@ import {
   root,
   selectSpeed,
   sessions,
+  textOf,
 } from "./helpers.mjs";
 import {
   EMPTY_VIEW,
@@ -275,7 +276,7 @@ sessions(async () => {
       await click(`//button[@role="menuitem"][normalize-space()="Save"]`);
       await eventually(
         async () => {
-          const notice = await browser.$(`//p[@role="status"]`).getText();
+          const notice = await textOf(`//p[@role="status"]`);
           if (!notice.includes(`Saved to ${folder}`)) throw new Error(notice);
         },
         "saved",

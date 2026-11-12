@@ -9,6 +9,7 @@ import {
   out,
   session,
   virtualSeconds,
+  textOf,
 } from "./helpers.mjs";
 
 const changeSource = async (text) =>
@@ -108,10 +109,10 @@ await session("debug", async () => {
     await dock("watch");
     await eventually(
       async () => {
-        const timing = await browser.$(".timing").getText();
+        const timing = await textOf(".timing");
         if (!timing.includes("µs") && !timing.includes(" ms")) throw new Error(timing);
         if (timing.includes("—")) throw new Error("no measured scan timing");
-        const speed = await browser.$(".actual").getText();
+        const speed = await textOf(".actual");
         if (!/^~\d+\.\d+×$/.test(speed)) throw new Error(`no measured speed: ${speed}`);
       },
       "runtime telemetry",
@@ -127,7 +128,7 @@ await session("debug", async () => {
     await browser.$("#panel-problems .error-line").waitForDisplayed({ timeout: 10000 });
     expectEqual(await browser.$(button("Pause")).isEnabled(), true, "Pause after failed build");
     expectEqual(await browser.$(".statusbar .build-status").isDisplayed(), true, "build status remains visible");
-    expectEqual(await browser.$(".statusbar .build-status").getText(), "Previous build loaded", "runtime build status");
+    expectEqual(await textOf(".statusbar .build-status"), "Previous build loaded", "runtime build status");
     expectEqual(
       await browser.$(".statusbar .error-status").isDisplayed(),
       true,

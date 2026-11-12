@@ -20,6 +20,7 @@ import {
   selectSpeed,
   sessions,
   virtualSeconds,
+  textOf,
 } from "./helpers.mjs";
 import { setProgram } from "./editing.mjs";
 
@@ -29,7 +30,7 @@ const belt = join(folder, "components/twinova.belt@1.st");
 const original = readFileSync(main, "utf8");
 const stopped = original.replace("belt_b_run := TRUE;", "belt_b_run := FALSE; (* saved outside *)");
 
-const notice = async () => (await browser.$(`//p[@role="status"]`)).getText();
+const notice = () => textOf(`//p[@role="status"]`);
 const noticeSays = (words) =>
   eventually(
     async () => {
