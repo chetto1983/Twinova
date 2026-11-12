@@ -10,26 +10,24 @@
 //!    2026-11-10-diverter-line-design.md), and the stoppers', pushers' and turntables' positions (spec
 //!    2026-11-11-stopper-pusher-turntable-design.md);
 //! 4. the controller's scan, when its period is due.
+//!
+//! An online change (spec 2026-11-12-st-vscode-design.md) replaces the controller's program between two
+//! milliseconds and binds the line to it again (`line_bind.rs`); the world and the field go on.
 
 use trust_runtime::value::Value;
-use twinova_physics::layout::SensorKind;
 use twinova_physics::{Reading, STEP_NS, World, layout};
 use twinova_project::Project;
 
 use crate::controller::{Controller, Port};
 use crate::drive::Feedback;
 use crate::field::Field;
+use crate::line_bind::{Ports, Wiring};
 
-/// A conveyor's signals, and whether its speed comes from its behaviour or its motor straight from the controller.
+/// A conveyor: whether its speed comes from its behaviour or its motor straight from the controller, and its drive
+/// feedback's state.
 struct BeltIo {
     instance: String,
-    run: Option<Port>,
-    running: Option<Port>,
     behaviour: bool,
-    /// The controller inputs its drive feedback is bound to, and the feedback's state.
-    velocity: Option<Port>,
-    encoder: Option<Port>,
-    pulse: Option<Port>,
     feedback: Feedback,
 }
 
@@ -56,28 +54,13 @@ pub struct Line {
     belts: Vec<BeltIo>,
     /// The devices the field moves.
     devices: Vec<Device>,
-    /// Per layout sensor, the controller input its reading is bound to: `detected`, `color` or `distance`.
-    sensors: Vec<Option<Port>>,
-    /// Per layout scanner, the controller inputs its `read`, `count` and `code` are bound to.
-    scanners: Vec<[Option<Port>; 3]>,
-    /// Per layout sink, the controller input its `count` is bound to.
-    sinks: Vec<Option<Port>>,
-    /// The controller outputs the field reads and the inputs it writes: the address as the field names it, and the
-    /// controller's, parsed. Every controller address is resolved here at Build, and an input only when the program
-    /// declares it: one it does not is skipped, as Build warned.
+    wiring: Wiring,
+    /// The controller addresses the line writes and reads, resolved for the current program, every one parsed once.
+    ports: Ports,
+    /// The controller outputs the field reads: the address as the field names it, and the controller's.
     commands: Vec<(String, Port)>,
-    feedback: Vec<(String, Port)>,
     t_ns: i64,
     next_scan_ns: i64,
-}
-
-fn signal(project: &Project, instance: &str, name: &str) -> Option<String> {
-    project
-        .scene
-        .instances
-        .iter()
-        .find(|i| i.id == instance)
-        .and_then(|i| i.signals.get(name).cloned())
 }
 
 /// Writes a bound input.
@@ -114,24 +97,13 @@ impl Line {
         let layout = layout(project)?;
         let field = Field::build(project)?;
         let (controller, warnings) = Controller::build(project)?;
-        let declared = |instance: &str, name: &str| {
-            signal(project, instance, name).and_then(|a| controller.declared_at(&a))
-        };
-        let mut belts = Vec::new();
-        for b in &layout.belts {
-            belts.push(BeltIo {
+        let belts = (layout.belts.iter())
+            .map(|b| BeltIo {
                 instance: b.id.clone(),
-                run: signal(project, &b.id, "run")
-                    .map(|a| Port::parse(&a))
-                    .transpose()?,
-                running: declared(&b.id, "running"),
                 behaviour: has_behaviour(project, &b.id),
-                velocity: declared(&b.id, "velocity"),
-                encoder: declared(&b.id, "encoder"),
-                pulse: declared(&b.id, "pulse"),
                 feedback: Feedback::of(project, &b.id),
-            });
-        }
+            })
+            .collect();
         // A device's motion is its block's, so it has no native fallback (specs 2026-11-10-diverter-line-design.md and
         // 2026-11-11-stopper-pusher-turntable-design.md, "The families").
         let by_kind = [
@@ -179,51 +151,38 @@ impl Line {
             let family = &project.definitions[&instance_of(project, &d.instance).definition].id;
             return Err(format!("{}: {family} needs its behaviour", d.instance));
         }
-        let sensors = (layout.sensors.iter())
-            .map(|s| {
-                let signal = match s.kind {
-                    SensorKind::Diffuse { .. } | SensorKind::ThroughBeam => "detected",
-                    SensorKind::Color { .. } => "color",
-                    SensorKind::Laser { .. } => "distance",
-                };
-                declared(&s.id, signal)
-            })
-            .collect();
-        let scanners = (layout.scanners.iter())
-            .map(|s| ["read", "count", "code"].map(|signal| declared(&s.id, signal)))
-            .collect();
-        let sinks = layout
-            .sinks
-            .iter()
-            .map(|s| declared(&s.id, "count"))
-            .collect();
-        let (mut commands, mut feedback) = (Vec::new(), Vec::new());
-        if let Some(field) = &field {
-            for address in field.commands() {
-                commands.push((address.clone(), Port::parse(address)?));
-            }
-            for address in field.feedback() {
-                if let Some(port) = controller.declared_at(address) {
-                    feedback.push((address.clone(), port));
-                }
-            }
-        }
+        let wiring = Wiring::of(project, &layout, field.as_ref())?;
+        let commands = (field.iter().flat_map(|f| f.commands()))
+            .map(|address| Ok((address.clone(), Port::parse(address)?)))
+            .collect::<Result<_, String>>()?;
         let next_scan_ns = controller.scan_ns();
         let line = Self {
             world: World::new(layout),
             field,
+            ports: wiring.bind(&controller),
+            wiring,
             controller,
             belts,
             devices,
-            sensors,
-            scanners,
-            sinks,
             commands,
-            feedback,
             t_ns: 0,
             next_scan_ns,
         };
         Ok((line, warnings))
+    }
+
+    /// Replaces the program with `project`'s, checked as Build checks it, and binds the line to it again; the next scan
+    /// stays where it was due, then follows the new program's period. An input the line no longer writes reads zero,
+    /// as it would after Build. On an error nothing changes. Returns Build's warnings for the new program.
+    pub fn change_program(&mut self, project: &Project) -> Result<Vec<String>, String> {
+        let written: Vec<Port> = self.ports.inputs().into_iter().cloned().collect();
+        let warnings = self.controller.reload(project)?;
+        self.ports = self.wiring.bind(&self.controller);
+        let still = self.ports.inputs();
+        for port in written.iter().filter(|p| !still.contains(p)) {
+            self.controller.clear_input(port)?;
+        }
+        Ok(warnings)
     }
 
     pub fn time_ns(&self) -> i64 {
@@ -263,7 +222,8 @@ impl Line {
         self.world.step();
         self.t_ns += STEP_NS;
         let controller = &mut self.controller;
-        for (k, address) in self.sensors.iter().enumerate() {
+        let ports = &self.ports;
+        for (k, address) in ports.sensors.iter().enumerate() {
             let value = match self.world.reading(k) {
                 Reading::Detected(seen) => Value::Bool(seen),
                 // The image is bit-string typed: a DINT at %ID travels as a DWORD (measured 2026-11-08).
@@ -272,33 +232,33 @@ impl Line {
             };
             input(controller, address, value)?;
         }
-        for (k, [read, count, code]) in self.scanners.iter().enumerate() {
+        for (k, [read, count, code]) in ports.scanners.iter().enumerate() {
             let scan = self.world.scanned(k);
             input(controller, read, Value::Bool(scan.read))?;
             input(controller, count, Value::DWord(scan.count))?;
             input(controller, code, Value::DWord(scan.code as u32))?;
         }
-        for (k, address) in self.sinks.iter().enumerate() {
+        for (k, address) in ports.sinks.iter().enumerate() {
             // The image is bit-string typed: a DINT at %ID travels as a DWORD (measured 2026-11-08).
             let count = u32::try_from(self.world.delivered(k)).unwrap_or(u32::MAX);
             input(controller, address, Value::DWord(count))?;
         }
-        for (k, belt) in self.belts.iter_mut().enumerate() {
+        for (k, (belt, at)) in self.belts.iter_mut().zip(&ports.belts).enumerate() {
             let speed = self.world.belt_speed(k);
             input(
                 controller,
-                &belt.velocity,
+                &at.velocity,
                 real(belt.feedback.velocity(speed)),
             )?;
             input(
                 controller,
-                &belt.encoder,
+                &at.encoder,
                 real(self.world.belt_travel(k) as f32),
             )?;
-            if belt.pulse.is_some() {
+            if at.pulse.is_some() {
                 input(
                     controller,
-                    &belt.pulse,
+                    &at.pulse,
                     Value::Bool(belt.feedback.pulse(speed)),
                 )?;
             }
@@ -308,13 +268,13 @@ impl Line {
                 field.set_command(address, self.controller.read_at(port)?)?;
             }
             field.cycle()?;
-            for (address, port) in &self.feedback {
+            for (address, port) in &self.ports.feedback {
                 self.controller
                     .write_at(port, field.feedback_value(address)?)?;
             }
         }
         for k in 0..self.belts.len() {
-            let belt = &self.belts[k];
+            let (belt, at) = (&self.belts[k], &self.ports.belts[k]);
             match (&self.field, belt.behaviour) {
                 (Some(field), true) => {
                     let Some(Value::Real(speed)) = field.native(&belt.instance, "surface_speed")
@@ -324,8 +284,8 @@ impl Line {
                     self.world.set_belt_speed(k, speed);
                 }
                 _ => {
-                    let motor = self.output(&belt.run)?;
-                    input(&mut self.controller, &belt.running, Value::Bool(motor))?;
+                    let motor = self.output(&at.run)?;
+                    input(&mut self.controller, &at.running, Value::Bool(motor))?;
                     self.world.set_belt_running(k, motor);
                 }
             }

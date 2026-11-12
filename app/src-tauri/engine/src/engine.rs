@@ -64,18 +64,27 @@ pub struct Snapshot {
 enum Input {
     Press(String),
     SinkBlocked(usize, bool),
+    /// An online change of the line program, its files as (path, text).
+    Program(Vec<(String, String)>),
 }
 
 /// A state to come back to (spec 2026-11-08-run-modes-design.md, decision 3): truST cannot save its VM's state, so a
-/// snapshot is the inputs that led there, replayed on a fresh engine. The line is deterministic (`line_tests.rs`).
+/// snapshot is the inputs that led there, replayed on a fresh engine. The line is deterministic (`line_tests.rs`). It
+/// starts from the program the engine was built with, whatever online changes came after (spec
+/// 2026-11-12-st-vscode-design.md, decision 9).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Saved {
+    program: Vec<(String, String)>,
     inputs: Vec<(i64, Input)>,
     time_ns: i64,
 }
 
 pub struct Engine {
     line: Line,
+    /// The project the engine runs, its program the current one: the scene an online change is checked against.
+    project: Project,
+    /// The program the engine was built with, where a snapshot's replay starts.
+    built_program: Vec<(String, String)>,
     /// The scene's signals and the panel's buttons, by name, address and type.
     signals: Vec<(String, String, SignalType)>,
     /// Every external input with its virtual time in ns.
@@ -142,6 +151,8 @@ impl Engine {
             .collect();
         let engine = Self {
             line,
+            project: project.clone(),
+            built_program: project.program.clone(),
             signals,
             inputs: Vec::new(),
             fault: None,
@@ -152,10 +163,14 @@ impl Engine {
 
     /// A fresh engine on `project` brought to the saved state: each input at its time, then up to the saved time.
     pub fn restore(project: &Project, saved: &Saved) -> Result<Self, String> {
-        let (mut engine, _) = Self::new(project)?;
+        let built = Project {
+            program: saved.program.clone(),
+            ..project.clone()
+        };
+        let (mut engine, _) = Self::new(&built)?;
         for (time_ns, input) in &saved.inputs {
             engine.advance_to(*time_ns)?;
-            engine.apply(input.clone());
+            engine.apply(input.clone())?;
         }
         engine.advance_to(saved.time_ns)?;
         Ok(engine)
@@ -163,6 +178,7 @@ impl Engine {
 
     pub fn save(&self) -> Saved {
         Saved {
+            program: self.built_program.clone(),
             inputs: self.inputs.clone(),
             time_ns: self.line.time_ns(),
         }
@@ -170,19 +186,53 @@ impl Engine {
 
     /// A panel button, held for the next scan only.
     pub fn press(&mut self, address: &str) {
-        self.apply(Input::Press(address.to_string()));
+        let applied = self.apply(Input::Press(address.to_string()));
+        applied.expect("a press always applies");
     }
 
     pub fn set_sink_blocked(&mut self, sink: usize, blocked: bool) {
-        self.apply(Input::SinkBlocked(sink, blocked));
+        let applied = self.apply(Input::SinkBlocked(sink, blocked));
+        applied.expect("a sink's block always applies");
     }
 
-    fn apply(&mut self, input: Input) {
-        match &input {
-            Input::Press(address) => self.line.press(address),
-            Input::SinkBlocked(sink, blocked) => self.line.set_sink_blocked(*sink, *blocked),
-        }
+    /// An online change of the line program (spec 2026-11-12-st-vscode-design.md, decision 1): the PLC takes `program`
+    /// now, between two milliseconds, while the plant goes on. A fault stays until Reset or Build. On an error nothing
+    /// changes. Returns Build's warnings for the new program.
+    pub fn change_program(
+        &mut self,
+        program: Vec<(String, String)>,
+    ) -> Result<Vec<String>, String> {
+        self.apply(Input::Program(program))
+    }
+
+    /// The program the engine runs now, with its online changes.
+    pub fn program(&self) -> &[(String, String)] {
+        &self.project.program
+    }
+
+    /// Applies an input and logs it for replay; one that fails is not logged.
+    fn apply(&mut self, input: Input) -> Result<Vec<String>, String> {
+        let warnings = match &input {
+            Input::Press(address) => {
+                self.line.press(address);
+                Vec::new()
+            }
+            Input::SinkBlocked(sink, blocked) => {
+                self.line.set_sink_blocked(*sink, *blocked);
+                Vec::new()
+            }
+            Input::Program(program) => {
+                let changed = Project {
+                    program: program.clone(),
+                    ..self.project.clone()
+                };
+                let warnings = self.line.change_program(&changed)?;
+                self.project = changed;
+                warnings
+            }
+        };
         self.inputs.push((self.line.time_ns(), input));
+        Ok(warnings)
     }
 
     /// The physics world's fingerprint: equal for equal runs, on every platform.
@@ -270,3 +320,7 @@ impl Engine {
 #[cfg(test)]
 #[path = "engine_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "engine_change_tests.rs"]
+mod change_tests;

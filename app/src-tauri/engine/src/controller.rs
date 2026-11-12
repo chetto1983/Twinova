@@ -140,6 +140,58 @@ impl Controller {
         }
     }
 
+    /// Replaces the program with `project`'s while the line runs (spec 2026-11-12-st-vscode-design.md, decision 1):
+    /// checked first as `build` checks it, then swapped by truST's reload, a warm restart that keeps the RETAIN
+    /// variables and virtual time and reinitialises the rest (`TestHarness::reload_sources`, measured 2026-11-12). The
+    /// reload starts from an empty process image, so the inputs and outputs are copied over: they hold until the new
+    /// program's first scan, as a PLC's do through an online change. A pressed button stays pressed for that scan. On
+    /// an error nothing changes. Returns Build's warnings for the new program.
+    pub fn reload(&mut self, project: &Project) -> Result<Vec<String>, String> {
+        let (checked, warnings) = Self::build(project)?;
+        let io = self.harness.runtime().io();
+        let images = [("I", io.inputs().to_vec()), ("Q", io.outputs().to_vec())];
+        let sources: Vec<&str> = project.program.iter().map(|(_, t)| t.as_str()).collect();
+        (self.harness.reload_sources(&sources)).map_err(|e| located(project, &e))?;
+        self.scan_ns = checked.scan_ns;
+        self.declared = checked.declared;
+        for (area, bytes) in images {
+            // The new image reaches as far as the new program declares: a byte past it is one it does not declare.
+            let io = self.harness.runtime().io();
+            let room = if area == "I" {
+                io.inputs()
+            } else {
+                io.outputs()
+            }
+            .len();
+            for (byte, value) in bytes.into_iter().take(room).enumerate() {
+                self.write_at(
+                    &Port::parse(&format!("%{area}B{byte}"))?,
+                    Value::Byte(value),
+                )?;
+            }
+        }
+        Ok(warnings)
+    }
+
+    /// Writes zero at input `port` inside the image; past it, the image reads zero already (measured 2026-11-09). A bit
+    /// is cleared alone: the other bits of its byte may be declared.
+    pub fn clear_input(&mut self, port: &Port) -> Result<(), String> {
+        let end = port
+            .at
+            .flat_byte_end()
+            .map_err(|e| format!("{}: {e}", port.text))?;
+        let room = self.harness.runtime().io().inputs().len();
+        match end {
+            Some(end) if end as usize <= room => {
+                if matches!(port.at.size, IoSize::Bit) {
+                    return self.write_at(port, Value::Bool(false));
+                }
+                (port.at.byte..end).try_for_each(|b| self.write(&format!("%IB{b}"), Value::Byte(0)))
+            }
+            _ => Ok(()),
+        }
+    }
+
     /// The variable the program declares where `address` starts: the same area and byte, and the same bit for a bit
     /// address.
     fn at(&self, address: &str) -> Option<&Declared> {
