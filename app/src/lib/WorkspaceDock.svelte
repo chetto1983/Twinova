@@ -4,6 +4,7 @@
   import type { ProjectView } from "./project";
   import type { Source } from "./sources";
   import type { Snapshot } from "./snapshot";
+  import { listed, type Listed, type Problems } from "./analysis";
   import Catalogue from "./Catalogue.svelte";
   import Editor from "./Editor.svelte";
   import IoPanel from "./IoPanel.svelte";
@@ -13,6 +14,7 @@
     status,
     error,
     warnings,
+    problems,
     notice,
     snapshot,
     onPlace,
@@ -25,6 +27,8 @@
     status: "none" | "ok" | "failed";
     error: string;
     warnings: string[];
+    /** truST's analysis of the editor's texts, by file. */
+    problems: Problems;
     notice: string;
     snapshot: Snapshot | null;
     onPlace: (key: string) => void;
@@ -42,7 +46,14 @@
       collapsed = false;
     }
   });
-  const count = $derived(warnings.length + (error ? 1 : 0));
+  const rows = $derived(listed(problems, sources));
+  const count = $derived(rows.length + warnings.length + (error ? 1 : 0));
+  /** The place a clicked row opens in the PLC tab. */
+  let reveal = $state<{ key: string; line: number; column: number } | null>(null);
+  function open(row: Listed): void {
+    reveal = { key: row.key, line: row.line, column: row.column };
+    tab = "plc";
+  }
   const tabs = $derived([
     { id: "parts", label: m.ui_parts(), icon: Boxes },
     { id: "plc", label: "PLC", icon: Cpu },
@@ -111,7 +122,7 @@
       <Catalogue {onPlace} {onDrag} />
     </div>
     <div class="tab-content" id="panel-plc" role="tabpanel" aria-labelledby="dock-plc" hidden={tab !== "plc"}>
-      <Editor bind:sources {status} />
+      <Editor bind:sources {status} {problems} {reveal} />
     </div>
     <div
       class="tab-content problems"
@@ -123,6 +134,14 @@
       {#if !count && !notice}<div class="all-clear">
           <CircleCheck size={26} /><strong>{m.ui_no_problems()}</strong>
         </div>{/if}
+      {#each rows as row, i (i)}<button
+          class="problem analysis"
+          class:err={row.severity === "error"}
+          onclick={() => open(row)}
+          ><CircleAlert size={14} /><span class="where">{row.file}:{row.line}:{row.column}</span><span
+            >{row.code} {row.message}</span
+          ></button
+        >{/each}
       {#if error}<pre class="problem error-line"><CircleAlert size={15} />{error}</pre>{/if}
       {#each warnings as warning, i (i)}<p class="problem"><CircleAlert size={14} />{warning}</p>{/each}
       {#if notice}<p class="problem">{notice}</p>{/if}
@@ -230,6 +249,25 @@
     border-bottom: 1px solid var(--color-border);
     font-size: 11px;
     white-space: pre-wrap;
+  }
+  .problem.analysis {
+    width: 100%;
+    border-width: 0 0 1px;
+    background: transparent;
+    color: var(--color-text);
+    text-align: left;
+    cursor: pointer;
+  }
+  .problem.analysis:hover {
+    background: var(--color-surface-2);
+  }
+  .problem.analysis.err :global(svg) {
+    color: var(--color-danger);
+  }
+  .where {
+    flex: none;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
   }
   .watch {
     display: grid;

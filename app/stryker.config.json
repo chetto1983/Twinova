@@ -12,7 +12,8 @@
     "src/lib/inspector.ts",
     "src/lib/picking.ts",
     "src/lib/shortcuts.ts",
-    "src/lib/snapping.ts"
+    "src/lib/snapping.ts",
+    "src/lib/analysis.ts"
   ],
   "reporters": ["clear-text", "progress", "json"],
   "thresholds": {

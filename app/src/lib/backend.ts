@@ -6,6 +6,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import type { Edit, ProjectView } from "./project";
 import type { Built, Snapshot, ScanTiming } from "./snapshot";
 import type { DiskSources } from "./sources";
+import type { Problems } from "./analysis";
 
 export const backend = {
   scanTiming: () => invoke<ScanTiming>("scan_timing"),
@@ -33,6 +34,23 @@ export interface CatalogueEntry {
 }
 
 export const catalogue = () => invoke<CatalogueEntry[]>("catalogue");
+
+/** A completion as `analysis.rs` sends it. */
+export interface Completion {
+  label: string;
+  kind: string;
+  detail: string | null;
+  insert_text: string;
+}
+
+/** truST's analysis of the editor's texts (src-tauri/src/analysis.rs): positions are 1-based, in UTF-16 units. */
+export const analysis = {
+  analyze: (program: [string, string][], behaviours: Record<string, string>) =>
+    invoke<Problems>("analyze", { program, behaviours }),
+  hover: (file: string, line: number, column: number) => invoke<string | null>("hover", { file, line, column }),
+  completion: (file: string, line: number, column: number) =>
+    invoke<Completion[]>("completion", { file, line, column }),
+};
 
 export const onSnapshot = (f: (s: Snapshot) => void): Promise<UnlistenFn> =>
   listen<Snapshot>("snapshot", (e) => f(e.payload));

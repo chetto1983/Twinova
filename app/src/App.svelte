@@ -8,7 +8,8 @@
   import { onMount } from "svelte";
   import { m } from "./paraglide/messages.js";
   import { readPreference, writePreference } from "./lib/preferences";
-  import { backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
+  import { analysis, backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
+  import { debounce, type Problems } from "./lib/analysis";
   import { deliveredOf, formatTime, type Snapshot } from "./lib/snapshot";
   import {
     buildArgs,
@@ -63,6 +64,20 @@
   let notice = $state<string | (() => string)>("");
   const noticeText = $derived(typeof notice === "function" ? notice() : notice);
   let warnings = $state<string[]>([]);
+  /** truST's analysis of the editor's texts, 300 ms after the last change (spec 2026-11-12-st-editor-design.md,
+   *  decision 6); a failure of the analysis itself is a notice, since Build stays the referee. */
+  let problems = $state<Problems>({});
+  const analyzeLater = debounce((program: [string, string][], behaviours: Record<string, string>) => {
+    analysis.analyze(program, behaviours).then(
+      (found) => (problems = found),
+      (e) => (notice = String(e)),
+    );
+  }, 300);
+  $effect(() => {
+    const { program, behaviours } = buildArgs(sources);
+    analyzeLater.call(program, behaviours);
+    return analyzeLater.cancel;
+  });
   /** The scene was edited since the last Build. */
   let changed = $state(false);
   /** Counts the projects shown, so the view frames each when it opens and not at every edit. */
@@ -346,6 +361,7 @@
         {status}
         {error}
         {warnings}
+        {problems}
         notice={noticeText}
         {snapshot}
         onPlace={place}

@@ -2,9 +2,25 @@
   import { Cpu, ChevronDown, FileCode2, Braces, Clock3, Folder } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { edited, type Source } from "./sources";
-  let { sources = $bindable(), status }: { sources: Source[]; status: "none" | "ok" | "failed" } = $props();
+  import type { Problems } from "./analysis";
+  import StEditor from "./StEditor.svelte";
+  let {
+    sources = $bindable(),
+    status,
+    problems,
+    reveal,
+  }: {
+    sources: Source[];
+    status: "none" | "ok" | "failed";
+    problems: Problems;
+    reveal: { key: string; line: number; column: number } | null;
+  } = $props();
   let active = $state(0);
-  let scroll = $state(0);
+  // A Problems row opens its tab.
+  $effect(() => {
+    const at = reveal ? sources.findIndex((s) => s.key === reveal.key) : -1;
+    if (at >= 0) active = at;
+  });
   const current = $derived(sources[Math.min(active, sources.length - 1)]);
   const task = $derived(
     sources
@@ -13,7 +29,6 @@
       .join("\n")
       .match(/\bTASK\s+(\w+)\s*\([^)]*INTERVAL\s*:=\s*(T#[\w.]+)/i),
   );
-  const lines = $derived(current?.text.split("\n").length ?? 1);
 </script>
 
 <section class="editor">
@@ -62,18 +77,8 @@
       <span class="language">ST</span><button class="ladder" disabled title={m.ui_ladder_unavailable()}>LD</button>
     </header>
     {#if current}
-      <div class="code-area">
-        <div class="gutter" aria-hidden="true">
-          <div style={`transform:translateY(-${scroll}px)`}>
-            {#each Array(lines) as _, i (i)}<div>{i + 1}</div>{/each}
-          </div>
-        </div>
-        <textarea
-          class="data"
-          spellcheck="false"
-          bind:value={current.text}
-          aria-label={current.label}
-          onscroll={(e) => (scroll = e.currentTarget.scrollTop)}></textarea>
+      <div class="code-area" aria-label={current.label}>
+        <StEditor bind:sources {active} {problems} {reveal} />
       </div>
     {/if}
     <footer>
@@ -223,37 +228,6 @@
     flex: 1;
     min-height: 0;
     background: var(--color-bg);
-  }
-  .gutter {
-    width: 43px;
-    flex: none;
-    overflow: hidden;
-    padding-top: 9px;
-    text-align: right;
-    color: var(--color-text-disabled);
-    font: 11px/20px var(--font-mono);
-    border-right: 1px solid var(--color-border);
-  }
-  .gutter div div {
-    padding-right: 12px;
-  }
-  textarea {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    min-height: 0;
-    border: 0;
-    padding: 9px 12px;
-    resize: none;
-    background: transparent;
-    color: var(--color-text);
-    font: 11px/20px var(--font-mono);
-    tab-size: 4;
-    white-space: pre;
-    outline: 0;
-  }
-  textarea:focus-visible {
-    box-shadow: inset 0 0 0 1px var(--color-accent-muted);
   }
   footer {
     display: flex;
