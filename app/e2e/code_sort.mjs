@@ -10,6 +10,7 @@ import { join, resolve } from "node:path";
 import {
   app,
   bit,
+  bits,
   browser,
   button,
   check,
@@ -53,7 +54,7 @@ sessions(() =>
     await check("red runs to sink B, green is turned to sink C, blue is rejected", () =>
       eventually(
         async () => {
-          const counts = await Promise.all(["sink_b", "sink_c", "sink_reject"].map((s) => bit(`${s}.count`)));
+          const counts = await bits(["sink_b.count", "sink_c.count", "sink_reject.count"]);
           if (counts.some((n) => Number(n) < 1)) throw new Error(`sinks B, C and reject at ${counts.join(", ")}`);
         },
         "deliveries",
@@ -62,7 +63,7 @@ sessions(() =>
     );
     await click(button("Pause"));
     await check("the scanner has counted the cartons it read, the last code one it reads", async () => {
-      const [count, code] = await Promise.all([bit("scan_b.count"), bit("scan_b.code")]);
+      const [count, code] = await bits(["scan_b.count", "scan_b.code"]);
       if (Number(count) < 2) throw new Error(`scanner count ${count}`);
       if (!["1", "3"].includes(code)) throw new Error(`scanner code ${code}`);
     });

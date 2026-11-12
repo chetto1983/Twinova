@@ -75,16 +75,32 @@ export const click = async (selector) => {
   }
   await element.click();
 };
-const text = async (selector) => (await browser.$(selector)).getText();
+/** The text an element shows: its rendered text (`innerText`, trimmed, as WebDriver's Get Element Text) while it is
+ *  displayed, else "". WebKitWebDriver's getText returns "" for the text of any `overflow: hidden` element, though it is
+ *  on screen (measured 2026-11-12: the status bar's notice and the project button's name read empty, and read whole
+ *  once the element is `overflow: visible` or `clip`); msedgedriver reads them. */
+export async function textOf(selector) {
+  const element = await browser.$(selector);
+  if (!(await element.isDisplayed())) return "";
+  return browser.execute((e) => e.innerText.trim(), element);
+}
 /** The value cell of an I/O row, by its exact name: a scene signal (`belt_a.run`, the same in every language) or M3's
  * jam. Exact, because `belt_a.run` is also the start of `belt_a.running`. */
 export const bit = async (name) => {
   await dock("watch");
-  return text(`//li[contains(@class,"row")][.//span[normalize-space()="${name}"]]/span[last()]`);
+  return textOf(`//li[contains(@class,"row")][.//span[normalize-space()="${name}"]]/span[last()]`);
 };
+/** Several signals' values, read one after the other: WebKitWebDriver segfaulted twice in five runs of code_sort.mjs
+ *  while three reads went in parallel at Max speed, each opening the Watch pane first (dmesg, 2026-11-12). A
+ *  session's commands are meant to come one at a time. */
+export async function bits(names) {
+  const values = [];
+  for (const name of names) values.push(await bit(name));
+  return values;
+}
 export const value = async (term) => {
   await dock("watch");
-  return text(`//dt[normalize-space()="${term}"]/following-sibling::dd[1]`);
+  return textOf(`//dt[normalize-space()="${term}"]/following-sibling::dd[1]`);
 };
 /** Virtual time "m:ss.cc" in seconds. Text that is not a time throws: a NaN would make every comparison false and
  * let a check pass on nothing (run 42524833751, where the cell read as empty). */

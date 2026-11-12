@@ -10,6 +10,7 @@ import { join, resolve } from "node:path";
 import {
   app,
   bit,
+  bits,
   browser,
   button,
   check,
@@ -67,7 +68,7 @@ sessions(() =>
       // after about 20 s, the first pushed one the reject sink after about 30 s.
       eventually(
         async () => {
-          const counts = await Promise.all(["sink_b", "sink_c", "sink_reject"].map((s) => bit(`${s}.count`)));
+          const counts = await bits(["sink_b.count", "sink_c.count", "sink_reject.count"]);
           if (counts.some((n) => Number(n) < 1)) throw new Error(`sinks B, C and reject at ${counts.join(", ")}`);
         },
         "deliveries",

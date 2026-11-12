@@ -12,7 +12,19 @@
 
 import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { app, browser, button, check, click, eventually, expectEqual, bit, selectSpeed, sessions } from "./helpers.mjs";
+import {
+  app,
+  browser,
+  button,
+  check,
+  click,
+  eventually,
+  expectEqual,
+  bit,
+  selectSpeed,
+  sessions,
+  textOf,
+} from "./helpers.mjs";
 import {
   choose,
   clickAt,
@@ -168,7 +180,7 @@ sessions(async () => {
       // is not the end of it, and an app closed before then rolls the save back at the next open (storage.rs).
       await eventually(
         async () => {
-          const notice = await browser.$(`//p[@role="status"]`).getText();
+          const notice = await textOf(`//p[@role="status"]`);
           if (!notice.includes(`Saved to ${folder}`)) throw new Error(notice);
         },
         "saved",
@@ -182,7 +194,7 @@ sessions(async () => {
   await app("debug", [`--project=${folder}`], async () => {
     await check("the saved line reopens the same, with nothing rolled back, and builds", async () => {
       await eventually(async () => expectEqual((await treeNames()).length, 5, "tree"), "reopened", 10_000);
-      const notice = await browser.$(`//p[@role="status"]`).getText();
+      const notice = await textOf(`//p[@role="status"]`);
       if (notice.includes("rolled back")) throw new Error(notice);
       await eventually(
         async () =>

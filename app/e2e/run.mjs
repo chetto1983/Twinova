@@ -23,6 +23,7 @@ import {
   session,
   value,
   virtualSeconds,
+  textOf,
 } from "./helpers.mjs";
 
 const shots = process.argv[2] ? resolve(process.argv[2]) : null;
@@ -180,7 +181,7 @@ async function behaviourScenario() {
     const before = await virtualSeconds("Virtual time");
     await click(button("Build"));
     await browser.$("//*[normalize-space()='Build failed']").waitForExist({ timeout: 10_000 });
-    const shown = await (await browser.$(`//pre[contains(@class,"error-line")]`)).getText();
+    const shown = await textOf(`//pre[contains(@class,"error-line")]`);
     if (!shown.includes("components/twinova.belt@1.st:")) throw new Error(`no location in "${shown}"`);
     await sleep(1000);
     const after = await virtualSeconds("Virtual time");

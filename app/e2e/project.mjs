@@ -21,13 +21,13 @@ import {
   root,
   selectLanguage,
   sessions,
+  textOf,
 } from "./helpers.mjs";
 
 const fixtures = join(root, "src-tauri/project/tests/fixtures");
 const VALID = ["demo_m3", "two_belts_diverter"];
 const INVALID = JSON.parse(readFileSync(join(fixtures, "invalid.json"), "utf8"));
 
-const textOf = async (selector) => (await browser.$(selector)).getText();
 const treeNames = () =>
   browser.execute(() => [...document.querySelectorAll("section.tree .item-name")].map((span) => span.textContent));
 const notice = () => textOf(`//p[@role="status"]`);
