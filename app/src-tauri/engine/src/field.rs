@@ -253,6 +253,10 @@ fn resolve_blocks(
 }
 
 impl Field {
+    pub(crate) fn harness_mut(&mut self) -> &mut TestHarness {
+        &mut self.harness
+    }
+
     /// Builds the field of `project`, or `None` when no component has a behaviour. A block cannot compile alone,
     /// because its `AT %I*` needs the configuration (E202, measured), so the whole field compiles at once and each
     /// error is located in its behaviour file.

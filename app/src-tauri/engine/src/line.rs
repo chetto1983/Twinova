@@ -193,6 +193,14 @@ impl Line {
         self.controller.scan_ns()
     }
 
+    pub(crate) fn controller_mut(&mut self) -> &mut Controller {
+        &mut self.controller
+    }
+
+    pub(crate) fn field_mut(&mut self) -> Option<&mut Field> {
+        self.field.as_mut()
+    }
+
     pub fn controller(&self) -> &Controller {
         &self.controller
     }

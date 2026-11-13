@@ -1,6 +1,7 @@
 //! The line controller by address (spec 2026-11-09-component-behaviour-design.md, "The controller by address"):
 //! truST's harness at the pinned commit, scanned with virtual time, its I/O read and written through the process
-//! image as a real PLC's would be. Twinova never writes a program variable by name.
+//! image as a real PLC's would be. Twinova never writes a program variable by name on its own: only the user's writes
+//! and forces do (`controller_monitor.rs`).
 
 use trust_runtime::harness::{CompileSession, SourceFile, TestHarness};
 use trust_runtime::io::{IoAddress, IoSize};
@@ -47,6 +48,7 @@ pub struct Controller {
     declared: Vec<Declared>,
     /// Panel bits pressed since the last scan; each holds for the next scan only.
     pressed: Vec<String>,
+    forces: monitor::Forces,
 }
 
 fn st_type(ty: SignalType) -> &'static str {
@@ -105,6 +107,7 @@ impl Controller {
             scan_ns,
             declared,
             pressed: Vec::new(),
+            forces: monitor::Forces::new(),
         };
         let scene = &project.scene;
         let signals = scene.instances.iter().flat_map(|i| {
@@ -286,6 +289,10 @@ impl Controller {
     pub fn variable(&self, name: &str) -> Option<Value> {
         self.harness.get_output(name)
     }
+
+    pub(crate) fn harness_mut(&mut self) -> &mut TestHarness {
+        &mut self.harness
+    }
 }
 
 /// The period at which the program is scanned (ROADMAP 3.4): the greatest common divisor of the intervals of its
@@ -313,6 +320,10 @@ pub(crate) fn scan_period(harness: &TestHarness) -> Result<i64, String> {
         .reduce(gcd)
         .unwrap_or(DEFAULT_SCAN_NS))
 }
+
+#[path = "controller_monitor.rs"]
+mod monitor;
+pub use monitor::Target;
 
 #[cfg(test)]
 #[path = "controller_tests.rs"]
