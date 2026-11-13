@@ -134,6 +134,14 @@ and build inside the app, on Windows and Linux.
   - opening, saving or building a project folder writes `trust-lsp.toml` and `.twinova/lsp/field.st`, so the
     extension reads the project without false errors in the program; the blocks keep three false E202 errors, a
     limit of truST's per-file check.
+- Breakpoints as HOLD (ROADMAP 4.9), as an S7-1500's:
+  - a breakpoint set from the program's gutter or with F9 stops the program, its timers, the plant and virtual time;
+    the status bar reads HOLD at the file and line;
+  - Continue (F5), Step over (F10), Step into (F11), Step out (Shift+F11) and Run to cursor (Ctrl+F10), with the call
+    stack; the code and the variables table show the values the stopped statement sees;
+  - breakpoints last the session; Build, Reset, Restore and Pause let a held scan go first;
+  - truST's runtime now comes from a fork with upstream c9635b1c ported: a breakpoint in an IF's or a loop's body
+    stops in the body.
 - The PLC pane in a window of its own (ROADMAP 4.8b), for example on a second monitor:
   - a button in the dock's PLC tab opens it, and the dock says where it went;
   - the window has Build, Run/Pause and Step, and the editor with Monitoring, the variables table and forcing;

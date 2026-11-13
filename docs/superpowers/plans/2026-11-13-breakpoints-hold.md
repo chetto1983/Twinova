@@ -126,9 +126,9 @@ with VS Code's keys.
   - Then the gutter, F9, the stopped line, the bar and keys, the call stack, `StatusBar.svelte`, i18n.
   - Commit `feat(view): breakpoints, stepping and HOLD in the ST editor`.
 - [x] **Task 4: the E2E.** `breakpoints.mjs`, the spec's list on top-level lines. Commit `test(e2e): breakpoints as HOLD`.
-- [ ] **Task 5: the soak.** A breakpoint never hit, against none, in release.
-- [ ] **Task 6: the matching rule (needs the user's fork).**
+- [x] **Task 5: the soak.** A breakpoint never hit, against none, in release.
+- [x] **Task 6: the matching rule (needs the user's fork).**
   - The fork's branch from `6405915` with `c9635b1c`'s rule and its tests, and the `[patch]`.
   - A test and an E2E check: line 40 in the IF's body.
   - Commit `fix(deps): stop a body breakpoint in the body (truST c9635b1c)`.
-- [ ] **Task 7: documents.** Verification, ROADMAP 4.9, CHANGELOG. The pull request, merged when green.
+- [x] **Task 7: documents.** Verification, ROADMAP 4.9, CHANGELOG. The pull request, merged when green.

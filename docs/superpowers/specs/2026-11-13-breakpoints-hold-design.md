@@ -153,6 +153,8 @@ breakpoint was set on line 40 of `Main.st`, `count := count + 1;`, inside `IF en
 
 ## What this does not prove
 
+- Breakpoints following their lines while the text is edited: they keep their numbers, and each Build resolves them
+  again (amended in the plan, decision 6, and told to the user).
 - Conditions, hit counts and logpoints (truST has them; a follow-up).
 - Breakpoints in blocks.
 - Writing while held.
