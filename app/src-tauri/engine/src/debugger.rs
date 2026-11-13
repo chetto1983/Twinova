@@ -1,7 +1,11 @@
-//! Breakpoints that hold the line (spec 2026-11-13-breakpoints-hold-design.md). At a stop, truST's hook blocks the
-//! scanning thread until it is resumed (`host/debug/control/hook.rs`), so the engine, the plant and virtual time stand:
-//! a PLC in HOLD. A `Debugger` therefore works without the engine, which that thread holds while it is stopped: it
-//! resolves lines from statement locations copied at attach, and reads values from the paused snapshot.
+//! Breakpoints that hold the line (specs 2026-11-13-breakpoints-hold-design.md and -breakpoints-complete-design.md).
+//! At a stop, truST's hook blocks the scanning thread until it is resumed (`host/debug/control/hook.rs`), so the engine,
+//! the plant and virtual time stand: a PLC in HOLD. A `Debugger` therefore works without the engine, which that thread
+//! holds while it is stopped: it resolves lines from statement locations copied at attach, reads values from the paused
+//! snapshot, and hands a write made while held to the engine through a queue.
+//!
+//! One debugger serves one runtime: the PLC's, whose files are each a runtime file, or the field's, whose blocks sit in
+//! one generated source at their spans (field.rs).
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -12,16 +16,23 @@ use trust_runtime::debug::{
     resolve_breakpoint_location,
 };
 use trust_runtime::harness::{TestHarness, parse_debug_expression};
-use trust_runtime::value::format_user_value;
+use trust_runtime::memory::InstanceId;
+use trust_runtime::value::{Value, format_user_value};
 
-use crate::watch::scalar;
+use crate::controller::Target;
+pub use crate::debugger_kinds::{Breakpoint, Hit, HitOp, Log};
+use crate::debugger_kinds::{compile, message};
+use crate::watch::{scalar, value_from};
 
-/// Where the program is held: a file of the program, a 1-based line, and the call stack, innermost first.
+/// Where the program is held: a file, a 1-based line, the call stack innermost first, and in a block, the device whose
+/// instance it is.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Hold {
     pub file: String,
     pub line: u32,
     pub frames: Vec<(String, u32)>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -33,30 +44,56 @@ pub enum Resume {
     Out,
 }
 
-/// An expression of the program read at the stop, formatted as the editor shows it.
-type Reader = dyn Fn(&DebugControl, &str) -> Option<String> + Send + Sync;
+/// Writes made while held, for the engine to log at its next millisecond (spec decision 6).
+pub(crate) type HeldWrites = Arc<Mutex<Vec<(Target, Value)>>>;
+
+/// A file the user edits, inside a runtime file: its path, the runtime file's id, its first line there (0-based) and
+/// its number of lines.
+#[derive(Debug, Clone)]
+pub(crate) struct Place {
+    pub path: String,
+    pub file_id: u32,
+    pub first_line: u32,
+    pub lines: u32,
+}
+
+/// A breakpoint as the user set it, and as truST takes it.
+type Built = (Breakpoint, DebugBreakpoint);
+
+/// An expression of the program read at the stop.
+type Reader = dyn Fn(&DebugControl, &str) -> Option<Value> + Send + Sync;
+type Parser = dyn Fn(&str) -> Result<trust_runtime::program_model::Expr, String> + Send + Sync;
 
 #[derive(Clone)]
 pub struct Debugger {
     control: DebugControl,
-    /// The program's files in Build's order: a file's place is its id in the runtime.
-    files: Vec<(String, String)>,
+    places: Vec<Place>,
+    /// Each runtime file's text and statements, by id.
+    texts: Vec<String>,
     statements: Vec<Vec<SourceLocation>>,
-    /// The user's breakpoints by file, as lines; Run to cursor adds one for a single stop.
-    lines: Arc<Mutex<BTreeMap<usize, Vec<u32>>>>,
-    cursor: Arc<Mutex<Option<usize>>>,
+    /// The field's devices and their blocks' instances; none for the PLC.
+    devices: Vec<(String, InstanceId)>,
+    /// The user's breakpoints by place, as set and as built for truST; Run to cursor adds one for a single stop.
+    breakpoints: Arc<Mutex<BTreeMap<usize, Vec<Built>>>>,
+    cursor: Arc<Mutex<Option<u32>>>,
     read: Arc<Reader>,
+    parse: Arc<Parser>,
+    /// The PLC's: where a write made while held goes. A block is read-only, so the field has none.
+    writes: Option<HeldWrites>,
 }
 
 impl Debugger {
-    /// The debugger of `harness`'s program, made of `files` in Build's order; `control` is attached to it.
+    /// The debugger of `harness`'s runtime, whose files are `texts` by id; `control` is attached to it.
     pub(crate) fn new(
         control: DebugControl,
         harness: &TestHarness,
-        files: Vec<(String, String)>,
+        texts: Vec<String>,
+        places: Vec<Place>,
+        devices: Vec<(String, InstanceId)>,
+        writes: Option<HeldWrites>,
     ) -> Self {
         let runtime = harness.runtime();
-        let statements = (0..files.len())
+        let statements = (0..texts.len())
             .map(|id| {
                 let id = u32::try_from(id).unwrap_or(u32::MAX);
                 runtime
@@ -64,90 +101,132 @@ impl Debugger {
                     .map_or_else(Vec::new, <[_]>::to_vec)
             })
             .collect();
-        let registry = Mutex::new(runtime.registry().clone());
+        let registry = Arc::new(Mutex::new(runtime.registry().clone()));
         let (profile, stdlib) = (runtime.profile(), runtime.stdlib().clone());
+        let parsing = registry.clone();
+        let parse = move |text: &str| {
+            let mut registry = parsing.lock().map_err(|e| e.to_string())?;
+            parse_debug_expression(text, &mut registry, profile, &[]).map_err(|e| e.to_string())
+        };
         let read = move |control: &DebugControl, text: &str| {
             let mut registry = registry.lock().ok()?;
             let expr = parse_debug_expression(text, &mut registry, profile, &[]).ok()?;
             let value = control.with_snapshot(|snapshot| {
                 snapshot.evaluate_expression(&expr, &registry, Some(&stdlib), &profile, None)
             })?;
-            value.ok().and_then(scalar).map(|v| format_user_value(&v))
+            value.ok()
         };
         Self {
             control,
-            files,
+            places,
+            texts,
             statements,
-            lines: Arc::default(),
+            devices,
+            breakpoints: Arc::default(),
             cursor: Arc::default(),
             read: Arc::new(read),
+            parse: Arc::new(parse),
+            writes,
         }
     }
 
-    fn file(&self, path: &str) -> Result<usize, String> {
-        (self.files.iter().position(|(p, _)| p == path))
-            .ok_or_else(|| format!("{path} is not a file of the program"))
+    /// The places of a runtime whose every file is one place: the PLC's.
+    pub(crate) fn whole_files(files: &[(String, String)]) -> Vec<Place> {
+        (files.iter().enumerate())
+            .map(|(id, (path, text))| Place {
+                path: path.clone(),
+                file_id: u32::try_from(id).unwrap_or(u32::MAX),
+                first_line: 0,
+                lines: u32::try_from(text.lines().count()).unwrap_or(u32::MAX),
+            })
+            .collect()
     }
 
-    /// The statement on 1-based `line` of file `id`, or the nearest one when the line has none
+    fn place(&self, path: &str) -> Result<usize, String> {
+        (self.places.iter().position(|p| p.path == path)).ok_or_else(|| {
+            let runtime = if self.writes.is_some() {
+                "program"
+            } else {
+                "field"
+            };
+            format!("{path} is not a file of the {runtime}")
+        })
+    }
+
+    /// The statement on 1-based `line` of place `at`, or the nearest one in it when the line has none
     /// (`resolve_breakpoint_location`, searched from the line's start).
-    fn statement(&self, id: usize, line: u32) -> Option<SourceLocation> {
-        let file_id = u32::try_from(id).ok()?;
-        let (text, statements) = (&self.files[id].1, &self.statements[id]);
-        resolve_breakpoint_location(text, file_id, statements, line.checked_sub(1)?, 0)
+    fn statement(&self, at: usize, line: u32) -> Option<SourceLocation> {
+        let place = &self.places[at];
+        let row = place.first_line + line.checked_sub(1)?;
+        let (id, text) = (place.file_id as usize, &self.texts[place.file_id as usize]);
+        let found = resolve_breakpoint_location(text, place.file_id, &self.statements[id], row, 0)?;
+        (self.line_of(&found)?.0 == place.path).then_some(found)
     }
 
     fn line_of(&self, location: &SourceLocation) -> Option<(String, u32)> {
-        let (path, text) = self.files.get(usize::try_from(location.file_id).ok()?)?;
-        Some((path.clone(), location_to_line_col(text, location).0 + 1))
+        let text = self.texts.get(usize::try_from(location.file_id).ok()?)?;
+        let row = location_to_line_col(text, location).0;
+        let place = (self.places.iter()).find(|p| {
+            p.file_id == location.file_id && (p.first_line..p.first_line + p.lines).contains(&row)
+        })?;
+        Some((place.path.clone(), row - place.first_line + 1))
     }
 
-    /// Arms file `id`'s breakpoints at `lines`, each moved to its statement's line, and gives those lines.
-    fn arm(&self, id: usize, lines: &[u32]) -> Vec<u32> {
-        let mut resolved: Vec<(u32, SourceLocation)> = (lines.iter())
-            .filter_map(|&line| self.statement(id, line))
-            .filter_map(|loc| Some((self.line_of(&loc)?.1, loc)))
+    /// Arms runtime file `file_id` with every place's breakpoints in it, and `extra`.
+    fn arm(&self, file_id: u32, extra: Option<DebugBreakpoint>) {
+        let kept = self
+            .breakpoints
+            .lock()
+            .map(|b| b.clone())
+            .unwrap_or_default();
+        let mut armed: Vec<DebugBreakpoint> = (kept.iter())
+            .filter(|(at, _)| self.places[**at].file_id == file_id)
+            .flat_map(|(_, set)| set.iter().map(|(_, built)| built.clone()))
             .collect();
-        resolved.sort_by_key(|(line, _)| *line);
-        resolved.dedup_by_key(|(line, _)| *line);
-        let breakpoints = resolved
-            .iter()
-            .map(|(_, loc)| DebugBreakpoint::new(*loc))
-            .collect();
-        self.control
-            .set_breakpoints_for_file(u32::try_from(id).unwrap_or(u32::MAX), breakpoints);
-        resolved.into_iter().map(|(line, _)| line).collect()
+        armed.extend(extra);
+        self.control.set_breakpoints_for_file(file_id, armed);
     }
 
-    /// Sets `path`'s breakpoints to `lines`, each moved to its statement's line; a line without one is dropped. Gives
-    /// the lines set.
-    pub fn set(&self, path: &str, lines: &[u32]) -> Result<Vec<u32>, String> {
-        let id = self.file(path)?;
-        let set = self.arm(id, lines);
-        self.lines
+    /// Sets `path`'s breakpoints, each moved to its statement's line, a line without one dropped, and gives them as
+    /// set.
+    pub fn set(&self, path: &str, breakpoints: &[Breakpoint]) -> Result<Vec<Breakpoint>, String> {
+        let at = self.place(path)?;
+        let mut set: Vec<Built> = Vec::new();
+        for breakpoint in breakpoints {
+            let Some(location) = self.statement(at, breakpoint.line) else {
+                continue;
+            };
+            let line = self.line_of(&location).map_or(breakpoint.line, |(_, l)| l);
+            if set.iter().any(|(b, _)| b.line == line) {
+                continue;
+            }
+            let moved = Breakpoint {
+                line,
+                ..breakpoint.clone()
+            };
+            let built = compile(&moved, location, &mut |t| (self.parse)(t))?;
+            set.push((moved, built));
+        }
+        set.sort_by_key(|(b, _)| b.line);
+        let shown = set.iter().map(|(b, _)| b.clone()).collect();
+        self.breakpoints
             .lock()
             .map_err(|e| e.to_string())?
-            .insert(id, set.clone());
-        Ok(set)
+            .insert(at, set);
+        self.arm(self.places[at].file_id, None);
+        Ok(shown)
     }
 
     /// Runs to `line` of `path`: a breakpoint for one stop, then the user's breakpoints as they were.
     pub fn run_to(&self, path: &str, line: u32) -> Result<(), String> {
-        let id = self.file(path)?;
-        self.statement(id, line)
+        let at = self.place(path)?;
+        let location = (self.statement(at, line))
             .ok_or_else(|| format!("line {line} of {path} has no statement"))?;
-        let mut lines = self.user_lines(id);
-        lines.push(line);
-        self.arm(id, &lines);
-        *self.cursor.lock().map_err(|e| e.to_string())? = Some(id);
+        let file_id = self.places[at].file_id;
+        self.arm(file_id, Some(DebugBreakpoint::new(location)));
+        *self.cursor.lock().map_err(|e| e.to_string())? = Some(file_id);
         self.control.continue_run();
         Ok(())
-    }
-
-    fn user_lines(&self, id: usize) -> Vec<u32> {
-        (self.lines.lock().ok())
-            .and_then(|lines| lines.get(&id).cloned())
-            .unwrap_or_default()
     }
 
     /// Where the program is held, or `None` while it runs. A stop after Run to cursor gives back the user's
@@ -156,8 +235,8 @@ impl Debugger {
         if !self.control.is_paused() {
             return None;
         }
-        if let Some(id) = self.cursor.lock().ok().and_then(|mut c| c.take()) {
-            self.arm(id, &self.user_lines(id));
+        if let Some(file_id) = self.cursor.lock().ok().and_then(|mut c| c.take()) {
+            self.arm(file_id, None);
         }
         let (file, line) = self.line_of(&self.control.last_location()?)?;
         let mut frames: Vec<_> = self.control.frame_locations().into_iter().collect();
@@ -166,7 +245,25 @@ impl Debugger {
             .iter()
             .filter_map(|(_, loc)| self.line_of(loc))
             .collect();
-        Some(Hold { file, line, frames })
+        Some(Hold {
+            file,
+            line,
+            frames,
+            device: self.device(),
+        })
+    }
+
+    /// The device whose block instance the stopped frame runs in.
+    fn device(&self) -> Option<String> {
+        let instance = self.control.with_snapshot(|snapshot| {
+            snapshot
+                .storage
+                .current_frame()
+                .and_then(|frame| frame.instance_id)
+        })??;
+        (self.devices.iter())
+            .find(|(_, id)| *id == instance)
+            .map(|(device, _)| device.clone())
     }
 
     pub fn resume(&self, how: Resume) {
@@ -184,15 +281,64 @@ impl Debugger {
         // The snapshot outlives its stop: while running it would show the last stop's values.
         let paused = self.control.is_paused();
         (texts.iter())
-            .map(|text| paused.then(|| (self.read)(&self.control, text)).flatten())
+            .map(|text| {
+                let value = paused.then(|| (self.read)(&self.control, text)).flatten();
+                value.and_then(scalar).map(|v| format_user_value(&v))
+            })
+            .collect()
+    }
+
+    /// Writes `text` to the program variable at `path` (`Main.count`, `Main.carry.PT`) while held (decision 5). The
+    /// value shows in the snapshot at once and reaches the program at the next cycle, as truST queues it; the engine
+    /// logs it at its next millisecond, where a replay gives the same trajectory (measured).
+    pub fn write(&self, path: &str, text: &str) -> Result<(), String> {
+        let writes = self.writes.as_ref().ok_or("a block is read-only")?;
+        if !self.control.is_paused() {
+            return Err("the PLC is not held".into());
+        }
+        let unknown = || format!("{path} is not a variable of the PLC");
+        let (owner, name) = path.rsplit_once('.').ok_or_else(unknown)?;
+        let (program, member) = path.split_once('.').ok_or_else(unknown)?;
+        let Some(Value::Instance(id)) = (self.read)(&self.control, owner) else {
+            return Err(unknown());
+        };
+        let current = (self.control)
+            .with_snapshot(|s| s.storage.get_instance_var(id, name).cloned())
+            .flatten()
+            .ok_or_else(unknown)?;
+        let current =
+            scalar(current).ok_or_else(|| format!("{path} has no single value to write"))?;
+        let value = value_from(|t| (self.read)(&self.control, t), text, &current)?;
+        (self.control)
+            .try_enqueue_instance_write(id, name, value.clone())
+            .map_err(|e| format!("{path}: {e:?}"))?;
+        (self.control).with_snapshot(|s| s.storage.set_instance_var(id, name, value.clone()));
+        writes
+            .lock()
+            .map_err(|e| e.to_string())?
+            .push((Target::variable(program, member), value));
+        Ok(())
+    }
+
+    /// The lines logpoints wrote since the last call, where they are.
+    pub fn logs(&self) -> Vec<Log> {
+        (self.control.drain_logs().into_iter())
+            .filter_map(|log| {
+                let (file, line) = self.line_of(&log.location?)?;
+                Some(Log {
+                    file,
+                    line,
+                    message: message(&log.message),
+                })
+            })
             .collect()
     }
 
     /// No breakpoint left and the scan running: what Reset, Build, Restore and Pause do first (decision 9).
     pub fn let_go(&self) {
         self.control.clear_breakpoints();
-        if let Ok(mut lines) = self.lines.lock() {
-            lines.clear();
+        if let Ok(mut breakpoints) = self.breakpoints.lock() {
+            breakpoints.clear();
         }
         self.control.continue_run();
     }
@@ -201,3 +347,7 @@ impl Debugger {
 #[cfg(test)]
 #[path = "debugger_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "debugger_kinds_tests.rs"]
+mod kinds_tests;

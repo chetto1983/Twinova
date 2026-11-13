@@ -6,8 +6,8 @@ use trust_runtime::harness::{TestHarness, parse_debug_expression};
 use trust_runtime::program_model::Expr;
 use trust_runtime::value::{Value, format_user_value, normalize_assignment_for_target};
 
-/// The runtime a watch reads.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The runtime a watch reads, or a debugger serves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Scope {
     /// The line's PLC, the project's program.
     Plc,
@@ -113,14 +113,26 @@ pub(crate) fn value_for(
     text: &str,
     current: &Value,
 ) -> Result<Value, String> {
+    value_from(
+        |text| {
+            let expr = parse(harness, text).ok()?;
+            harness.runtime_mut().evaluate_expression(&expr, None).ok()
+        },
+        text,
+        current,
+    )
+}
+
+/// `value_for`, with `evaluate` reading an expression wherever the value lives: the harness, or a paused snapshot
+/// (debugger.rs).
+pub(crate) fn value_from(
+    mut evaluate: impl FnMut(&str) -> Option<Value>,
+    text: &str,
+    current: &Value,
+) -> Result<Value, String> {
     let wanted = type_name(current).unwrap_or("a value of its type");
     let mut evaluate = |text: &str| -> Option<Value> {
-        let expr = parse(harness, text).ok()?;
-        let value = harness
-            .runtime_mut()
-            .evaluate_expression(&expr, None)
-            .ok()?;
-        let value = normalize_assignment_for_target(current, value);
+        let value = normalize_assignment_for_target(current, evaluate(text)?);
         same_kind(&value, current).then_some(value)
     };
     let typed = || type_name(current).map(|ty| format!("{ty}#{}", text.trim()));

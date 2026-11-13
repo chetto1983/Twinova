@@ -5,6 +5,7 @@
 pub mod build;
 pub mod controller;
 pub mod debugger;
+mod debugger_kinds;
 mod drive;
 pub mod engine;
 pub mod field;

@@ -9,6 +9,8 @@ use twinova_project::Project;
 use twinova_project::model::SignalType;
 
 use crate::controller::Target;
+use crate::debugger::Debugger;
+use crate::field::Field;
 use crate::line::Line;
 use crate::watch::{self, Compiled, Scope, Watch};
 
@@ -99,6 +101,8 @@ pub struct Engine {
     pub lag_ms: i64,
     /// What the editor monitors, ready to read.
     watches: Vec<Compiled>,
+    /// Writes the PLC's debugger made while held, logged at the next millisecond (debugger.rs).
+    held_writes: crate::debugger::HeldWrites,
 }
 
 fn text(value: &Value, ty: SignalType) -> String {
@@ -170,6 +174,7 @@ impl Engine {
             fault: None,
             lag_ms: 0,
             watches: Vec::new(),
+            held_writes: Default::default(),
         };
         Ok((engine, warnings))
     }
@@ -236,11 +241,27 @@ impl Engine {
 
     /// The program's debugger, attached as a force attaches it (spec 2026-11-13-breakpoints-hold-design.md,
     /// decision 10). It works without the engine, which a stopped scan holds.
-    pub fn debugger(&mut self) -> crate::debugger::Debugger {
+    pub fn debugger(&mut self) -> Debugger {
         let files = self.project.program.clone();
+        let places = Debugger::whole_files(&files);
+        let texts = files.into_iter().map(|(_, text)| text).collect();
+        let writes = Some(self.held_writes.clone());
         let controller = self.line.controller_mut();
         let control = controller.debug();
-        crate::debugger::Debugger::new(control, controller.harness_mut(), files)
+        Debugger::new(
+            control,
+            controller.harness_mut(),
+            texts,
+            places,
+            Vec::new(),
+            writes,
+        )
+    }
+
+    /// The field's debugger, for breakpoints in blocks (spec 2026-11-13-breakpoints-complete-design.md, decision 4);
+    /// `None` when no device has a behaviour.
+    pub fn field_debugger(&mut self) -> Option<Debugger> {
+        self.line.field_mut().map(Field::debugger)
     }
 
     /// The forces in effect, with their values as the editor shows them.
@@ -341,6 +362,20 @@ impl Engine {
         Ok(warnings)
     }
 
+    /// Logs the writes made while a scan was held, at this millisecond, the one after it: truST has queued them for the
+    /// next cycle already, so they are logged, not applied, and a replay applies them here (spec
+    /// 2026-11-13-breakpoints-complete-design.md, decision 6, measured).
+    fn log_held_writes(&mut self) {
+        let Ok(mut held) = self.held_writes.lock() else {
+            return;
+        };
+        let now = self.line.time_ns();
+        (self.inputs).extend(
+            held.drain(..)
+                .map(|(target, value)| (now, Input::Write(target, value))),
+        );
+    }
+
     /// The physics world's fingerprint: equal for equal runs, on every platform.
     pub fn fingerprint(&self) -> u64 {
         self.line.world().fingerprint()
@@ -352,6 +387,7 @@ impl Engine {
 
     fn advance_to(&mut self, time_ns: i64) -> Result<(), String> {
         while self.line.time_ns() < time_ns {
+            self.log_held_writes();
             if let Err(fault) = self.line.step_ms() {
                 self.fault = Some(fault.clone());
                 return Err(fault);
