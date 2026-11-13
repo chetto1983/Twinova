@@ -28,6 +28,20 @@ pub struct Analysis {
 #[derive(Default)]
 pub struct AnalysisState(Mutex<Analysis>);
 
+impl AnalysisState {
+    /// Runs `f` on the engine with `text` as `file`'s: what the editor holds now.
+    pub(crate) fn on<T>(
+        &self,
+        file: &str,
+        text: String,
+        f: impl FnOnce(&BrowserAnalysisEngine) -> Result<T, String>,
+    ) -> Result<T, String> {
+        let mut analysis = self.0.lock().map_err(|_| "analysis lock poisoned")?;
+        analysis.with_text(file, text)?;
+        f(&analysis.engine)
+    }
+}
+
 impl Analysis {
     fn replace(&mut self, documents: Vec<DocumentInput>) -> Result<(), String> {
         (self.engine.replace_documents(documents.clone())).map_err(|e| e.to_string())?;
@@ -140,7 +154,7 @@ pub fn analyze_project(
 }
 
 /// The engine's position of the editor's 1-based `line` and `column`.
-fn position(line: u32, column: u32) -> Position {
+pub(crate) fn position(line: u32, column: u32) -> Position {
     Position {
         line: line.saturating_sub(1),
         character: column.saturating_sub(1),
@@ -182,16 +196,13 @@ pub fn hover(
     line: u32,
     column: u32,
 ) -> Result<Option<String>, String> {
-    let mut analysis = state.0.lock().map_err(|_| "analysis lock poisoned")?;
-    analysis.with_text(&file, text)?;
-    let request = HoverRequest {
-        uri: file,
-        position: position(line, column),
-    };
-    Ok((analysis.engine)
-        .hover(request)
-        .map_err(|e| e.to_string())?
-        .map(|h| h.contents))
+    state.on(&file.clone(), text, |engine| {
+        let request = HoverRequest {
+            uri: file,
+            position: position(line, column),
+        };
+        Ok((engine.hover(request).map_err(|e| e.to_string())?).map(|h| h.contents))
+    })
 }
 
 /// What may be typed at a place of `file`, `text` being the file as the editor holds it now.
@@ -203,14 +214,14 @@ pub fn completion(
     line: u32,
     column: u32,
 ) -> Result<Vec<Completion>, String> {
-    let mut analysis = state.0.lock().map_err(|_| "analysis lock poisoned")?;
-    analysis.with_text(&file, text)?;
     let request = CompletionRequest {
-        uri: file,
+        uri: file.clone(),
         position: position(line, column),
         limit: None,
     };
-    let items = (analysis.engine.completion(request)).map_err(|e| e.to_string())?;
+    let items = state.on(&file, text, |engine| {
+        engine.completion(request).map_err(|e| e.to_string())
+    })?;
     Ok(items
         .into_iter()
         .map(|c| Completion {
@@ -224,4 +235,4 @@ pub fn completion(
 
 #[cfg(test)]
 #[path = "analysis_tests.rs"]
-mod tests;
+pub(crate) mod tests;

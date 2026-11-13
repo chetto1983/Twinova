@@ -61,6 +61,19 @@ tutto"), decisions 1 to 5.
 2. **The quick fix opens the bar; it does not edit the text itself.** The class and type are the user's choice, as in
    CODESYS's Auto Declare.
 
+3. **The template is offered when `(` is typed after an FB instance or a function** (changed in Task 1), not as two more
+   items of every completion list.
+   - It takes one signature per `(`, on the text as typed, with no synthetic copy.
+   - It is TIA's moment too: its Call options open at the `(`.
+4. **Function or FB comes from the symbol table** (`lookup`, `SymbolKind::Function`).
+   - truST's signature knows it (`return_type`) but keeps it private.
+   - A name with a signature but no symbol is a standard function.
+5. **Measured in Task 1, in the app's tests:**
+   - TON's parameters come in declaration order: IN, PT, Q, ET;
+   - LIMIT's begin with MN;
+   - a user function gives its inputs, then in-outs, then outputs, as declared.
+   - Not measured: a reference from the program into a block. The 4.4a program calls no block.
+
 ## File structure
 
 | File | Change |
@@ -76,7 +89,7 @@ tutto"), decisions 1 to 5.
 
 ## Tasks
 
-- [ ] **Task 1: the app (Rust).** Tests first, then a commit.
+- [x] **Task 1: the app (Rust).** Tests first, then a commit.
   - Measure: `call_signature_info`'s order for TON and for a function; a reference from `Main.st` into a block; whether
     a truST snippet goes in as typed today.
   - Then:

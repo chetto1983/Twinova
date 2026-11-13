@@ -1,12 +1,16 @@
 pub mod analysis;
+pub mod call_templates;
 pub mod commands;
 pub mod debug_commands;
 pub mod declarations;
 pub mod demo;
 pub mod edit_commands;
+mod frontend;
 pub mod lsp_files;
 pub mod monitor;
+pub mod navigation;
 pub mod plc_window;
+mod positions;
 pub mod project_commands;
 #[cfg(test)]
 mod test_fixtures;
@@ -39,6 +43,10 @@ pub fn run() {
             analysis::analyze,
             analysis::hover,
             analysis::completion,
+            navigation::definition,
+            navigation::references,
+            call_templates::call_template,
+            call_templates::declare_proposal,
             commands::build,
             commands::scan_timing,
             commands::change_program,
@@ -58,6 +66,7 @@ pub fn run() {
             declarations::declarations_of,
             declarations::edit_declaration,
             declarations::rename_declaration,
+            declarations::rename_symbol,
             monitor::watch_range,
             monitor::unwatch,
             monitor::watched,
