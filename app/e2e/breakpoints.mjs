@@ -1,5 +1,5 @@
 // End-to-end run of breakpoints as HOLD (spec 2026-11-13-breakpoints-hold-design.md) on the 4.4a line, at top-level
-// lines, where the pinned runtime stops on the line itself (plan, Task 6): a breakpoint from the glyph margin and F9,
+// lines, and in an IF's body through the fork's matching rule (plan, Task 6): a breakpoint from the glyph margin and F9,
 // HOLD with virtual time standing, the value at the stop, F10, F5, Run to cursor, a breakpoint removed, and Reset
 // while held.
 //
@@ -147,6 +147,34 @@ sessions(() =>
         "reset",
         10_000,
       );
+    });
+    await check("a breakpoint in an IF's body stops when the body runs, with its values", async () => {
+      // truST c9635b1c, ported through the fork (spec decision 1): at the pin this stopped at the IF, at time zero.
+      await clickGutter(37);
+      await clickGutter(40);
+      await eventually(async () => expectEqual(await marks(), ["40 debug-breakpoint"], "marks"), "set", 5_000);
+      await click(button("Run"));
+      await heldAt(40);
+      const at = await statusSeconds();
+      if (at < 5) throw new Error(`stopped at ${at} s, before the first carton enters`);
+      await eventually(
+        async () => {
+          if (!(await drawn()).includes("40 monitor-value 0")) throw new Error((await drawn()).join(" | "));
+        },
+        "count before the line",
+        10_000,
+      );
+      await browser.keys(["F11"]);
+      await heldAt(41);
+      await eventually(
+        async () => {
+          if (!(await drawn()).includes("40 monitor-value 1")) throw new Error((await drawn()).join(" | "));
+        },
+        "count after the line",
+        10_000,
+      );
+      await browser.saveScreenshot(`${out}/breakpoint-body.png`);
+      await click(button("Reset"));
     });
   }),
 );
