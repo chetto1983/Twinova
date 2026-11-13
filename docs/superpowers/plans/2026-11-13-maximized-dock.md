@@ -62,6 +62,6 @@ Svelte 5, `@lucide/svelte` (`Maximize2` and `Minimize2`, in the installed versio
   - Then the component, the style and the messages.
   - The gates, and the two E2E files.
   - Commit `feat(view): maximize the dock over the workspace`.
-- [ ] **Task 2: acceptance and documents.**
+- [x] **Task 2: acceptance and documents.**
   - The verification file; ROADMAP 4.8a ✅, 4.8b listed; CHANGELOG.
   - Push; the pull request merged when CI is green.
