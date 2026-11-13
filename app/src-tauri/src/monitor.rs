@@ -246,6 +246,14 @@ pub struct Row {
     pub instance: bool,
 }
 
+/// What the editor monitors, kept for a held line (spec 2026-11-13-breakpoints-hold-design.md, decision 6): its watches
+/// in the values' order, and the table's rows with theirs, which need the engine to be listed again.
+#[derive(Default)]
+pub(crate) struct Monitored {
+    watches: Vec<Watch>,
+    table: Vec<(Row, Watch)>,
+}
+
 /// What the editor shows of a file while monitoring: the spots in the code, then the table's rows, the values coming
 /// in that order.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -315,35 +323,64 @@ pub fn watch_range(
         (true, Some(device)) => Some(Owner::Device(device)),
         (true, None) => None,
     };
-    with_engine(&state, |e| {
-        let table = match (text, owner) {
-            (Some(text), Some(owner)) => rows(e, &text, &owner, &unfolded),
-            _ => Vec::new(),
-        };
-        let watches: Vec<Watch> = (found.iter().map(|(_, w)| w.clone()))
-            .chain(table.iter().map(|(_, w)| w.clone()))
-            .collect();
-        e.watch(&watches);
-        Ok(Watched {
-            spots: found.into_iter().map(|(s, _)| s).collect(),
-            rows: table.into_iter().map(|(r, _)| r).collect(),
-        })
+    let mut monitored = state.monitored.lock().map_err(|e| e.to_string())?;
+    // While held, the engine is in its scan: the spots are found in the text and the table stays as it was.
+    let held = state.held();
+    let table = match held {
+        Some(_) => monitored.table.clone(),
+        None => with_engine(&state, |e| {
+            Ok(match (text, owner) {
+                (Some(text), Some(owner)) => rows(e, &text, &owner, &unfolded),
+                _ => Vec::new(),
+            })
+        })?,
+    };
+    let watches: Vec<Watch> = (found.iter().map(|(_, w)| w.clone()))
+        .chain(table.iter().map(|(_, w)| w.clone()))
+        .collect();
+    if held.is_none() {
+        with_engine(&state, |e| {
+            e.watch(&watches);
+            Ok(())
+        })?;
+    }
+    let rows = table.iter().map(|(r, _)| r.clone()).collect();
+    *monitored = Monitored { watches, table };
+    Ok(Watched {
+        spots: found.into_iter().map(|(s, _)| s).collect(),
+        rows,
     })
 }
 
 /// Monitoring off: the engine reads nothing.
 #[tauri::command]
 pub fn unwatch(state: State<'_, AppState>) -> Result<(), String> {
+    *state.monitored.lock().map_err(|e| e.to_string())? = Monitored::default();
+    if state.held().is_some() {
+        return Ok(());
+    }
     with_engine(&state, |e| {
         e.watch(&[]);
         Ok(())
     })
 }
 
-/// The monitored values now, for a paused or stepped line.
+/// The monitored values now, for a paused or stepped line, or as the held statement sees them; a block's read nothing
+/// while held, since its runtime is the field's.
 #[tauri::command]
 pub fn watched(state: State<'_, AppState>) -> Result<Vec<Option<String>>, String> {
-    with_engine(&state, |e| Ok(e.watched()))
+    let Some(debugger) = state.held() else {
+        return with_engine(&state, |e| Ok(e.watched()));
+    };
+    let monitored = state.monitored.lock().map_err(|e| e.to_string())?;
+    Ok((monitored.watches.iter())
+        .map(|w| match w {
+            Watch::Path(Scope::Plc, text) | Watch::Condition(Scope::Plc, text) => {
+                debugger.read(std::slice::from_ref(text)).pop().flatten()
+            }
+            Watch::Path(Scope::Field, _) | Watch::Condition(Scope::Field, _) => None,
+        })
+        .collect())
 }
 
 /// A force in effect, as the Watch pane lists it.

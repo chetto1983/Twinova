@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use trust_runtime::debug::{
     DebugBreakpoint, DebugControl, SourceLocation, location_to_line_col,
     resolve_breakpoint_location,
@@ -24,7 +24,8 @@ pub struct Hold {
     pub frames: Vec<(String, u32)>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Resume {
     Continue,
     Over,

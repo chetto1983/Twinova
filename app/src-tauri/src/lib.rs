@@ -1,5 +1,6 @@
 pub mod analysis;
 pub mod commands;
+pub mod debug_commands;
 pub mod declarations;
 pub mod demo;
 pub mod edit_commands;
@@ -47,6 +48,10 @@ pub fn run() {
             commands::set_sink_blocked,
             commands::pause,
             commands::run,
+            debug_commands::set_breakpoints,
+            debug_commands::run_to_cursor,
+            debug_commands::resume,
+            debug_commands::hold,
             commands::save_state,
             commands::restore_state,
             declarations::declarations_of,

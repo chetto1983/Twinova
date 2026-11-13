@@ -103,7 +103,7 @@ with VS Code's keys.
     - letting go runs free;
     - a line with no statement takes the nearest one.
   - Commit `feat(engine): breakpoints that hold the line`.
-- [ ] **Task 2: the app's commands.**
+- [x] **Task 2: the app's commands.**
   - Tests first:
     - while held, `with_engine` answers HOLD within 100 ms;
     - Step stopped by a breakpoint returns after a resume;
