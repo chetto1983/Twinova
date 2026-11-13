@@ -13,18 +13,21 @@ import {
   check,
   click,
   dock,
+  drawn,
   editorText,
   eventually,
   expectEqual,
   fixtureCopy,
   out,
+  BAR,
+  pickRow,
   selectSpeed,
   sessions,
+  setInput,
   textOf,
 } from "./helpers.mjs";
 
 const folder = fixtureCopy("two_belts_diverter");
-const BAR = `//div[@role="group"][@aria-label="Value to write or force"]`;
 
 /** The value cell of the variables table's row `name`: a declaration's input or a member's text. */
 const tableValue = (name) =>
@@ -44,27 +47,6 @@ const hasRow = (name) =>
     name,
   );
 
-/** Clicks row `name`'s value, which opens the write and force bar. */
-const pickRow = (name) =>
-  browser.execute((n) => {
-    const rows = [...document.querySelectorAll('[aria-label="Variables"] tbody tr')];
-    const row = rows.find((r) => r.querySelector('input[aria-label="Name"]')?.value === n);
-    row.querySelector(".value button").click();
-  }, name);
-
-/** Sets an input and tells Svelte, as typing would: `input` for a bound value, `change` for a committed one. */
-const setInput = (selector, text, event) =>
-  browser.execute(
-    (s, t, e) => {
-      const input = document.evaluate(s, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-      input.value = t;
-      input.dispatchEvent(new Event(e, { bubbles: true }));
-    },
-    selector,
-    text,
-    event,
-  );
-
 /** Changes row `name`'s field `label` to `text`, committed as leaving the cell does. */
 const setRowField = (name, label, text) =>
   browser.execute(
@@ -78,17 +60,6 @@ const setRowField = (name, label, text) =>
     name,
     label,
     text,
-  );
-
-/** The values drawn in the code: each as `line class text`. */
-const drawn = () =>
-  browser.execute(() =>
-    document
-      .querySelector(".monaco-host")
-      .editor.getModel()
-      .getAllDecorations()
-      .filter((d) => d.options.after?.content)
-      .map((d) => `${d.range.startLineNumber} ${d.options.after.inlineClassName} ${d.options.after.content.trim()}`),
   );
 
 /** The number drawn after line 40's `count`. */

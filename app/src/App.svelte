@@ -9,6 +9,7 @@
   import { m } from "./paraglide/messages.js";
   import { readPreference, writePreference } from "./lib/preferences";
   import { analysis, backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
+  import { Inbox, hostPlcWindow, plcWindow } from "./lib/plcWindow";
   import { debounce, type Problems } from "./lib/analysis";
   import { deliveredOf, formatTime, type Snapshot } from "./lib/snapshot";
   import {
@@ -78,6 +79,27 @@
     analyzeLater.call(program, behaviours);
     return analyzeLater.cancel;
   });
+  /** The PLC pane is in its own window (spec 2026-11-13-plc-window-design.md): this window keeps the texts and sends
+   *  the window its state, here and when it is ready. */
+  let detached = $state(false);
+  const inbox = new Inbox();
+  const ready = $derived(snapshot !== null);
+  const plcState = () => ({
+    ...$state.snapshot({ sources, status, problems, selected, running, ready }),
+    instances: $state.snapshot(project?.instances ?? []),
+    ack: inbox.ack,
+  });
+  $effect(() => {
+    if (detached) void plcWindow.send(plcState());
+  });
+  function detach(): void {
+    inbox.reset();
+    detached = true;
+    plcWindow.open().catch((e) => {
+      detached = false;
+      error = String(e);
+    });
+  }
   /** The scene was edited since the last Build. */
   let changed = $state(false);
   /** Counts the projects shown, so the view frames each when it opens and not at every edit. */
@@ -240,6 +262,8 @@
     }
   }
 
+  const stepLine = () => replace(backend.step).then(() => (running = false));
+
   async function replace(action: () => Promise<Snapshot>): Promise<void> {
     const next = await attempt(action);
     if (next) snapshot = next;
@@ -258,6 +282,12 @@
       onStopped(() => (running = false)),
       onDiskSources((disk) => void fromFolder(disk)),
       onEngineError((e) => (error = m.engine_error({ error: e }))),
+      ...hostPlcWindow(inbox, {
+        take: (next) => (sources = next),
+        request: (r) => void (r === "build" ? build() : r === "run" ? toggleRun() : stepLine()),
+        ready: () => void plcWindow.send(plcState()),
+        closed: () => (detached = false),
+      }),
     ];
     return () => listeners.forEach((l) => l.then((unlisten) => unlisten()));
   });
@@ -269,14 +299,14 @@
   <Toolbar
     {project}
     {running}
-    ready={snapshot !== null}
+    {ready}
     bind:speed
     bind:theme
     {ratio}
     onBuild={build}
     onRun={toggleRun}
     onStop={() => replace(backend.reset).then(() => (running = false))}
-    onStep={() => replace(backend.step).then(() => (running = false))}
+    onStep={stepLine}
     onUndo={() => step(projects.undo)}
     onRedo={() => step(projects.redo)}
     onSave={() => attempt(backend.saveState)}
@@ -365,6 +395,9 @@
         notice={noticeText}
         {snapshot}
         {selected}
+        {detached}
+        onDetach={detach}
+        onAttach={() => void plcWindow.close()}
         onPlace={place}
         onDrag={(family) => (dragging = family)}
         onSinkBlocked={(sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked))}

@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { Play, Pause, Square, StepForward, Hammer, Undo2, Redo2, Save, History, Sun, Moon } from "@lucide/svelte";
+  import { Undo2, Redo2, Save, History, Sun, Moon } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { currentLocale, languageName, locales, setLanguage, type Locale } from "./i18n.svelte";
   import { SPEEDS, formatSpeed } from "./snapshot";
   import type { ProjectView } from "./project";
   import ProjectMenu from "./ProjectMenu.svelte";
+  import Transport from "./Transport.svelte";
   import twinovaMark from "../assets/twinova-mark.svg";
 
   let {
@@ -58,26 +59,7 @@
     {#if project}<ProjectMenu {project} onChange={onProject} {onNotice} {onError} />{/if}
   </div>
   <div class="transport" aria-label={m.ui_simulation()}>
-    <button class="icon-button" title={m.build()} aria-label={m.build()} onclick={onBuild} disabled={!project}
-      ><Hammer size={16} /></button
-    >
-    <span class="divider"></span>
-    <button
-      class="icon-button run"
-      class:playing={running}
-      title={running ? m.pause() : m.run()}
-      aria-label={running ? m.pause() : m.run()}
-      onclick={onRun}
-      disabled={!ready}
-    >
-      {#if running}<Pause size={17} fill="currentColor" />{:else}<Play size={17} fill="currentColor" />{/if}
-    </button>
-    <button class="icon-button" title={m.reset()} aria-label={m.reset()} onclick={onStop} disabled={!ready}
-      ><Square size={14} fill="currentColor" /></button
-    >
-    <button class="icon-button" title={m.step()} aria-label={m.step()} onclick={onStep} disabled={!ready}
-      ><StepForward size={17} /></button
-    >
+    <Transport canBuild={project !== null} {running} {ready} {onBuild} {onRun} {onStep} onReset={onStop} />
     <span class="divider"></span>
     <select class="speed" aria-label={m.speed()} bind:value={speed} disabled={running}>
       {#each SPEEDS as option (option)}<option value={option}
@@ -188,12 +170,6 @@
     background: var(--color-border);
     margin: 0 5px;
     flex: none;
-  }
-  .run {
-    color: var(--color-success);
-  }
-  .playing {
-    background: color-mix(in oklab, var(--color-success) 13%, transparent);
   }
   select {
     height: 27px;

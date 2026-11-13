@@ -177,3 +177,39 @@ export async function app(profile, args, body) {
 
 /** One run of the app without arguments. */
 export const session = (profile, body) => sessions(() => app(profile, [], body));
+
+// ---------- monitoring (monitor.mjs, plc_window.mjs) ----------
+
+export const BAR = `//div[@role="group"][@aria-label="Value to write or force"]`;
+
+/** Clicks row `name`'s value, which opens the write and force bar. */
+export const pickRow = (name) =>
+  browser.execute((n) => {
+    const rows = [...document.querySelectorAll('[aria-label="Variables"] tbody tr')];
+    const row = rows.find((r) => r.querySelector('input[aria-label="Name"]')?.value === n);
+    row.querySelector(".value button").click();
+  }, name);
+
+/** Sets an input and tells Svelte, as typing would: `input` for a bound value, `change` for a committed one. */
+export const setInput = (selector, text, event) =>
+  browser.execute(
+    (s, t, e) => {
+      const input = document.evaluate(s, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+      input.value = t;
+      input.dispatchEvent(new Event(e, { bubbles: true }));
+    },
+    selector,
+    text,
+    event,
+  );
+
+/** The values drawn in the code: each as `line class text`. */
+export const drawn = () =>
+  browser.execute(() =>
+    document
+      .querySelector(".monaco-host")
+      .editor.getModel()
+      .getAllDecorations()
+      .filter((d) => d.options.after?.content)
+      .map((d) => `${d.range.startLineNumber} ${d.options.after.inlineClassName} ${d.options.after.content.trim()}`),
+  );
