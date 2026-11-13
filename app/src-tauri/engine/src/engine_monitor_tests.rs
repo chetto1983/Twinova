@@ -238,3 +238,20 @@ fn a_restored_state_replays_the_forces() {
     }
     assert_eq!(restored.fingerprint(), engine.fingerprint());
 }
+
+#[test]
+fn the_engine_lists_an_instance_s_members_and_says_whether_it_watches() {
+    let mut engine = diverter();
+    let members = engine.members(Scope::Plc, "Main.carry");
+    for name in ["IN", "PT", "Q", "ET"] {
+        assert!(members.iter().any(|m| m == name), "{members:?}");
+    }
+    assert!(engine.members(Scope::Plc, "Main.count").is_empty());
+    let travel = engine.members(Scope::Field, "F.chain_transfer");
+    assert!(travel.iter().any(|m| m == "travel"), "{travel:?}");
+    assert!(!engine.watching());
+    engine.watch(&[Watch::Path(Scope::Plc, "Main.count".into())]);
+    assert!(engine.watching());
+    engine.watch(&[]);
+    assert!(!engine.watching());
+}

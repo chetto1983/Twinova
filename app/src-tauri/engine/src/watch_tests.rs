@@ -104,3 +104,28 @@ fn an_instance_lists_its_members_and_a_variable_none() {
     assert!(super::members(&harness(), "Main.count").is_empty());
     assert!(super::members(&harness(), "Main.nowhere").is_empty());
 }
+
+/// Each kind names its type in the refusal, as a typed literal would (`DINT#5`).
+#[test]
+fn a_refusal_names_each_kind_s_type() {
+    let kinds = [
+        (Value::Bool(false), "BOOL"),
+        (Value::SInt(0), "SINT"),
+        (Value::Int(0), "INT"),
+        (Value::DInt(0), "DINT"),
+        (Value::LInt(0), "LINT"),
+        (Value::USInt(0), "USINT"),
+        (Value::UInt(0), "UINT"),
+        (Value::UDInt(0), "UDINT"),
+        (Value::ULInt(0), "ULINT"),
+        (Value::Real(0.0), "REAL"),
+        (Value::LReal(0.0), "LREAL"),
+        (Value::Byte(0), "BYTE"),
+        (Value::Word(0), "WORD"),
+        (Value::DWord(0), "DWORD"),
+        (Value::LWord(0), "LWORD"),
+    ];
+    for (current, name) in kinds {
+        assert_eq!(value("abc", current), Err(format!("'abc' is not {name}")));
+    }
+}
