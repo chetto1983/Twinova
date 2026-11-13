@@ -74,6 +74,11 @@ impl AppState {
         Ok(())
     }
 
+    pub(crate) fn drop_debugger(&self, scope: Scope) -> Result<(), String> {
+        self.debuggers.lock().map_err(poisoned)?.remove(&scope);
+        Ok(())
+    }
+
     /// Every debugger attached.
     pub(crate) fn debuggers(&self) -> Vec<Debugger> {
         (self.debuggers.lock().map(|d| d.values().cloned().collect())).unwrap_or_default()

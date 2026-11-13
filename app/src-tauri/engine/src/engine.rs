@@ -264,6 +264,14 @@ impl Engine {
         self.line.field_mut().map(Field::debugger)
     }
 
+    /// Turns the field's debug off once its last breakpoint is gone (`Field::release_debug`). The PLC's stays on:
+    /// forces and writes use it too.
+    pub fn release_field_debugger(&mut self) {
+        if let Some(field) = self.line.field_mut() {
+            field.release_debug();
+        }
+    }
+
     /// The forces in effect, with their values as the editor shows them.
     pub fn forces(&self) -> Vec<(Target, String)> {
         self.line.controller().forces()

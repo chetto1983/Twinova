@@ -101,5 +101,5 @@ tiverse-mmap = { git = "https://github.com/johannesPettersson80/trust-platform",
 # chetto1983/trust-platform, branch twinova/6405915-breakpoint-body, one commit on 6405915. At the pin a breakpoint in
 # an IF's body stopped at the IF every scan (measured).
 [patch."https://github.com/johannesPettersson80/trust-platform"]
-trust-runtime = { git = "https://github.com/chetto1983/trust-platform", rev = "efceb1258e60c748bd4b798482d981ca969307e3" }
-trust-runtime-core = { git = "https://github.com/chetto1983/trust-platform", rev = "efceb1258e60c748bd4b798482d981ca969307e3" }
+trust-runtime = { git = "https://github.com/chetto1983/trust-platform", rev = "1e249be7b41e4674ed44b97e4db2cc0b4ead52f2" }
+trust-runtime-core = { git = "https://github.com/chetto1983/trust-platform", rev = "1e249be7b41e4674ed44b97e4db2cc0b4ead52f2" }

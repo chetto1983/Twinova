@@ -284,8 +284,10 @@ sessions(() =>
         10_000,
       );
       await browser.saveScreenshot(`${out}/breakpoint-block.png`);
-      await click(button("Reset"));
+      // Taken off while held, it lets the field's debug go at Continue: on, the line runs 7.7 times slower.
       await clickGutter(20);
+      await click(button("Continue (F5)"));
+      await click(button("Reset"));
       await click(`//button[@role="tab"][contains(normalize-space(), "plc/Main.st")]`);
     });
     await check("a write while held shows at once and reaches the program at the next cycle", async () => {

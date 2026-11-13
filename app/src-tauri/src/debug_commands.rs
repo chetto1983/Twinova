@@ -8,7 +8,7 @@ use tauri::State;
 use twinova_engine::debugger::{Breakpoint, Debugger, Hold, Log, Resume};
 use twinova_engine::watch::Scope;
 
-use crate::commands::{AppState, with_engine};
+use crate::commands::{AppState, HOLD, with_engine};
 
 /// The runtime a file's breakpoints go to: a block's to the field, a program file's to the PLC.
 fn scope_of(file: &str) -> Scope {
@@ -41,8 +41,7 @@ pub fn set_breakpoints(
     file: String,
     breakpoints: Vec<Breakpoint>,
 ) -> Result<Vec<Breakpoint>, String> {
-    // truST turns debug on and never off, and a field runtime with it on runs 7.7 times slower (measured 2026-11-13):
-    // nothing to take off attaches nothing.
+    // Debug on costs even with no breakpoint (`release_idle_field`): nothing to take off attaches nothing.
     let set = match (breakpoints.is_empty(), state.debugger(scope_of(&file))?) {
         (true, None) => Vec::new(),
         _ => attached(&state, &file)?.set(&file, &breakpoints)?,
@@ -52,6 +51,8 @@ pub fn set_breakpoints(
         true => kept.remove(&file),
         false => kept.insert(file, set.clone()),
     };
+    drop(kept);
+    release_idle_field(&state)?;
     Ok(set)
 }
 
@@ -61,7 +62,26 @@ pub(crate) fn arm(state: &AppState) -> Result<(), String> {
     for (file, breakpoints) in kept {
         attached(state, &file)?.set(&file, &breakpoints)?;
     }
-    Ok(())
+    release_idle_field(state)
+}
+
+/// Turns the field's debug off once no block has a breakpoint: on, its 1 ms scans run 7.7 times slower (measured
+/// 2026-11-13, release). The PLC's stays on, since forces and writes use it too. A held line keeps it to the next Run
+/// or Step, which arm again.
+fn release_idle_field(state: &AppState) -> Result<(), String> {
+    let kept = state.breakpoints.lock().map_err(|e| e.to_string())?;
+    if kept.keys().any(|file| scope_of(file) == Scope::Field) {
+        return Ok(());
+    }
+    drop(kept);
+    if state.debugger(Scope::Field)?.is_none() || state.held().is_some() {
+        return Ok(());
+    }
+    with_engine(state, |e| {
+        e.release_field_debugger();
+        Ok(())
+    })?;
+    state.drop_debugger(Scope::Field)
 }
 
 #[tauri::command]
@@ -73,7 +93,12 @@ pub fn run_to_cursor(state: State<'_, AppState>, file: String, line: u32) -> Res
 pub fn resume(state: State<'_, AppState>, how: Resume) -> Result<(), String> {
     let (_, debugger) = state.held().ok_or("the PLC is not held")?;
     debugger.resume(how);
-    Ok(())
+    // A block's last breakpoint taken off while held: its debug goes off now, or at the next Run or Step if the line
+    // stops again first.
+    match release_idle_field(&state) {
+        Err(e) if e == HOLD => Ok(()),
+        released => released,
+    }
 }
 
 /// Where the program is held, with its call stack and, in a block, its device; `None` while it runs.

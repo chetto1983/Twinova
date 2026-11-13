@@ -289,6 +289,12 @@ impl Field {
         )
     }
 
+    /// Turns the field's debug off: on, every statement of its 1 ms scans goes through truST's hook, 7.7 times slower
+    /// with no breakpoint at all (measured 2026-11-13, release).
+    pub(crate) fn release_debug(&mut self) {
+        self.harness.runtime_mut().disable_debug();
+    }
+
     /// Builds the field of `project`, or `None` when no component has a behaviour. A block cannot compile alone,
     /// because its `AT %I*` needs the configuration (E202, measured), so the whole field compiles at once and each
     /// error is located in its behaviour file.

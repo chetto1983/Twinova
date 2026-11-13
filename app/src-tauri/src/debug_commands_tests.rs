@@ -182,3 +182,39 @@ fn taking_off_a_breakpoint_after_reset_attaches_no_debugger() {
     assert!(state.debugger(Scope::Field).unwrap().is_none());
     assert!(state.debugger(Scope::Plc).unwrap().is_none());
 }
+
+#[test]
+fn the_field_s_last_breakpoint_taken_off_drops_its_debugger() {
+    let app = opened("two_belts_diverter", true);
+    set_breakpoints(app.state(), TRANSFER.into(), at(&[20])).unwrap();
+    let state = app.state::<AppState>();
+    assert!(state.debugger(Scope::Field).unwrap().is_some());
+    set_breakpoints(app.state(), TRANSFER.into(), vec![]).unwrap();
+    assert!(
+        state.debugger(Scope::Field).unwrap().is_none(),
+        "its debug is off: 7.7 times slower on"
+    );
+    set_breakpoints(app.state(), MAIN.into(), at(&[37])).unwrap();
+    set_breakpoints(app.state(), MAIN.into(), vec![]).unwrap();
+    assert!(
+        state.debugger(Scope::Plc).unwrap().is_some(),
+        "the PLC's stays: forces and writes use it"
+    );
+}
+
+#[test]
+fn a_block_s_breakpoint_taken_off_while_held_lets_its_debug_go_at_continue() {
+    let app = opened("two_belts_diverter", true);
+    set_breakpoints(app.state(), TRANSFER.into(), at(&[20])).unwrap();
+    run(app.handle().clone(), app.state(), None).unwrap();
+    assert_eq!(held(&app).line, 20);
+    set_breakpoints(app.state(), TRANSFER.into(), vec![]).unwrap();
+    let state = app.state::<AppState>();
+    assert!(
+        state.debugger(Scope::Field).unwrap().is_some(),
+        "held: kept"
+    );
+    resume(app.state(), Resume::Continue).unwrap();
+    assert!(state.debugger(Scope::Field).unwrap().is_none());
+    reset(app.state()).unwrap();
+}

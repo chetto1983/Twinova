@@ -69,12 +69,17 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-complete-design.md`, plan `2026-1
   - Taking a block's breakpoint off after Reset attached the field's debugger only to clear an empty list. It no longer
     does: an empty list attaches no debugger (`set_breakpoints`).
   - Linux E2E, the never-hit check at Max for 4 s: 8.3 s of virtual time before, 49.8 s after.
+  - Then the field's debug goes off with its last breakpoint (spec decision 8): the fork's `disable_debug`
+    (`1e249be`), called when no block has a breakpoint and the line is not held. App tests: taken off, the field's
+    debugger is dropped; taken off while held, at Continue; the PLC's stays. `breakpoints.mjs` now takes the block's
+    breakpoint off while held and continues; the checks after it at Max: 50 s of virtual time in 4 s.
 
 ## What this does not prove
 
 - **A breakpoint bound to one device** (decision 4), and the hit count "a multiple of N" (decision 2).
 - **Logpoint values in IEC form for every type:** a TIME shows in truST's form.
 - **Writing in a block, and forcing while held.**
-- **Debug off once breakpoints are gone.** Removing a runtime's last breakpoint without Reset or Build leaves its debug
-  on: the field's costs 7.7×, the PLC's 30 %, until the next Reset or Build. Turning it off needs an API truST lacks.
+- **The PLC's debug off.** Once attached, by a breakpoint, a write or a force, it stays on to the next Build or Reset:
+  30 % at no breakpoint.
+- **The fork's `disable_debug` test,** until the fork's CI runs it.
 - **Windows,** until CI's windows-2022 E2E.
