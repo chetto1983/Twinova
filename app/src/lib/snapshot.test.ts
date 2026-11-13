@@ -46,6 +46,14 @@ vi.mock("./backend", () => ({
   onStopped: vi.fn().mockResolvedValue(() => {}),
   onEngineError: vi.fn().mockResolvedValue(() => {}),
   onDiskSources: vi.fn().mockResolvedValue(() => {}),
+  onMonitor: vi.fn().mockResolvedValue(() => {}),
+  monitor: {
+    watchRange: vi.fn().mockResolvedValue({ spots: [], rows: [] }),
+    unwatch: vi.fn().mockResolvedValue(undefined),
+    watched: vi.fn().mockResolvedValue([]),
+    forces: vi.fn().mockResolvedValue([]),
+  },
+  declarations: { of: vi.fn().mockResolvedValue([]) },
 }));
 
 describe("paintOf", () => {
