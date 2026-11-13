@@ -102,14 +102,16 @@ fn one_ladder_file_lowers_with_its_rungs_that_do_not_lower_reported_in_it() {
 fn a_place_reads_as_a_file_line_a_declaration_line_or_a_rung() {
     let program = ProgramFiles::of(&files(&[
         ("plc/Main.st", "PROGRAM Main\nEND_PROGRAM\n"),
-        ("plc/Pump.ld", "\nVAR Q : BOOL; END_VAR\n|Q| (Q);"),
+        // four empty lines, and Q at the start of its line: an offset of the declarations that missed the leading
+        // text's length would land on the line above
+        ("plc/Pump.ld", "\n\n\n\nVAR\nQ : BOOL;\nEND_VAR\n|Q| (Q);"),
     ]))
     .unwrap();
     let main = program.placer("plc/Main.st").unwrap();
     assert_eq!(main(13), "plc/Main.st:2");
     let pump = program.placer("plc/Pump.ld").unwrap();
     let st = &program.files[1].1;
-    assert_eq!(pump(st.find("Q : BOOL").unwrap()), "plc/Pump.ld:2");
+    assert_eq!(pump(st.find("Q : BOOL").unwrap()), "plc/Pump.ld:6");
     assert_eq!(pump(st.find("Q := LD_P1").unwrap()), "plc/Pump.ld, rung 1");
     assert_eq!(pump(0), "plc/Pump.ld", "the PROGRAM's own line");
     assert!(program.placer("plc/Other.st").is_none());
