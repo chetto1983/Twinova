@@ -110,9 +110,14 @@ fn a_ladder_file_shows_the_problems_of_its_declarations_where_it_has_them() {
     let found = analyzed(&app, &project);
     let errors: Vec<String> = (found["plc/Pump.ld"].iter())
         .filter(|p| p.severity == "error")
-        .map(|p| format!("{}:{} {}", p.line, p.column, p.code))
+        .map(|p| {
+            format!(
+                "{}:{}-{}:{} {}",
+                p.line, p.column, p.end_line, p.end_column, p.code
+            )
+        })
         .collect();
-    assert_eq!(errors, ["1:9 E102", "4:9 E102"]);
+    assert_eq!(errors, ["1:9-1:19 E102", "4:9-4:16 E102"]);
     assert_eq!(
         found["plc/Bad.ld"],
         [],
