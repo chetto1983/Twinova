@@ -97,6 +97,19 @@ fn a_literal_proposes_its_own_type() {
     assert_eq!(proposal("|gain := 1.5;"), proposed("gain", Some("REAL")));
     assert_eq!(proposal("|big := DINT#7;"), proposed("big", Some("DINT")));
     assert_eq!(proposal("|mask := 16#FF;"), proposed("mask", Some("INT")));
+    assert_eq!(proposal("|many := 1_000;"), proposed("many", Some("INT")));
+    assert_eq!(
+        proposal("|big_r := 1.5E3;"),
+        proposed("big_r", Some("REAL"))
+    );
+    assert_eq!(
+        proposal("|label := 'a.b';"),
+        proposed("label", Some("STRING"))
+    );
+    assert_eq!(
+        proposal("|wide := \"a.b\";"),
+        proposed("wide", Some("WSTRING"))
+    );
 }
 
 #[test]
@@ -105,4 +118,10 @@ fn an_identifier_proposes_its_declared_type_and_anything_else_none() {
     assert_eq!(proposal("|next := count + 1;"), proposed("next", None));
     assert_eq!(proposal("ok := |unknown;"), proposed("unknown", None));
     assert_eq!(proposal("ok := TRUE;|"), None);
+}
+
+#[test]
+fn a_text_that_is_no_literal_proposes_no_type() {
+    assert_eq!(literal_type("x1"), None);
+    assert_eq!(literal_type("1.5"), Some("REAL".into()));
 }

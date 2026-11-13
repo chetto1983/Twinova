@@ -126,7 +126,7 @@ pub fn declare_proposal(
     }))
 }
 
-/// The type a literal has on its own.
+/// The type a literal has on its own: a string's, a typed literal's prefix, an integer's INT, a real's REAL.
 fn literal_type(literal: &str) -> Option<String> {
     let upper = literal.to_ascii_uppercase();
     if upper == "TRUE" || upper == "FALSE" {
@@ -143,12 +143,15 @@ fn literal_type(literal: &str) -> Option<String> {
             .to_string(),
         );
     }
-    let number = |n: &str| n.chars().all(|c| c.is_ascii_digit() || c == '_') && !n.is_empty();
-    match upper.split_once('.') {
-        None if number(&upper) => Some("INT".into()),
-        Some((whole, part)) if number(whole) && !part.is_empty() => Some("REAL".into()),
-        _ => None,
-    }
+    let plain = upper.replace('_', "");
+    let kind = match upper.chars().next() {
+        Some('\'') => "STRING",
+        Some('"') => "WSTRING",
+        _ if plain.parse::<i64>().is_ok() => "INT",
+        _ if plain.parse::<f64>().is_ok() => "REAL",
+        _ => return None,
+    };
+    Some(kind.into())
 }
 
 #[cfg(test)]
