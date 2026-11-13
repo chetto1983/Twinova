@@ -70,7 +70,8 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-complete-design.md`, plan `2026-1
     does: an empty list attaches no debugger (`set_breakpoints`).
   - Linux E2E, the never-hit check at Max for 4 s: 8.3 s of virtual time before, 49.8 s after.
   - Then the field's debug goes off with its last breakpoint (spec decision 8): the fork's `disable_debug`
-    (`1e249be`), called when no block has a breakpoint and the line is not held. App tests: taken off, the field's
+    (`1e249be`; the fork's CI ran its test, 8/8 in `debug_stepping`, run 43480440936), called when no block has a
+    breakpoint and the line is not held. App tests: taken off, the field's
     debugger is dropped; taken off while held, at Continue; the PLC's stays. `breakpoints.mjs` now takes the block's
     breakpoint off while held and continues; the checks after it at Max: 50 s of virtual time in 4 s.
 
@@ -90,5 +91,4 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-complete-design.md`, plan `2026-1
 - **Writing in a block, and forcing while held.**
 - **The PLC's debug off.** Once attached, by a breakpoint, a write or a force, it stays on to the next Build or Reset:
   30 % at no breakpoint.
-- **The fork's `disable_debug` test,** until the fork's CI runs it.
 - **Windows,** until CI's windows-2022 E2E.
