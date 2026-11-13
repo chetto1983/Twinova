@@ -16,7 +16,7 @@ use twinova_project::model::{
     Definition, Direction, Instance, ParamType, ParamValue, SignalDef, SignalType,
 };
 
-use crate::debugger::{Debugger, Place};
+use crate::debugger::{Debugger, Place, line_count};
 use crate::field_image::place;
 use crate::locate::{line_of, rewrite_spans};
 
@@ -264,15 +264,12 @@ impl Field {
     /// The field's debugger: each block a place in the one generated source, at its span's lines, and each device's
     /// block instance, to name the device a stop belongs to. A block is read-only, so it takes no write.
     pub(crate) fn debugger(&mut self) -> Debugger {
-        let line_at = |byte: usize| {
-            u32::try_from(self.text[..byte].matches('\n').count()).unwrap_or(u32::MAX)
-        };
         let places = (self.spans.iter())
             .map(|(start, end, path)| Place {
                 path: path.clone(),
                 file_id: 0,
-                first_line: line_at(*start),
-                lines: line_at(*end) - line_at(*start) + 1,
+                first_line: line_count(&self.text[..*start]),
+                lines: line_count(&self.text[*start..*end]),
             })
             .collect();
         let devices = (self.blocks.iter())

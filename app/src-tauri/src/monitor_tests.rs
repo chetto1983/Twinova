@@ -185,3 +185,32 @@ fn the_commands_watch_read_force_and_release() {
     unwatch(app.state()).unwrap();
     assert!(watched(app.state()).unwrap().is_empty());
 }
+
+#[test]
+fn while_a_block_is_held_a_plc_watch_reads_nothing_even_a_name_the_block_s_frame_has() {
+    let app = opened("two_belts_diverter", true);
+    crate::debug_commands::set_breakpoints(
+        app.state(),
+        TRANSFER.into(),
+        vec![twinova_engine::debugger::Breakpoint {
+            line: 20,
+            condition: None,
+            hit: None,
+            log: None,
+        }],
+    )
+    .unwrap();
+    app.state::<AppState>().monitored.lock().unwrap().watches = vec![
+        Watch::Path(Scope::Field, "F.chain_transfer.travel".into()),
+        // A PLC global that shares a name with the block's local.
+        Watch::Path(Scope::Plc, "raised".into()),
+    ];
+    crate::commands::run(app.handle().clone(), app.state(), None).unwrap();
+    let started = std::time::Instant::now();
+    while crate::debug_commands::hold(app.state()).unwrap().is_none() {
+        assert!(started.elapsed().as_secs() < 10, "no stop");
+        std::thread::sleep(std::time::Duration::from_millis(1));
+    }
+    assert_eq!(watched(app.state()).unwrap(), [Some("0".into()), None]);
+    crate::commands::reset(app.state()).unwrap();
+}

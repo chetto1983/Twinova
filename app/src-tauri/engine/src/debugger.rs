@@ -47,6 +47,11 @@ pub enum Resume {
 /// Writes made while held, for the engine to log at its next millisecond (spec decision 6).
 pub(crate) type HeldWrites = Arc<Mutex<Vec<(Target, Value)>>>;
 
+/// How many lines `text` has, its last one counted though unterminated.
+pub(crate) fn line_count(text: &str) -> u32 {
+    u32::try_from(text.lines().count()).unwrap_or(u32::MAX)
+}
+
 /// A file the user edits, inside a runtime file: its path, the runtime file's id, its first line there (0-based) and
 /// its number of lines.
 #[derive(Debug, Clone)]
@@ -137,7 +142,7 @@ impl Debugger {
                 path: path.clone(),
                 file_id: u32::try_from(id).unwrap_or(u32::MAX),
                 first_line: 0,
-                lines: u32::try_from(text.lines().count()).unwrap_or(u32::MAX),
+                lines: line_count(text),
             })
             .collect()
     }
