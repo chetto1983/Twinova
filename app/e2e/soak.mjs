@@ -19,6 +19,9 @@ const PROJECT = process.argv[3] ? [`--project=${resolve(process.argv[3])}`] : []
  *  2026-11-13-online-monitoring-design.md, acceptance 5). */
 const MONITOR = process.env.SOAK_MONITOR === "1";
 const FORCE = process.env.SOAK_FORCE;
+/** SOAK_PLC_WINDOW=1 opens the PLC pane in its own window first, where SOAK_MONITOR turns Monitoring on (spec
+ *  2026-11-13-plc-window-design.md). */
+const PLC_WINDOW = process.env.SOAK_PLC_WINDOW === "1";
 const SAMPLE_MS = 2000;
 const TICKS_PER_S = 100; // USER_HZ, the unit of utime and stime in /proc/<pid>/stat
 
@@ -59,7 +62,8 @@ function processes() {
   return tree;
 }
 
-/** Samples for `seconds` and reports, per process name, the mean CPU and the RSS at start, end and peak. */
+/** Samples for `seconds` and reports, per process (name and pid: two windows are two WebKit web processes), the mean
+ *  CPU and the RSS at start, end and peak. */
 async function phase(name, seconds) {
   const series = new Map();
   let before = processes();
@@ -72,27 +76,42 @@ async function phase(name, seconds) {
     for (const [pid, p] of now) {
       const prev = before.get(pid);
       if (!prev) continue;
-      const s = series.get(p.cmd) ?? { cpu: [], rss: [] };
+      const key = `${p.cmd} ${pid}`;
+      const s = series.get(key) ?? { cpu: [], rss: [] };
       s.cpu.push(((p.ticks - prev.ticks) / TICKS_PER_S / ((t1 - t0) / 1000)) * 100);
       s.rss.push(p.rssMb);
-      series.set(p.cmd, s);
+      series.set(key, s);
     }
     [before, t0] = [now, t1];
   }
   console.log(`${name} (${seconds} s), virtual time ${(await virtualSeconds("Virtual time")).toFixed(1)} s`);
-  for (const [cmd, s] of series) {
+  for (const [key, s] of series) {
     const mean = s.cpu.reduce((a, b) => a + b, 0) / s.cpu.length;
     const [first, last, peak] = [s.rss[0], s.rss.at(-1), Math.max(...s.rss)];
     console.log(
-      `  ${cmd.padEnd(18)} CPU ${mean.toFixed(1).padStart(5)} %  RSS ${first.toFixed(0)} → ${last.toFixed(0)} MB, peak ${peak.toFixed(0)}`,
+      `  ${key.padEnd(24)} CPU ${mean.toFixed(1).padStart(5)} %  RSS ${first.toFixed(0)} → ${last.toFixed(0)} MB, peak ${peak.toFixed(0)}`,
     );
   }
+}
+
+/** Opens the PLC window from the dock, turns Monitoring on there with SOAK_MONITOR, and comes back to the main one. */
+async function openPlcWindow() {
+  const main = await browser.getWindowHandle();
+  await dock("plc");
+  await click(button("Open the PLC in a window"));
+  await browser.waitUntil(async () => (await browser.getWindowHandles()).length === 2, { timeout: 15000 });
+  await browser.switchToWindow((await browser.getWindowHandles()).find((h) => h !== main));
+  await browser.$(".monaco-host").waitForExist({ timeout: 15000 });
+  if (MONITOR) await click(button("Monitoring (Ctrl+T)"));
+  await browser.switchToWindow(main);
+  await sleep(1000);
 }
 
 sessions(() =>
   app("release", PROJECT, async () => {
     await sleep(3000);
-    if (MONITOR) {
+    if (PLC_WINDOW) await openPlcWindow();
+    else if (MONITOR) {
       await dock("plc");
       await click(button("Monitoring (Ctrl+T)"));
       await sleep(1000);

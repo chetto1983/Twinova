@@ -109,7 +109,7 @@ Run, Pause and Step added to decision 3.
   - `e2e/plc_window.mjs`, the spec's list.
   - The whole suite on Linux under CI's screen.
   - Commit `test(e2e): the PLC window`.
-- [ ] **Task 4: acceptance and documents.**
+- [x] **Task 4: acceptance and documents.**
   - The release soak at Run ×1: the window open and monitoring, against closed.
   - Verification, ROADMAP 4.8b, CHANGELOG.
   - The pull request; merged when green.

@@ -134,6 +134,10 @@ and build inside the app, on Windows and Linux.
   - opening, saving or building a project folder writes `trust-lsp.toml` and `.twinova/lsp/field.st`, so the
     extension reads the project without false errors in the program; the blocks keep three false E202 errors, a
     limit of truST's per-file check.
+- The PLC pane in a window of its own (ROADMAP 4.8b), for example on a second monitor:
+  - a button in the dock's PLC tab opens it, and the dock says where it went;
+  - the window has Build, Run/Pause and Step, and the editor with Monitoring, the variables table and forcing;
+  - Back to the dock, or closing the window, brings it back; closing the main window closes both.
 - The dock can be maximized over the workspace (ROADMAP 4.8a): a button in its bar gives the PLC pane, or any other
   tab, the room of the scene and both side panels, while the toolbar and the status bar stay; the same button restores
   its height.
