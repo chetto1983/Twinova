@@ -11,7 +11,7 @@
   import { analysis, backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
   import { Inbox, hostPlcWindow, plcWindow } from "./lib/plcWindow";
   import { debounce, type Problems } from "./lib/analysis";
-  import { deliveredOf, formatTime, type Snapshot } from "./lib/snapshot";
+  import { deliveredOf, type Snapshot } from "./lib/snapshot";
   import {
     buildArgs,
     builtFrom,
@@ -30,8 +30,9 @@
   import type { GizmoMode } from "./lib/sceneEditing";
   import { shortcutOf } from "./lib/shortcuts";
   import Toolbar from "./lib/Toolbar.svelte";
+  import StatusBar from "./lib/StatusBar.svelte";
   import WorkspaceDock from "./lib/WorkspaceDock.svelte";
-  import { Box, Move, RotateCw, CircleCheck, AlertCircle } from "@lucide/svelte";
+  import { Box, Move, RotateCw } from "@lucide/svelte";
   let hidden = $state<string[]>([]);
   let locked = $state<string[]>([]);
   let history = $state<{ label: string; time: string }[]>([]);
@@ -405,30 +406,15 @@
       />
     </main>
   {/if}
-  <footer class="statusbar">
-    <span class="status"
-      ><span class="led" class:on={running}></span>{running
-        ? m.ui_running()
-        : status === "ok"
-          ? m.ui_ready()
-          : m.ui_stopped()}</span
-    >
-    <span class="divider"></span><span class="data">{formatTime(snapshot?.time_ms ?? 0)}</span>
-    <p class="status-notice" role="status" title={noticeText}>{noticeText}</p>
-    {#if error}<AlertCircle size={13} /><span class="error-status" title={error}>{error}</span>{/if}
-    {#if changed}<span class="scene-status">{m.scene_changed()}</span>{/if}
-    {#if snapshot}<CircleCheck size={13} />{/if}<span class="build-status"
-      >{status === "ok"
-        ? m.built_ok()
-        : snapshot
-          ? m.ui_previous_build()
-          : status === "failed"
-            ? m.build_failed()
-            : m.not_built()}</span
-    >
-    <span class="divider"></span><span>{project?.instances.length ?? 0} {m.ui_objects()}</span><span class="divider"
-    ></span><span>truST · IEC 61131-3</span>
-  </footer>
+  <StatusBar
+    {running}
+    {status}
+    {snapshot}
+    notice={noticeText}
+    {error}
+    {changed}
+    objects={project?.instances.length ?? 0}
+  />
 </div>
 
 <style>
@@ -536,56 +522,6 @@
   .view-footer :global(input) {
     height: 23px;
     font-size: 10px;
-  }
-  .statusbar {
-    min-height: 27px;
-    flex: none;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 12px;
-    background: var(--color-surface);
-    border-top: 1px solid var(--color-border);
-    color: var(--color-text-faint);
-    font-size: 10px;
-  }
-  .status {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--color-text-muted);
-  }
-  .divider {
-    width: 1px;
-    height: 12px;
-    background: var(--color-border);
-    margin: 0 4px;
-  }
-  .error-status {
-    max-width: 40vw;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    color: var(--color-danger);
-  }
-  .build-status {
-    flex: none;
-    white-space: nowrap;
-    color: var(--color-text-muted);
-  }
-  .scene-status {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .status-notice {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   @media (max-width: 1200px) {
     .workspace {

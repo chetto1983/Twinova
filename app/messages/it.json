@@ -166,5 +166,13 @@
   "io_force": "Forza questo indirizzo",
   "plc_window_open": "Apri il PLC in una finestra",
   "plc_window_detached": "Il PLC è in una finestra separata.",
-  "plc_window_attach": "Riporta nel pannello"
+  "plc_window_attach": "Riporta nel pannello",
+  "debug_title": "Debug",
+  "debug_hold": "HOLD a {at}",
+  "debug_continue": "Continua (F5)",
+  "debug_over": "Passo oltre (F10)",
+  "debug_into": "Passo dentro (F11)",
+  "debug_out": "Passo fuori (Maiusc+F11)",
+  "debug_cursor": "Esegui fino al cursore (Ctrl+F10)",
+  "debug_stack": "Stack delle chiamate"
 }

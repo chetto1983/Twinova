@@ -78,6 +78,10 @@ with VS Code's keys.
    - Build, Reset and Restore replace the engine, and Pause lets a held scan go: each leaves no breakpoint in the
      runtime.
    - The editor sends its lines again after a Build, since lines move with edits.
+6. **Breakpoints keep their line numbers while the text is edited** (a departure from spec decision 8, reported to
+   the user).
+   - Each Build sets them again on those numbers, and each resolves to its nearest statement.
+   - Following edits needs the marks read back from Monaco's decorations on every change, which is left for later.
 5. **The webview asks where the program is held** (`hold`, every 200 ms while breakpoints are set).
    - A stop sends no event, since its scan holds the Run loop.
    - A forwarding thread would keep the debug control alive, and never end.
@@ -117,11 +121,11 @@ with VS Code's keys.
     - Reset ends a HOLD;
     - watched values come from the snapshot.
   - Commit `feat(app): debug commands and the hold event`.
-- [ ] **Task 3: the webview.**
+- [x] **Task 3: the webview.**
   - `debug.ts` tests first.
   - Then the gutter, F9, the stopped line, the bar and keys, the call stack, `StatusBar.svelte`, i18n.
   - Commit `feat(view): breakpoints, stepping and HOLD in the ST editor`.
-- [ ] **Task 4: the E2E.** `breakpoints.mjs`, the spec's list on top-level lines. Commit `test(e2e): breakpoints as HOLD`.
+- [x] **Task 4: the E2E.** `breakpoints.mjs`, the spec's list on top-level lines. Commit `test(e2e): breakpoints as HOLD`.
 - [ ] **Task 5: the soak.** A breakpoint never hit, against none, in release.
 - [ ] **Task 6: the matching rule (needs the user's fork).**
   - The fork's branch from `6405915` with `c9635b1c`'s rule and its tests, and the `[patch]`.

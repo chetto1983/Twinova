@@ -4,7 +4,8 @@
   import { m } from "../paraglide/messages.js";
   import { edited, type Source } from "./sources";
   import { debounce, fileOf, type Problems } from "./analysis";
-  import { declarations as declared, monitor, onMonitor } from "./backend";
+  import { debug, declarations as declared, monitor, onMonitor } from "./backend";
+  import { toggleLine, type Hold } from "./debug";
   import {
     deviceOf,
     labelOf,
@@ -18,6 +19,7 @@
   } from "./monitor";
   import StEditor from "./StEditor.svelte";
   import VariablesTable from "./VariablesTable.svelte";
+  import DebugBar from "./DebugBar.svelte";
   let {
     sources = $bindable(),
     status,
@@ -66,6 +68,30 @@
   );
   const live = $derived(monitoring && status === "ok" && !!current && !blocked);
   const parts = $derived(watched ? split(watched, values) : { spots: [], rows: [] });
+
+  // Breakpoints and HOLD (spec 2026-11-13-breakpoints-hold-design.md): by file, the lines they landed on, kept in the
+  // session; only the program's files have them (decision 3).
+  let breakpoints = $state<Record<string, number[]>>({});
+  let hold = $state<Hold | null>(null);
+  let cursor = $state(1);
+  const programFile = $derived(current?.kind === "program" ? fileOf(current) : null);
+  function setBreakpoints(file: string, lines: number[]): void {
+    debug
+      .setBreakpoints(file, lines)
+      .then((set) => (breakpoints = { ...breakpoints, [file]: set }))
+      .catch((e) => (problem = String(e)));
+  }
+  // A Build compiles new statements: the breakpoints are set again on them, where their lines resolve now.
+  $effect(() => {
+    void sources.filter((s) => s.kind === "program").map((s) => s.base);
+    if (status === "ok")
+      untrack(() => Object.entries(breakpoints).forEach(([file, lines]) => setBreakpoints(file, lines)));
+  });
+  // A stop shows its file.
+  $effect(() => {
+    const at = hold ? sources.findIndex((s) => fileOf(s) === hold?.file) : -1;
+    if (at >= 0) untrack(() => (active = at));
+  });
 
   const readRows = debounce((text: string) => {
     declared
@@ -233,7 +259,14 @@
         aria-pressed={monitoring}
         disabled={status !== "ok"}
         onclick={() => (monitoring = !monitoring)}><Activity size={13} /></button
-      ><span class="language">ST</span><button class="ladder" disabled title={m.ui_ladder_unavailable()}>LD</button>
+      ><DebugBar
+        file={programFile}
+        {cursor}
+        armed={Object.keys(breakpoints).length > 0}
+        ready={status === "ok"}
+        bind:hold
+        onError={(text) => (problem = text)}
+      /><span class="language">ST</span><button class="ladder" disabled title={m.ui_ladder_unavailable()}>LD</button>
     </header>
     {#if blocked || problem}<p class="note" role="status">{problem || blocked}</p>{/if}
     {#if picked}
@@ -280,6 +313,12 @@
             if (target) pick(target, parts.spots[i] ?? null);
           }}
           onToggleMonitor={() => (monitoring = status === "ok" && !monitoring)}
+          breakpoints={programFile ? (breakpoints[programFile] ?? []) : []}
+          heldLine={hold && hold.file === programFile ? hold.line : null}
+          onBreakpoint={(line) => {
+            if (programFile) setBreakpoints(programFile, toggleLine(breakpoints[programFile] ?? [], line));
+          }}
+          onCursor={(line) => (cursor = line)}
         />
       </div>
     {/if}
@@ -369,6 +408,7 @@
     color: var(--color-ring);
   }
   .code-pane {
+    position: relative;
     display: flex;
     flex-direction: column;
     min-height: 0;
