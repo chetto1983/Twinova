@@ -132,7 +132,7 @@
   - The Monitoring toggle and Ctrl+T, the values in the code, the variables table above it (online values, write and
     force, edits), the Forces list; i18n.
   - Commit `feat(view): monitor, force and declare in the ST editor`.
-- [ ] **Task 6: the E2E.**
+- [x] **Task 6: the E2E.**
   - `e2e/monitor.mjs`: the spec's list, and a variable added and retyped through the table, then built.
   - The whole suite on Linux under CI's screen.
   - Commit `test(e2e): online monitoring and the variables table`.
