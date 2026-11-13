@@ -14,6 +14,16 @@ import {
   virtualSeconds,
 } from "./helpers.mjs";
 
+/** The dock's, the workspace's and the ST editor's rectangles, rounded: [left, top, right, bottom]. */
+const rectangles = () =>
+  browser.execute(() => {
+    const [panel, workspace, editor] = [".dock", ".workspace", ".monaco-host"].map((selector) => {
+      const r = document.querySelector(selector).getBoundingClientRect();
+      return [r.left, r.top, r.right, r.bottom].map(Math.round);
+    });
+    return { dock: panel, workspace, editor };
+  });
+
 await session("debug", async () => {
   await check("the IDE gives the scene the centre and has no horizontal page overflow", async () => {
     await browser.$(".stage canvas").waitForExist({ timeout: 30000 });
@@ -97,6 +107,24 @@ await session("debug", async () => {
     expectEqual(await browser.$(".organizer").isDisplayed(), true, "organizer");
   });
   await browser.saveScreenshot(`${out}/plc.png`);
+  await check("the dock maximizes over the workspace and restores its height", async () => {
+    const before = await rectangles();
+    await click(button("Maximize panel"));
+    await eventually(
+      async () => {
+        const now = await rectangles();
+        expectEqual(now.dock, now.workspace, "dock over the workspace");
+        if (now.editor[2] - now.editor[0] <= before.editor[2] - before.editor[0]) throw new Error("editor not wider");
+      },
+      "maximized",
+      5000,
+    );
+    expectEqual(await browser.$(button("Build")).isDisplayed(), true, "toolbar");
+    expectEqual(await browser.$(".statusbar").isDisplayed(), true, "status bar");
+    await browser.saveScreenshot(`${out}/plc-maximized.png`);
+    await click(button("Restore panel"));
+    await eventually(async () => expectEqual((await rectangles()).dock, before.dock, "restored"), "restored", 5000);
+  });
   await click(button("Build"));
   await click(button("Run"));
   await click(button("Start"));

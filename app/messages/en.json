@@ -119,6 +119,8 @@
   "ui_delivered": "Delivered",
   "ui_collapse": "Collapse panel",
   "ui_expand": "Expand panel",
+  "ui_maximize": "Maximize panel",
+  "ui_restore": "Restore panel",
   "ui_resize": "Resize panel",
   "ui_organizer": "PLC organizer",
   "ui_programs": "Programs",

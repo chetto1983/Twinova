@@ -1,5 +1,15 @@
 <script lang="ts">
-  import { Boxes, Cpu, CircleAlert, Activity, ChevronDown, ChevronUp, CircleCheck } from "@lucide/svelte";
+  import {
+    Boxes,
+    Cpu,
+    CircleAlert,
+    Activity,
+    ChevronDown,
+    ChevronUp,
+    CircleCheck,
+    Maximize2,
+    Minimize2,
+  } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import type { ProjectView } from "./project";
   import type { Source } from "./sources";
@@ -41,6 +51,8 @@
   } = $props();
   let tab = $state("parts");
   let collapsed = $state(false);
+  /** Laid over the whole workspace (spec 2026-11-13-maximized-dock-design.md). */
+  let maximized = $state(false);
   let height = $state(242);
   let resizing = $state<{ y: number; height: number } | null>(null);
   $effect(() => {
@@ -75,9 +87,10 @@
   onpointerup={() => (resizing = null)}
 />
 
-<section class="dock" style={`height:${collapsed ? 36 : height}px`}>
+<section class="dock" class:maximized style={maximized ? "" : `height:${collapsed ? 36 : height}px`}>
   <button
     class="resize"
+    hidden={maximized}
     aria-label={m.ui_resize()}
     onpointerdown={(e) => {
       resizing = { y: e.clientY, height };
@@ -113,6 +126,18 @@
     <span class="dock-hint">{tab === "parts" ? m.ui_library_hint() : tab === "plc" ? "IEC 61131-3 · truST" : ""}</span>
     <button
       class="icon-button"
+      aria-label={maximized ? m.ui_restore() : m.ui_maximize()}
+      title={maximized ? m.ui_restore() : m.ui_maximize()}
+      onclick={() => {
+        maximized = !maximized;
+        collapsed = false;
+      }}
+    >
+      {#if maximized}<Minimize2 size={14} />{:else}<Maximize2 size={14} />{/if}
+    </button>
+    <button
+      class="icon-button"
+      hidden={maximized}
       aria-label={collapsed ? m.ui_expand() : m.ui_collapse()}
       title={collapsed ? m.ui_expand() : m.ui_collapse()}
       onclick={() => (collapsed = !collapsed)}
@@ -181,6 +206,17 @@
     flex-direction: column;
     background: var(--color-surface);
     border-top: 1px solid var(--color-border);
+  }
+  /* An absolutely positioned grid item is placed in the grid area its grid-column and grid-row name (CSS Grid Level 1,
+     9.1), so the dock takes every column and row to cover the workspace. */
+  .dock.maximized {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    max-height: none;
+    border-top: 0;
   }
   .resize {
     position: absolute;

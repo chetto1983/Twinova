@@ -54,7 +54,7 @@ Svelte 5, `@lucide/svelte` (`Maximize2` and `Minimize2`, in the installed versio
 
 ## Tasks
 
-- [ ] **Task 1: the maximized dock.**
+- [x] **Task 1: the maximized dock.**
   - The E2E checks first:
     - the rectangle, the bars and Monaco's width;
     - the height restored;
