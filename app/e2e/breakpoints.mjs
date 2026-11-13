@@ -17,6 +17,7 @@ import {
   expectEqual,
   fixtureCopy,
   out,
+  selectSpeed,
   sessions,
   statusSeconds,
   textOf,
@@ -55,6 +56,35 @@ const holdText = () => textOf(".statusbar .hold");
 const heldAt = (where) =>
   eventually(async () => expectEqual(await holdText(), `HOLD at plc/Main.st:${where}`, "hold"), "held", 10_000);
 
+/** Inserts `text` at the start of `line`, as typing does: through the model, so the decorations move with it. */
+const insertAt = (line, text) =>
+  browser.execute(
+    (l, t) =>
+      document
+        .querySelector(".monaco-host")
+        .editor.executeEdits("e2e", [
+          { range: { startLineNumber: l, startColumn: 1, endLineNumber: l, endColumn: 1 }, text: t },
+        ]),
+    line,
+    text,
+  );
+
+const built = () =>
+  eventually(
+    async () => expectEqual(await textOf(".statusbar .build-status"), "Built: ready to run", "built"),
+    "built",
+    15_000,
+  );
+
+/** The virtual time Run makes in `ms` of wall time. */
+async function virtualIn(ms) {
+  const before = await statusSeconds();
+  await click(button("Run"));
+  await browser.pause(ms);
+  await click(button("Pause"));
+  return (await statusSeconds()) - before;
+}
+
 /** Puts the cursor on `line` and gives the editor the focus. */
 const cursorAt = (line) =>
   browser.execute((l) => {
@@ -66,11 +96,7 @@ const cursorAt = (line) =>
 sessions(() =>
   app("debug", [`--project=${folder}`], async () => {
     console.log("Breakpoints as HOLD");
-    await eventually(
-      async () => expectEqual(await textOf(".statusbar .build-status"), "Built: ready to run", "built"),
-      "built",
-      15_000,
-    );
+    await built();
     await dock("plc");
     await check("a click in the glyph margin and F9 set breakpoints", async () => {
       await clickGutter(37);
@@ -175,6 +201,41 @@ sessions(() =>
       );
       await browser.saveScreenshot(`${out}/breakpoint-body.png`);
       await click(button("Reset"));
+    });
+    await check("a breakpoint moves with its line when a line goes in above, and stops there after Build", async () => {
+      await insertAt(30, "(* a line above *)\n");
+      await eventually(async () => expectEqual(await marks(), ["41 debug-breakpoint"], "moved"), "moved", 5_000);
+      await click(button("Build"));
+      await built();
+      await click(button("Run"));
+      await heldAt(41);
+      await click(button("Reset"));
+      await clickGutter(41);
+      await eventually(async () => expectEqual(await marks(), [], "cleared"), "cleared", 5_000);
+    });
+    await check("a breakpoint on a line that never runs never holds the line", async () => {
+      // `count` only counts up, so this body never runs; a constant condition might be compiled away.
+      const end = await editor(
+        () =>
+          document
+            .querySelector(".monaco-host")
+            .editor.getModel()
+            .findMatches("END_PROGRAM", false, false, true, null, false)[0].range.startLineNumber,
+      );
+      await insertAt(end, "IF count < 0 THEN\n    count := 0;\nEND_IF;\n");
+      await click(button("Build"));
+      await built();
+      await selectSpeed("Max");
+      const free = await virtualIn(4_000);
+      await clickGutter(end + 1);
+      await eventually(async () => expectEqual(await marks(), [`${end + 1} debug-breakpoint`], "set"), "set", 5_000);
+      const armed = await virtualIn(4_000);
+      expectEqual(await browser.$(".statusbar .hold").isExisting(), false, "never held");
+      if (armed <= 0) throw new Error(`the line did not run: ${armed} s`);
+      // A measurement, not a pass mark: the debug build, on whatever machine runs it.
+      console.log(
+        `      as fast as possible for 4 s: ${free.toFixed(1)} s of virtual time free, ${armed.toFixed(1)} s with the breakpoint`,
+      );
     });
   }),
 );
