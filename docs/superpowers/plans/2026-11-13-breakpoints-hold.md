@@ -74,6 +74,13 @@ with VS Code's keys.
 2. **`with_engine` tries the lock in a loop** and checks the hold between tries. This covers a hold that starts after
    the check.
 3. **The status bar is extracted from `App.svelte`** before HOLD is added to it (refactor on touch, 600-line cap).
+4. **The session's breakpoints live in `AppState`, armed again at each Run and Step** (decided in Task 3).
+   - Build, Reset and Restore replace the engine, and Pause lets a held scan go: each leaves no breakpoint in the
+     runtime.
+   - The editor sends its lines again after a Build, since lines move with edits.
+5. **The webview asks where the program is held** (`hold`, every 200 ms while breakpoints are set).
+   - A stop sends no event, since its scan holds the Run loop.
+   - A forwarding thread would keep the debug control alive, and never end.
 
 ## File structure
 

@@ -25,7 +25,26 @@ pub fn set_breakpoints(
     file: String,
     lines: Vec<u32>,
 ) -> Result<Vec<u32>, String> {
-    attached(&state)?.set(&file, &lines)
+    let set = attached(&state)?.set(&file, &lines)?;
+    let mut kept = state.breakpoints.lock().map_err(|e| e.to_string())?;
+    match set.is_empty() {
+        true => kept.remove(&file),
+        false => kept.insert(file, set.clone()),
+    };
+    Ok(set)
+}
+
+/// Arms the user's breakpoints in the engine about to scan, attaching the debugger when there are some.
+pub(crate) fn arm(state: &AppState) -> Result<(), String> {
+    let kept = state.breakpoints.lock().map_err(|e| e.to_string())?.clone();
+    if kept.is_empty() {
+        return Ok(());
+    }
+    let debugger = attached(state)?;
+    for (file, lines) in kept {
+        debugger.set(&file, &lines)?;
+    }
+    Ok(())
 }
 
 #[tauri::command]

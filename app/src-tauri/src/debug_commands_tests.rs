@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use tauri::Manager;
 use tauri::test::MockRuntime;
 
-use crate::commands::{HOLD, reset, run, scan_timing, step};
+use crate::commands::{HOLD, pause, reset, run, scan_timing, step};
 use crate::monitor::{watch_range, watched};
 use crate::test_fixtures::opened;
 
@@ -66,6 +66,23 @@ fn the_app_answers_while_the_line_is_held_and_reset_lets_it_go() {
         "Reset let the line go and dropped the debugger"
     );
     assert!(scan_timing(app.state()).is_ok());
+    run(app.handle().clone(), app.state(), None).unwrap();
+    assert_eq!(
+        held(&app).line,
+        37,
+        "the session's breakpoint is armed again at Run"
+    );
+    pause(app.state());
+    assert_eq!(
+        set_breakpoints(app.state(), MAIN.into(), vec![]).unwrap(),
+        Vec::<u32>::new()
+    );
+    tauri::async_runtime::block_on(step(app.state())).unwrap();
+    assert_eq!(
+        hold(app.state()).unwrap(),
+        None,
+        "no breakpoint left to arm"
+    );
 }
 
 #[test]

@@ -40,6 +40,9 @@ pub struct AppState {
     /// The program's debugger from the first breakpoint to the next engine; it works while a scan holds the engine
     /// (spec 2026-11-13-breakpoints-hold-design.md, decision 4).
     debugger: Mutex<Option<Debugger>>,
+    /// The user's breakpoints by file, for the session: armed again at each Run and Step, since an engine replaced or a
+    /// Pause leaves none in the runtime (`debug_commands.rs`).
+    pub(crate) breakpoints: Mutex<BTreeMap<String, Vec<u32>>>,
     /// What the editor monitors, for reading it while the line is held (`monitor.rs`).
     pub(crate) monitored: Mutex<crate::monitor::Monitored>,
 }
@@ -191,6 +194,7 @@ pub fn reset(state: State<'_, AppState>) -> Result<Snapshot, String> {
 #[tauri::command]
 pub async fn step(state: State<'_, AppState>) -> Result<Snapshot, String> {
     state.running.store(false, Ordering::SeqCst);
+    crate::debug_commands::arm(&state)?;
     with_engine(&state, |e| {
         e.lag_ms = 0;
         e.step()?;
@@ -264,6 +268,7 @@ pub fn run<R: Runtime>(
     speed: Option<f64>,
 ) -> Result<(), String> {
     let origin_ms = with_engine(&state, |e| Ok(e.time_ms()))?;
+    crate::debug_commands::arm(&state)?;
     if state.running.swap(true, Ordering::SeqCst) {
         return Ok(());
     }
