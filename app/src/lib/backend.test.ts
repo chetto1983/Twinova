@@ -104,10 +104,11 @@ describe("backend bridge", () => {
     await declarations.of("PROGRAM Main END_PROGRAM");
     await declarations.edit("T", { op: "add", row });
     await declarations.rename([["plc/Main.st", "T"]], "plc/Main.st", 2, "y");
-    await debug.setBreakpoints("plc/Main.st", [37]);
+    await debug.setBreakpoints("plc/Main.st", [{ line: 37, condition: "count = 2" }]);
     await debug.runToCursor("plc/Main.st", 40);
     await debug.resume("over");
     await debug.hold();
+    await debug.logs();
     expect(invoke.mock.calls).toEqual([
       ["watch_range", { file: "plc/Main.st", first: 3, last: 9, device: null, unfolded: ["carry"] }],
       ["unwatch"],
@@ -119,10 +120,11 @@ describe("backend bridge", () => {
       ["declarations_of", { text: "PROGRAM Main END_PROGRAM" }],
       ["edit_declaration", { text: "T", change: { op: "add", row } }],
       ["rename_declaration", { files: [["plc/Main.st", "T"]], file: "plc/Main.st", index: 2, newName: "y" }],
-      ["set_breakpoints", { file: "plc/Main.st", lines: [37] }],
+      ["set_breakpoints", { file: "plc/Main.st", breakpoints: [{ line: 37, condition: "count = 2" }] }],
       ["run_to_cursor", { file: "plc/Main.st", line: 40 }],
       ["resume", { how: "over" }],
       ["hold"],
+      ["debug_logs"],
     ]);
   });
 
@@ -179,6 +181,21 @@ describe("project bridge", () => {
       ["current_project"],
       ["open_demo"],
     ]);
+  });
+
+  it("moves the line only once the breakpoints set before have reached the app, even refused", async () => {
+    const pending: { refuse?: (e: string) => void } = {};
+    invoke.mockImplementation((cmd: string) =>
+      cmd === "set_breakpoints" ? new Promise((_, reject) => (pending.refuse = reject)) : Promise.resolve(undefined),
+    );
+    const set = debug.setBreakpoints("plc/Main.st", []);
+    const moves = [backend.run(null), backend.step(), debug.resume("continue"), debug.runToCursor("plc/Main.st", 3)];
+    await Promise.resolve();
+    expect(invoke.mock.calls.map((c) => c[0])).toEqual(["set_breakpoints"]);
+    pending.refuse?.("line 3: the condition 'x' is not a variable");
+    await expect(set).rejects.toBe("line 3: the condition 'x' is not a variable");
+    await Promise.all(moves);
+    expect(invoke.mock.calls.map((c) => c[0])).toEqual(["set_breakpoints", "run", "step", "resume", "run_to_cursor"]);
   });
 
   it("does nothing when a dialog is cancelled", async () => {

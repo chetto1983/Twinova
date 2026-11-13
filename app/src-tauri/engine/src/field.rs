@@ -16,6 +16,7 @@ use twinova_project::model::{
     Definition, Direction, Instance, ParamType, ParamValue, SignalDef, SignalType,
 };
 
+use crate::debugger::{Debugger, Place, line_count};
 use crate::field_image::place;
 use crate::locate::{line_of, rewrite_spans};
 
@@ -65,6 +66,9 @@ pub(crate) fn block_signals(def: &Definition) -> impl Iterator<Item = &SignalDef
 
 pub struct Field {
     harness: TestHarness,
+    /// The generated source and each block's span in it, for the field's debugger (debugger.rs).
+    text: String,
+    spans: Spans,
     /// Each behaving instance's block, by instance id, resolved at Build. A read by path parses the path every time,
     /// 31 % of a run when the belts' `motor` was read so every millisecond (spec, "Amended after the acceptance").
     blocks: BTreeMap<String, InstanceId>,
@@ -257,6 +261,40 @@ impl Field {
         &mut self.harness
     }
 
+    /// The field's debugger: each block a place in the one generated source, at its span's lines, and each device's
+    /// block instance, to name the device a stop belongs to. A block is read-only, so it takes no write.
+    pub(crate) fn debugger(&mut self) -> Debugger {
+        let places = (self.spans.iter())
+            .map(|(start, end, path)| Place {
+                path: path.clone(),
+                file_id: 0,
+                first_line: line_count(&self.text[..*start]),
+                lines: line_count(&self.text[*start..*end]),
+            })
+            .collect();
+        let devices = (self.blocks.iter())
+            .map(|(device, id)| (device.clone(), *id))
+            .collect();
+        let runtime = self.harness.runtime_mut();
+        let control = runtime
+            .debug_control()
+            .unwrap_or_else(|| runtime.enable_debug());
+        Debugger::new(
+            control,
+            &self.harness,
+            vec![self.text.clone()],
+            places,
+            devices,
+            None,
+        )
+    }
+
+    /// Turns the field's debug off: on, every statement of its 1 ms scans goes through truST's hook, 7.7 times slower
+    /// with no breakpoint at all (measured 2026-11-13, release).
+    pub(crate) fn release_debug(&mut self) {
+        self.harness.runtime_mut().disable_debug();
+    }
+
     /// Builds the field of `project`, or `None` when no component has a behaviour. A block cannot compile alone,
     /// because its `AT %I*` needs the configuration (E202, measured), so the whole field compiles at once and each
     /// error is located in its behaviour file.
@@ -333,6 +371,8 @@ impl Field {
         }
         Ok(Some(Self {
             harness,
+            text,
+            spans,
             blocks,
             commands,
             feedback,

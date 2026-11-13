@@ -365,20 +365,20 @@ pub fn unwatch(state: State<'_, AppState>) -> Result<(), String> {
     })
 }
 
-/// The monitored values now, for a paused or stepped line, or as the held statement sees them; a block's read nothing
-/// while held, since its runtime is the field's.
+/// The monitored values now, for a paused or stepped line, or as the held statement sees them: only the held runtime's,
+/// the PLC's or the field's, since the other's is not stopped at a statement.
 #[tauri::command]
 pub fn watched(state: State<'_, AppState>) -> Result<Vec<Option<String>>, String> {
-    let Some(debugger) = state.held() else {
+    let Some((held, debugger)) = state.held() else {
         return with_engine(&state, |e| Ok(e.watched()));
     };
     let monitored = state.monitored.lock().map_err(|e| e.to_string())?;
     Ok((monitored.watches.iter())
         .map(|w| match w {
-            Watch::Path(Scope::Plc, text) | Watch::Condition(Scope::Plc, text) => {
+            Watch::Path(scope, text) | Watch::Condition(scope, text) if *scope == held => {
                 debugger.read(std::slice::from_ref(text)).pop().flatten()
             }
-            Watch::Path(Scope::Field, _) | Watch::Condition(Scope::Field, _) => None,
+            _ => None,
         })
         .collect())
 }
@@ -430,6 +430,13 @@ pub fn release(state: State<'_, AppState>, target: Target) -> Result<Vec<Force>,
 /// Writes `text` into a program variable once, at the next scan.
 #[tauri::command]
 pub fn write_value(state: State<'_, AppState>, target: Target, text: String) -> Result<(), String> {
+    // While the PLC is held, its debugger writes and the engine logs it at its next millisecond (spec
+    // 2026-11-13-breakpoints-complete-design.md, decisions 5 and 6).
+    if let (Some((Scope::Plc, debugger)), Target::Variable { program, path }) =
+        (state.held(), &target)
+    {
+        return debugger.write(&format!("{program}.{path}"), &text);
+    }
     with_engine(&state, |e| e.write(target, &text))
 }
 

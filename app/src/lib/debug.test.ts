@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { breakpointMarks, heldMark, holdLabel, keyAction, markedLines, toggleLine } from "./debug";
+import {
+  breakpointMarks,
+  heldMark,
+  holdLabel,
+  keyAction,
+  kindOf,
+  moved,
+  replaced,
+  sameLines,
+  toggle,
+  trimmed,
+} from "./debug";
 
 const key = (k: string, mods: { shift?: boolean; ctrl?: boolean; meta?: boolean } = {}) => ({
   key: k,
@@ -9,14 +20,29 @@ const key = (k: string, mods: { shift?: boolean; ctrl?: boolean; meta?: boolean 
 });
 
 describe("breakpoints and HOLD in the editor", () => {
-  it("toggles a line in or out, the lines kept in order", () => {
-    expect(toggleLine([40, 37], 38)).toEqual([37, 38, 40]);
-    expect(toggleLine([37, 38, 40], 38)).toEqual([37, 40]);
-    expect(toggleLine([], 5)).toEqual([5]);
+  it("toggles a plain breakpoint in or out, in order", () => {
+    expect(toggle([{ line: 40 }, { line: 37 }], 38)).toEqual([{ line: 37 }, { line: 38 }, { line: 40 }]);
+    expect(toggle([{ line: 37 }, { line: 38, condition: "x" }], 38)).toEqual([{ line: 37 }]);
+    expect(toggle([], 5)).toEqual([{ line: 5 }]);
+  });
+
+  it("replaces the breakpoint on a line, and sends only the fields set", () => {
+    expect(replaced([{ line: 40 }, { line: 37 }], { line: 40, log: "x" })).toEqual([
+      { line: 37 },
+      { line: 40, log: "x" },
+    ]);
+    expect(trimmed({ line: 3, condition: "  ", hit: { op: "equal", count: 0 }, log: "" })).toEqual({ line: 3 });
+    expect(trimmed({ line: 3, condition: " a > 1 ", hit: { op: "at_least", count: 2 }, log: "v={a}" })).toEqual({
+      line: 3,
+      condition: "a > 1",
+      hit: { op: "at_least", count: 2 },
+      log: "v={a}",
+    });
   });
 
   it("takes VS Code's keys", () => {
     expect(keyAction(key("F9"))).toBe("toggle");
+    expect(keyAction(key("F9", { shift: true }))).toBe("edit");
     expect(keyAction(key("F5"))).toBe("continue");
     expect(keyAction(key("F10"))).toBe("over");
     expect(keyAction(key("F10", { ctrl: true }))).toBe("cursor");
@@ -27,11 +53,15 @@ describe("breakpoints and HOLD in the editor", () => {
     expect(keyAction(key("F5", { shift: true }))).toBeNull();
   });
 
-  it("marks each breakpoint in the glyph margin, and the held line across", () => {
-    const marks = breakpointMarks([37, 40], 3);
+  it("marks each breakpoint by its kind, and the held line across", () => {
+    expect(kindOf({ line: 1 })).toBe("debug-breakpoint");
+    expect(kindOf({ line: 1, condition: "x" })).toBe("debug-breakpoint-conditional");
+    expect(kindOf({ line: 1, hit: { op: "equal", count: 3 } })).toBe("debug-breakpoint-conditional");
+    expect(kindOf({ line: 1, log: "x", condition: "y" })).toBe("debug-logpoint");
+    const marks = breakpointMarks([{ line: 37 }, { line: 40, log: "x" }], 3);
     expect(marks.map((d) => [d.range.startLineNumber, d.options.glyphMarginClassName, d.options.stickiness])).toEqual([
       [37, "debug-breakpoint", 3],
-      [40, "debug-breakpoint", 3],
+      [40, "debug-logpoint", 3],
     ]);
     expect(heldMark(40)).toEqual([
       {
@@ -42,12 +72,31 @@ describe("breakpoints and HOLD in the editor", () => {
     expect(heldMark(null)).toEqual([]);
   });
 
-  it("reads the breakpoints' lines back from their moved marks", () => {
-    expect(markedLines([{ startLineNumber: 41 }, { startLineNumber: 38 }, { startLineNumber: 41 }])).toEqual([38, 41]);
-    expect(markedLines([])).toEqual([]);
+  it("moves each breakpoint with its mark, keeping its kind", () => {
+    const list = [{ line: 37 }, { line: 40, condition: "c" }];
+    expect(moved(list, [{ startLineNumber: 38 }, { startLineNumber: 41 }])).toEqual([
+      { line: 38 },
+      { line: 41, condition: "c" },
+    ]);
+    expect(moved(list, [{ startLineNumber: 38 }, { startLineNumber: 38 }]), "joined lines keep the first").toEqual([
+      { line: 38 },
+    ]);
+    expect(moved(list, [{ startLineNumber: 39 }]), "a mark gone leaves its line").toEqual([
+      { line: 39 },
+      { line: 40, condition: "c" },
+    ]);
   });
 
-  it("names where the program is held", () => {
+  it("tells lists apart by their lines", () => {
+    expect(sameLines([{ line: 1 }, { line: 2, log: "x" }], [{ line: 1, condition: "c" }, { line: 2 }])).toBe(true);
+    expect(sameLines([{ line: 1 }], [{ line: 2 }])).toBe(false);
+    expect(sameLines([{ line: 1 }], [{ line: 1 }, { line: 2 }])).toBe(false);
+  });
+
+  it("names where the program is held, and the device in a block", () => {
     expect(holdLabel({ file: "plc/Main.st", line: 40, frames: [] })).toBe("plc/Main.st:40");
+    expect(holdLabel({ file: "components/b.st", line: 20, frames: [], device: "chain_transfer" })).toBe(
+      "components/b.st:20 (chain_transfer)",
+    );
   });
 });

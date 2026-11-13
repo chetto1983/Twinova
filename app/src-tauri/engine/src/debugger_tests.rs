@@ -54,7 +54,20 @@ fn at(line: u32) -> Hold {
         file: MAIN.into(),
         line,
         frames: vec![(MAIN.into(), line)],
+        device: None,
     }
+}
+
+/// Plain breakpoints at `lines`, and the lines they landed on.
+fn set(debugger: &Debugger, path: &str, lines: &[u32]) -> Result<Vec<u32>, String> {
+    let plain = |line| Breakpoint {
+        line,
+        condition: None,
+        hit: None,
+        log: None,
+    };
+    let set = debugger.set(path, &lines.iter().copied().map(plain).collect::<Vec<_>>())?;
+    Ok(set.iter().map(|b| b.line).collect())
 }
 
 #[test]
@@ -72,7 +85,7 @@ fn a_breakpoint_holds_the_line_and_steps_continue_and_let_go_leave_its_trajector
         [None],
         "nothing is read while it runs"
     );
-    assert_eq!(debugger.set(MAIN, &[37]).unwrap(), [37]);
+    assert_eq!(set(&debugger, MAIN, &[37]).unwrap(), [37]);
     let (shared, time, thread) = running(engine, END);
     assert_eq!(held(&debugger), at(37), "the first scan stops");
     let stopped_at = time.load(Ordering::SeqCst);
@@ -115,7 +128,7 @@ fn a_breakpoint_holds_the_line_and_steps_continue_and_let_go_leave_its_trajector
 fn run_to_cursor_stops_once_and_leaves_the_breakpoints_as_they_were() {
     let mut engine = diverter();
     let debugger = engine.debugger();
-    debugger.set(MAIN, &[37]).unwrap();
+    set(&debugger, MAIN, &[37]).unwrap();
     let (_shared, _time, thread) = running(engine, 100);
     assert_eq!(held(&debugger), at(37));
     debugger.run_to(MAIN, 38).unwrap();
@@ -136,14 +149,14 @@ fn a_line_takes_its_nearest_statement_and_a_line_past_the_end_none() {
     let mut engine = diverter();
     let debugger = engine.debugger();
     assert_eq!(
-        debugger.set(MAIN, &[34, 37, 38, 37]).unwrap(),
+        set(&debugger, MAIN, &[34, 37, 38, 37]).unwrap(),
         [37, 38],
         "the comment line 34 takes 37"
     );
-    assert_eq!(debugger.set(MAIN, &[0, 999]).unwrap(), Vec::<u32>::new());
-    assert_eq!(debugger.set(MAIN, &[]).unwrap(), Vec::<u32>::new());
+    assert_eq!(set(&debugger, MAIN, &[0, 999]).unwrap(), Vec::<u32>::new());
+    assert_eq!(set(&debugger, MAIN, &[]).unwrap(), Vec::<u32>::new());
     assert_eq!(
-        debugger.set("plc/Other.st", &[1]).unwrap_err(),
+        set(&debugger, "plc/Other.st", &[1]).unwrap_err(),
         "plc/Other.st is not a file of the program"
     );
     assert_eq!(
@@ -160,7 +173,7 @@ fn a_line_takes_its_nearest_statement_and_a_line_past_the_end_none() {
 fn letting_go_forgets_the_breakpoints() {
     let mut engine = diverter();
     let debugger = engine.debugger();
-    debugger.set(MAIN, &[37]).unwrap();
+    set(&debugger, MAIN, &[37]).unwrap();
     debugger.let_go();
     debugger.run_to(MAIN, 38).unwrap();
     let (_shared, _time, thread) = running(engine, 100);
@@ -193,7 +206,16 @@ END_PROGRAM
 fn calling() -> (Debugger, JoinHandle<()>) {
     let mut harness = TestHarness::from_source(BLOCK).unwrap();
     let control = harness.runtime_mut().enable_debug();
-    let debugger = Debugger::new(control, &harness, vec![(MAIN.into(), BLOCK.into())]);
+    let files = vec![(MAIN.to_string(), BLOCK.to_string())];
+    let places = Debugger::whole_files(&files);
+    let debugger = Debugger::new(
+        control,
+        &harness,
+        vec![BLOCK.into()],
+        places,
+        Vec::new(),
+        None,
+    );
     let thread = std::thread::spawn(move || {
         for _ in 0..20 {
             harness.cycle();
@@ -205,7 +227,7 @@ fn calling() -> (Debugger, JoinHandle<()>) {
 #[test]
 fn into_enters_a_block_out_leaves_it_and_the_stack_lists_the_innermost_first() {
     let (debugger, thread) = calling();
-    debugger.set(MAIN, &[8]).unwrap();
+    set(&debugger, MAIN, &[8]).unwrap();
     assert_eq!(held(&debugger).line, 8);
     debugger.resume(Resume::Into);
     let inside = held(&debugger);
@@ -220,7 +242,7 @@ fn into_enters_a_block_out_leaves_it_and_the_stack_lists_the_innermost_first() {
     );
     debugger.resume(Resume::Out);
     assert_eq!(held(&debugger).line, 9, "out of the block, after its call");
-    debugger.set(MAIN, &[]).unwrap();
+    set(&debugger, MAIN, &[]).unwrap();
     debugger.run_to(MAIN, 8).unwrap();
     assert_eq!(held(&debugger).line, 8);
     debugger.resume(Resume::Over);
@@ -235,7 +257,7 @@ fn into_enters_a_block_out_leaves_it_and_the_stack_lists_the_innermost_first() {
 fn a_breakpoint_in_an_if_s_body_stops_only_when_the_body_runs() {
     let mut engine = diverter();
     let debugger = engine.debugger();
-    debugger.set(MAIN, &[40]).unwrap();
+    set(&debugger, MAIN, &[40]).unwrap();
     let (_shared, time, thread) = running(engine, 8_000);
     assert_eq!(held(&debugger), at(40));
     let first = time.load(Ordering::SeqCst);
@@ -261,7 +283,7 @@ fn a_breakpoint_in_an_if_s_body_stops_only_when_the_body_runs() {
 fn a_breakpoint_on_an_if_s_line_stops_at_the_if_once_a_scan() {
     let mut engine = diverter();
     let debugger = engine.debugger();
-    debugger.set(MAIN, &[39]).unwrap();
+    set(&debugger, MAIN, &[39]).unwrap();
     let (_shared, time, thread) = running(engine, 100);
     assert_eq!(held(&debugger), at(39));
     let first = time.load(Ordering::SeqCst);

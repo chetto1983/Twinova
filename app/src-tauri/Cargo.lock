@@ -6920,7 +6920,7 @@ dependencies = [
 [[package]]
 name = "trust-ads-core"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "serde",
  "serde_json",
@@ -6930,7 +6930,7 @@ dependencies = [
 [[package]]
 name = "trust-hir"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "boxcar",
  "parking_lot",
@@ -6962,7 +6962,7 @@ dependencies = [
 [[package]]
 name = "trust-ide"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "once_cell",
  "rustc-hash 2.1.3",
@@ -6988,7 +6988,7 @@ dependencies = [
 [[package]]
 name = "trust-plcopen"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "anyhow",
  "crc32fast",
@@ -7001,7 +7001,7 @@ dependencies = [
 [[package]]
 name = "trust-runtime"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -7064,7 +7064,7 @@ dependencies = [
 [[package]]
 name = "trust-runtime-core"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "crc32fast",
  "indexmap 2.14.2",
@@ -7080,7 +7080,7 @@ dependencies = [
 [[package]]
 name = "trust-syntax"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "drop_bomb",
  "logos",
@@ -7102,7 +7102,7 @@ dependencies = [
 [[package]]
 name = "trust-tcads-native"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "libloading 0.9.0",
 ]
@@ -7110,7 +7110,7 @@ dependencies = [
 [[package]]
 name = "trust-wasm-analysis"
 version = "0.24.75"
-source = "git+https://github.com/chetto1983/trust-platform?rev=efceb1258e60c748bd4b798482d981ca969307e3#efceb1258e60c748bd4b798482d981ca969307e3"
+source = "git+https://github.com/chetto1983/trust-platform?rev=1e249be7b41e4674ed44b97e4db2cc0b4ead52f2#1e249be7b41e4674ed44b97e4db2cc0b4ead52f2"
 dependencies = [
  "rowan",
  "serde",

@@ -174,5 +174,16 @@
   "debug_into": "Passo dentro (F11)",
   "debug_out": "Passo fuori (Maiusc+F11)",
   "debug_cursor": "Esegui fino al cursore (Ctrl+F10)",
-  "debug_stack": "Stack delle chiamate"
+  "debug_stack": "Stack delle chiamate",
+  "bp_title": "Breakpoint alla riga {line}",
+  "bp_condition": "Condizione",
+  "bp_hit_op": "Confronto dei passaggi",
+  "bp_hit": "Passaggi",
+  "bp_log": "Messaggio di log",
+  "bp_log_hint": "Messaggio di log (espressioni tra graffe)",
+  "bp_apply": "Applica",
+  "bp_remove": "Rimuovi",
+  "debug_log": "Log",
+  "value_held": "In HOLD: il programma riceve il valore al ciclo successivo",
+  "debug_log_clear": "Svuota"
 }

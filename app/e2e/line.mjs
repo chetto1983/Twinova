@@ -18,6 +18,7 @@ import {
   click,
   selectSpeed,
   sessions,
+  statusSeconds,
 } from "./helpers.mjs";
 
 const shots = process.argv[2] ? resolve(process.argv[2]) : null;
@@ -53,11 +54,27 @@ sessions(() =>
       expectEqual(await bit("chain_transfer.raised_fb"), "FALSE", "raised_fb");
     });
 
-    await click(button("Run"));
-    await check("the third carton raises the chains, and raised_fb reports the top", () =>
-      // The chains top out under it at about 12.1 s of virtual time; Run goes at the wall clock.
-      eventually(async () => expectEqual(await bit("chain_transfer.raised_fb"), "TRUE", "raised_fb"), "raise", 20_000),
-    );
+    await check("the third carton raises the chains, and raised_fb reports the top", async () => {
+      // raised_fb is TRUE from 12.14 to 13.63 s of virtual time (measured in the engine, 2026-11-13). Polled at x1, a
+      // stall of 1.5 s missed it on windows-2022; at x0.25 that window lasts 6 s of wall time.
+      await selectSpeed("×0.5");
+      await click(button("Run"));
+      await eventually(
+        async () => {
+          if ((await statusSeconds()) < 11) throw new Error("before 11 s");
+        },
+        "11 s",
+        40_000,
+      );
+      await click(button("Pause"));
+      await selectSpeed("×0.25");
+      await click(button("Run"));
+      await eventually(
+        async () => expectEqual(await bit("chain_transfer.raised_fb"), "TRUE", "raised_fb"),
+        "raise",
+        20_000,
+      );
+    });
     await screenshot("chain-transfer-raised");
     await click(button("Pause"));
 

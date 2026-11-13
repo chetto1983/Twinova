@@ -4,8 +4,9 @@
   import { m } from "../paraglide/messages.js";
   import { edited, type Source } from "./sources";
   import { debounce, fileOf, type Problems } from "./analysis";
-  import { debug, declarations as declared, monitor, onMonitor } from "./backend";
-  import { toggleLine, type Hold } from "./debug";
+  import { declarations as declared, monitor, onMonitor } from "./backend";
+  import { replaced, toggle, trimmed, type Breakpoint, type Hold, type Log } from "./debug";
+  import { Breakpoints } from "./breakpoints.svelte";
   import {
     deviceOf,
     labelOf,
@@ -20,6 +21,8 @@
   import StEditor from "./StEditor.svelte";
   import VariablesTable from "./VariablesTable.svelte";
   import DebugBar from "./DebugBar.svelte";
+  import BreakpointBar from "./BreakpointBar.svelte";
+  import LogList from "./LogList.svelte";
   let {
     sources = $bindable(),
     status,
@@ -69,29 +72,22 @@
   const live = $derived(monitoring && status === "ok" && !!current && !blocked);
   const parts = $derived(watched ? split(watched, values) : { spots: [], rows: [] });
 
-  // Breakpoints and HOLD (spec 2026-11-13-breakpoints-hold-design.md): by file, the lines they landed on, kept in the
-  // session; only the program's files have them (decision 3).
-  let breakpoints = $state<Record<string, number[]>>({});
+  // Breakpoints and HOLD (specs 2026-11-13-breakpoints-hold-design.md and -breakpoints-complete-design.md), in the
+  // program's files and the blocks'.
+  const breakpoints = new Breakpoints(
+    (file) => sources.some((s) => fileOf(s) === file && edited(s)),
+    (error) => (problem = error),
+  );
   let hold = $state<Hold | null>(null);
+  let logs = $state<Log[]>([]);
   let cursor = $state(1);
-  const programFile = $derived(current?.kind === "program" ? fileOf(current) : null);
-  /** Sets `file`'s breakpoints. While its tab has edits not built, the engine runs the built text: they wait in the
-   *  editor for the next Build, which sets them all. */
-  function setBreakpoints(file: string, lines: number[]): void {
-    if (sources.some((s) => fileOf(s) === file && edited(s))) {
-      breakpoints = { ...breakpoints, [file]: lines };
-      return;
-    }
-    debug
-      .setBreakpoints(file, lines)
-      .then((set) => (breakpoints = { ...breakpoints, [file]: set }))
-      .catch((e) => (problem = String(e)));
-  }
+  /** The breakpoint the bar edits. */
+  let editing = $state<Breakpoint | null>(null);
+  const debugFile = $derived(current ? fileOf(current) : null);
   // A Build compiles new statements: the breakpoints are set again on them, where their lines resolve now.
   $effect(() => {
-    void sources.filter((s) => s.kind === "program").map((s) => s.base);
-    if (status === "ok")
-      untrack(() => Object.entries(breakpoints).forEach(([file, lines]) => setBreakpoints(file, lines)));
+    void sources.map((s) => s.base);
+    if (status === "ok") untrack(() => breakpoints.resend());
   });
   // A stop shows its file.
   $effect(() => {
@@ -118,8 +114,10 @@
       })
       .catch((e) => (problem = String(e)));
   }, 150);
-  // A new Build, a scroll, a tab, a selection or an unfolded instance watches again; the engine forgets its watches at
-  // each Build, so the built text (`base`) is a dependency too.
+  /** Whether a breakpoint holds the line: while held the engine cannot read a new table, so letting go watches again. */
+  const held = $derived(hold !== null);
+  // A new Build, a scroll, a tab, a selection, an unfolded instance or the end of a HOLD watches again; the engine
+  // forgets its watches at each Build, so the built text (`base`) is a dependency too.
   $effect(() => {
     if (!live || !current) {
       rewatch.cancel();
@@ -130,6 +128,7 @@
       return;
     }
     void current.base;
+    void held;
     rewatch.call(fileOf(current), visible.first, visible.last, device, [...unfolded]);
   });
 
@@ -266,24 +265,41 @@
         disabled={status !== "ok"}
         onclick={() => (monitoring = !monitoring)}><Activity size={13} /></button
       ><DebugBar
-        file={programFile}
+        file={debugFile}
         {cursor}
-        armed={Object.keys(breakpoints).length > 0}
+        armed={breakpoints.armed}
+        logging={breakpoints.logging}
         ready={status === "ok"}
         bind:hold
+        bind:logs
         onError={(text) => (problem = text)}
       /><span class="language">ST</span><button class="ladder" disabled title={m.ui_ladder_unavailable()}>LD</button>
     </header>
     {#if blocked || problem}<p class="note" role="status">{problem || blocked}</p>{/if}
+    {#if editing && debugFile}
+      {@const file = debugFile}
+      <BreakpointBar
+        breakpoint={editing}
+        onApply={(b) => {
+          breakpoints.set(file, replaced(breakpoints.of(file), trimmed(b)));
+          editing = null;
+        }}
+        onRemove={() => {
+          breakpoints.set(file, toggle(breakpoints.of(file), editing?.line ?? 0));
+          editing = null;
+        }}
+        onClose={() => (editing = null)}
+      />
+    {/if}
     {#if picked}
       <div class="prepare" role="group" aria-label={m.value_prepared()}>
         <strong class="data">{labelOf(picked.target)}</strong>
         <input aria-label={m.value_prepared()} bind:value={picked.text} />
         <button onclick={() => apply("write")} disabled={picked.target.kind === "address"}>{m.value_write()}</button>
-        <button onclick={() => apply("force")}>{m.value_force()}</button>
-        <button onclick={() => apply("release")} disabled={!forced.has(labelOf(picked.target))}
+        <button onclick={() => apply("force")} disabled={!!hold}>{m.value_force()}</button>
+        <button onclick={() => apply("release")} disabled={!!hold || !forced.has(labelOf(picked.target))}
           >{m.value_release()}</button
-        >
+        >{#if hold}<span class="held-note">{m.value_held()}</span>{/if}
         <button class="close" aria-label="✕" onclick={() => (picked = null)}><X size={12} /></button>
       </div>
     {/if}
@@ -319,18 +335,20 @@
             if (target) pick(target, parts.spots[i] ?? null);
           }}
           onToggleMonitor={() => (monitoring = status === "ok" && !monitoring)}
-          breakpoints={programFile ? (breakpoints[programFile] ?? []) : []}
-          heldLine={hold && hold.file === programFile ? hold.line : null}
+          breakpoints={breakpoints.of(debugFile)}
+          heldLine={hold && hold.file === debugFile ? hold.line : null}
           onBreakpoint={(line) => {
-            if (programFile) setBreakpoints(programFile, toggleLine(breakpoints[programFile] ?? [], line));
+            if (debugFile) breakpoints.set(debugFile, toggle(breakpoints.of(debugFile), line));
           }}
-          onBreakpointsMoved={(lines) => {
-            if (programFile) breakpoints = { ...breakpoints, [programFile]: lines };
+          onEditBreakpoint={(line) => (editing = breakpoints.of(debugFile).find((b) => b.line === line) ?? { line })}
+          onBreakpointsMoved={(list) => {
+            if (debugFile) breakpoints.move(debugFile, list);
           }}
           onCursor={(line) => (cursor = line)}
         />
       </div>
     {/if}
+    <LogList bind:logs />
     <footer>
       <span class="led" class:on={status === "ok"} class:err={status === "failed"}></span><span
         >{status === "ok" ? m.built_ok() : status === "failed" ? m.build_failed() : m.not_built()}</span
@@ -514,6 +532,10 @@
     font-size: 10px;
     color: var(--color-text-muted);
     border-bottom: 1px solid var(--color-border);
+  }
+  .held-note {
+    color: var(--color-warning);
+    font-size: 10px;
   }
   .prepare {
     display: flex;

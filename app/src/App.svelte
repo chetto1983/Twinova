@@ -5,7 +5,7 @@
   // (spec 2026-11-11-editor-basics-design.md), and parts dragged in the view snap together (2026-11-11-snapping); the
   // running line changes at the next Build. Sources saved in the project's folder outside Twinova, as in VS Code, reach
   // the running line (2026-11-12-st-vscode): the program online, a behaviour by a rebuild.
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { m } from "./paraglide/messages.js";
   import { readPreference, writePreference } from "./lib/preferences";
   import { analysis, backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
@@ -128,8 +128,21 @@
     }
   }
 
+  /** The Build in flight. Run and Step wait for it and for the breakpoints it sets again (the editor's resend): on
+   *  Windows, WebView2 sends a click while a Build holds the main thread, and the line ran with the old breakpoints
+   *  (windows-2022 E2E, 2026-11-13). */
+  let building: Promise<void> = Promise.resolve();
+  function build(): Promise<void> {
+    building = buildNow();
+    return building;
+  }
+  async function afterBuild(): Promise<void> {
+    await building;
+    await tick();
+  }
+
   /** A Build that fails leaves the running line as it was (commands.rs `build`), so only a success stops Run here. */
-  async function build(): Promise<void> {
+  async function buildNow(): Promise<void> {
     const built = await attempt(() => {
       const { program, behaviours } = buildArgs(sources);
       return backend.build(program, behaviours);
@@ -256,14 +269,21 @@
     if (running) {
       await attempt(backend.pause);
       running = false;
-    } else if (await attempt(() => backend.run(speed)).then(() => !error)) {
+    } else if (
+      await afterBuild()
+        .then(() => attempt(() => backend.run(speed)))
+        .then(() => !error)
+    ) {
       paceStart = { wall: performance.now(), virtual: snapshot?.time_ms ?? 0 };
       ratio = null;
       running = true;
     }
   }
 
-  const stepLine = () => replace(backend.step).then(() => (running = false));
+  const stepLine = () =>
+    afterBuild()
+      .then(() => replace(backend.step))
+      .then(() => (running = false));
 
   async function replace(action: () => Promise<Snapshot>): Promise<void> {
     const next = await attempt(action);

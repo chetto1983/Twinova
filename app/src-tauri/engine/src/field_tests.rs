@@ -420,3 +420,14 @@ fn the_placed_variables_are_those_of_every_instance() {
         }
     }
 }
+
+#[test]
+fn the_field_s_debug_goes_off_with_release_debug() {
+    let mut field = Field::build(&fixture("two_belts_diverter"))
+        .unwrap()
+        .unwrap();
+    field.debugger();
+    assert!(field.harness.runtime().debug_control().is_some());
+    field.release_debug();
+    assert!(field.harness.runtime().debug_control().is_none());
+}

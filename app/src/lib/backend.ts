@@ -8,7 +8,13 @@ import type { Built, Snapshot, ScanTiming } from "./snapshot";
 import type { DiskSources } from "./sources";
 import type { Problems } from "./analysis";
 import type { Change, Declaration, Force, Target, Watched } from "./monitor";
-import type { Hold, Resume } from "./debug";
+import type { Breakpoint, Hold, Log, Resume } from "./debug";
+
+/** Each invoke is a fetch of its own (Tauri 2.12 `scripts/ipc-protocol.js`, `sendIpcMessage`), so two not awaited
+ * may reach the app in either order; WebView2 was measured doing so (CI, 2026-11-13). A command that moves the line
+ * waits for the breakpoints set before it, so it never runs with the ones the user just changed. */
+let breakpointsSent: Promise<unknown> = Promise.resolve();
+const afterBreakpoints = <T>(command: () => Promise<T>): Promise<T> => breakpointsSent.then(command);
 
 export const backend = {
   scanTiming: () => invoke<ScanTiming>("scan_timing"),
@@ -18,9 +24,9 @@ export const backend = {
   /** An online change of the line program while the plant goes on (commands.rs `change_program`). */
   changeProgram: (program: [string, string][]) => invoke<Built>("change_program", { program }),
   reset: () => invoke<Snapshot>("reset"),
-  step: () => invoke<Snapshot>("step"),
+  step: () => afterBreakpoints(() => invoke<Snapshot>("step")),
   /** `speed` times the wall clock, or as fast as possible when null. */
-  run: (speed: number | null) => invoke<void>("run", { speed }),
+  run: (speed: number | null) => afterBreakpoints(() => invoke<void>("run", { speed })),
   saveState: () => invoke<void>("save_state"),
   restoreState: () => invoke<Snapshot>("restore_state"),
   pause: () => invoke<void>("pause"),
@@ -58,10 +64,17 @@ export const analysis = {
 /** Online monitoring and forcing (src-tauri/src/monitor.rs). */
 /** Breakpoints and HOLD (debug_commands.rs): the lines a file's breakpoints landed on, and where the program is held. */
 export const debug = {
-  setBreakpoints: (file: string, lines: number[]) => invoke<number[]>("set_breakpoints", { file, lines }),
-  runToCursor: (file: string, line: number) => invoke<void>("run_to_cursor", { file, line }),
-  resume: (how: Resume) => invoke<void>("resume", { how }),
+  setBreakpoints: (file: string, breakpoints: Breakpoint[]) => {
+    const set = invoke<Breakpoint[]>("set_breakpoints", { file, breakpoints });
+    const settled = set.catch(() => undefined);
+    breakpointsSent = Promise.all([breakpointsSent, settled]);
+    return set;
+  },
+  runToCursor: (file: string, line: number) => afterBreakpoints(() => invoke<void>("run_to_cursor", { file, line })),
+  resume: (how: Resume) => afterBreakpoints(() => invoke<void>("resume", { how })),
   hold: () => invoke<Hold | null>("hold"),
+  /** The logpoints' lines since the last call. */
+  logs: () => invoke<Log[]>("debug_logs"),
 };
 
 export const monitor = {

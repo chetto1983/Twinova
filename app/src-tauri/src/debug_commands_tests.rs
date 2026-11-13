@@ -6,8 +6,22 @@ use tauri::test::MockRuntime;
 use crate::commands::{HOLD, pause, reset, run, scan_timing, step};
 use crate::monitor::{watch_range, watched};
 use crate::test_fixtures::opened;
+use twinova_engine::controller::Target;
 
 const MAIN: &str = "plc/Main.st";
+const TRANSFER: &str = "components/twinova.chain_transfer@1.st";
+
+/// Plain breakpoints at `lines`.
+fn at(lines: &[u32]) -> Vec<Breakpoint> {
+    (lines.iter())
+        .map(|&line| Breakpoint {
+            line,
+            condition: None,
+            hit: None,
+            log: None,
+        })
+        .collect()
+}
 
 fn held(app: &tauri::App<MockRuntime>) -> Hold {
     let started = Instant::now();
@@ -30,11 +44,11 @@ fn the_app_answers_while_the_line_is_held_and_reset_lets_it_go() {
     );
     assert_eq!(
         resume(app.state(), Resume::Continue).unwrap_err(),
-        "no breakpoint is set"
+        "the PLC is not held"
     );
     assert_eq!(
-        set_breakpoints(app.state(), MAIN.into(), vec![34, 37]).unwrap(),
-        [37]
+        set_breakpoints(app.state(), MAIN.into(), at(&[34, 37])).unwrap(),
+        at(&[37])
     );
     watch_range(app.state(), MAIN.into(), 40, 40, None, vec![]).unwrap();
     run(app.handle().clone(), app.state(), None).unwrap();
@@ -75,7 +89,7 @@ fn the_app_answers_while_the_line_is_held_and_reset_lets_it_go() {
     pause(app.state());
     assert_eq!(
         set_breakpoints(app.state(), MAIN.into(), vec![]).unwrap(),
-        Vec::<u32>::new()
+        Vec::<Breakpoint>::new()
     );
     tauri::async_runtime::block_on(step(app.state())).unwrap();
     assert_eq!(
@@ -88,7 +102,7 @@ fn the_app_answers_while_the_line_is_held_and_reset_lets_it_go() {
 #[test]
 fn a_step_stopped_by_a_breakpoint_returns_once_resumed() {
     let app = opened("two_belts_diverter", true);
-    set_breakpoints(app.state(), MAIN.into(), vec![38]).unwrap();
+    set_breakpoints(app.state(), MAIN.into(), at(&[38])).unwrap();
     std::thread::scope(|scope| {
         let handle = app.handle().clone();
         let stepping = scope.spawn(move || tauri::async_runtime::block_on(step(handle.state())));
@@ -99,4 +113,108 @@ fn a_step_stopped_by_a_breakpoint_returns_once_resumed() {
         resume(app.state(), Resume::Continue).unwrap();
         assert!(stepping.join().unwrap().is_ok());
     });
+}
+
+#[test]
+fn a_block_s_breakpoint_goes_to_the_field_and_its_hold_names_the_device() {
+    let app = opened("two_belts_diverter", true);
+    assert_eq!(
+        set_breakpoints(app.state(), TRANSFER.into(), at(&[20])).unwrap(),
+        at(&[20])
+    );
+    run(app.handle().clone(), app.state(), None).unwrap();
+    let hold = held(&app);
+    assert_eq!(
+        (hold.file.as_str(), hold.line, hold.device.as_deref()),
+        (TRANSFER, 20, Some("chain_transfer"))
+    );
+    assert_eq!(
+        scan_timing(app.state()).unwrap_err(),
+        HOLD,
+        "the field's HOLD holds the engine too"
+    );
+    reset(app.state()).unwrap();
+}
+
+#[test]
+fn a_logpoint_s_lines_are_drained_and_a_write_while_held_is_taken_but_not_a_force() {
+    let app = opened("two_belts_diverter", true);
+    let log = Breakpoint {
+        log: Some("count={count}".into()),
+        ..at(&[41])[0].clone()
+    };
+    set_breakpoints(app.state(), MAIN.into(), vec![log]).unwrap();
+    while crate::commands::with_engine(&app.state(), |e| Ok(e.time_ms())).unwrap() < 6_000 {
+        tauri::async_runtime::block_on(step(app.state())).unwrap();
+    }
+    let logs = debug_logs(app.state());
+    assert_eq!(
+        logs.iter().map(|l| l.message.as_str()).collect::<Vec<_>>(),
+        ["count=1"]
+    );
+    assert!(debug_logs(app.state()).is_empty(), "drained");
+
+    set_breakpoints(app.state(), MAIN.into(), at(&[40])).unwrap();
+    run(app.handle().clone(), app.state(), None).unwrap();
+    assert_eq!(held(&app).line, 40);
+    let count = Target::variable("Main", "count");
+    crate::monitor::write_value(app.state(), count.clone(), "100".into()).unwrap();
+    assert_eq!(
+        crate::monitor::force(app.state(), count, "5".into()).unwrap_err(),
+        HOLD
+    );
+    reset(app.state()).unwrap();
+}
+
+#[test]
+fn taking_off_a_breakpoint_after_reset_attaches_no_debugger() {
+    // A field runtime with debug on runs 7.7 times slower, breakpoints or not (measured 2026-11-13, release).
+    let app = opened("two_belts_diverter", true);
+    assert_eq!(
+        set_breakpoints(app.state(), TRANSFER.into(), vec![]).unwrap(),
+        vec![]
+    );
+    assert_eq!(
+        set_breakpoints(app.state(), MAIN.into(), vec![]).unwrap(),
+        vec![]
+    );
+    let state = app.state::<AppState>();
+    assert!(state.debugger(Scope::Field).unwrap().is_none());
+    assert!(state.debugger(Scope::Plc).unwrap().is_none());
+}
+
+#[test]
+fn the_field_s_last_breakpoint_taken_off_drops_its_debugger() {
+    let app = opened("two_belts_diverter", true);
+    set_breakpoints(app.state(), TRANSFER.into(), at(&[20])).unwrap();
+    let state = app.state::<AppState>();
+    assert!(state.debugger(Scope::Field).unwrap().is_some());
+    set_breakpoints(app.state(), TRANSFER.into(), vec![]).unwrap();
+    assert!(
+        state.debugger(Scope::Field).unwrap().is_none(),
+        "its debug is off: 7.7 times slower on"
+    );
+    set_breakpoints(app.state(), MAIN.into(), at(&[37])).unwrap();
+    set_breakpoints(app.state(), MAIN.into(), vec![]).unwrap();
+    assert!(
+        state.debugger(Scope::Plc).unwrap().is_some(),
+        "the PLC's stays: forces and writes use it"
+    );
+}
+
+#[test]
+fn a_block_s_breakpoint_taken_off_while_held_lets_its_debug_go_at_continue() {
+    let app = opened("two_belts_diverter", true);
+    set_breakpoints(app.state(), TRANSFER.into(), at(&[20])).unwrap();
+    run(app.handle().clone(), app.state(), None).unwrap();
+    assert_eq!(held(&app).line, 20);
+    set_breakpoints(app.state(), TRANSFER.into(), vec![]).unwrap();
+    let state = app.state::<AppState>();
+    assert!(
+        state.debugger(Scope::Field).unwrap().is_some(),
+        "held: kept"
+    );
+    resume(app.state(), Resume::Continue).unwrap();
+    assert!(state.debugger(Scope::Field).unwrap().is_none());
+    reset(app.state()).unwrap();
 }
