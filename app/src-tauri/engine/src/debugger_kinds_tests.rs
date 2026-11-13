@@ -158,6 +158,10 @@ fn a_message_splits_into_text_and_expressions() {
     assert_eq!(pieces("plain").unwrap(), [Piece::Text("plain")]);
     assert_eq!(pieces("a{x").unwrap_err(), "'{' without '}' in the message");
     assert_eq!(pieces("a}x").unwrap_err(), "'}' without '{' in the message");
+    assert_eq!(
+        pieces("a}b{c}").unwrap_err(),
+        "'}' without '{' in the message"
+    );
     assert_eq!(pieces("a{}").unwrap_err(), "an empty {} in the message");
 }
 
