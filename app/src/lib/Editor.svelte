@@ -75,7 +75,13 @@
   let hold = $state<Hold | null>(null);
   let cursor = $state(1);
   const programFile = $derived(current?.kind === "program" ? fileOf(current) : null);
+  /** Sets `file`'s breakpoints. While its tab has edits not built, the engine runs the built text: they wait in the
+   *  editor for the next Build, which sets them all. */
   function setBreakpoints(file: string, lines: number[]): void {
+    if (sources.some((s) => fileOf(s) === file && edited(s))) {
+      breakpoints = { ...breakpoints, [file]: lines };
+      return;
+    }
     debug
       .setBreakpoints(file, lines)
       .then((set) => (breakpoints = { ...breakpoints, [file]: set }))
@@ -317,6 +323,9 @@
           heldLine={hold && hold.file === programFile ? hold.line : null}
           onBreakpoint={(line) => {
             if (programFile) setBreakpoints(programFile, toggleLine(breakpoints[programFile] ?? [], line));
+          }}
+          onBreakpointsMoved={(lines) => {
+            if (programFile) breakpoints = { ...breakpoints, [programFile]: lines };
           }}
           onCursor={(line) => (cursor = line)}
         />

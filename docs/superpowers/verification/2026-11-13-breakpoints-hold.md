@@ -29,16 +29,21 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-hold-design.md`, plan `2026-11-13
 - **truST's own tests on the fork** (`chetto1983/trust-platform`, branch `twinova/6405915-breakpoint-body`), run in the
   fork's CI, since Twinova does not compile truST's tests (user, 2026-11-13). Run 43435374062: `debug::breakpoints`,
   27/27, and `tests/debug_stepping.rs`, 7/7, `breakpoint_only_triggers_for_taken_branch` among them.
-- **E2E on Linux,** `e2e/breakpoints.mjs`, 7/7 at top-level lines:
+- **E2E on Linux,** `e2e/breakpoints.mjs`, 10/10:
   - glyph margin and F9;
   - HOLD in the status bar, with time standing;
   - count at the stop;
   - F10, F5, Ctrl+F10;
   - Continue with the breakpoint off;
-  - Reset while held.
+  - Reset while held;
+  - a breakpoint in an IF's body (line 40) stops after the first carton, with count 0, then 1 after F11;
+  - a line inserted above moves a breakpoint from 40 to 41, and after Build, Run stops at 41 (spec decision 8);
+  - a breakpoint in a branch that never runs (`IF count < 0 THEN`) never holds the line. As fast as possible for 4 s,
+    in the debug build under xvfb: 42.4 s of virtual time without the debugger, 37.0 s with the breakpoint (−13 %,
+    the debug control's cost).
 
-  Regressions checked: `monitor` 7/7, `plc_window` 6/6, `workspace` 9/9, `editor_st` 6/6, `editor` 10/10. The IF-body
-  check (line 40) and the whole suite run in CI, which compiles the fork (user, 2026-11-13).
+  Regressions checked: `monitor` 7/7, `plc_window` 6/6, `workspace` 9/9, `editor_st` 6/6, `editor` 10/10. The whole
+  suite runs in CI.
 
 ### The release soak: the 4.4a line, Linux under xvfb, 30 s per phase
 
@@ -53,9 +58,11 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-hold-design.md`, plan `2026-11-13
   idle or paused, and nothing measurable while running.
 - **Attaching the debug control** (a force, or the first breakpoint) costs 13 % of a run as fast as possible, as 4.8
   measured.
-- **A breakpoint never hit was not measured in the app.** With the 4.4a program every top-level line runs each scan,
-  and every body line runs as cartons pass. The engine measured it: 0.99 s against 1.01 s for 20 s of virtual time,
-  with the control attached.
+- **A breakpoint never hit.** The 4.4a program runs every line, so the E2E adds a branch that never runs:
+  - the app measured 37.0 s of virtual time against 42.4 s without the debugger (debug build, above);
+  - the engine measured 0.99 s against 1.01 s for 20 s of virtual time, both with the control attached.
+
+  So the cost is the control's, not the breakpoint's.
 
 ## Measurements that changed the design
 
@@ -71,8 +78,6 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-hold-design.md`, plan `2026-11-13
 
 ## What this does not prove
 
-- **Breakpoints following their lines while the text is edited** (spec decision 8). They keep their line numbers, and
-  each Build resolves them to the nearest statement (plan, decision 6).
 - **Conditions, hit counts and logpoints.** truST has them.
 - **Breakpoints in blocks, and writing while held.**
 - **Windows,** until CI's windows-2022 E2E.

@@ -85,7 +85,7 @@
   import { onMount } from "svelte";
   import { fileOf, marker, type Problems } from "./analysis";
   import { decorations, spotAt, type Spot } from "./monitor";
-  import { breakpointDecorations } from "./debug";
+  import { breakpointMarks, heldMark, markedLines } from "./debug";
   import type { Source } from "./sources";
 
   let {
@@ -102,6 +102,7 @@
     breakpoints = [],
     heldLine = null,
     onBreakpoint,
+    onBreakpointsMoved,
     onCursor,
   }: {
     sources: Source[];
@@ -123,6 +124,8 @@
     heldLine?: number | null;
     /** A breakpoint toggled on `line`, by a click in the glyph margin or F9. */
     onBreakpoint?: (line: number) => void;
+    /** An edit moved the shown tab's breakpoints with their lines: where they are now. */
+    onBreakpointsMoved?: (lines: number[]) => void;
     /** The cursor's line, for Run to cursor. */
     onCursor?: (line: number) => void;
   } = $props();
@@ -131,6 +134,12 @@
   let editor = $state<monaco.editor.IStandaloneCodeEditor>();
   let values: monaco.editor.IEditorDecorationsCollection | undefined;
   let marks: monaco.editor.IEditorDecorationsCollection | undefined;
+  let held: monaco.editor.IEditorDecorationsCollection | undefined;
+  /** A text set from outside (disk, Revert) replaces the model's content and drops its decorations: no move then. */
+  let replacing = false;
+  function drawMarks(): void {
+    marks?.set(breakpointMarks(breakpoints, monaco.editor.TrackedRangeStickiness.GrowsOnlyWhenTypingAfter));
+  }
   const models = new Map<string, monaco.editor.ITextModel>();
 
   /** A tab's model, made on first use; what is typed in it goes back to the tab's source. */
@@ -170,6 +179,12 @@
     editor = made;
     values = made.createDecorationsCollection();
     marks = made.createDecorationsCollection();
+    held = made.createDecorationsCollection();
+    made.onDidChangeModelContent(() => {
+      if (replacing || !marks) return;
+      const lines = markedLines(marks.getRanges());
+      if (lines.join() !== breakpoints.join()) onBreakpointsMoved?.(lines);
+    });
     const visible = (): void => {
       const ranges = made.getVisibleRanges();
       if (ranges.length > 0) onVisible?.(ranges[0].startLineNumber, ranges[ranges.length - 1].endLineNumber);
@@ -211,7 +226,12 @@
     const current = sources[Math.min(active, sources.length - 1)];
     if (!editor || !current) return;
     const model = modelOf(current);
-    if (model.getValue() !== current.text) model.setValue(current.text);
+    if (model.getValue() !== current.text) {
+      replacing = true;
+      model.setValue(current.text);
+      replacing = false;
+      drawMarks();
+    }
     if (editor.getModel() !== model) editor.setModel(model);
   });
 
@@ -240,8 +260,12 @@
   });
 
   $effect(() => {
-    const drawn = breakpointDecorations(breakpoints, heldLine);
-    if (editor) marks?.set(drawn);
+    void breakpoints;
+    if (editor) drawMarks();
+  });
+  $effect(() => {
+    const drawn = heldMark(heldLine);
+    if (editor) held?.set(drawn);
   });
 
   // The held line comes into view, as a debugger's does.

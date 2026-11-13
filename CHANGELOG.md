@@ -139,7 +139,8 @@ and build inside the app, on Windows and Linux.
     the status bar reads HOLD at the file and line;
   - Continue (F5), Step over (F10), Step into (F11), Step out (Shift+F11) and Run to cursor (Ctrl+F10), with the call
     stack; the code and the variables table show the values the stopped statement sees;
-  - breakpoints last the session; Build, Reset, Restore and Pause let a held scan go first;
+  - breakpoints last the session and move with their lines while the program is edited; Build, Reset, Restore and
+    Pause let a held scan go first;
   - truST's runtime now comes from a fork with upstream c9635b1c ported: a breakpoint in an IF's or a loop's body
     stops in the body.
 - The PLC pane in a window of its own (ROADMAP 4.8b), for example on a second monitor:

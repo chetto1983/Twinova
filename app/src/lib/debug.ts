@@ -35,24 +35,26 @@ export function keyAction(e: {
 /** A Monaco range at the start of `line`. */
 const at = (line: number) => ({ startLineNumber: line, startColumn: 1, endLineNumber: line, endColumn: 1 });
 
-/** Monaco decorations: a dot in the glyph margin per breakpoint, and the held line across the editor. */
-export function breakpointDecorations(lines: number[], held: number | null) {
-  const marks = lines.map((line) => ({
-    range: at(line),
-    options: {
-      glyphMarginClassName: "debug-breakpoint",
-      className: undefined as string | undefined,
-      isWholeLine: false,
-    },
-  }));
-  if (held === null) return marks;
+/** Monaco decorations: a dot in the glyph margin per breakpoint. `stickiness` keeps each on its line's start, so a line
+ *  inserted above moves it down with its line (spec decision 8). */
+export function breakpointMarks(lines: number[], stickiness: number) {
+  return lines.map((line) => ({ range: at(line), options: { glyphMarginClassName: "debug-breakpoint", stickiness } }));
+}
+
+/** The held line, marked across the editor. */
+export function heldMark(held: number | null) {
+  if (held === null) return [];
   return [
-    ...marks,
     {
       range: at(held),
       options: { glyphMarginClassName: "debug-held", className: "debug-held-line", isWholeLine: true },
     },
   ];
 }
+
+/** The breakpoints' lines after an edit, from their marks' ranges: in order, once each (two lines joined into one
+ *  bring their marks together). */
+export const markedLines = (ranges: { startLineNumber: number }[]): number[] =>
+  [...new Set(ranges.map((r) => r.startLineNumber))].toSorted((a, b) => a - b);
 
 export const holdLabel = (hold: Hold): string => `${hold.file}:${hold.line}`;

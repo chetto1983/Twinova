@@ -78,10 +78,12 @@ with VS Code's keys.
    - Build, Reset and Restore replace the engine, and Pause lets a held scan go: each leaves no breakpoint in the
      runtime.
    - The editor sends its lines again after a Build, since lines move with edits.
-6. **Breakpoints keep their line numbers while the text is edited** (a departure from spec decision 8, reported to
-   the user).
-   - Each Build sets them again on those numbers, and each resolves to its nearest statement.
-   - Following edits needs the marks read back from Monaco's decorations on every change, which is left for later.
+6. **Breakpoints follow their lines through Monaco's decorations** (spec decision 8, done after the user asked for it
+   to be closed by an E2E).
+   - The marks stick to their line's start (`GrowsOnlyWhenTypingAfter`), and each edit reads them back.
+   - A text set from outside replaces the model, so the marks are drawn again from the state instead.
+   - While a tab has edits not built, its breakpoints wait in the editor, since the engine runs the built text; Build
+     sets them.
 5. **The webview asks where the program is held** (`hold`, every 200 ms while breakpoints are set).
    - A stop sends no event, since its scan holds the Run loop.
    - A forwarding thread would keep the debug control alive, and never end.
