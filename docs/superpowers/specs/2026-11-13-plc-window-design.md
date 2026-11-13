@@ -55,10 +55,11 @@ state through `emitTo`: main to `plc` with the whole state, `plc` to main with t
 | Second webview at Run ×1, not monitoring | 0.1 % CPU, 419 MB RSS |
 | Second webview at Run ×1, monitoring | 23.9 % CPU, 440 MB RSS |
 | Main webview, the same 10 s | 260-277 % CPU with or without the second (three.js on xvfb's software GL) |
-| Closing the main window while `plc` is open | the process and `plc` stay alive |
 | Closing `plc` with `Window::close` (as its title bar does) | the label is freed; it opens again |
 | Closing `plc` with WebDriver's `closeWindow` | the label stays registered: reopening fails, "a webview with label `plc` already exists" |
 | Opening `plc` while it is open | the same error |
+| Closing the main window as a window manager does (`WM_DELETE_WINDOW`), with `plc` open and no hook | `plc` stays open (amended in Task 3: the first figure came from WebDriver's `closeWindow`, which is no user's close) |
+| The page's `window.close()` | closes nothing |
 
 **What these do not show:**
 - **Windows.** Whether EdgeDriver switches between the two windows is not measured: no Windows machine here. CI's
@@ -97,8 +98,8 @@ state through `emitTo`: main to `plc` with the whole state, `plc` to main with t
    - Opening it while it is open brings it to the front.
 5. **Closing the window puts the pane back.** Main listens for the window's destruction and remounts the editor in the
    dock. The editor's open tab and Monitoring state are lost; the text is not, since main holds it.
-6. **Closing the main window closes the PLC window and quits.** Measured otherwise: the process stays with only the
-   PLC window.
+6. **Closing the main window closes the PLC window and quits.** Without it, a window manager's close of the main window
+   leaves the PLC window open, and the process with it (measured, the control run of Task 3).
 7. **The window's size and position are not remembered** (first version). It opens at 1000 × 700 px.
 8. **The E2E closes the window through the app.**
    - It uses the window's own "Bring back" button, and the title bar's close through `Window::close`.
@@ -116,8 +117,11 @@ state through `emitTo`: main to `plc` with the whole state, `plc` to main with t
   - edit in the window and Build from its bar: the main window built it;
   - Monitoring on in the window with Run from main: values drawn;
   - a force from the window: listed in main's Watch;
-  - bring back: the dock's editor holds the edited text;
-  - open again and close the main window: no process left.
+  - bring back: the dock's editor holds the edited text.
+- **Closing the main window, measured once.**
+  - WebDriver can't close a window as its user does: `closeWindow` and `window.close()` fire no `Destroyed`.
+  - So the main window is closed with a window manager's `WM_DELETE_WINDOW` (python-xlib, under xvfb).
+  - This is measured once, with a control run without the hook, and recorded in the verification.
 - **Soak:** the release build at Run ×1 with the window open and monitoring, against the window closed.
 
 ## What this does not prove
