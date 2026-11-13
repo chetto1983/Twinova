@@ -83,10 +83,15 @@ Text and Ladder. The PLC pane has an LD button, disabled ("Ladder is not availab
 | The `plcopen` crate (MIT, 0.3.1) on Beremiz's 5 projects with `<LD>` | each read, written back and read again; contacts, coils and blocks counted the same: 10/2/46, 10/2/46, 3/2/10, 1/0/11, 3/2/9 |
 
 | truST's calls (Task 3, a probe in the crate's tests, not committed) | named arguments to standard functions compile and run: `GT(IN1 := a, IN2 := b)`, `ADD(IN1, IN2, IN3)` by name, `LIMIT(MN, IN, MX)`, `SEL`, `MOVE`, `NOT(t)`. `AND(...)` and `MOD(...)` as calls do not parse; `EN` and `ENO` are unknown parameters |
+| What a box's head names (Task 4, a probe in the crate's tests, not committed) | the ST files compiled with a PROGRAM holding only a Ladder file's declarations: the runtime's `programs()` gives each variable's type (`T1` → `TON`), `function_blocks()` the standard and the project's function blocks with each pin's direction and type, `functions()` the project's functions, `stdlib().get()` the standard ones |
+| A duplicate PROGRAM name across an ST file and a Ladder file (Task 4) | truST labels the error with both files, but both spans are in the ST file's bytes |
 
 Consequences:
 - An LD file is lowered to a PROGRAM of its own, listed after `Main.st`'s files: no CONFIGURATION is needed.
 - The power temporaries stay in the design: one per element costs nothing measurable at a realistic count.
+- Boxes are resolved by truST itself, from that compile: no declaration reader of Twinova's, and the engine needs
+  nothing beyond the runtime it links. When the declarations do not compile, every box is lowered by its bare pins
+  and the program's own compile reports the problem.
 - A function is lowered as a call with named arguments, so the lowering needs no table of argument order. truST
   checks the pins' names, which keeps one compiler. AND, OR, XOR and MOD are written as operators. EN is an `IF`
   around the call, as in OIP.
