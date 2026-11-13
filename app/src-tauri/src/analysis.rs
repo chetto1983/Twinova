@@ -91,12 +91,11 @@ fn shown(diagnostics: Vec<DiagnosticItem>, text: &str, placed: &BTreeSet<String>
         .collect()
 }
 
-/// Analyses `project`'s sources: each shown file's problems, by path.
-pub fn analyze_project(
-    analysis: &mut Analysis,
-    project: &Project,
-) -> Result<BTreeMap<String, Vec<Problem>>, String> {
-    let shown_files: Vec<(String, String)> = (project.program.iter().cloned())
+/// Every source truST's frontend reads of `project`, by path: the program's files, the blocks as their files, and the
+/// field's generated configuration last, when a component has a behaviour. The monitoring resolves references on the
+/// same files (`monitor.rs`).
+pub(crate) fn sources(project: &Project) -> Result<Vec<(String, String)>, String> {
+    let mut files: Vec<(String, String)> = (project.program.iter().cloned())
         .chain(
             project
                 .behaviours
@@ -104,18 +103,25 @@ pub fn analyze_project(
                 .map(|(k, t)| (block_file(k), t.clone())),
         )
         .collect();
-    let mut documents: Vec<DocumentInput> = (shown_files.iter())
+    if let Some(config) = config_source(project)? {
+        files.push((FIELD.into(), config));
+    }
+    Ok(files)
+}
+
+/// Analyses `project`'s sources: each shown file's problems, by path.
+pub fn analyze_project(
+    analysis: &mut Analysis,
+    project: &Project,
+) -> Result<BTreeMap<String, Vec<Problem>>, String> {
+    let files = sources(project)?;
+    let documents: Vec<DocumentInput> = (files.iter())
         .map(|(uri, text)| DocumentInput {
             uri: uri.clone(),
             text: text.clone(),
         })
         .collect();
-    if let Some(config) = config_source(project)? {
-        documents.push(DocumentInput {
-            uri: FIELD.into(),
-            text: config,
-        });
-    }
+    let shown_files: Vec<&(String, String)> = files.iter().filter(|(f, _)| f != FIELD).collect();
     analysis.replace(documents)?;
     let placed = placed_variables(project);
     let none = BTreeSet::new();

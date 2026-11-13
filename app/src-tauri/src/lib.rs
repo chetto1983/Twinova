@@ -3,6 +3,7 @@ pub mod commands;
 pub mod demo;
 pub mod edit_commands;
 pub mod lsp_files;
+pub mod monitor;
 pub mod project_commands;
 #[cfg(test)]
 mod test_fixtures;
@@ -45,6 +46,13 @@ pub fn run() {
             commands::run,
             commands::save_state,
             commands::restore_state,
+            monitor::watch_range,
+            monitor::unwatch,
+            monitor::watched,
+            monitor::forces,
+            monitor::force,
+            monitor::release,
+            monitor::write_value,
             project_commands::current_project,
             project_commands::open_demo,
             project_commands::open_project,

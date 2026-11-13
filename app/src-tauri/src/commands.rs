@@ -1,5 +1,6 @@
 //! Tauri commands and the Run loop. The engine lives behind one mutex; Run is a thread that paces it to the wall
-//! clock and emits a `snapshot` event about 30 times a second. Build runs the current project (project_commands.rs)
+//! clock and emits a `snapshot` event about 30 times a second, and a `monitor` event with the monitored values while
+//! the editor monitors (`monitor.rs`). Build runs the current project (project_commands.rs)
 //! with the ST sources the editor holds (spec 2026-11-09-component-behaviour-design.md, "The app").
 
 use std::collections::BTreeMap;
@@ -37,6 +38,13 @@ pub struct AppState {
     saved: Mutex<Option<(Project, Saved)>>,
 }
 
+impl AppState {
+    /// The project the engine was last built from.
+    pub(crate) fn built_project(&self) -> Result<Option<Project>, String> {
+        Ok(self.built.lock().map_err(poisoned)?.clone())
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Built {
     pub snapshot: Snapshot,
@@ -47,7 +55,7 @@ fn poisoned<T>(_: T) -> String {
     "a lock is poisoned".to_string()
 }
 
-fn with_engine<T>(
+pub(crate) fn with_engine<T>(
     state: &AppState,
     f: impl FnOnce(&mut Engine) -> Result<T, String>,
 ) -> Result<T, String> {
@@ -226,11 +234,14 @@ pub fn run<R: Runtime>(
                         }
                     }
                 }
-                Ok(e.snapshot())
+                Ok((e.snapshot(), e.watching().then(|| e.watched())))
             });
             match tick {
-                Ok(snapshot) => {
+                Ok((snapshot, monitored)) => {
                     let _ = app.emit("snapshot", snapshot);
+                    if let Some(values) = monitored {
+                        let _ = app.emit("monitor", values);
+                    }
                 }
                 Err(error) => {
                     running.store(false, Ordering::SeqCst);
