@@ -93,7 +93,7 @@ con il piano"), decisions 1 to 8. Research 18, 19 and 20.
 
 ## Tasks
 
-- [ ] **Task 1: measurements, before any code.** Throwaway probes in a worktree outside the repository.
+- [x] **Task 1: measurements, before any code.** Throwaway probes in a worktree outside the repository.
   - How a second PROGRAM joins `Main.st` in `TestHarness::from_sources`, with no CONFIGURATION:
     - does it run;
     - in which order;

@@ -72,6 +72,27 @@ Text and Ladder. The PLC pane has an LD button, disabled ("Ladder is not availab
   - a written or forced value marked.
   - CODESYS says its power flow is recomputed in the IDE, not read from the PLC.
 
+### Measured in the plan's Task 1 (probes outside the repository, 2026-11-13)
+
+| What | Result |
+|---|---|
+| A second PROGRAM beside `Main` in `TestHarness::from_sources`, with no CONFIGURATION | both run every cycle, in the sources' order. `Ld` read a global `Main` had just written: 1 after the first cycle |
+| Two programs' outputs, adjacent or interleaved (`%QX1.0`/`%QX1.1`, `%QD4`/`%QD8`/`%QD12`), in either order | every program's outputs survive |
+| ST shaped as OIP's lowering: a seal-in rung, a TON box, a P contact through a hidden `R_TRIG` | compiles in truST. Start then Stop gives Motor TRUE then FALSE, Late TRUE after the preset, one pulse counted per rising edge |
+| Power temporaries: 20 s of virtual time on the 4.4a line, release, best of 3 | as is 0.837 s; with 60 hidden BOOLs written each scan 0.800 s (within noise); with 200, 0.973 s (+16 %); the fingerprint is unchanged in all three |
+| The `plcopen` crate (MIT, 0.3.1) on Beremiz's 5 projects with `<LD>` | each read, written back and read again; contacts, coils and blocks counted the same: 10/2/46, 10/2/46, 3/2/10, 1/0/11, 3/2/9 |
+
+Consequences:
+- An LD file is lowered to a PROGRAM of its own, listed after `Main.st`'s files: no CONFIGURATION is needed.
+- The power temporaries stay in the design: one per element costs nothing measurable at a realistic count.
+- PLCopen's XML is read and written with the `plcopen` crate. OIP's reduction from the graph to the series/parallel
+  tree is ported on top of it.
+
+What these do not show:
+- the scan order across programs with a CONFIGURATION and several tasks;
+- PLCopen's meaning, beyond its structure: the semantic round trip is Task 5's;
+- the power temporaries' cost on a program of a thousand rungs.
+
 ## Decisions
 
 1. **A Twinova crate, `twinova-ladder`** (Rust, in the app's workspace), holds:
