@@ -9,10 +9,12 @@
 //! `[path, path, …]`, an empty path being a wire; a box a function block's instance or a function with its pins. An
 //! operand or a pin's value is kept as written: truST, which compiles the lowered program, reads its expressions.
 
+use serde::Serialize;
+
 use crate::model::{CoilMode, ContactMode, Element, Exit, Pin, Program, Rung};
 
 /// Where the text stops making sense, and why.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ParseError {
     pub message: String,
     /// A byte offset in the text.

@@ -6,6 +6,7 @@ pub mod declarations;
 pub mod demo;
 pub mod edit_commands;
 mod frontend;
+pub mod ladder_commands;
 pub mod lsp_files;
 pub mod monitor;
 pub mod navigation;
@@ -43,6 +44,9 @@ pub fn run() {
             analysis::analyze,
             analysis::hover,
             analysis::completion,
+            ladder_commands::ladder_parse,
+            ladder_commands::ladder_print,
+            ladder_commands::ladder_lowering,
             navigation::definition,
             navigation::references,
             call_templates::call_template,

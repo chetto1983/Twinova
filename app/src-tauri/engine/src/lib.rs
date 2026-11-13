@@ -13,6 +13,7 @@ mod field_image;
 pub mod line;
 mod line_bind;
 mod locate;
+pub mod program_files;
 pub mod timing;
 pub mod watch;
 

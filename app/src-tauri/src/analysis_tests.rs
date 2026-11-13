@@ -96,6 +96,35 @@ fn a_broken_program_shows_its_errors_before_build() {
     );
 }
 
+/// A Ladder file reaches the frontend as its declarations alone: their problems show at the file's own lines and
+/// columns, and the ST files see its program.
+#[test]
+fn a_ladder_file_shows_the_problems_of_its_declarations_where_it_has_them() {
+    let (app, mut project) = opened("two_belts_diverter");
+    let ld =
+        "VAR x : NoSuchType; END_VAR\nVAR\n    y : BOOL;\n    z : Missing;\nEND_VAR\n|y| (y);\n";
+    project.program.push(("plc/Pump.ld".into(), ld.into()));
+    project
+        .program
+        .push(("plc/Bad.ld".into(), "|y| (y)".into()));
+    let found = analyzed(&app, &project);
+    let errors: Vec<String> = (found["plc/Pump.ld"].iter())
+        .filter(|p| p.severity == "error")
+        .map(|p| format!("{}:{} {}", p.line, p.column, p.code))
+        .collect();
+    assert_eq!(errors, ["1:9 E102", "4:9 E102"]);
+    assert_eq!(
+        found["plc/Bad.ld"],
+        [],
+        "Build reports a file that does not read"
+    );
+    assert!(
+        codes(&found, MAIN).iter().all(|c| !c.contains(" E")),
+        "{:?}",
+        codes(&found, MAIN)
+    );
+}
+
 /// An `AT %I*` the configuration does not place is a real E202: Build's field would refuse it.
 #[test]
 fn an_unplaced_wildcard_keeps_its_e202() {

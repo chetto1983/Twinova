@@ -7174,6 +7174,7 @@ dependencies = [
  "trust-syntax 0.39.0",
  "trust-wasm-analysis 0.39.0",
  "twinova-engine",
+ "twinova-ladder",
  "twinova-physics",
  "twinova-project",
  "webkit2gtk",
@@ -7200,7 +7201,9 @@ name = "twinova-engine"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "trust-hir 0.24.75",
  "trust-runtime",
+ "twinova-ladder",
  "twinova-physics",
  "twinova-project",
 ]

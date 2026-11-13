@@ -32,6 +32,8 @@ twinova-project = { path = "project" }
 twinova-engine = { path = "engine" }
 # The editor's interfaces and joins (spec 2026-11-11-snapping-design.md), built by the line's own physics geometry.
 twinova-physics = { path = "physics" }
+# The Ladder editor (spec 2026-11-13-ladder-editor-design.md): its model, grammar and lowering, a crate of this workspace.
+twinova-ladder = { path = "ladder" }
 # Watching the project folder for sources saved in VS Code (spec 2026-11-12-st-vscode-design.md). CC0-1.0; the version
 # trust-runtime's `full` feature already builds, so no crate is added.
 notify = "=8.2.1"

@@ -15,7 +15,7 @@ examine_globs = [
   "src/watch.rs", "src/analysis.rs", "src/monitor.rs", "src/navigation.rs", "src/call_templates.rs",
   "src/positions.rs",
   "ladder/src/parse.rs", "ladder/src/print.rs", "ladder/src/lower.rs", "ladder/src/lower_rung.rs",
-  "ladder/src/lower_boxes.rs",
+  "ladder/src/lower_boxes.rs", "ladder/src/program.rs", "engine/src/program_files.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs", "project/src/edit.rs",
   "project/src/history.rs", "project/src/library.rs", "project/src/sources.rs",

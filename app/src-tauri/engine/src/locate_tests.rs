@@ -28,7 +28,7 @@ fn a_labelled_message_names_each_file_and_line() {
     ];
     let message = "plc/B.st: bad at 4..5\nplc/A.st: odd at 0..1\nplc/A.st: no span\nfile 3: elsewhere at 1..2\nplain";
     assert_eq!(
-        locate_in_files(message, &files),
+        locate_in_files(message, &ProgramFiles::of(&files).unwrap()),
         "bad at plc/B.st:3\nodd at plc/A.st:1\nplc/A.st: no span\nfile 3: elsewhere at 1..2\nplain"
     );
 }

@@ -64,7 +64,7 @@ pub struct Power {
     pub variable: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct LowerError {
     pub element: ElementId,
     pub message: String,

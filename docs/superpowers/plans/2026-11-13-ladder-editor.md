@@ -110,7 +110,14 @@ con il piano"), decisions 1 to 8. Research 18, 19 and 20.
   - Done as amended in the spec (decision 5): a BOOL per element holds its power out, so the deferred conditions are
     not ported.
   - Beyond OIP's cases: a property test runs random rungs against an interpreter of the tree written in the test.
-- [ ] **Task 4: `.ld` in the project and the Build; the app's commands.** Tests first. Commit.
+- [x] **Task 4: `.ld` in the project and the Build; the app's commands.** Tests first. Commit.
+  - The engine's `program_files.rs` lowers each `.ld` for Build, its online change and the debugger. Its boxes are
+    resolved from truST's compile of the declarations (spec, measured). truST's errors map back to a rung or a
+    declaration line.
+  - The 4.4a line's program rewritten in Ladder gives the ST program's fingerprints over 15 s.
+  - The format took `.ld` paths unchanged. The app's analysis reads a `.ld` as its declarations alone, on their lines.
+  - Commands: `ladder_parse`, `ladder_print`, `ladder_lowering`. The catalogue of boxes moves to Task 6, its picker:
+    truST's standard library has no public list of its functions, so its source is that task's inventory.
 - [ ] **Task 5: PLCopen `<LD>` reader and writer,** OIP's tests ported, with the semantic round trip. Commit.
 - [ ] **Task 6: the editor.**
   - The tree, edits and layout in TypeScript (vitest first).

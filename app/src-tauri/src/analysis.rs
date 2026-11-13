@@ -13,6 +13,7 @@ use trust_wasm_analysis::{
     BrowserAnalysisEngine, CompletionRequest, DiagnosticItem, DocumentInput, HoverRequest, Position,
 };
 use twinova_engine::field::{config_source, placed_variables};
+use twinova_ladder::{declarations_only, declarations_prefix, program_name};
 use twinova_project::Project;
 
 use crate::lsp_files::FIELD;
@@ -109,7 +110,9 @@ fn shown(diagnostics: Vec<DiagnosticItem>, text: &str, placed: &BTreeSet<String>
 /// field's generated configuration last, when a component has a behaviour. The monitoring resolves references on the
 /// same files (`monitor.rs`).
 pub(crate) fn sources(project: &Project) -> Result<Vec<(String, String)>, String> {
-    let mut files: Vec<(String, String)> = (project.program.iter().cloned())
+    let program =
+        (project.program.iter()).map(|(path, text)| (path.clone(), frontend_text(path, text)));
+    let mut files: Vec<(String, String)> = program
         .chain(
             project
                 .behaviours
@@ -121,6 +124,38 @@ pub(crate) fn sources(project: &Project) -> Result<Vec<(String, String)>, String
         files.push((FIELD.into(), config));
     }
     Ok(files)
+}
+
+/// What the frontend reads of a program file: an ST file as written, a Ladder file as its declarations alone, on
+/// their own lines (`declarations_only`). Its rungs are the lowering's, which Build compiles. A Ladder file that does
+/// not read gives nothing: Build reports it.
+fn frontend_text(path: &str, text: &str) -> String {
+    if !path.ends_with(".ld") {
+        return text.to_string();
+    }
+    (program_name(path).ok())
+        .and_then(|name| declarations_only(name, text).ok())
+        .unwrap_or_default()
+}
+
+/// A Ladder file's problems at its own columns: the frontend read its first line after `declarations_prefix`.
+fn in_ladder_file(file: &str, mut problems: Vec<Problem>) -> Vec<Problem> {
+    let Some(name) = file
+        .strip_suffix(".ld")
+        .and_then(|_| program_name(file).ok())
+    else {
+        return problems;
+    };
+    let shift = u32::try_from(declarations_prefix(name).len()).unwrap_or(0);
+    for p in &mut problems {
+        if p.line == 1 {
+            p.column = p.column.saturating_sub(shift).max(1);
+        }
+        if p.end_line == 1 {
+            p.end_column = p.end_column.saturating_sub(shift).max(1);
+        }
+    }
+    problems
 }
 
 /// Analyses `project`'s sources: each shown file's problems, by path.
@@ -148,7 +183,8 @@ pub fn analyze_project(
     (shown_files.iter())
         .map(|(file, text)| {
             let found = (analysis.engine.diagnostics(file)).map_err(|e| e.to_string())?;
-            Ok((file.clone(), shown(found, text, placed_in(file))))
+            let problems = shown(found, text, placed_in(file));
+            Ok((file.clone(), in_ladder_file(file, problems)))
         })
         .collect()
 }
