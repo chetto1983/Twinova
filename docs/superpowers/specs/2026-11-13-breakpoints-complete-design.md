@@ -1,6 +1,6 @@
 # Spec: breakpoints, the rest of ROADMAP 4.9
 
-Date: 2026-11-13. Status: **proposed**, decisions 1 to 7 awaiting the user's approval.
+Date: 2026-11-13. Status: **approved** (user, 2026-11-13: "Perfetto"), decisions 1 to 7.
 
 The user, 2026-11-13: "Finiamo la 4.9". The first part (spec `2026-11-13-breakpoints-hold-design.md`, PR #48)
 left out what its verification lists:

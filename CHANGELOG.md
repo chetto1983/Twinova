@@ -143,6 +143,11 @@ and build inside the app, on Windows and Linux.
     Pause let a held scan go first;
   - truST's runtime now comes from a fork with upstream c9635b1c ported: a breakpoint in an IF's or a loop's body
     stops in the body.
+  - a breakpoint can carry a condition, a hit count (=, ≥, >) and a log message with {expressions} that never stops
+    and writes to a Log list; Shift+F9 or a right click on its dot edits it;
+  - breakpoints in blocks hold the line too, naming the device;
+  - while held, a program variable can be written: it shows at once, reaches the program at the next cycle, and a
+    saved state replays it.
 - The PLC pane in a window of its own (ROADMAP 4.8b), for example on a second monitor:
   - a button in the dock's PLC tab opens it, and the dock says where it went;
   - the window has Build, Run/Pause and Step, and the editor with Monitoring, the variables table and forcing;

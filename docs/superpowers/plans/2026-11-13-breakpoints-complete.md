@@ -94,4 +94,4 @@ decisions 1 to 7.
   - A write while held accepted, a force refused.
 - [x] **Task 3: the webview.** `debug.ts` tests first, then the bar, the dots, the Log, block tabs. Commit.
 - [x] **Task 4: the E2E.** Five checks, local once. Commit.
-- [ ] **Task 5: documents.** Verification, CHANGELOG, ROADMAP note. The pull request, merged when green.
+- [x] **Task 5: documents.** Verification, CHANGELOG, ROADMAP note. The pull request, merged when green.
