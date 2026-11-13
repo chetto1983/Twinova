@@ -221,6 +221,37 @@ source → belt_a → roller_r (with chain_transfer at its centre) → belt_b �
   - **It holds belt A and the rollers while the chains are up.** At 2 s spacing, the next carton otherwise runs into
     the raised deck's edge.
 
+### Amendment 2026-11-13: an infeed photocell and gap control
+
+**Measured.** The program above counts at `sensor_a` and raises on the third carton's edge, assuming the source's 2 s
+spacing. On the engine alone (deterministic: the same timeline in 5 processes, debug and release), that assumption
+holds for about 30 s:
+- each raise holds belt A for about 1.6 s while the source keeps its interval, so cartons bunch up;
+- from 31 s they reach `sensor_a` about 1.2 s apart, and the carton before the third is still on the deck when it
+  rises: it goes to reject too;
+- from then on the ratio is 1:2 (34 to `sink_ok`, 60 to reject at 200 s).
+
+The simulation was right: acceptance 3 says only cartons on the deck leave by the side. The E2E passed only when it
+read the counts within the transient, between about 28 and 38 s of virtual time (CI run 43283896219 on `main` read
+239 / 471).
+
+**The line:**
+- `sensor_in`, a diffuse photocell on belt A at 2.95 m, at its end, on `%IX0.6`.
+  - It must be at the end: belt A stops to hold a carton, and a carton past a sensor at 2.7 m was still on belt A,
+    so it never reached `sensor_a` (measured: the line stopped at 3 / 1).
+- The roller conveyor runs at 0.8 m/s, faster than belt A's 0.5 m/s, to make a gap. Cartons held on belt A queue
+  touching, and a photocell sees two touching cartons as one: `sensor_a` stayed covered for 1.2 s, two cartons,
+  and the count stopped (measured).
+
+**The program:**
+- it counts at `sensor_in`;
+- it holds belt A while the third carton is at `sensor_in`, until no carton is between `sensor_in` and `sensor_a`
+  and `sensor_a` has been clear for 0.8 s (the previous carton has left the deck);
+- it raises on that carton's edge at `sensor_a`, then carries and lowers as before.
+
+**Measured with the change** (600 s of virtual time): 259 cartons counted, 170 to `sink_ok`, 86 to reject
+(⌊259 / 3⌋), and 7 to 9 cartons on the line throughout.
+
 ## Acceptance of 4.4a
 
 1. **The line runs in the app** (E2E, Linux and Windows):

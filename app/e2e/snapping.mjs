@@ -121,6 +121,7 @@ const IDS = {
   chain_transfer: "chain_transfer_1",
   sensor_a: "sensor_diffuse_1",
   sensor_b: "sensor_diffuse_2",
+  sensor_in: "sensor_diffuse_3",
   source: "source_1",
   sink_ok: "sink_1",
   sink_reject: "sink_2",
@@ -165,6 +166,7 @@ sessions(async () => {
       await dragTo(known, "roller_1", rel(3.1, 0.04));
       await standsAt(known, "roller_1", rel(3.085), 0.001);
       await (await browser.$(`${inspector}//input[@aria-label="left_guard"]`)).click();
+      await setField("speed", "0.8");
       await setField("run", "%QX0.3");
       await setField("running", "%IX0.5");
     });
@@ -239,6 +241,12 @@ sessions(async () => {
         await setField("running", "%IX0.2");
       },
     );
+    await check("the infeed photocell mounts at belt A's end", async () => {
+      await dropAt("sensor diffuse", ...rel(2.95), await frameAll(known));
+      await eventually(async () => near([Number(await fieldValue(ALONG))], [2.95], 0.02, "eye in"), "eye in", 5_000);
+      known.sensor_diffuse_3 = rel(2.95);
+      await setField("detected", "%IX0.6");
+    });
     await click(`//button[@role="tab"][normalize-space()="plc/Main.st"]`);
     await setEditorText(PROGRAM);
     await click(button("Build"));
