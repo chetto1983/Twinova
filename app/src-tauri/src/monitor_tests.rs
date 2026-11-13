@@ -73,7 +73,28 @@ fn a_program_s_variables_and_members_are_targets() {
 }
 
 #[test]
+fn a_repeat_s_condition_is_after_until() {
+    let text = "PROGRAM Main\nVAR\n    n : INT;\nEND_VAR\nREPEAT\n    n := n + 1;\nUNTIL n > 3\nEND_REPEAT;\nEND_PROGRAM\n";
+    let files = [("plc/Main.st".to_string(), text.to_string())];
+    let shown: Vec<String> = (spots(&files, "plc/Main.st", 7, 7, None).into_iter())
+        .map(|(s, w)| format!("{}:{} {w:?}", s.line, s.column))
+        .collect();
+    assert_eq!(
+        shown,
+        [
+            "7:8 Path(Plc, \"Main.n\")",
+            "7:12 Condition(Plc, \"Main.n > 3\")"
+        ]
+    );
+}
+
+#[test]
 fn a_block_s_file_shows_the_selected_device_s_instance() {
+    let found = spots(&diverter(), TRANSFER, 22, 22, Some("chain_transfer"));
+    assert!(
+        found.iter().all(|(s, _)| s.target.is_none()),
+        "a block is read-only"
+    );
     let lines = shown(TRANSFER, 22, 22, Some("chain_transfer"));
     assert_eq!(lines, ["22:10 Field F.chain_transfer.raised"]);
     assert!(
@@ -171,8 +192,17 @@ fn the_commands_watch_read_force_and_release() {
     step(app.state()).unwrap();
     assert_eq!(watched(app.state()).unwrap()[0], Some("FALSE".to_string()));
     assert_eq!(forces(app.state()).unwrap(), forced);
-    assert!(release(app.state(), target.clone()).unwrap().is_empty());
+    let eye = Target::address("%IX0.6");
+    force(app.state(), eye.clone(), "TRUE".into()).unwrap();
+    let left = release(app.state(), target.clone()).unwrap();
+    let labels: Vec<&str> = left.iter().map(|f| f.label.as_str()).collect();
+    assert_eq!(labels, ["%IX0.6"], "only the released force goes");
+    assert!(release(app.state(), eye.clone()).unwrap().is_empty());
     write_value(app.state(), target, "FALSE".into()).unwrap();
+    assert_eq!(
+        write_value(app.state(), eye, "TRUE".into()).unwrap_err(),
+        "%IX0.6 is an address: force it instead"
+    );
     unwatch(app.state()).unwrap();
     assert!(watched(app.state()).unwrap().is_empty());
 }
