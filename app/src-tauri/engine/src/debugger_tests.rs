@@ -228,3 +228,46 @@ fn into_enters_a_block_out_leaves_it_and_the_stack_lists_the_innermost_first() {
     debugger.let_go();
     thread.join().unwrap();
 }
+
+/// truST c9635b1c, ported to the pin through the fork (spec decision 1): a statement matches a breakpoint when it starts
+/// inside it, so a breakpoint in an IF's body stops in the body, when the body runs.
+#[test]
+fn a_breakpoint_in_an_if_s_body_stops_only_when_the_body_runs() {
+    let mut engine = diverter();
+    let debugger = engine.debugger();
+    debugger.set(MAIN, &[40]).unwrap();
+    let (_shared, time, thread) = running(engine, 8_000);
+    assert_eq!(held(&debugger), at(40));
+    let first = time.load(Ordering::SeqCst);
+    assert!(
+        first > 5_000,
+        "the first carton enters after 5 s, not at the first scan ({first} ms)"
+    );
+    assert_eq!(debugger.read(&["Main.count".into()]), [Some("0".into())]);
+    debugger.resume(Resume::Into);
+    assert_eq!(held(&debugger), at(41));
+    assert_eq!(debugger.read(&["Main.count".into()]), [Some("1".into())]);
+    debugger.resume(Resume::Continue);
+    assert_eq!(held(&debugger), at(40));
+    assert!(
+        time.load(Ordering::SeqCst) >= first + 1_900,
+        "the next carton, 2 s later"
+    );
+    debugger.let_go();
+    thread.join().unwrap();
+}
+
+#[test]
+fn a_breakpoint_on_an_if_s_line_stops_at_the_if_once_a_scan() {
+    let mut engine = diverter();
+    let debugger = engine.debugger();
+    debugger.set(MAIN, &[39]).unwrap();
+    let (_shared, time, thread) = running(engine, 100);
+    assert_eq!(held(&debugger), at(39));
+    let first = time.load(Ordering::SeqCst);
+    debugger.resume(Resume::Continue);
+    assert_eq!(held(&debugger), at(39), "the next scan");
+    assert!(time.load(Ordering::SeqCst) > first);
+    debugger.let_go();
+    thread.join().unwrap();
+}
