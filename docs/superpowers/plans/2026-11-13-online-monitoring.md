@@ -97,7 +97,7 @@
 ## Tasks
 
 - [x] **Task 1: spec approval and plan** (docs commit).
-- [ ] **Task 2: the engine.**
+- [x] **Task 2: the engine.**
   - Tests first, on the diverter:
     - a forced variable holds for 1,000 scans, and release gives it back;
     - a forced input holds, and after release it reads the plant's value (the spec's claim, measured);
@@ -109,7 +109,7 @@
     - debug attached without forces keeps the fingerprint.
   - `cargo mutants` on the new code.
   - Commit `feat(engine): write, force and watch the PLC's variables`.
-- [ ] **Task 3: the watch list in the app.**
+- [x] **Task 3: the watch list in the app.**
   - The dependencies.
   - `monitor.rs`, tests first:
     - the diverter's visible lines give the paths, `entered.Q` and not `entered`, and each `Condition` qualified;
@@ -118,15 +118,25 @@
   - The commands and the `monitor` event.
   - `cargo mutants` on `monitor.rs`.
   - Commit `feat(app): watch the visible lines and force from commands`.
-- [ ] **Task 4: the webview.**
-  - `monitor.ts`, tests first: decorations from values, forced marks, which target a click is.
-  - The toggle and Ctrl+T, the decorations, the write/force field, the Forces list; i18n. Stryker.
-  - Commit `feat(view): monitor and force in the ST editor`.
-- [ ] **Task 5: the E2E.**
-  - `e2e/monitor.mjs` as the spec lists, in the `e2e` script.
+- [ ] **Task 4: the declarations in Rust** (spec decisions 9 and 10).
+  - `src/declarations.rs`, tests first, on the diverter and a sample with every class:
+    - rows read from the syntax tree: name, class, retain or constant, type, address, initial value, comment;
+    - each edit's new text: add, delete, change of a field, change of class (the line moves), a new block when its
+      class has none;
+    - rename through `trust_ide::rename::rename_symbol`, every reference included;
+    - an edit that does not parse is refused.
+  - The commands `declarations` and `edit_declaration`.
+  - Commit `feat(app): read and edit a POU's declarations`.
+- [ ] **Task 5: the webview.**
+  - `monitor.ts`, tests first: decorations from values, forced marks, rows' values.
+  - The Monitoring toggle and Ctrl+T, the values in the code, the variables table above it (online values, write and
+    force, edits), the Forces list; i18n.
+  - Commit `feat(view): monitor, force and declare in the ST editor`.
+- [ ] **Task 6: the E2E.**
+  - `e2e/monitor.mjs`: the spec's list, and a variable added and retyped through the table, then built.
   - The whole suite on Linux under CI's screen.
-  - Commit `test(e2e): online monitoring`.
-- [ ] **Task 6: acceptance and documents.**
+  - Commit `test(e2e): online monitoring and the variables table`.
+- [ ] **Task 7: acceptance and documents.**
   - The release soak with Monitoring on and off against `main`.
   - The verification file; ROADMAP 4.8; CHANGELOG.
-  - The pull request; merge when green.
+  - Mutation and coverage in CI; the pull request ready, merged when green.
