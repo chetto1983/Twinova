@@ -136,7 +136,7 @@
   - `e2e/monitor.mjs`: the spec's list, and a variable added and retyped through the table, then built.
   - The whole suite on Linux under CI's screen.
   - Commit `test(e2e): online monitoring and the variables table`.
-- [ ] **Task 7: acceptance and documents.**
+- [x] **Task 7: acceptance and documents.**
   - The release soak with Monitoring on and off against `main`.
   - The verification file; ROADMAP 4.8; CHANGELOG.
   - Mutation and coverage in CI; the pull request ready, merged when green.
