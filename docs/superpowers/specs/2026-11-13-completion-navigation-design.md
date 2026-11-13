@@ -1,6 +1,6 @@
 # Spec: completion as in PLC IDEs, and navigation (ROADMAP 4.10)
 
-Date: 2026-11-13. Status: **proposed**, decisions 1 to 5 awaiting the user's approval.
+Date: 2026-11-13. Status: **approved** (user, 2026-11-13: "Facciamo tutto"), decisions 1 to 5.
 
 ROADMAP 4.10:
 - an FB or function call inserted with all its parameters (`:=` inputs, `=>` outputs), optional ones reducible;
