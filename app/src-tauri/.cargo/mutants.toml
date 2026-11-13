@@ -34,4 +34,7 @@ exclude_re = [
   # snap.rs `pose_onto`: a turn's w is exactly 0 only for a half turn, where q and -q are one rotation either way, and
   # from_rotation_y(π) in f64 gives w = 6e-17, never 0; `<` and `<=` differ on no turn a join produces.
   "physics/src/snap.rs:.*replace < with <= in pose_onto",
+  # debugger_kinds.rs `pieces`: '{' and '}' never sit at one byte offset, so `o < c` and `o <= c` agree on every
+  # message.
+  "engine/src/debugger_kinds.rs:.*replace < with <= in pieces",
 ]

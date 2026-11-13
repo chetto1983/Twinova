@@ -156,6 +156,7 @@ fn a_message_splits_into_text_and_expressions() {
         ]
     );
     assert_eq!(pieces("plain").unwrap(), [Piece::Text("plain")]);
+    assert_eq!(pieces("{x}").unwrap(), [Piece::Expr("x")]);
     assert_eq!(pieces("a{x").unwrap_err(), "'{' without '}' in the message");
     assert_eq!(pieces("a}x").unwrap_err(), "'}' without '{' in the message");
     assert_eq!(
@@ -266,10 +267,20 @@ fn a_write_while_held_lands_at_the_next_cycle_and_replays_to_the_same_trajectory
         "Main.count".into(),
     )]);
     assert_eq!(engine.watched(), [Some("101".into())], "100, then a carton");
-    let replayed = Engine::restore(&project, &engine.save()).unwrap();
+    let mut replayed = Engine::restore(&project, &engine.save()).unwrap();
     assert_eq!(
         replayed.fingerprint(),
         engine.fingerprint(),
         "the write replays one step after the held one"
+    );
+    // The fingerprint alone misses a lost write here: 101 and 2 cartons route the same (MOD 3).
+    replayed.watch(&[crate::watch::Watch::Path(
+        crate::watch::Scope::Plc,
+        "Main.count".into(),
+    )]);
+    assert_eq!(
+        replayed.watched(),
+        [Some("101".into())],
+        "the write replayed"
     );
 }
