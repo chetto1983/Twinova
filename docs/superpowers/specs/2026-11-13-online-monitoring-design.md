@@ -1,6 +1,7 @@
 # Spec: online monitoring in the ST editor (ROADMAP 4.8)
 
-Date: 2026-11-13. Status: **approved** (user, 2026-11-13), decisions 1 to 8.
+Date: 2026-11-13. Status: **approved** (user, 2026-11-13), decisions 1 to 8; decisions 9 to 11, the variables table,
+**for approval**.
 
 ROADMAP 4.8: "Online monitoring in the editor (research [17]): each line's values beside the code, TRUE/FALSE on
 conditions, an FB instance chosen to watch; modify and force from the code, as TIA Portal and CODESYS do. From the
@@ -144,6 +145,46 @@ All measured on the line's PLC, the controller's harness:
   - Twinova refuses a dotted target with a message rather than list a force that does nothing.
   - FB members are still monitored.
 - **A BOOL takes TRUE or FALSE.** truST does not parse `BOOL#1`; a click toggles a BOOL anyway.
+
+### Amendment of 2026-11-13: a variables table, which also edits the declarations (user)
+
+The user asked for the variables in a table, as in CODESYS and TIA Portal (a screenshot of OpenPLC Editor's table:
+#, Name, Class, Type, Location, Initial Value, Option, Documentation). Two answers on 2026-11-13:
+- the table **and** the values in the code;
+- the table **also edits the declarations**, not only shows them online.
+
+**9. The table.**
+- **Where:** above the code of the open POU, as OpenPLC's and CODESYS's declaration part. Its height is resizable and
+  it can be folded.
+- **Columns:** #, Name, Class (VAR, VAR_INPUT, VAR_OUTPUT, VAR_IN_OUT, VAR_TEMP, VAR_GLOBAL, VAR_EXTERNAL, and
+  RETAIN or CONSTANT), Type, Address (`AT`), Initial value, Comment; then, while Monitoring is on, Value and Forced.
+- **Online:** each row's value is a path watch (`Main.<name>`, or `F.<device>.<name>` for a block).
+  - An FB instance's row unfolds into its members, read-only.
+  - A row's Value can be written or forced as decision 6 says: the program's own variables only.
+- **Offline (and online, as an edit of the text):**
+  - add a row;
+  - delete a row;
+  - change name, class, type, address, initial value or comment.
+  - Each edit rewrites the ST text of the tab, which is then an edited tab, built or reverted as any other. The table
+    and the code are two views of one text.
+
+**10. What is reused and what is written** (inventory of 2026-11-13, frontend `5eb7f8c`).
+- **Rename:** reused. `trust_ide::rename::rename_symbol` renames the declaration and every reference in the project's
+  files.
+- **Reading the declarations:** the public syntax tree of `trust_syntax`. A `VarBlock` gives the class and its
+  qualifiers; a `VarDecl` gives `Name`, `DirectAddress`, `TypeRef`, the initializer after `Assign`, and the comment that
+  follows it (measured on a sample).
+- **Writing the declarations:** written by Twinova. `trust-ide` has no add, delete or retype refactor, and its
+  `var_decl` helpers are crate-private. Every edit is a text edit on a node's range, with nothing reformatted around
+  it:
+  - a declaration's own line is regenerated as `name [AT address] : type [:= value]; (* comment *)`;
+  - an added row goes before its block's `END_VAR`, and a new block is made when the class has none;
+  - a deleted row loses its line;
+  - a change of class moves the line to its block.
+- **Each edit is checked** by truST's analysis before it is shown: an edit that makes the file fail to parse is
+  refused.
+
+**11. The plan grows** by two tasks, the declarations in Rust and the table in the webview, before the E2E.
 
 ## The design
 
