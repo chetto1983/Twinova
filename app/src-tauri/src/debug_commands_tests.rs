@@ -165,3 +165,20 @@ fn a_logpoint_s_lines_are_drained_and_a_write_while_held_is_taken_but_not_a_forc
     );
     reset(app.state()).unwrap();
 }
+
+#[test]
+fn taking_off_a_breakpoint_after_reset_attaches_no_debugger() {
+    // A field runtime with debug on runs 7.7 times slower, breakpoints or not (measured 2026-11-13, release).
+    let app = opened("two_belts_diverter", true);
+    assert_eq!(
+        set_breakpoints(app.state(), TRANSFER.into(), vec![]).unwrap(),
+        vec![]
+    );
+    assert_eq!(
+        set_breakpoints(app.state(), MAIN.into(), vec![]).unwrap(),
+        vec![]
+    );
+    let state = app.state::<AppState>();
+    assert!(state.debugger(Scope::Field).unwrap().is_none());
+    assert!(state.debugger(Scope::Plc).unwrap().is_none());
+}

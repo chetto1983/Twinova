@@ -41,7 +41,12 @@ pub fn set_breakpoints(
     file: String,
     breakpoints: Vec<Breakpoint>,
 ) -> Result<Vec<Breakpoint>, String> {
-    let set = attached(&state, &file)?.set(&file, &breakpoints)?;
+    // truST turns debug on and never off, and a field runtime with it on runs 7.7 times slower (measured 2026-11-13):
+    // nothing to take off attaches nothing.
+    let set = match (breakpoints.is_empty(), state.debugger(scope_of(&file))?) {
+        (true, None) => Vec::new(),
+        _ => attached(&state, &file)?.set(&file, &breakpoints)?,
+    };
     let mut kept = state.breakpoints.lock().map_err(|e| e.to_string())?;
     match set.is_empty() {
         true => kept.remove(&file),
