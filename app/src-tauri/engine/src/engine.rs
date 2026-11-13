@@ -234,6 +234,15 @@ impl Engine {
         self.apply(Input::Release(target)).map(drop)
     }
 
+    /// The program's debugger, attached as a force attaches it (spec 2026-11-13-breakpoints-hold-design.md,
+    /// decision 10). It works without the engine, which a stopped scan holds.
+    pub fn debugger(&mut self) -> crate::debugger::Debugger {
+        let files = self.project.program.clone();
+        let controller = self.line.controller_mut();
+        let control = controller.debug();
+        crate::debugger::Debugger::new(control, controller.harness_mut(), files)
+    }
+
     /// The forces in effect, with their values as the editor shows them.
     pub fn forces(&self) -> Vec<(Target, String)> {
         self.line.controller().forces()

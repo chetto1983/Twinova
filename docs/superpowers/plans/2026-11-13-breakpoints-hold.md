@@ -93,7 +93,7 @@ with VS Code's keys.
 
 ## Tasks
 
-- [ ] **Task 1: the engine's debugger.**
+- [x] **Task 1: the engine's debugger.**
   - Tests first, on the 4.4a line, at top-level lines:
     - a stop at the first scan;
     - steps move the line;

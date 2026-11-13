@@ -52,7 +52,7 @@ pub(super) type Forces = BTreeMap<Target, Value>;
 
 impl Controller {
     /// The debug control, attached now if it was not.
-    fn debug(&mut self) -> DebugControl {
+    pub(crate) fn debug(&mut self) -> DebugControl {
         let runtime = self.harness.runtime_mut();
         runtime
             .debug_control()
