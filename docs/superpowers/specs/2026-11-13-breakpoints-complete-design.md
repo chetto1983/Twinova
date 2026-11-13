@@ -91,6 +91,15 @@ This spec adds them.
      condition, hit count (operator and N) and log message;
    - the dot shows what kind it is: plain, conditional, logpoint.
 
+8. **The field's debug goes off with its last breakpoint** (amended 2026-11-13, after the windows-2022 E2E).
+   - Measured: debug on costs even with no breakpoint, 7.7× on the field's 1 ms scans and 30 % on the PLC's (release,
+     20 s of virtual time: 6.53 s and 1.10 s against 0.84 s). truST at `efceb12` can turn it on, not off.
+   - The fork gets `Runtime::disable_debug` (`1e249be`, with a test in `tests/debug_stepping.rs`), approved by the user
+     on 2026-11-13. It is Twinova's own API, not an upstream port.
+   - When no block has a breakpoint and the line is not held, the app turns the field's debug off and drops its
+     debugger: at `set_breakpoints`, at Continue, and at each Run or Step.
+   - The PLC's debug stays on once attached: forces and writes use the same control.
+
 ## Test plan
 
 - **Engine:**
