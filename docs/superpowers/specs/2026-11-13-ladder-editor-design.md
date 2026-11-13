@@ -95,8 +95,16 @@ Consequences:
 - A function is lowered as a call with named arguments, so the lowering needs no table of argument order. truST
   checks the pins' names, which keeps one compiler. AND, OR, XOR and MOD are written as operators. EN is an `IF`
   around the call, as in OIP.
-- PLCopen's XML is read and written with the `plcopen` crate. OIP's reduction from the graph to the series/parallel
-  tree is ported on top of it.
+- ~~PLCopen's XML is read and written with the `plcopen` crate.~~ Amended in Task 5 (2026-11-13), from the crate's
+  generated types (`generated/generated_body.rs`, `Body_LD_Inline`): they keep an `<LD>` body's elements grouped by
+  kind (every contact, then every coil…), so the order of the file is lost. OIP's reader orders rungs and branches by
+  it and attaches a comment or a label to the network after it. So:
+  - the body is read with `roxmltree` 0.21.2 (MIT OR Apache-2.0), already in the lockfile through truST's
+    `trust-plcopen`, which keeps the document's order;
+  - it is written as text, as OIP's writer writes it;
+  - OIP's reduction from the graph to the series/parallel tree and its writer are ported as they are (decision 7).
+- truST's `trust-plcopen` does not cover LD: its profile refuses graphical bodies ("No import/export for SFC/LD/FBD
+  bodies").
 
 What these do not show:
 - the scan order across programs with a CONFIGURATION and several tasks;
