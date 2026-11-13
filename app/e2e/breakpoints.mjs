@@ -100,10 +100,11 @@ async function editBreakpoint(line, fields) {
   await click(`//div[contains(@class,"breakpoint-bar")]//button[normalize-space()="Apply"]`);
 }
 
-/** Whether the code shows `value` after line 40's `count`. */
+/** Whether the code shows `value` after line 40's `count`, brought into view: values are drawn on visible lines. */
 const countShows = (value) =>
   eventually(
     async () => {
+      await editor(() => document.querySelector(".monaco-host").editor.revealLineInCenter(40));
       const values = await drawn();
       if (!values.includes(`40 monitor-value ${value}`)) throw new Error(values.join(" | "));
     },
@@ -172,9 +173,24 @@ sessions(() =>
       await heldAt(39);
     });
     await check("with the breakpoint off, Continue lets the line run", async () => {
+      // Monitoring turned on while held: the engine, in its scan, cannot read the table, which comes at Continue.
+      await click(button("Monitoring (Ctrl+T)"));
+      await click(button("Monitoring (Ctrl+T)"));
       await clickGutter(37);
       await eventually(async () => expectEqual(await marks(), ["39 debug-held"], "marks"), "off", 5_000);
       await click(button("Continue (F5)"));
+      await eventually(
+        async () => {
+          const names = await browser.execute(() =>
+            [...document.querySelectorAll('[aria-label="Variables"] tbody input[aria-label="Name"]')].map(
+              (i) => i.value,
+            ),
+          );
+          if (!names.includes("count")) throw new Error(names.join(" | ") || "no row");
+        },
+        "the table after Continue",
+        10_000,
+      );
       const at = await statusSeconds();
       await eventually(
         async () => {

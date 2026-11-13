@@ -114,8 +114,10 @@
       })
       .catch((e) => (problem = String(e)));
   }, 150);
-  // A new Build, a scroll, a tab, a selection or an unfolded instance watches again; the engine forgets its watches at
-  // each Build, so the built text (`base`) is a dependency too.
+  /** Whether a breakpoint holds the line: while held the engine cannot read a new table, so letting go watches again. */
+  const held = $derived(hold !== null);
+  // A new Build, a scroll, a tab, a selection, an unfolded instance or the end of a HOLD watches again; the engine
+  // forgets its watches at each Build, so the built text (`base`) is a dependency too.
   $effect(() => {
     if (!live || !current) {
       rewatch.cancel();
@@ -126,6 +128,7 @@
       return;
     }
     void current.base;
+    void held;
     rewatch.call(fileOf(current), visible.first, visible.last, device, [...unfolded]);
   });
 

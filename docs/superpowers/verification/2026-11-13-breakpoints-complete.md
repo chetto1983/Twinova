@@ -74,6 +74,15 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-complete-design.md`, plan `2026-1
     debugger is dropped; taken off while held, at Continue; the PLC's stays. `breakpoints.mjs` now takes the block's
     breakpoint off while held and continues; the checks after it at Max: 50 s of virtual time in 4 s.
 
+- **Monitoring turned on while held left the variables table empty** (seen by the user on an E2E screenshot,
+  2026-11-13).
+  - While held, `watch_range` keeps the table it had, so an empty one, and does not tell the engine what to read; and
+    nothing watched again after Continue.
+  - The editor now watches again when a HOLD ends. `breakpoints.mjs` turns Monitoring off and on while held, then
+    expects `count` in the table after Continue: "no row" without the change, 15/15 in six runs with it.
+  - `countShows` brings line 40 into view first: values are drawn on visible lines only, and the write bar and the table
+    had pushed it out (one run in four).
+
 ## What this does not prove
 
 - **A breakpoint bound to one device** (decision 4), and the hit count "a multiple of N" (decision 2).

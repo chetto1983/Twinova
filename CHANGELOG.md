@@ -150,6 +150,9 @@ and build inside the app, on Windows and Linux.
     saved state replays it.
   - Run, Step, Continue and Run to cursor wait for the breakpoints just set: on Windows they could reach the app
     first, and the line ran with the old breakpoints.
+  - monitoring turned on while the line is held fills the variables table at Continue: it stayed empty until a scroll
+    or a Build;
+  - taking a block's last breakpoint off turns the field's debug off: left on, the line ran 7.7 times slower.
 - The PLC pane in a window of its own (ROADMAP 4.8b), for example on a second monitor:
   - a button in the dock's PLC tab opens it, and the dock says where it went;
   - the window has Build, Run/Pause and Step, and the editor with Monitoring, the variables table and forcing;
