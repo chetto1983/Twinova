@@ -6,6 +6,7 @@
 //   npx tauri build --debug --no-bundle && node e2e/breakpoints.mjs
 
 import {
+  BAR,
   app,
   browser,
   button,
@@ -17,8 +18,10 @@ import {
   expectEqual,
   fixtureCopy,
   out,
+  pickRow,
   selectSpeed,
   sessions,
+  setInput,
   statusSeconds,
   textOf,
 } from "./helpers.mjs";
@@ -84,6 +87,29 @@ async function virtualIn(ms) {
   await click(button("Pause"));
   return (await statusSeconds()) - before;
 }
+
+/** The breakpoint bar's field `label` (spec 2026-11-13-breakpoints-complete-design.md, decision 7). */
+const field = (label) => `//div[contains(@class,"breakpoint-bar")]//input[@aria-label="${label}"]`;
+
+/** Opens line `line`'s breakpoint bar with Shift+F9, sets its fields, and applies them. */
+async function editBreakpoint(line, fields) {
+  await cursorAt(line);
+  await browser.keys(["Shift", "F9"]);
+  await browser.$(field("Condition")).waitForExist({ timeout: 5_000 });
+  for (const [label, text] of Object.entries(fields)) await setInput(field(label), text, "input");
+  await click(`//div[contains(@class,"breakpoint-bar")]//button[normalize-space()="Apply"]`);
+}
+
+/** Whether the code shows `value` after line 40's `count`. */
+const countShows = (value) =>
+  eventually(
+    async () => {
+      const values = await drawn();
+      if (!values.includes(`40 monitor-value ${value}`)) throw new Error(values.join(" | "));
+    },
+    `count ${value}`,
+    10_000,
+  );
 
 /** Puts the cursor on `line` and gives the editor the focus. */
 const cursorAt = (line) =>
@@ -200,6 +226,80 @@ sessions(() =>
         10_000,
       );
       await browser.saveScreenshot(`${out}/breakpoint-body.png`);
+      await click(button("Reset"));
+    });
+    await check("a condition stops only when it holds: count = 2, the second carton", async () => {
+      await clickGutter(40);
+      await editBreakpoint(41, { Condition: "count = 2" });
+      await eventually(
+        async () => expectEqual(await marks(), ["41 debug-breakpoint-conditional"], "marks"),
+        "conditional",
+        5_000,
+      );
+      await selectSpeed("Max");
+      await click(button("Run"));
+      await heldAt(41);
+      await countShows(2);
+      await click(button("Reset"));
+    });
+    await check("a hit count stops at its hit: the third carton", async () => {
+      await editBreakpoint(41, { Condition: "", Hits: "3" });
+      await click(button("Run"));
+      await heldAt(41);
+      await countShows(3);
+      await click(button("Reset"));
+    });
+    await check("a logpoint never stops and writes its lines to the Log", async () => {
+      await editBreakpoint(41, { Hits: "", "Log message": "count={count}" });
+      await eventually(async () => expectEqual(await marks(), ["41 debug-logpoint"], "marks"), "logpoint", 5_000);
+      await click(button("Run"));
+      await eventually(
+        async () => {
+          const lines = await browser.execute(() =>
+            [...document.querySelectorAll('section[aria-label="Log"] li')].map((li) => li.textContent.trim()),
+          );
+          if (!lines.some((l) => l.endsWith("count=1")) || !lines.some((l) => l.endsWith("count=2")))
+            throw new Error(lines.join(" | "));
+        },
+        "logged",
+        15_000,
+      );
+      expectEqual(await browser.$(".statusbar .hold").isExisting(), false, "never held");
+      await click(button("Pause"));
+      await cursorAt(41);
+      await browser.keys(["Shift", "F9"]);
+      await click(`//div[contains(@class,"breakpoint-bar")]//button[normalize-space()="Remove"]`);
+      await eventually(async () => expectEqual(await marks(), [], "removed"), "removed", 5_000);
+      await click(`//section[@aria-label="Log"]//button[normalize-space()="Clear"]`);
+      await click(button("Reset"));
+    });
+    await check("a block's breakpoint holds the line and names the device", async () => {
+      await click(`//button[@role="tab"][contains(normalize-space(), "chain_transfer")]`);
+      await clickGutter(20);
+      await click(button("Run"));
+      await eventually(
+        async () =>
+          expectEqual(await holdText(), "HOLD at components/twinova.chain_transfer@1.st:20 (chain_transfer)", "hold"),
+        "held in the block",
+        10_000,
+      );
+      await browser.saveScreenshot(`${out}/breakpoint-block.png`);
+      await click(button("Reset"));
+      await clickGutter(20);
+      await click(`//button[@role="tab"][contains(normalize-space(), "plc/Main.st")]`);
+    });
+    await check("a write while held shows at once and reaches the program at the next cycle", async () => {
+      await clickGutter(40);
+      await click(button("Run"));
+      await heldAt(40);
+      await pickRow("count");
+      await setInput(`${BAR}//input`, "100", "input");
+      await click(`${BAR}//button[normalize-space()="Write"]`);
+      expectEqual(await browser.$(".held-note").isExisting(), true, "the bar says when it lands");
+      // The next carton stops at line 40 again, before count goes up: count is the 100 written, not 1.
+      await click(button("Continue (F5)"));
+      await heldAt(40);
+      await countShows(100);
       await click(button("Reset"));
     });
     await check("a breakpoint moves with its line when a line goes in above, and stops there after Build", async () => {
