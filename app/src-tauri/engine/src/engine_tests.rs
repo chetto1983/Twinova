@@ -176,7 +176,7 @@ fn the_snapshot_carries_each_chain_transfer_s_lift() {
         s.actuators[0].value
     };
     assert_eq!(lift(&engine), 0.0);
-    // The third carton reaches the transfer at about 11.4 s; the chains top out 150 ms later.
+    // The chains top out under the third carton at 12.14 s (measured 2026-11-13).
     let topped = (0..1_300).any(|_| {
         engine.step().unwrap();
         lift(&engine) == 1.0
@@ -253,4 +253,34 @@ fn the_fingerprint_follows_the_line() {
     assert_eq!(run(3), run(3));
     assert_ne!(run(3), run(4));
     assert_ne!(run(3), engine().fingerprint());
+}
+
+/// The 4.4a line keeps its ratio once cartons bunch up (spec 2026-11-10-diverter-line-design.md, amendment
+/// 2026-11-13): each raise holds belt A, and from about 31 s the carton before the third was still on the deck when it
+/// rose, so the first program rejected two in three for good (34 to the normal sink, 60 to reject at 200 s).
+#[test]
+fn the_line_with_its_chain_transfer_rejects_one_carton_in_three_as_they_bunch_up() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../project/tests/fixtures/valid/two_belts_diverter");
+    let (mut engine, _) = Engine::new(&open_folder(&dir).unwrap().opened.project).unwrap();
+    while engine.time_ms() < 200_000 {
+        engine.step().unwrap();
+    }
+    let end = engine.snapshot();
+    let (ok, rejected) = (end.sinks[0].delivered, end.sinks[1].delivered);
+    let Some(Value::DInt(counted)) = engine.line.controller().variable("count") else {
+        panic!("the program's count");
+    };
+    assert_eq!((ok, rejected), (54, 27), "measured 2026-11-13");
+    // The last third carton counted may still be on its way to the reject sink.
+    let thirds = counted as u64 / 3;
+    assert!(
+        rejected == thirds || rejected + 1 == thirds,
+        "every third carton counted, and only those: {rejected} of {counted}"
+    );
+    assert!(
+        end.cartons.len() <= 9,
+        "no queue that grows: {} on the line",
+        end.cartons.len()
+    );
 }

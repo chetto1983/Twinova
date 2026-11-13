@@ -53,7 +53,9 @@ and build inside the app, on Windows and Linux.
 - A roller conveyor and a chain transfer (ROADMAP 4.4a), copied and translated from Open Industry Project (MIT):
   - the transfer pops its chains up through the rollers and carries a carton out of the side;
   - its logic is an ST block with a `raised_fb` feedback;
-  - the example line sends every third carton to a reject sink.
+  - the example line sends every third carton to a reject sink, at any spacing. A photocell at belt A's end counts the
+    cartons and holds each third one until the transfer is clear. The roller conveyor runs faster than belt A, so
+    cartons part and each one breaks the beam.
   The 3D view draws the rollers, the chain transfer and the photo eyes as OIP does.
 - Curved conveyors and the conveyor options (ROADMAP 4.4b), from Open Industry Project (MIT):
   - curved belt and curved roller conveyors, left or right, 15° to 180°: a carton turns with the curve and leaves

@@ -55,7 +55,7 @@ sessions(() =>
 
     await click(button("Run"));
     await check("the third carton raises the chains, and raised_fb reports the top", () =>
-      // It reaches the transfer at about 11.4 s of virtual time; Run goes at the wall clock.
+      // The chains top out under it at about 12.1 s of virtual time; Run goes at the wall clock.
       eventually(async () => expectEqual(await bit("chain_transfer.raised_fb"), "TRUE", "raised_fb"), "raise", 20_000),
     );
     await screenshot("chain-transfer-raised");
