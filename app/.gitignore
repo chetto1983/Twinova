@@ -10,3 +10,6 @@ project.inlang/cache/
 .stryker-tmp/
 reports/
 mutants.out*/
+# Seeds proptest records when a property fails. `cargo mutants --in-place` fails them on purpose, so the seeds it
+# leaves are a mutant's, not a bug's; a real failure is fixed with a test of its own.
+proptest-regressions/
