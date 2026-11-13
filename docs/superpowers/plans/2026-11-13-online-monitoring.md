@@ -69,7 +69,7 @@
 1. **Write applies to variables only.** An input written once is overwritten by the plant at the next millisecond, and
    an output by the program at the next scan. Addresses are forced, not written.
 2. **A force target is `Variable { program, path }` or `Address(text)`.** The program comes from `inline_value_data`'s
-   owner; the path may be dotted (`carry.PT`) if truST resolves it, measured in Task 2.
+   owner. A dotted path is refused, because truST drops forces on members (measured in Task 2, spec amended).
 3. **The watch list is compiled once** when the text, the visible range or the selection changes: paths kept,
    conditions parsed. The run loop only reads it.
 4. **Values travel as text,** formatted in Rust: `TRUE`/`FALSE`, integers, reals, `T#…`. The webview shows them as

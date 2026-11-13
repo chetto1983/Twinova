@@ -127,6 +127,24 @@ All measured on the line's PLC, the controller's harness:
    - Reads change nothing. The debug control attached leaves the trajectory equal (measured above, six fixtures).
    - Writes and forces are inputs, recorded and replayed.
 
+### Amendments of 2026-11-13, measured in plan Task 2
+
+- **Decision 2: monitoring alone attaches nothing.**
+  - Reads of paths and conditions need no debug control: `engine_monitor_tests.rs` reads after every scan with none
+    attached.
+  - So the debug control attaches at the first write or force, not when Monitoring is turned on.
+  - Monitoring alone costs the reads, not the 3 to 6 times per scan.
+- **Releasing a forced input needs nothing written.**
+  - `Line::step_ms` writes every input every millisecond. After `release_io`, the next scan reads the plant's value
+    (`a_forced_input_holds_against_the_plant_and_the_plant_comes_back`).
+  - The forcing section's claim above came from a probe that read an input a carton was really covering.
+- **Only a program's own variables can be written or forced.**
+  - truST discards a force on an instance's member without a word: `carry.PT` and `arrived.Q` were dropped at the next
+    scan, while `count` held.
+  - Twinova refuses a dotted target with a message rather than list a force that does nothing.
+  - FB members are still monitored.
+- **A BOOL takes TRUE or FALSE.** truST does not parse `BOOL#1`; a click toggles a BOOL anyway.
+
 ## The design
 
 ### Rust
