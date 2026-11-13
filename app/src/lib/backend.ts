@@ -8,6 +8,7 @@ import type { Built, Snapshot, ScanTiming } from "./snapshot";
 import type { DiskSources } from "./sources";
 import type { Problems } from "./analysis";
 import type { Change, Declaration, Force, Target, Watched } from "./monitor";
+import type { Hold, Resume } from "./debug";
 
 export const backend = {
   scanTiming: () => invoke<ScanTiming>("scan_timing"),
@@ -55,6 +56,14 @@ export const analysis = {
 };
 
 /** Online monitoring and forcing (src-tauri/src/monitor.rs). */
+/** Breakpoints and HOLD (debug_commands.rs): the lines a file's breakpoints landed on, and where the program is held. */
+export const debug = {
+  setBreakpoints: (file: string, lines: number[]) => invoke<number[]>("set_breakpoints", { file, lines }),
+  runToCursor: (file: string, line: number) => invoke<void>("run_to_cursor", { file, line }),
+  resume: (how: Resume) => invoke<void>("resume", { how }),
+  hold: () => invoke<Hold | null>("hold"),
+};
+
 export const monitor = {
   watchRange: (file: string, first: number, last: number, device: string | null, unfolded: string[]) =>
     invoke<Watched>("watch_range", { file, first, last, device, unfolded }),

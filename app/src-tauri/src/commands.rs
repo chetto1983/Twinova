@@ -5,12 +5,13 @@
 
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, TryLockError};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Runtime, State};
+use twinova_engine::debugger::Debugger;
 use twinova_engine::engine::{Engine, Saved, Snapshot};
 use twinova_project::Project;
 
@@ -36,12 +37,48 @@ pub struct AppState {
     running: Arc<AtomicBool>,
     /// One saved state per session, with the project it was taken on (spec 2026-11-08-run-modes-design.md).
     saved: Mutex<Option<(Project, Saved)>>,
+    /// The program's debugger from the first breakpoint to the next engine; it works while a scan holds the engine
+    /// (spec 2026-11-13-breakpoints-hold-design.md, decision 4).
+    debugger: Mutex<Option<Debugger>>,
+    /// The user's breakpoints by file, for the session: armed again at each Run and Step, since an engine replaced or a
+    /// Pause leaves none in the runtime (`debug_commands.rs`).
+    pub(crate) breakpoints: Mutex<BTreeMap<String, Vec<u32>>>,
+    /// What the editor monitors, for reading it while the line is held (`monitor.rs`).
+    pub(crate) monitored: Mutex<crate::monitor::Monitored>,
 }
+
+/// What a command that needs the engine answers while a breakpoint holds it.
+pub(crate) const HOLD: &str = "The PLC is in HOLD: continue first";
 
 impl AppState {
     /// The project the engine was last built from.
     pub(crate) fn built_project(&self) -> Result<Option<Project>, String> {
         Ok(self.built.lock().map_err(poisoned)?.clone())
+    }
+
+    pub(crate) fn debugger(&self) -> Result<Option<Debugger>, String> {
+        Ok(self.debugger.lock().map_err(poisoned)?.clone())
+    }
+
+    pub(crate) fn set_debugger(&self, debugger: Option<Debugger>) -> Result<(), String> {
+        *self.debugger.lock().map_err(poisoned)? = debugger;
+        Ok(())
+    }
+
+    /// The debugger, while a breakpoint holds the line.
+    pub(crate) fn held(&self) -> Option<Debugger> {
+        self.debugger()
+            .ok()
+            .flatten()
+            .filter(|d| d.held().is_some())
+    }
+
+    /// Drops the debugger of an engine about to be replaced, and lets a held scan finish (decision 9).
+    fn forget_debugger(&self) -> Result<(), String> {
+        if let Some(debugger) = self.debugger.lock().map_err(poisoned)?.take() {
+            debugger.let_go();
+        }
+        Ok(())
     }
 }
 
@@ -59,7 +96,16 @@ pub(crate) fn with_engine<T>(
     state: &AppState,
     f: impl FnOnce(&mut Engine) -> Result<T, String>,
 ) -> Result<T, String> {
-    let mut guard = state.engine.lock().map_err(poisoned)?;
+    // A command without `async` runs on the main thread (tauri-macros 2.7.4, `ExecutionContext::Blocking`), so it
+    // never waits for an engine a breakpoint holds: that would freeze the app.
+    let mut guard = loop {
+        match state.engine.try_lock() {
+            Ok(guard) => break guard,
+            Err(TryLockError::Poisoned(e)) => return Err(poisoned(e)),
+            Err(TryLockError::WouldBlock) if state.held().is_some() => return Err(HOLD.into()),
+            Err(TryLockError::WouldBlock) => thread::sleep(Duration::from_micros(200)),
+        }
+    };
     let engine = guard.as_mut().ok_or("build the project first")?;
     f(engine)
 }
@@ -74,6 +120,7 @@ pub fn scan_timing(
 /// Puts `engine` in place of the current one, stopped, for `project`.
 fn install(state: &AppState, project: Project, engine: Engine) -> Result<Snapshot, String> {
     state.running.store(false, Ordering::SeqCst);
+    state.forget_debugger()?;
     let snapshot = engine.snapshot();
     *state.engine.lock().map_err(poisoned)? = Some(engine);
     *state.built.lock().map_err(poisoned)? = Some(project);
@@ -119,6 +166,8 @@ pub fn change_program(
         let warnings = e.change_program(program.clone())?;
         Ok((warnings, e.snapshot()))
     })?;
+    // The new program has new statements: the editor sets its breakpoints again.
+    state.forget_debugger()?;
     let mut project = projects.project()?;
     project.program = program.clone();
     projects.set_sources(&project)?;
@@ -141,9 +190,11 @@ pub fn reset(state: State<'_, AppState>) -> Result<Snapshot, String> {
     install(&state, project, engine)
 }
 
+/// Async, so a breakpoint that stops the step holds a worker thread, not the main one; it returns once resumed.
 #[tauri::command]
-pub fn step(state: State<'_, AppState>) -> Result<Snapshot, String> {
+pub async fn step(state: State<'_, AppState>) -> Result<Snapshot, String> {
     state.running.store(false, Ordering::SeqCst);
+    crate::debug_commands::arm(&state)?;
     with_engine(&state, |e| {
         e.lag_ms = 0;
         e.step()?;
@@ -172,9 +223,13 @@ pub fn set_sink_blocked(
     })
 }
 
+/// Stops Run; a held scan is let go first, its breakpoints cleared, and the editor sets them again (decision 9).
 #[tauri::command]
 pub fn pause(state: State<'_, AppState>) {
     state.running.store(false, Ordering::SeqCst);
+    if let Some(debugger) = state.held() {
+        debugger.let_go();
+    }
 }
 
 /// Saves the current state in the session's slot.
@@ -213,6 +268,7 @@ pub fn run<R: Runtime>(
     speed: Option<f64>,
 ) -> Result<(), String> {
     let origin_ms = with_engine(&state, |e| Ok(e.time_ms()))?;
+    crate::debug_commands::arm(&state)?;
     if state.running.swap(true, Ordering::SeqCst) {
         return Ok(());
     }

@@ -1,10 +1,8 @@
 use super::*;
 use tauri::Manager;
-use tauri::test::{MockRuntime, mock_app};
 
-use crate::commands::{build, step};
-use crate::project_commands::{ProjectState, open_project};
-use crate::test_fixtures::copied;
+use crate::commands::step;
+use crate::test_fixtures::opened;
 
 const MAIN: &str = "plc/Main.st";
 const TRANSFER: &str = "components/twinova.chain_transfer@1.st";
@@ -126,33 +124,14 @@ fn a_position_counts_utf16_columns_and_lines_cover_whole_lines() {
     assert_eq!(lines(text, 5, 6), TextRange::new(at(7), at(7)));
 }
 
-fn app() -> tauri::App<MockRuntime> {
-    let app = mock_app();
-    app.manage(AppState::default());
-    app.manage(ProjectState::default());
-    open_project(app.state(), copied("two_belts_diverter").1).unwrap();
-    app
-}
-
-fn built(app: &tauri::App<MockRuntime>) {
-    let project = app.state::<ProjectState>().project().unwrap();
-    build(
-        app.state(),
-        app.state(),
-        project.program,
-        project.behaviours,
-    )
-    .unwrap();
-}
-
 #[test]
 fn the_commands_watch_read_force_and_release() {
-    let app = app();
+    let app = opened("two_belts_diverter", false);
     assert_eq!(
         watch_range(app.state(), MAIN.into(), 37, 40, None, vec![]).unwrap_err(),
         "build the project first"
     );
-    built(&app);
+    let app = opened("two_belts_diverter", true);
     let watched_now =
         watch_range(app.state(), MAIN.into(), 37, 37, None, vec!["carry".into()]).unwrap();
     let spots = watched_now.spots;
@@ -171,7 +150,7 @@ fn the_commands_watch_read_force_and_release() {
             .all(|r| r.name.starts_with("carry.") && r.declaration.is_none() && r.target.is_some()),
         "{pt:?}"
     );
-    step(app.state()).unwrap();
+    tauri::async_runtime::block_on(step(app.state())).unwrap();
     let values = watched(app.state()).unwrap();
     assert_eq!(values[0], Some("TRUE".to_string()));
     assert_eq!(values.len(), 1 + rows.len());
@@ -189,7 +168,7 @@ fn the_commands_watch_read_force_and_release() {
             value: "FALSE".into()
         }]
     );
-    step(app.state()).unwrap();
+    tauri::async_runtime::block_on(step(app.state())).unwrap();
     assert_eq!(watched(app.state()).unwrap()[0], Some("FALSE".to_string()));
     assert_eq!(forces(app.state()).unwrap(), forced);
     let eye = Target::address("%IX0.6");

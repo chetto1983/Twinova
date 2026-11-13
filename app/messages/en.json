@@ -166,5 +166,13 @@
   "io_force": "Force this address",
   "plc_window_open": "Open the PLC in a window",
   "plc_window_detached": "The PLC is in its own window.",
-  "plc_window_attach": "Back to the dock"
+  "plc_window_attach": "Back to the dock",
+  "debug_title": "Debug",
+  "debug_hold": "HOLD at {at}",
+  "debug_continue": "Continue (F5)",
+  "debug_over": "Step over (F10)",
+  "debug_into": "Step into (F11)",
+  "debug_out": "Step out (Shift+F11)",
+  "debug_cursor": "Run to cursor (Ctrl+F10)",
+  "debug_stack": "Call stack"
 }

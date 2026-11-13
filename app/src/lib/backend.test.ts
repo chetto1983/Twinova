@@ -13,6 +13,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({ open, save }));
 import {
   analysis,
   backend,
+  debug,
   declarations,
   monitor,
   onDiskSources,
@@ -103,6 +104,10 @@ describe("backend bridge", () => {
     await declarations.of("PROGRAM Main END_PROGRAM");
     await declarations.edit("T", { op: "add", row });
     await declarations.rename([["plc/Main.st", "T"]], "plc/Main.st", 2, "y");
+    await debug.setBreakpoints("plc/Main.st", [37]);
+    await debug.runToCursor("plc/Main.st", 40);
+    await debug.resume("over");
+    await debug.hold();
     expect(invoke.mock.calls).toEqual([
       ["watch_range", { file: "plc/Main.st", first: 3, last: 9, device: null, unfolded: ["carry"] }],
       ["unwatch"],
@@ -114,6 +119,10 @@ describe("backend bridge", () => {
       ["declarations_of", { text: "PROGRAM Main END_PROGRAM" }],
       ["edit_declaration", { text: "T", change: { op: "add", row } }],
       ["rename_declaration", { files: [["plc/Main.st", "T"]], file: "plc/Main.st", index: 2, newName: "y" }],
+      ["set_breakpoints", { file: "plc/Main.st", lines: [37] }],
+      ["run_to_cursor", { file: "plc/Main.st", line: 40 }],
+      ["resume", { how: "over" }],
+      ["hold"],
     ]);
   });
 

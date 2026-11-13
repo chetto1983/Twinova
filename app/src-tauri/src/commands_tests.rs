@@ -42,7 +42,9 @@ fn events(app: &App<MockRuntime>, name: &'static str) -> Receiver<String> {
 fn every_command_but_build_needs_a_built_project() {
     let app = app();
     assert_eq!(
-        step(app.state()).err().as_deref(),
+        tauri::async_runtime::block_on(step(app.state()))
+            .err()
+            .as_deref(),
         Some("build the project first")
     );
     assert!(press(app.state(), "%IX1.0".into()).is_err());
@@ -59,14 +61,16 @@ fn a_failed_build_keeps_the_running_line_and_the_project_sources() {
         built.warnings,
         ["sink.count at %ID4: the program does not declare it"]
     );
-    step(app.state()).unwrap();
+    tauri::async_runtime::block_on(step(app.state())).unwrap();
     let (program, mut behaviours) = sources(&app);
     let belt = behaviours.get_mut("twinova.belt@1").unwrap();
     *belt = belt.replace("    target := speed_ref;", "    target := ;");
     let error = build(app.state(), app.state(), program.clone(), behaviours).unwrap_err();
     assert!(error.contains("components/twinova.belt@1.st:30"), "{error}");
     assert_eq!(
-        step(app.state()).unwrap().time_ms,
+        tauri::async_runtime::block_on(step(app.state()))
+            .unwrap()
+            .time_ms,
         20,
         "the line keeps running"
     );
@@ -98,7 +102,7 @@ fn the_commands_drive_the_engine_and_reset_rebuilds_the_last_project() {
     let app = app();
     assert_eq!(build_demo(&app).snapshot.time_ms, 0);
     press(app.state(), "%IX1.0".into()).unwrap();
-    let snapshot = step(app.state()).unwrap();
+    let snapshot = tauri::async_runtime::block_on(step(app.state())).unwrap();
     assert_eq!(
         (snapshot.time_ms, value(&snapshot, "belt_a.run")),
         (10, "TRUE")
@@ -158,17 +162,20 @@ fn a_saved_state_comes_back_on_restore() {
     build_demo(&app);
     press(app.state(), "%IX1.0".into()).unwrap();
     for _ in 0..50 {
-        step(app.state()).unwrap();
+        tauri::async_runtime::block_on(step(app.state())).unwrap();
     }
     save_state(app.state()).unwrap();
-    let saved = step(app.state()).unwrap();
+    let saved = tauri::async_runtime::block_on(step(app.state())).unwrap();
     for _ in 0..100 {
-        step(app.state()).unwrap();
+        tauri::async_runtime::block_on(step(app.state())).unwrap();
     }
     let restored = restore_state(app.state()).unwrap();
     assert_eq!(restored.time_ms, saved.time_ms - 10);
     assert_eq!(value(&restored, "belt_a.run"), "TRUE");
-    assert_eq!(step(app.state()).unwrap(), saved);
+    assert_eq!(
+        tauri::async_runtime::block_on(step(app.state())).unwrap(),
+        saved
+    );
 }
 
 #[test]
@@ -256,7 +263,7 @@ fn change_program_swaps_the_running_program_for_save_and_reset() {
     );
     let built = build_demo(&app);
     for _ in 0..10 {
-        step(app.state()).unwrap();
+        tauri::async_runtime::block_on(step(app.state())).unwrap();
     }
     let edited = vec![(
         program[0].0.clone(),

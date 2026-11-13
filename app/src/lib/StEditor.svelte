@@ -85,6 +85,7 @@
   import { onMount } from "svelte";
   import { fileOf, marker, type Problems } from "./analysis";
   import { decorations, spotAt, type Spot } from "./monitor";
+  import { breakpointMarks, heldMark, markedLines } from "./debug";
   import type { Source } from "./sources";
 
   let {
@@ -98,6 +99,11 @@
     onVisible,
     onSpot,
     onToggleMonitor,
+    breakpoints = [],
+    heldLine = null,
+    onBreakpoint,
+    onBreakpointsMoved,
+    onCursor,
   }: {
     sources: Source[];
     active: number;
@@ -113,11 +119,27 @@
     /** A drawn value was clicked: its spot's index. */
     onSpot?: (index: number) => void;
     onToggleMonitor?: () => void;
+    /** The shown tab's breakpoints, and the line the program is held at in it (spec 2026-11-13-breakpoints-hold-design.md). */
+    breakpoints?: number[];
+    heldLine?: number | null;
+    /** A breakpoint toggled on `line`, by a click in the glyph margin or F9. */
+    onBreakpoint?: (line: number) => void;
+    /** An edit moved the shown tab's breakpoints with their lines: where they are now. */
+    onBreakpointsMoved?: (lines: number[]) => void;
+    /** The cursor's line, for Run to cursor. */
+    onCursor?: (line: number) => void;
   } = $props();
 
   let host = $state<HTMLDivElement>();
   let editor = $state<monaco.editor.IStandaloneCodeEditor>();
   let values: monaco.editor.IEditorDecorationsCollection | undefined;
+  let marks: monaco.editor.IEditorDecorationsCollection | undefined;
+  let held: monaco.editor.IEditorDecorationsCollection | undefined;
+  /** A text set from outside (disk, Revert) replaces the model's content and drops its decorations: no move then. */
+  let replacing = false;
+  function drawMarks(): void {
+    marks?.set(breakpointMarks(breakpoints, monaco.editor.TrackedRangeStickiness.GrowsOnlyWhenTypingAfter));
+  }
   const models = new Map<string, monaco.editor.ITextModel>();
 
   /** A tab's model, made on first use; what is typed in it goes back to the tab's source. */
@@ -149,12 +171,20 @@
       scrollBeyondLastLine: false,
       tabSize: 4,
       theme: "twinova",
+      glyphMargin: true,
     });
     // The E2E reaches the text through the editor's host (plan 2026-11-12-st-editor.md, decision 1): WebKitWebDriver
     // drops typed spaces.
     (host as HTMLDivElement & { editor?: unknown }).editor = made;
     editor = made;
     values = made.createDecorationsCollection();
+    marks = made.createDecorationsCollection();
+    held = made.createDecorationsCollection();
+    made.onDidChangeModelContent(() => {
+      if (replacing || !marks) return;
+      const lines = markedLines(marks.getRanges());
+      if (lines.join() !== breakpoints.join()) onBreakpointsMoved?.(lines);
+    });
     const visible = (): void => {
       const ranges = made.getVisibleRanges();
       if (ranges.length > 0) onVisible?.(ranges[0].startLineNumber, ranges[ranges.length - 1].endLineNumber);
@@ -164,9 +194,19 @@
     made.onDidChangeModel(visible);
     // Monitoring on and off, as TIA Portal's Ctrl+T.
     made.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyT, () => onToggleMonitor?.());
+    // A breakpoint on the cursor's line, as VS Code's F9.
+    made.addCommand(monaco.KeyCode.F9, () => {
+      const at = made.getPosition();
+      if (at) onBreakpoint?.(at.lineNumber);
+    });
+    made.onDidChangeCursorPosition((e) => onCursor?.(e.position.lineNumber));
     // A click on a drawn value lands on its spot's column (Monaco gives injected text no column of its own).
     made.onMouseDown((e) => {
       const at = e.target.position;
+      if (at && e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) {
+        onBreakpoint?.(at.lineNumber);
+        return;
+      }
       if (!at || !e.target.element?.classList.contains("monitor-value")) return;
       const index = spotAt(spots, at.lineNumber, at.column);
       if (index >= 0) onSpot?.(index);
@@ -186,7 +226,12 @@
     const current = sources[Math.min(active, sources.length - 1)];
     if (!editor || !current) return;
     const model = modelOf(current);
-    if (model.getValue() !== current.text) model.setValue(current.text);
+    if (model.getValue() !== current.text) {
+      replacing = true;
+      model.setValue(current.text);
+      replacing = false;
+      drawMarks();
+    }
     if (editor.getModel() !== model) editor.setModel(model);
   });
 
@@ -212,6 +257,20 @@
   $effect(() => {
     const drawn = decorations(spots, spotValues, forced);
     if (editor) values?.set(drawn);
+  });
+
+  $effect(() => {
+    void breakpoints;
+    if (editor) drawMarks();
+  });
+  $effect(() => {
+    const drawn = heldMark(heldLine);
+    if (editor) held?.set(drawn);
+  });
+
+  // The held line comes into view, as a debugger's does.
+  $effect(() => {
+    if (editor && heldLine !== null) editor.revealLineInCenterIfOutsideViewport(heldLine);
   });
 
   $effect(() => {
@@ -241,6 +300,24 @@
   }
   :global(.monitor-forced) {
     outline: 1px solid var(--color-warning);
+  }
+  :global(.debug-breakpoint) {
+    background: var(--color-danger);
+    border-radius: 50%;
+    width: 10px !important;
+    height: 10px !important;
+    margin: 4px 0 0 5px;
+  }
+  :global(.debug-held) {
+    border-left: 8px solid var(--color-warning);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 3px 0 0 6px;
+  }
+  :global(.debug-held-line) {
+    background: color-mix(in oklab, var(--color-warning) 22%, transparent);
   }
   .monaco-host {
     width: 100%;

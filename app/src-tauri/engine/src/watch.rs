@@ -49,7 +49,7 @@ pub(crate) fn compile(harness: &TestHarness, watch: &Watch) -> Compiled {
 }
 
 /// A scalar value: an instance, a structure or an array has no single text to show.
-fn scalar(value: Value) -> Option<Value> {
+pub(crate) fn scalar(value: Value) -> Option<Value> {
     match value {
         Value::Instance(_) | Value::Struct(_) | Value::Array(_) | Value::Null => None,
         other => Some(other),

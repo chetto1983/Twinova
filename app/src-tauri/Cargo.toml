@@ -95,3 +95,11 @@ strip = true
 # Cargo.toml, [patch.crates-io]), but a patch does not reach dependents, so it is repeated here.
 [patch.crates-io]
 tiverse-mmap = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0" }
+
+# truST's runtime at the pin with upstream c9635b1c's breakpoint rule ported by hand (truST policy, spec
+# 2026-11-07-trust-upstream-policy-design.md; ROADMAP 4.9, spec 2026-11-13-breakpoints-hold-design.md, decision 1):
+# chetto1983/trust-platform, branch twinova/6405915-breakpoint-body, one commit on 6405915. At the pin a breakpoint in
+# an IF's body stopped at the IF every scan (measured).
+[patch."https://github.com/johannesPettersson80/trust-platform"]
+trust-runtime = { git = "https://github.com/chetto1983/trust-platform", rev = "efceb1258e60c748bd4b798482d981ca969307e3" }
+trust-runtime-core = { git = "https://github.com/chetto1983/trust-platform", rev = "efceb1258e60c748bd4b798482d981ca969307e3" }
