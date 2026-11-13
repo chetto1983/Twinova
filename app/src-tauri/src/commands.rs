@@ -11,8 +11,9 @@ use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Runtime, State};
-use twinova_engine::debugger::Debugger;
+use twinova_engine::debugger::{Breakpoint, Debugger};
 use twinova_engine::engine::{Engine, Saved, Snapshot};
+use twinova_engine::watch::Scope;
 use twinova_project::Project;
 
 use crate::project_commands::ProjectState;
@@ -37,12 +38,12 @@ pub struct AppState {
     running: Arc<AtomicBool>,
     /// One saved state per session, with the project it was taken on (spec 2026-11-08-run-modes-design.md).
     saved: Mutex<Option<(Project, Saved)>>,
-    /// The program's debugger from the first breakpoint to the next engine; it works while a scan holds the engine
-    /// (spec 2026-11-13-breakpoints-hold-design.md, decision 4).
-    debugger: Mutex<Option<Debugger>>,
+    /// The PLC's and the field's debuggers, from the first breakpoint in each to the next engine; they work while a
+    /// scan holds the engine (spec 2026-11-13-breakpoints-hold-design.md, decision 4).
+    debuggers: Mutex<BTreeMap<Scope, Debugger>>,
     /// The user's breakpoints by file, for the session: armed again at each Run and Step, since an engine replaced or a
     /// Pause leaves none in the runtime (`debug_commands.rs`).
-    pub(crate) breakpoints: Mutex<BTreeMap<String, Vec<u32>>>,
+    pub(crate) breakpoints: Mutex<BTreeMap<String, Vec<Breakpoint>>>,
     /// What the editor monitors, for reading it while the line is held (`monitor.rs`).
     pub(crate) monitored: Mutex<crate::monitor::Monitored>,
 }
@@ -56,26 +57,37 @@ impl AppState {
         Ok(self.built.lock().map_err(poisoned)?.clone())
     }
 
-    pub(crate) fn debugger(&self) -> Result<Option<Debugger>, String> {
-        Ok(self.debugger.lock().map_err(poisoned)?.clone())
+    pub(crate) fn debugger(&self, scope: Scope) -> Result<Option<Debugger>, String> {
+        Ok(self
+            .debuggers
+            .lock()
+            .map_err(poisoned)?
+            .get(&scope)
+            .cloned())
     }
 
-    pub(crate) fn set_debugger(&self, debugger: Option<Debugger>) -> Result<(), String> {
-        *self.debugger.lock().map_err(poisoned)? = debugger;
+    pub(crate) fn set_debugger(&self, scope: Scope, debugger: Debugger) -> Result<(), String> {
+        self.debuggers
+            .lock()
+            .map_err(poisoned)?
+            .insert(scope, debugger);
         Ok(())
     }
 
-    /// The debugger, while a breakpoint holds the line.
-    pub(crate) fn held(&self) -> Option<Debugger> {
-        self.debugger()
-            .ok()
-            .flatten()
-            .filter(|d| d.held().is_some())
+    /// Every debugger attached.
+    pub(crate) fn debuggers(&self) -> Vec<Debugger> {
+        (self.debuggers.lock().map(|d| d.values().cloned().collect())).unwrap_or_default()
     }
 
-    /// Drops the debugger of an engine about to be replaced, and lets a held scan finish (decision 9).
-    fn forget_debugger(&self) -> Result<(), String> {
-        if let Some(debugger) = self.debugger.lock().map_err(poisoned)?.take() {
+    /// The runtime a breakpoint holds the line in, and its debugger.
+    pub(crate) fn held(&self) -> Option<(Scope, Debugger)> {
+        let debuggers = self.debuggers.lock().ok()?.clone();
+        debuggers.into_iter().find(|(_, d)| d.held().is_some())
+    }
+
+    /// Drops the debuggers of an engine about to be replaced, and lets a held scan finish (decision 9).
+    fn forget_debuggers(&self) -> Result<(), String> {
+        for (_, debugger) in std::mem::take(&mut *self.debuggers.lock().map_err(poisoned)?) {
             debugger.let_go();
         }
         Ok(())
@@ -120,7 +132,7 @@ pub fn scan_timing(
 /// Puts `engine` in place of the current one, stopped, for `project`.
 fn install(state: &AppState, project: Project, engine: Engine) -> Result<Snapshot, String> {
     state.running.store(false, Ordering::SeqCst);
-    state.forget_debugger()?;
+    state.forget_debuggers()?;
     let snapshot = engine.snapshot();
     *state.engine.lock().map_err(poisoned)? = Some(engine);
     *state.built.lock().map_err(poisoned)? = Some(project);
@@ -167,7 +179,7 @@ pub fn change_program(
         Ok((warnings, e.snapshot()))
     })?;
     // The new program has new statements: the editor sets its breakpoints again.
-    state.forget_debugger()?;
+    state.forget_debuggers()?;
     let mut project = projects.project()?;
     project.program = program.clone();
     projects.set_sources(&project)?;
@@ -227,7 +239,7 @@ pub fn set_sink_blocked(
 #[tauri::command]
 pub fn pause(state: State<'_, AppState>) {
     state.running.store(false, Ordering::SeqCst);
-    if let Some(debugger) = state.held() {
+    if let Some((_, debugger)) = state.held() {
         debugger.let_go();
     }
 }

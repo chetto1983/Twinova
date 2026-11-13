@@ -52,6 +52,7 @@ pub fn run() {
             debug_commands::run_to_cursor,
             debug_commands::resume,
             debug_commands::hold,
+            debug_commands::debug_logs,
             commands::save_state,
             commands::restore_state,
             declarations::declarations_of,
