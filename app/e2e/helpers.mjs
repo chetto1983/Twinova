@@ -114,13 +114,15 @@ export const value = async (term) => {
 };
 /** Virtual time "m:ss.cc" in seconds. Text that is not a time throws: a NaN would make every comparison false and
  * let a check pass on nothing (run 42524833751, where the cell read as empty). */
-export const virtualSeconds = async (term) => {
-  const shown = await value(term);
-  const [minutes, seconds] = shown.split(":");
-  const total = Number(minutes) * 60 + Number(seconds);
+export const virtualSeconds = async (term) => seconds(await value(term));
+/** The status bar's virtual time in seconds, read without leaving the dock's tab. */
+export const statusSeconds = async () => seconds(await textOf(".statusbar > .data"));
+function seconds(shown) {
+  const [minutes, secs] = shown.split(":");
+  const total = Number(minutes) * 60 + Number(secs);
   if (!/^\d+:\d\d\.\d\d$/.test(shown) || !Number.isFinite(total)) throw new Error(`"${shown}" is not a virtual time`);
   return total;
-};
+}
 /** A header select by its class, which does not change with the language (its aria-label does). */
 const choose = async (cls, label) =>
   (await browser.$(`//header//select[contains(concat(" ", @class, " "), " ${cls} ")]`)).selectByVisibleText(label);
