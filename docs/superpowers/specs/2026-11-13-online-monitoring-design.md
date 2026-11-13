@@ -1,7 +1,6 @@
 # Spec: online monitoring in the ST editor (ROADMAP 4.8)
 
-Date: 2026-11-13. Status: **draft for approval**. Decisions 1 to 3 were taken by the user on 2026-11-13; 4 to 8 are
-proposed here.
+Date: 2026-11-13. Status: **approved** (user, 2026-11-13), decisions 1 to 8.
 
 ROADMAP 4.8: "Online monitoring in the editor (research [17]): each line's values beside the code, TRUE/FALSE on
 conditions, an FB instance chosen to watch; modify and force from the code, as TIA Portal and CODESYS do. From the
@@ -98,7 +97,7 @@ All measured on the line's PLC, the controller's harness:
    - forces kept until released or until Build;
    - every force and release recorded in the replay.
 
-**Proposed here:**
+**Proposed in the draft, approved with it:**
 
 4. **What is monitored.**
    - The PLC tab shown, for its visible lines only, as TIA monitors only the visible window.
