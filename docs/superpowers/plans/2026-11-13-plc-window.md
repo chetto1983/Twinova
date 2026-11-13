@@ -100,12 +100,12 @@ Run, Pause and Step added to decision 3.
     - the hook's decision for each window and event.
   - The capability.
   - Commit `feat(app): open and close the PLC window`.
-- [ ] **Task 2: the webview.**
+- [x] **Task 2: the webview.**
   - `plcWindow.ts`, tests first: event wrappers; the numbering (the echo, a request's texts).
   - Then `Transport.svelte`, `PlcWindow.svelte`, `main.ts`, the App and dock wiring, the unwatch on unmount, i18n.
   - The gates.
   - Commit `feat(view): the PLC pane in a window of its own`.
-- [ ] **Task 3: the E2E.**
+- [x] **Task 3: the E2E.**
   - `e2e/plc_window.mjs`, the spec's list.
   - The whole suite on Linux under CI's screen.
   - Commit `test(e2e): the PLC window`.
