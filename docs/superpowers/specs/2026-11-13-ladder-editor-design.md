@@ -1,6 +1,6 @@
 # Spec: the Ladder editor (LD), as the second language of the PLC pane
 
-Date: 2026-11-13. Status: **proposed**. Decisions 1 to 8 await the user's approval of the whole.
+Date: 2026-11-13. Status: **approved** (user, 2026-11-13: "Approvata, procedi con il piano"), decisions 1 to 8.
 
 The user, 2026-11-13: "poi passerei all'editor ladder". CLAUDE.md: the components' logic is IEC 61131-3 Structured
 Text and Ladder. The PLC pane has an LD button, disabled ("Ladder is not available").
