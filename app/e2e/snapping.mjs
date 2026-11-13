@@ -25,6 +25,7 @@ import {
   root,
   selectSpeed,
   sessions,
+  setEditorText,
   textOf,
 } from "./helpers.mjs";
 import {
@@ -39,7 +40,6 @@ import {
   position,
   select,
   setField,
-  setProgram,
   treeNames,
 } from "./editing.mjs";
 
@@ -248,7 +248,7 @@ sessions(async () => {
       await setField("detected", "%IX0.6");
     });
     await click(`//button[@role="tab"][normalize-space()="plc/Main.st"]`);
-    await setProgram(PROGRAM);
+    await setEditorText(PROGRAM);
     await click(button("Build"));
     await check("the line builds", () =>
       eventually(

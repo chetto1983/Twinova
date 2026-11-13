@@ -134,4 +134,9 @@ and build inside the app, on Windows and Linux.
   - opening, saving or building a project folder writes `trust-lsp.toml` and `.twinova/lsp/field.st`, so the
     extension reads the project without false errors in the program; the blocks keep three false E202 errors, a
     limit of truST's per-file check.
+- The in-app ST editor (ROADMAP 4.7), for who has no VS Code: the PLC pane edits programs and behaviours in Monaco,
+  with Structured Text highlighting:
+  - truST's diagnostics appear as you type, before any Build, as squiggles and in the Problems pane, whose rows open
+    their line. They are the ones VS Code's extension shows, without the false E202 of the blocks;
+  - hovering a name shows its declaration and type; completion offers the variables, types and keywords in scope.
 - Installers: MSI for Windows, deb and AppImage for Linux, not signed yet.

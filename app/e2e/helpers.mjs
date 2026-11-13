@@ -75,6 +75,16 @@ export const click = async (selector) => {
   }
   await element.click();
 };
+/** The PLC editor's open tab, read and replaced through the Monaco editor its host carries (StEditor.svelte; plan
+ *  2026-11-12-st-editor.md, decision 1): WebKitWebDriver drops typed spaces, so the E2E does not type. */
+export async function editorText() {
+  await dock("plc");
+  return browser.execute(() => document.querySelector(".monaco-host").editor.getValue());
+}
+export async function setEditorText(text) {
+  await dock("plc");
+  await browser.execute((t) => document.querySelector(".monaco-host").editor.setValue(t), text);
+}
 /** The text an element shows: its rendered text (`innerText`, trimmed, as WebDriver's Get Element Text) while it is
  *  displayed, else "". WebKitWebDriver's getText returns "" for the text of any `overflow: hidden` element, though it is
  *  on screen (measured 2026-11-12: the status bar's notice and the project button's name read empty, and read whole

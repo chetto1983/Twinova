@@ -14,15 +14,16 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   app,
+  bit,
   browser,
   button,
   check,
   click,
   eventually,
   expectEqual,
-  bit,
   selectSpeed,
   sessions,
+  setEditorText,
   textOf,
 } from "./helpers.mjs";
 import {
@@ -36,7 +37,6 @@ import {
   select,
   selectedName,
   setField,
-  setProgram,
   treeNames,
 } from "./editing.mjs";
 
@@ -131,7 +131,7 @@ sessions(async () => {
       await eventually(async () => expectEqual(await fieldValue("detected"), "%IX0.0", "bound"), "bound", 5_000);
     });
     await click(`//button[@role="tab"][normalize-space()="plc/Main.st"]`);
-    await setProgram(PROGRAM);
+    await setEditorText(PROGRAM);
     await click(button("Build"));
     await check("the line builds", () =>
       eventually(

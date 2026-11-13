@@ -1,3 +1,4 @@
+pub mod analysis;
 pub mod commands;
 pub mod demo;
 pub mod edit_commands;
@@ -25,10 +26,14 @@ pub fn run() {
             Ok(())
         })
         .manage(commands::AppState::default())
+        .manage(analysis::AnalysisState::default())
         .manage(project_commands::ProjectState::launching(
             project_commands::launch_folder(std::env::args_os()),
         ))
         .invoke_handler(tauri::generate_handler![
+            analysis::analyze,
+            analysis::hover,
+            analysis::completion,
             commands::build,
             commands::scan_timing,
             commands::change_program,

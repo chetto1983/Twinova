@@ -67,7 +67,7 @@ try {
   if (!(await browser.$('button[aria-label="Show Belt A"]').isExisting())) throw new Error("Visibility toggle failed");
   await browser.$('button[aria-label="Show Belt A"]').click();
   await browser.$("#dock-plc").click();
-  await browser.$("textarea").waitForDisplayed();
+  await browser.$(".monaco-host .view-lines").waitForDisplayed();
   await browser.saveScreenshot(resolve(output, "03-plc.png"));
   await browser.$("#dock-watch").click();
   await browser.$(".timing").waitForDisplayed();

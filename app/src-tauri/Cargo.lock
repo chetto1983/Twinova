@@ -6940,7 +6940,23 @@ dependencies = [
  "smol_str",
  "text-size",
  "tracing",
- "trust-syntax",
+ "trust-syntax 0.24.75",
+]
+
+[[package]]
+name = "trust-hir"
+version = "0.39.0"
+source = "git+https://github.com/johannesPettersson80/trust-platform?rev=5eb7f8cd9c137840a5a5db8049edae99c481ace9#5eb7f8cd9c137840a5a5db8049edae99c481ace9"
+dependencies = [
+ "boxcar",
+ "parking_lot",
+ "rowan",
+ "rustc-hash 2.1.3",
+ "salsa",
+ "smol_str",
+ "text-size",
+ "tracing",
+ "trust-syntax 0.39.0",
 ]
 
 [[package]]
@@ -6952,8 +6968,21 @@ dependencies = [
  "rustc-hash 2.1.3",
  "smol_str",
  "text-size",
- "trust-hir",
- "trust-syntax",
+ "trust-hir 0.24.75",
+ "trust-syntax 0.24.75",
+]
+
+[[package]]
+name = "trust-ide"
+version = "0.39.0"
+source = "git+https://github.com/johannesPettersson80/trust-platform?rev=5eb7f8cd9c137840a5a5db8049edae99c481ace9#5eb7f8cd9c137840a5a5db8049edae99c481ace9"
+dependencies = [
+ "once_cell",
+ "rustc-hash 2.1.3",
+ "smol_str",
+ "text-size",
+ "trust-hir 0.39.0",
+ "trust-syntax 0.39.0",
 ]
 
 [[package]]
@@ -6966,7 +6995,7 @@ dependencies = [
  "roxmltree",
  "serde",
  "serde_json",
- "trust-syntax",
+ "trust-syntax 0.24.75",
 ]
 
 [[package]]
@@ -7019,13 +7048,13 @@ dependencies = [
  "toml_edit 0.25.19+spec-1.1.0",
  "tracing",
  "trust-ads-core",
- "trust-hir",
- "trust-ide",
+ "trust-hir 0.24.75",
+ "trust-ide 0.24.75",
  "trust-plcopen",
  "trust-runtime-core",
- "trust-syntax",
+ "trust-syntax 0.24.75",
  "trust-tcads-native",
- "trust-wasm-analysis",
+ "trust-wasm-analysis 0.24.75",
  "tungstenite",
  "ureq",
  "urlencoding",
@@ -7045,13 +7074,24 @@ dependencies = [
  "ryu",
  "smol_str",
  "thiserror 2.0.21",
- "trust-hir",
+ "trust-hir 0.24.75",
 ]
 
 [[package]]
 name = "trust-syntax"
 version = "0.24.75"
 source = "git+https://github.com/johannesPettersson80/trust-platform?rev=6405915973a77587748ffb061a61d37bb8a368b0#6405915973a77587748ffb061a61d37bb8a368b0"
+dependencies = [
+ "drop_bomb",
+ "logos",
+ "rowan",
+ "text-size",
+]
+
+[[package]]
+name = "trust-syntax"
+version = "0.39.0"
+source = "git+https://github.com/johannesPettersson80/trust-platform?rev=5eb7f8cd9c137840a5a5db8049edae99c481ace9#5eb7f8cd9c137840a5a5db8049edae99c481ace9"
 dependencies = [
  "drop_bomb",
  "logos",
@@ -7076,9 +7116,23 @@ dependencies = [
  "serde",
  "serde_json",
  "text-size",
- "trust-hir",
- "trust-ide",
- "trust-syntax",
+ "trust-hir 0.24.75",
+ "trust-ide 0.24.75",
+ "trust-syntax 0.24.75",
+]
+
+[[package]]
+name = "trust-wasm-analysis"
+version = "0.39.0"
+source = "git+https://github.com/johannesPettersson80/trust-platform?rev=5eb7f8cd9c137840a5a5db8049edae99c481ace9#5eb7f8cd9c137840a5a5db8049edae99c481ace9"
+dependencies = [
+ "rowan",
+ "serde",
+ "serde_json",
+ "text-size",
+ "trust-hir 0.39.0",
+ "trust-ide 0.39.0",
+ "trust-syntax 0.39.0",
 ]
 
 [[package]]
@@ -7114,6 +7168,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tempfile",
+ "trust-wasm-analysis 0.39.0",
  "twinova-engine",
  "twinova-physics",
  "twinova-project",

@@ -10,7 +10,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open, save }));
 
-import { backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./backend";
+import { analysis, backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./backend";
 
 describe("backend bridge", () => {
   beforeEach(() => {
@@ -50,6 +50,23 @@ describe("backend bridge", () => {
       ["press", { address: "%IX1.0" }],
       ["set_sink_blocked", { sink: 0, blocked: true }],
       ["scan_timing"],
+    ]);
+  });
+
+  it("calls the analysis commands of analysis.rs with their argument names", async () => {
+    await analysis.analyze([["plc/Main.st", "PROGRAM Main END_PROGRAM"]], { "twinova.belt@1": "FUNCTION_BLOCK B" });
+    await analysis.hover("plc/Main.st", "PROGRAM Main", 3, 5);
+    await analysis.completion("plc/Main.st", "PROGRAM M", 4, 9);
+    expect(invoke.mock.calls).toEqual([
+      [
+        "analyze",
+        {
+          program: [["plc/Main.st", "PROGRAM Main END_PROGRAM"]],
+          behaviours: { "twinova.belt@1": "FUNCTION_BLOCK B" },
+        },
+      ],
+      ["hover", { file: "plc/Main.st", text: "PROGRAM Main", line: 3, column: 5 }],
+      ["completion", { file: "plc/Main.st", text: "PROGRAM M", line: 4, column: 9 }],
     ]);
   });
 

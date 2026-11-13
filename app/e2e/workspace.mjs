@@ -4,20 +4,15 @@ import {
   check,
   click,
   dock,
+  editorText,
   eventually,
   expectEqual,
   out,
   session,
-  virtualSeconds,
+  setEditorText,
   textOf,
+  virtualSeconds,
 } from "./helpers.mjs";
-
-const changeSource = async (text) =>
-  browser.execute((t) => {
-    const area = document.querySelector("textarea");
-    area.value = t;
-    area.dispatchEvent(new Event("input", { bubbles: true }));
-  }, text);
 
 await session("debug", async () => {
   await check("the IDE gives the scene the centre and has no horizontal page overflow", async () => {
@@ -98,7 +93,7 @@ await session("debug", async () => {
   });
   await check("PLC sources open in the bottom dock", async () => {
     await dock("plc");
-    expectEqual(await browser.$("textarea").isDisplayed(), true, "ST editor");
+    expectEqual(await browser.$(".monaco-host .view-lines").isDisplayed(), true, "ST editor");
     expectEqual(await browser.$(".organizer").isDisplayed(), true, "organizer");
   });
   await browser.saveScreenshot(`${out}/plc.png`);
@@ -121,8 +116,8 @@ await session("debug", async () => {
   });
   await browser.saveScreenshot(`${out}/watch.png`);
   await check("a failed build opens Problems and the old running line can still be paused", async () => {
-    const original = await browser.execute(() => document.querySelector("textarea").value);
-    await changeSource("PROGRAM Main\nthis is invalid\nEND_PROGRAM");
+    const original = await editorText();
+    await setEditorText("PROGRAM Main\nthis is invalid\nEND_PROGRAM");
     const before = await virtualSeconds("Virtual time");
     await click(button("Build"));
     await browser.$("#panel-problems .error-line").waitForDisplayed({ timeout: 10000 });
@@ -143,7 +138,7 @@ await session("debug", async () => {
       5000,
     );
     await click(button("Pause"));
-    await changeSource(original);
+    await setEditorText(original);
     await click(button("Build"));
   });
 });
