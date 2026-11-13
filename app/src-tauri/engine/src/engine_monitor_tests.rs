@@ -91,21 +91,28 @@ fn a_write_lands_once_and_the_program_goes_on_from_it() {
     );
 }
 
-/// truST discards a force on an instance's member without a word (measured 2026-11-13: `carry.PT`, `arrived.Q`), so
-/// Twinova refuses it rather than list a force that does nothing.
+/// A member of an instance is forced on that instance: truST drops a force named by a dotted path (measured
+/// 2026-11-13). The call's `PT := T#1500MS` writes it every scan, and the force holds it at 100 ms all the same.
 #[test]
-fn a_member_of_an_instance_is_refused() {
+fn a_member_of_an_instance_holds_its_force() {
     let mut engine = diverter();
-    let member = "Main.carry.PT is a member of an instance: only a program's own variables can be written or forced";
+    engine.force(main_var("carry.PT"), "T#100MS").unwrap();
+    engine.force(main_var("arrived.Q"), "TRUE").unwrap();
+    for _ in 0..100 {
+        engine.step().unwrap();
+        let held = (var(&engine, "carry.PT"), var(&engine, "arrived.Q"));
+        assert_eq!(held, ("T#100ms".into(), "TRUE".into()));
+    }
+    engine.release(main_var("carry.PT")).unwrap();
+    engine.step().unwrap();
+    assert_eq!(var(&engine, "carry.PT"), "T#1500ms");
+    engine.write(main_var("deck_clear.PT"), "T#1S").unwrap();
     assert_eq!(
-        engine.force(main_var("carry.PT"), "T#100MS").unwrap_err(),
-        member
+        engine.forces(),
+        [(main_var("arrived.Q"), "TRUE".to_string())]
     );
-    assert_eq!(
-        engine.write(main_var("carry.PT"), "T#100MS").unwrap_err(),
-        member
-    );
-    assert!(engine.forces().is_empty());
+    let unknown = engine.force(main_var("nowhere.PT"), "T#1S").unwrap_err();
+    assert_eq!(unknown, "Main.nowhere.PT is not a variable of the PLC");
 }
 
 #[test]

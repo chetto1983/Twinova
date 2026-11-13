@@ -16,8 +16,7 @@ use crate::watch::value_for;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum Target {
-    /// A variable of a program, its own: truST discards a force or a write on an instance's member (`carry.PT`) without
-    /// a word (measured 2026-11-13), so Twinova refuses one.
+    /// A variable of a program, or a member of one of its instances (`carry.PT`).
     Variable { program: String, path: String },
     /// An address of the process image, `%IX0.6` or `%QX0.1`.
     Address { address: String },
@@ -64,19 +63,23 @@ impl Controller {
         self.harness.runtime().debug_control().is_some()
     }
 
-    fn instance(&self, program: &str) -> Result<InstanceId, String> {
-        match self.harness.get_output(program) {
-            Some(Value::Instance(id)) => Ok(id),
-            _ => Err(format!("{program} is not a program of the PLC")),
+    /// The instance that holds `path`'s last name, and that name: the program's for `count`, `carry`'s for `carry.PT`.
+    /// truST drops a force named by a dotted path at the next scan, and holds it on the member's own instance (measured
+    /// 2026-11-13).
+    fn holder<'p>(&self, program: &str, path: &'p str) -> Result<(InstanceId, &'p str), String> {
+        let (owner, name) = match path.rsplit_once('.') {
+            Some((head, name)) => (format!("{program}.{head}"), name),
+            None => (program.to_string(), path),
+        };
+        match self.harness.get_output(&owner) {
+            Some(Value::Instance(id)) => Ok((id, name)),
+            _ => Err(format!("{program}.{path} is not a variable of the PLC")),
         }
     }
 
     /// The value `target` holds now, which sets the type a written text must have.
     fn current(&self, target: &Target) -> Result<Value, String> {
         match target {
-            Target::Variable { path, .. } if path.contains('.') => Err(format!(
-                "{target} is a member of an instance: only a program's own variables can be written or forced"
-            )),
             Target::Variable { program, path } => {
                 let found = self.harness.get_output(&format!("{program}.{path}"));
                 match found {
@@ -103,9 +106,9 @@ impl Controller {
         let refused = |e| format!("{target}: {e:?}");
         match target {
             Target::Variable { program, path } => {
-                let id = self.instance(program)?;
+                let (id, name) = self.holder(program, path)?;
                 self.debug()
-                    .try_force_instance(id, path.as_str(), value.clone())
+                    .try_force_instance(id, name, value.clone())
                     .map_err(refused)?;
             }
             Target::Address { address } => {
@@ -126,8 +129,8 @@ impl Controller {
         }
         match target {
             Target::Variable { program, path } => {
-                let id = self.instance(program)?;
-                self.debug().release_instance(id, path);
+                let (id, name) = self.holder(program, path)?;
+                self.debug().release_instance(id, name);
             }
             Target::Address { address } => self.debug().release_io(&Port::parse(address)?.at),
         }
@@ -140,9 +143,9 @@ impl Controller {
         let Target::Variable { program, path } = target else {
             return Err(format!("{target} is an address: force it instead"));
         };
-        let id = self.instance(program)?;
+        let (id, name) = self.holder(program, path)?;
         self.debug()
-            .try_enqueue_instance_write(id, path.as_str(), value)
+            .try_enqueue_instance_write(id, name, value)
             .map_err(|e| format!("{target}: {e:?}"))
     }
 

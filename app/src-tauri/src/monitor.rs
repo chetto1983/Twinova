@@ -32,7 +32,8 @@ pub struct Spot {
     pub column: u32,
     /// A condition's TRUE or FALSE, or a reference's value.
     pub condition: bool,
-    /// What a click writes or forces: a program's own variable, when the reference is one.
+    /// What a click writes or forces: a program's variable or a member of one of its instances. A block's variable, an
+    /// array element or a dereference has none.
     pub target: Option<Target>,
 }
 
@@ -161,7 +162,7 @@ pub fn spots(
         if !seen.insert((line, path.clone())) {
             continue;
         }
-        let own = matches!(owner, Owner::Program) && !path.contains(['.', '[', '^']);
+        let own = matches!(owner, Owner::Program) && !path.contains(['[', '^']);
         let program = target.owner.as_deref().unwrap_or_default();
         let spot = Spot {
             line,

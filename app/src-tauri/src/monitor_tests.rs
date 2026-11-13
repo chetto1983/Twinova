@@ -59,12 +59,19 @@ fn a_member_shows_whole_and_a_condition_shows_qualified() {
 }
 
 #[test]
-fn only_a_program_s_own_variable_is_a_target() {
+fn a_program_s_variables_and_members_are_targets() {
     let found = spots(&diverter(), MAIN, 39, 40, None);
     let targets: Vec<Option<String>> = (found.iter())
         .map(|(s, _)| s.target.as_ref().map(ToString::to_string))
         .collect();
-    assert_eq!(targets, [None, None, Some("Main.count".into())]);
+    assert_eq!(
+        targets,
+        [
+            Some("Main.entered.Q".into()),
+            None,
+            Some("Main.count".into())
+        ]
+    );
 }
 
 #[test]
