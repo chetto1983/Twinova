@@ -21,7 +21,7 @@ pub struct ParseError {
 
 pub fn parse(text: &str) -> Result<Program, ParseError> {
     let mut p = Parser { text, at: 0 };
-    let declarations = p.declarations();
+    let declarations = p.declarations()?;
     let mut rungs = Vec::new();
     loop {
         let comment = p.comments()?;
@@ -97,11 +97,9 @@ impl Parser<'_> {
     }
 
     /// The `VAR … END_VAR` blocks before the first rung, as written.
-    fn declarations(&mut self) -> String {
-        let start = {
-            self.skip_space();
-            self.at
-        };
+    fn declarations(&mut self) -> Result<String, ParseError> {
+        self.skip_space();
+        let start = self.at;
         let mut end = start;
         loop {
             self.skip_space();
@@ -110,13 +108,13 @@ impl Parser<'_> {
             }
             let upper = self.rest().to_ascii_uppercase();
             let Some(close) = upper.find("END_VAR") else {
-                break;
+                return Err(self.error("a VAR block with no END_VAR"));
             };
             self.at += close + "END_VAR".len();
             end = self.at;
         }
-        self.at = end.max(start);
-        self.text[start..end].to_string()
+        self.at = end;
+        Ok(self.text[start..end].to_string())
     }
 
     /// The comments written before a rung, joined by lines, each line without its leading space.

@@ -14,3 +14,5 @@ serde = { version = "1", features = ["derive"] }
 [dev-dependencies]
 # Property tests of the grammar's round trip (CLAUDE.md: property-based tests for codecs). MIT OR Apache-2.0.
 proptest = "=1.12.0"
+# The lowered ST run scan by scan in the tests, by the runtime the engine runs (the root manifest's patch applies).
+trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }

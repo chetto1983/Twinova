@@ -182,6 +182,13 @@ fn what_does_not_read_says_where() {
     );
     assert_eq!(at("(* open").message, "a comment with no '*)'");
     assert_eq!(
+        at("VAR a : BOOL; END_VAR\n VAR_TEMP b : BOOL;\n|a| (b);"),
+        ParseError {
+            message: "a VAR block with no END_VAR".into(),
+            offset: 23
+        }
+    );
+    assert_eq!(
         at("|A| (B);\n(* dangling *)").message,
         "a comment with no rung after it"
     );

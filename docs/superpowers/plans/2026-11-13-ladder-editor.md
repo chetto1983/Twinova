@@ -105,8 +105,11 @@ con il piano"), decisions 1 to 8. Research 18, 19 and 20.
   - Record each answer in the spec. Commit.
 - [x] **Task 2: the crate's model, parser and printer** (OIP's `ladder.ts` types and `parserLadder.ts`, their tests
   ported). Commit.
-- [ ] **Task 3: the lowering, with the power temporaries** (OIP's `Lowerer`). Tests run the lowered ST in truST, scan by
+- [x] **Task 3: the lowering, with the power temporaries** (OIP's `Lowerer`). Tests run the lowered ST in truST, scan by
   scan, against expected values and against an ST twin's fingerprint. Commit.
+  - Done as amended in the spec (decision 5): a BOOL per element holds its power out, so the deferred conditions are
+    not ported.
+  - Beyond OIP's cases: a property test runs random rungs against an interpreter of the tree written in the test.
 - [ ] **Task 4: `.ld` in the project and the Build; the app's commands.** Tests first. Commit.
 - [ ] **Task 5: PLCopen `<LD>` reader and writer,** OIP's tests ported, with the semantic round trip. Commit.
 - [ ] **Task 6: the editor.**
