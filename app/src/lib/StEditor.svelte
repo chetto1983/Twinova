@@ -85,7 +85,7 @@
   import { onMount } from "svelte";
   import { fileOf, marker, type Problems } from "./analysis";
   import { decorations, spotAt, type Spot } from "./monitor";
-  import { breakpointMarks, heldMark, markedLines } from "./debug";
+  import { breakpointMarks, heldMark, moved, sameLines, type Breakpoint } from "./debug";
   import type { Source } from "./sources";
 
   let {
@@ -102,6 +102,7 @@
     breakpoints = [],
     heldLine = null,
     onBreakpoint,
+    onEditBreakpoint,
     onBreakpointsMoved,
     onCursor,
   }: {
@@ -120,12 +121,14 @@
     onSpot?: (index: number) => void;
     onToggleMonitor?: () => void;
     /** The shown tab's breakpoints, and the line the program is held at in it (spec 2026-11-13-breakpoints-hold-design.md). */
-    breakpoints?: number[];
+    breakpoints?: Breakpoint[];
     heldLine?: number | null;
     /** A breakpoint toggled on `line`, by a click in the glyph margin or F9. */
     onBreakpoint?: (line: number) => void;
+    /** The breakpoint on `line` to edit: a right click on its dot, or Shift+F9. */
+    onEditBreakpoint?: (line: number) => void;
     /** An edit moved the shown tab's breakpoints with their lines: where they are now. */
-    onBreakpointsMoved?: (lines: number[]) => void;
+    onBreakpointsMoved?: (list: Breakpoint[]) => void;
     /** The cursor's line, for Run to cursor. */
     onCursor?: (line: number) => void;
   } = $props();
@@ -182,8 +185,8 @@
     held = made.createDecorationsCollection();
     made.onDidChangeModelContent(() => {
       if (replacing || !marks) return;
-      const lines = markedLines(marks.getRanges());
-      if (lines.join() !== breakpoints.join()) onBreakpointsMoved?.(lines);
+      const next = moved(breakpoints, marks.getRanges());
+      if (!sameLines(next, breakpoints)) onBreakpointsMoved?.(next);
     });
     const visible = (): void => {
       const ranges = made.getVisibleRanges();
@@ -195,6 +198,14 @@
     // Monitoring on and off, as TIA Portal's Ctrl+T.
     made.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyT, () => onToggleMonitor?.());
     // A breakpoint on the cursor's line, as VS Code's F9.
+    made.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F9, () => {
+      const at = made.getPosition();
+      if (at) onEditBreakpoint?.(at.lineNumber);
+    });
+    made.onContextMenu((e) => {
+      const at = e.target.position;
+      if (at && e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN) onEditBreakpoint?.(at.lineNumber);
+    });
     made.addCommand(monaco.KeyCode.F9, () => {
       const at = made.getPosition();
       if (at) onBreakpoint?.(at.lineNumber);
@@ -307,6 +318,22 @@
     width: 10px !important;
     height: 10px !important;
     margin: 4px 0 0 5px;
+  }
+  :global(.debug-breakpoint-conditional) {
+    background: var(--color-danger);
+    border-radius: 50%;
+    width: 10px !important;
+    height: 10px !important;
+    margin: 4px 0 0 5px;
+    box-shadow: inset 0 0 0 3px var(--color-surface);
+    outline: 1px solid var(--color-danger);
+  }
+  :global(.debug-logpoint) {
+    background: var(--color-danger);
+    width: 9px !important;
+    height: 9px !important;
+    margin: 5px 0 0 6px;
+    transform: rotate(45deg);
   }
   :global(.debug-held) {
     border-left: 8px solid var(--color-warning);

@@ -6,24 +6,29 @@
   import { Play, RedoDot, ArrowDownToLine, CornerUpLeft, TextCursor } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { debug } from "./backend";
-  import { holdLabel, keyAction, type Hold, type Resume } from "./debug";
+  import { holdLabel, keyAction, type Hold, type Log, type Resume } from "./debug";
 
   let {
     file,
     cursor,
     armed,
+    logging,
     ready,
     hold = $bindable(null),
+    logs = $bindable([]),
     onError,
   }: {
-    /** The shown tab's file when it is the program's: only the program has breakpoints (decision 3). */
+    /** The shown tab's file, a program's or a block's. */
     file: string | null;
     cursor: number;
-    /** Some breakpoint is set. */
+    /** Some breakpoint is set; some is a logpoint. */
     armed: boolean;
+    logging: boolean;
     /** The program is built. */
     ready: boolean;
     hold?: Hold | null;
+    /** The logpoints' lines, the last hundred: the editor shows them under the code. */
+    logs?: Log[];
     onError: (text: string) => void;
   } = $props();
 
@@ -41,7 +46,7 @@
 
   function onKey(e: KeyboardEvent): void {
     const action = keyAction(e);
-    if (!action || action === "toggle") return;
+    if (!action || action === "toggle" || action === "edit") return;
     if (action === "cursor") {
       if (!file || !ready) return;
       toCursor();
@@ -58,7 +63,17 @@
         .then((h) => (hold = h))
         .catch(() => (hold = null));
     }, 200);
-    return () => clearInterval(timer);
+    const logged = setInterval(() => {
+      if (logging)
+        debug
+          .logs()
+          .then((more) => (logs = [...logs, ...more].slice(-100)))
+          .catch(fail);
+    }, 500);
+    return () => {
+      clearInterval(timer);
+      clearInterval(logged);
+    };
   });
 </script>
 

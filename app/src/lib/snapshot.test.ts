@@ -53,6 +53,7 @@ vi.mock("./backend", () => ({
   onDiskSources: vi.fn().mockResolvedValue(() => {}),
   debug: {
     hold: vi.fn().mockResolvedValue(null),
+    logs: vi.fn().mockResolvedValue([]),
     setBreakpoints: vi.fn().mockResolvedValue([]),
     runToCursor: vi.fn().mockResolvedValue(undefined),
     resume: vi.fn().mockResolvedValue(undefined),

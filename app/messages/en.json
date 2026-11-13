@@ -174,5 +174,16 @@
   "debug_into": "Step into (F11)",
   "debug_out": "Step out (Shift+F11)",
   "debug_cursor": "Run to cursor (Ctrl+F10)",
-  "debug_stack": "Call stack"
+  "debug_stack": "Call stack",
+  "bp_title": "Breakpoint at line {line}",
+  "bp_condition": "Condition",
+  "bp_hit_op": "Hit count comparison",
+  "bp_hit": "Hits",
+  "bp_log": "Log message",
+  "bp_log_hint": "Log message (expressions in braces)",
+  "bp_apply": "Apply",
+  "bp_remove": "Remove",
+  "debug_log": "Log",
+  "value_held": "Held: the program takes the value at the next cycle",
+  "debug_log_clear": "Clear"
 }
