@@ -35,14 +35,15 @@ fn codes(found: &BTreeMap<String, Vec<Problem>>, file: &str) -> Vec<String> {
 }
 
 /// The diverter's program and blocks as trust-lsp 0.39.0 shows them with Twinova's trust-lsp.toml (measured
-/// 2026-11-12, spec "The frontend at upstream's v0.39.0"), less the false E202 of the placed block variables.
+/// 2026-11-12, spec "The frontend at upstream's v0.39.0"; again 2026-11-13 on the 4.4a line with its infeed photocell),
+/// less the false E202 of the placed block variables.
 #[test]
 fn the_diverter_s_sources_show_what_vscode_shows_without_the_false_e202() {
     let (app, project) = opened("two_belts_diverter");
     let found = analyzed(&app, &project);
     assert_eq!(
         codes(&found, MAIN),
-        ["6:9 W009", "9:5 W001", "15:5 W001", "16:5 W001"]
+        ["11:9 W009", "14:5 W001", "21:5 W001", "22:5 W001"]
     );
     assert_eq!(codes(&found, "components/twinova.belt@1.st"), ["34:3 W013"]);
     assert_eq!(
@@ -65,7 +66,7 @@ fn the_diverter_s_sources_show_what_vscode_shows_without_the_false_e202() {
             first.end_line,
             first.end_column
         ),
-        ("warning", "unused variable 'detected_b'", 9, 15)
+        ("warning", "unused variable 'detected_b'", 14, 15)
     );
 }
 
@@ -85,9 +86,9 @@ fn a_broken_program_shows_its_errors_before_build() {
     assert_eq!(
         errors.iter().map(at).collect::<Vec<_>>(),
         [
-            "21:1 E203 cannot assign 'SINT' to 'BOOL'",
-            "22:1 E101 undefined identifier 'not_declared'",
-            "23:19 E205 expected TIME or LTIME for parameter 'PT'",
+            "37:1 E203 cannot assign 'SINT' to 'BOOL'",
+            "38:1 E101 undefined identifier 'not_declared'",
+            "39:19 E205 expected TIME or LTIME for parameter 'PT'",
         ]
     );
 }

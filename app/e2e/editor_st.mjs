@@ -42,7 +42,7 @@ const decorated = (cls) =>
     cls,
   );
 const cursorLine = () => browser.execute(() => document.querySelector(".monaco-host").editor.getPosition().lineNumber);
-/** Puts the cursor on the first line holding `text`, `offset` characters into `text`, and runs editor `action`. */
+/** Puts the cursor on the first line holding `text`, `offset` characters into `text`, in view, and runs editor `action`. */
 const actAt = (text, offset, action) =>
   browser.execute(
     (t, o, a) => {
@@ -50,6 +50,8 @@ const actAt = (text, offset, action) =>
       const model = editor.getModel();
       const line = model.getLinesContent().findIndex((l) => l.includes(t)) + 1;
       editor.setPosition({ lineNumber: line, column: model.getLineContent(line).indexOf(t) + 1 + o });
+      // Monaco shows a hover only at a position in view.
+      editor.revealLineInCenter(line);
       editor.focus();
       editor.trigger("e2e", a, {});
       return line;
@@ -71,7 +73,7 @@ sessions(() =>
       await eventually(
         async () => {
           const found = await rows();
-          if (!found.some((r) => r.includes("plc/Main.st:9:5") && r.includes("W001")))
+          if (!found.some((r) => r.includes("plc/Main.st:14:5") && r.includes("W001")))
             throw new Error(found.join(" | "));
           if (found.some((r) => / E202 | W01[01] /.test(` ${r} `))) throw new Error(`hidden ones shown: ${found}`);
         },
@@ -86,14 +88,14 @@ sessions(() =>
       await eventually(
         async () => {
           const errors = (await rows()).filter((r) => /E2\d\d|E1\d\d/.test(r)).map((r) => r.split(" ")[0]);
-          expectEqual(errors, ["plc/Main.st:21:1", "plc/Main.st:22:1", "plc/Main.st:23:19"], "errors");
+          expectEqual(errors, ["plc/Main.st:37:1", "plc/Main.st:38:1", "plc/Main.st:39:19"], "errors");
         },
         "errors listed",
         15_000,
       );
       await dock("plc");
       await eventually(
-        async () => expectEqual(await decorated("squiggly-error"), [21, 22, 23], "error squiggles"),
+        async () => expectEqual(await decorated("squiggly-error"), [37, 38, 39], "error squiggles"),
         "squiggles",
         10_000,
       );
@@ -101,8 +103,8 @@ sessions(() =>
     });
     await check("a Problems row opens its line", async () => {
       await dock("problems");
-      await click(`//button[contains(@class,"analysis")][contains(., "plc/Main.st:22:1")]`);
-      await eventually(async () => expectEqual(await cursorLine(), 22, "line"), "revealed", 5_000);
+      await click(`//button[contains(@class,"analysis")][contains(., "plc/Main.st:38:1")]`);
+      await eventually(async () => expectEqual(await cursorLine(), 38, "line"), "revealed", 5_000);
     });
     await check("hover tells a variable's type", async () => {
       await dock("plc");
@@ -122,7 +124,7 @@ sessions(() =>
       const typed = "count := detec";
       await setEditorText(original.replace("belt_b_run := TRUE;", `belt_b_run := TRUE;\n${typed}`));
       await dock("plc");
-      expectEqual(await actAt(typed, typed.length, "editor.action.triggerSuggest"), 22, "the typed line");
+      expectEqual(await actAt(typed, typed.length, "editor.action.triggerSuggest"), 38, "the typed line");
       await eventually(
         async () => {
           const offered = await textOf(".suggest-widget");
