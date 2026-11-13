@@ -84,6 +84,17 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-complete-design.md`, plan `2026-1
   - `countShows` brings line 40 into view first: values are drawn on visible lines only, and the write bar and the table
     had pushed it out (one run in four).
 
+- **A breakpoint moved by an edit, then Build and Run at once, held at its old line on Windows** (every windows-2022 run
+  since `ca12379`; on `f6cd6a7` the HOLD came at 0.00 s on the new line 40, `IF entered.Q`, so the new program was armed
+  with the old list).
+  - The status bar reads "Built: ready to run" through an edit and a Build, so the E2E's wait for it passes at once and
+    Run goes out before the Build's answer, and so before the editor sets the moved breakpoints again.
+  - On Linux, WebKitGTK and the synchronous commands share the GTK main thread: the click on Run waits for the Build,
+    and the resend goes first. Not reproduced there, without the wait and on one loaded CPU alike.
+  - Run and Step now wait for the Build in flight and a tick, so the resend's `set_breakpoints` is out before them
+    (`App.svelte`, `afterBuild`). Linux: `breakpoints` 15/15, `run` 11/11, `plc_window` 6/6, `line` 4/4. Windows rests on
+    CI.
+
 ## What this does not prove
 
 - **A breakpoint bound to one device** (decision 4), and the hit count "a multiple of N" (decision 2).
