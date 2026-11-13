@@ -78,6 +78,11 @@ All recorded in the spec's amendments:
   - vitest: 213.
 - **E2E:** 119/119 on Linux, 12 files, `monitor.mjs` 6/6 among them.
 - **Coverage and mutation:** CI on pull request #45 (`ci.yml`, `mutation.yml`).
+- **Mutation's timeout raised from 60 to 180 s (user, 2026-11-13).**
+  - The engine's tests took 41-47 s per mutant on one shard's runner and more than 60 s on the other two (runs
+    43403329446 and 43405902568).
+  - There, 42 engine mutants timed out, and the gate counts a timeout as caught. 13 of them were survivors on the
+    faster runner; the tests that kill them came with this pull request.
 
 ## What this does not prove
 

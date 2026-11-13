@@ -112,6 +112,9 @@ jobs:
       # --baseline=skip: ci.yml runs these tests on every push, and the timeout is set, so each shard saves the
       # baseline's build and test of the whole workspace (https://mutants.rs/baseline.html). The exit code is stored
       # with the results so a cached run is judged like a fresh one.
+      # --timeout 180: a timeout counts as caught at the gate, so it must stay above the slowest test run. The engine's
+      # tests took 41-47 s per mutant on one runner and more than 60 s on the other two (PR #45, runs 43403329446 and
+      # 43405902568, 21 s locally): at 60 s, 42 engine mutants timed out there, 13 of them survivors on the faster runner.
       - name: cargo mutants
         if: steps.results.outputs.cache-hit != 'true'
         working-directory: app/src-tauri
@@ -124,7 +127,7 @@ jobs:
             git diff --relative HEAD^1 HEAD > "$RUNNER_TEMP/pr.diff"
             scope+=(--in-diff "$RUNNER_TEMP/pr.diff")
           fi
-          cargo mutants "${scope[@]}" -j 2 --timeout 60 --baseline=skip --copy-target=true \
+          cargo mutants "${scope[@]}" -j 2 --timeout 180 --baseline=skip --copy-target=true \
             --shard "$SHARD/3" --sharding round-robin
           code=$?
           mkdir -p mutants.out
