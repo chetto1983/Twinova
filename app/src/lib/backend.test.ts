@@ -183,6 +183,21 @@ describe("project bridge", () => {
     ]);
   });
 
+  it("moves the line only once the breakpoints set before have reached the app, even refused", async () => {
+    const pending: { refuse?: (e: string) => void } = {};
+    invoke.mockImplementation((cmd: string) =>
+      cmd === "set_breakpoints" ? new Promise((_, reject) => (pending.refuse = reject)) : Promise.resolve(undefined),
+    );
+    const set = debug.setBreakpoints("plc/Main.st", []);
+    const moves = [backend.run(null), backend.step(), debug.resume("continue"), debug.runToCursor("plc/Main.st", 3)];
+    await Promise.resolve();
+    expect(invoke.mock.calls.map((c) => c[0])).toEqual(["set_breakpoints"]);
+    pending.refuse?.("line 3: the condition 'x' is not a variable");
+    await expect(set).rejects.toBe("line 3: the condition 'x' is not a variable");
+    await Promise.all(moves);
+    expect(invoke.mock.calls.map((c) => c[0])).toEqual(["set_breakpoints", "run", "step", "resume", "run_to_cursor"]);
+  });
+
   it("does nothing when a dialog is cancelled", async () => {
     open.mockResolvedValue(null);
     save.mockResolvedValue(null);

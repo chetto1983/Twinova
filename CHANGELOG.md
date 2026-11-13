@@ -148,6 +148,8 @@ and build inside the app, on Windows and Linux.
   - breakpoints in blocks hold the line too, naming the device;
   - while held, a program variable can be written: it shows at once, reaches the program at the next cycle, and a
     saved state replays it.
+  - Run, Step, Continue and Run to cursor wait for the breakpoints just set: on Windows they could reach the app
+    first, and the line ran with the old breakpoints.
 - The PLC pane in a window of its own (ROADMAP 4.8b), for example on a second monitor:
   - a button in the dock's PLC tab opens it, and the dock says where it went;
   - the window has Build, Run/Pause and Step, and the editor with Monitoring, the variables table and forcing;

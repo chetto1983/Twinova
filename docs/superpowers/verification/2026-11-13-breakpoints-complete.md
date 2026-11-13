@@ -47,6 +47,14 @@ Date: 2026-11-13. Spec `2026-11-13-breakpoints-complete-design.md`, plan `2026-1
 - **vitest reports a rejected promise a `vi.fn` returned as unhandled,** though the code catches it. The test of the
   breakpoint state stubs the backend by hand.
 
+- **On Windows a breakpoint just set or removed could reach the app after Run or Continue** (CI's windows-2022 E2E,
+  on `main` after PR #48 and on this PR's `ca12379`: HOLD at the old line 40, and a HOLD after Continue with the
+  breakpoint off).
+  - Each `invoke` is a fetch of its own (Tauri 2.12.5, `scripts/ipc-protocol.js`), so two not awaited have no order.
+  - Run, Step, Continue and Run to cursor now wait for the breakpoints set before them (`backend.ts`). The vitest that
+    checks it fails without the change.
+  - Linux never showed the race locally, so its absence on Windows rests on the next CI run.
+
 ## What this does not prove
 
 - **A breakpoint bound to one device** (decision 4), and the hit count "a multiple of N" (decision 2).
