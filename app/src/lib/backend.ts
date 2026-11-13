@@ -9,6 +9,7 @@ import type { DiskSources } from "./sources";
 import type { Problems } from "./analysis";
 import type { Change, Declaration, Force, Target, Watched } from "./monitor";
 import type { Breakpoint, Hold, Log, Resume } from "./debug";
+import type { Proposal, Reference, Span, Template } from "./navigation";
 
 /** Each invoke is a fetch of its own (Tauri 2.12 `scripts/ipc-protocol.js`, `sendIpcMessage`), so two not awaited
  * may reach the app in either order; WebView2 was measured doing so (CI, 2026-11-13). A command that moves the line
@@ -59,6 +60,20 @@ export const analysis = {
     invoke<string | null>("hover", { file, text, line, column }),
   completion: (file: string, text: string, line: number, column: number) =>
     invoke<Completion[]>("completion", { file, text, line, column }),
+};
+
+/** Navigation, call templates and Auto Declare (navigation.rs, declarations.rs, call_templates.rs). */
+export const navigation = {
+  definition: (file: string, text: string, line: number, column: number) =>
+    invoke<Span | null>("definition", { file, text, line, column }),
+  references: (file: string, text: string, line: number, column: number) =>
+    invoke<Reference[]>("references", { file, text, line, column }),
+  rename: (files: [string, string][], file: string, line: number, column: number, newName: string) =>
+    invoke<[string, string][]>("rename_symbol", { files, file, line, column, newName }),
+  callTemplate: (files: [string, string][], file: string, line: number, column: number) =>
+    invoke<Template | null>("call_template", { files, file, line, column }),
+  declareProposal: (files: [string, string][], file: string, line: number, column: number) =>
+    invoke<Proposal | null>("declare_proposal", { files, file, line, column }),
 };
 
 /** Online monitoring and forcing (src-tauri/src/monitor.rs). */

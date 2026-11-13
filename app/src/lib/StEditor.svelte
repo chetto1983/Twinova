@@ -22,18 +22,15 @@
   import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
   import { analysis } from "./backend";
   import { completionKind } from "./analysis";
+  import { isSnippet } from "./navigation";
+  import { ST, fileOfModel } from "./stNavigation";
 
-  const ST = "st";
   monaco.languages.register({ id: ST, extensions: [".st"] });
   monaco.languages.setLanguageConfiguration(ST, conf);
   monaco.languages.setMonarchTokensProvider(ST, language);
   (self as unknown as { MonacoEnvironment: monaco.Environment }).MonacoEnvironment = {
     getWorker: () => new EditorWorker(),
   };
-
-  /** A model's file: its URI's path, `inmemory://twinova/<file>`. */
-  const fileOfModel = (model: monaco.editor.ITextModel): string => model.uri.path.slice(1);
-  const uriOf = (file: string): monaco.Uri => monaco.Uri.parse(`inmemory://twinova/${file}`);
 
   monaco.languages.registerHoverProvider(ST, {
     provideHover: async (model, position) => {
@@ -56,6 +53,11 @@
           kind: completionKind(c.kind, kinds),
           detail: c.detail ?? undefined,
           insertText: c.insert_text,
+          // truST's parameters and typed literals carry placeholders (`IN := $0`, `BOOL#${1:TRUE}`): as typed text they
+          // would go in with their dollars.
+          insertTextRules: isSnippet(c.insert_text)
+            ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+            : undefined,
           range,
         })),
       };
@@ -84,13 +86,17 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { fileOf, marker, type Problems } from "./analysis";
-  import { decorations, spotAt, type Spot } from "./monitor";
+  import { decorations, spotAt, type Declaration, type Spot } from "./monitor";
   import { breakpointMarks, heldMark, moved, sameLines, type Breakpoint } from "./debug";
   import type { Source } from "./sources";
+  import DeclareBar from "./DeclareBar.svelte";
+  import { declarations, navigation } from "./backend";
+  import { applyChanged, type Proposal } from "./navigation";
+  import { registerNavigation, uriOf } from "./stNavigation";
 
   let {
     sources = $bindable(),
-    active,
+    active = $bindable(),
     problems,
     reveal,
     spots = [],
@@ -144,6 +150,32 @@
     marks?.set(breakpointMarks(breakpoints, monaco.editor.TrackedRangeStickiness.GrowsOnlyWhenTypingAfter));
   }
   const models = new Map<string, monaco.editor.ITextModel>();
+  /** Auto Declare's proposal while its bar is open, and why its Apply was refused. */
+  let declaring = $state<Proposal | null>(null);
+  let declareError = $state("");
+  /** A place to show once its tab's model is in: a definition or a reference in another tab. */
+  let pending: { line: number; column: number } | null = null;
+  const tabFiles = (): [string, string][] => sources.map((s) => [fileOf(s), s.text]);
+  const shown = (): Source | undefined => sources[Math.min(active, sources.length - 1)];
+
+  /** Opens Auto Declare on the name at a place of the shown tab: a program's only, blocks being read-only. */
+  async function declare(line: number, column: number): Promise<void> {
+    const tab = shown();
+    if (!tab || tab.kind === "behaviour") return;
+    declareError = "";
+    declaring = await navigation.declareProposal(tabFiles(), fileOf(tab), line, column).catch(() => null);
+  }
+
+  async function addDeclaration(row: Declaration): Promise<void> {
+    const tab = shown();
+    if (!tab) return;
+    try {
+      tab.text = await declarations.edit(tab.text, { op: "add", row });
+      declaring = null;
+    } catch (e) {
+      declareError = String(e);
+    }
+  }
 
   /** A tab's model, made on first use; what is typed in it goes back to the tab's source. */
   function modelOf(source: Source): monaco.editor.ITextModel {
@@ -211,6 +243,23 @@
       if (at) onBreakpoint?.(at.lineNumber);
     });
     made.onDidChangeCursorPosition((e) => onCursor?.(e.position.lineNumber));
+    // Auto Declare on the cursor's name, as CODESYS's Shift+F2.
+    made.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F2, () => {
+      const at = made.getPosition();
+      if (at) void declare(at.lineNumber, made.getModel()?.getWordAtPosition(at)?.startColumn ?? at.column);
+    });
+    const navigations = registerNavigation({
+      files: tabFiles,
+      renamed: (changed) => applyChanged(sources, changed),
+      open: (file, line, column) => {
+        const at = sources.findIndex((s) => fileOf(s) === file);
+        if (at < 0) return;
+        pending = { line, column };
+        if (at === active) showPending();
+        else active = at;
+      },
+      declare: (line, column) => void declare(line, column),
+    });
     // A click on a drawn value lands on its spot's column (Monaco gives injected text no column of its own).
     made.onMouseDown((e) => {
       const at = e.target.position;
@@ -225,6 +274,7 @@
     const themes = new MutationObserver(applyTheme);
     themes.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => {
+      navigations.forEach((d) => d.dispose());
       themes.disconnect();
       made.dispose();
       models.forEach((m) => m.dispose());
@@ -244,7 +294,16 @@
       drawMarks();
     }
     if (editor.getModel() !== model) editor.setModel(model);
+    showPending();
   });
+
+  function showPending(): void {
+    if (!editor || !pending) return;
+    editor.revealLineInCenter(pending.line);
+    editor.setPosition({ lineNumber: pending.line, column: pending.column });
+    editor.focus();
+    pending = null;
+  }
 
   // A tab that left the project takes its model along.
   $effect(() => {
@@ -292,7 +351,12 @@
   });
 </script>
 
-<div class="monaco-host" bind:this={host}></div>
+<div class="st-editor">
+  {#if declaring}
+    <DeclareBar proposal={declaring} error={declareError} onApply={addDeclaration} onClose={() => (declaring = null)} />
+  {/if}
+  <div class="monaco-host" bind:this={host}></div>
+</div>
 
 <style>
   :global(.monitor-value) {
@@ -346,9 +410,16 @@
   :global(.debug-held-line) {
     background: color-mix(in oklab, var(--color-warning) 22%, transparent);
   }
-  .monaco-host {
+  .st-editor {
+    display: flex;
+    flex-direction: column;
     width: 100%;
     height: 100%;
+    min-height: 0;
+  }
+  .monaco-host {
+    flex: 1;
+    width: 100%;
     min-height: 0;
   }
 </style>

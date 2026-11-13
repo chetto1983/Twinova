@@ -74,6 +74,13 @@ tutto"), decisions 1 to 5.
    - a user function gives its inputs, then in-outs, then outputs, as declared.
    - Not measured: a reference from the program into a block. The 4.4a program calls no block.
 
+6. **The references' peek needs Monaco's standalone contribution** (Task 3, measured).
+   - contrib's `ReferencesController` is abstract. With contrib's alone, the editor had no
+     `editor.contrib.referencesController` and Shift+F12 did nothing.
+   - `standalone/browser/referenceSearch/standaloneReferenceSearch.js` registers it.
+7. **Auto Declare's bar sits in `StEditor`, above the code,** not in `Editor.svelte` (591 lines). `StEditor` already
+   binds the tabs' texts. `active` became bindable, so a definition in another tab opens it.
+
 ## File structure
 
 | File | Change |
@@ -96,7 +103,7 @@ tutto"), decisions 1 to 5.
     - `definition`, `references` and `highlights`;
     - `rename_at` and its refusal;
     - `call_template` and `declare_proposal`.
-- [ ] **Task 2: the webview.** `navigation.ts` tests first, then the providers, snippets, templates, opener and bar.
+- [x] **Task 2: the webview.** `navigation.ts` tests first, then the providers, snippets, templates, opener and bar.
   Commit.
-- [ ] **Task 3: the E2E**, `navigation.mjs` (spec test plan), locally once. Commit.
+- [x] **Task 3: the E2E**, `navigation.mjs` (spec test plan), locally once. Commit.
 - [ ] **Task 4: documents.** Verification, CHANGELOG, ROADMAP. The pull request, merged when green.

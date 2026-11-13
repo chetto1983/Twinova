@@ -23,6 +23,7 @@
   import DebugBar from "./DebugBar.svelte";
   import BreakpointBar from "./BreakpointBar.svelte";
   import LogList from "./LogList.svelte";
+  import { applyChanged } from "./navigation";
   let {
     sources = $bindable(),
     status,
@@ -170,10 +171,7 @@
     if (!current) return;
     try {
       const files = sources.map((s): [string, string] => [fileOf(s), s.text]);
-      for (const [file, text] of await declared.rename(files, fileOf(current), index, name)) {
-        const tab = sources.find((s) => fileOf(s) === file);
-        if (tab) tab.text = text;
-      }
+      applyChanged(sources, await declared.rename(files, fileOf(current), index, name));
       problem = "";
     } catch (e) {
       problem = String(e);
@@ -323,7 +321,7 @@
       <div class="code-area" aria-label={current.label}>
         <StEditor
           bind:sources
-          {active}
+          bind:active
           {problems}
           {reveal}
           spots={watched?.spots ?? []}
