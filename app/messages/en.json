@@ -163,5 +163,8 @@
   "value_release": "Release",
   "forces_title": "Forces",
   "forces_none": "No value is forced",
-  "io_force": "Force this address"
+  "io_force": "Force this address",
+  "plc_window_open": "Open the PLC in a window",
+  "plc_window_detached": "The PLC is in its own window.",
+  "plc_window_attach": "Back to the dock"
 }

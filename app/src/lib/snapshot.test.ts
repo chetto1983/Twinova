@@ -15,6 +15,11 @@ import {
 } from "./snapshot";
 
 vi.mock("./ProjectScene.svelte", () => ({ default: () => {} }));
+// The App hosts the PLC window's events (plcWindow.ts); here no window and no Tauri event bus.
+vi.mock("./plcWindow", async (original) => ({
+  ...(await original<typeof import("./plcWindow")>()),
+  hostPlcWindow: () => [],
+}));
 vi.mock("./backend", () => ({
   backend: {
     build: vi.fn().mockResolvedValue({ snapshot: null, warnings: [] }),
