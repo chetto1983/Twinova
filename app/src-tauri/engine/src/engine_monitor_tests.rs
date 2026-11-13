@@ -255,3 +255,16 @@ fn the_engine_lists_an_instance_s_members_and_says_whether_it_watches() {
     engine.watch(&[]);
     assert!(!engine.watching());
 }
+
+#[test]
+fn the_field_s_debug_goes_off_when_released() {
+    let mut engine = diverter();
+    engine.field_debugger().unwrap();
+    let debugged = |e: &mut Engine| {
+        let field = e.line.field_mut().unwrap();
+        field.harness_mut().runtime().debug_control().is_some()
+    };
+    assert!(debugged(&mut engine));
+    engine.release_field_debugger();
+    assert!(!debugged(&mut engine));
+}
