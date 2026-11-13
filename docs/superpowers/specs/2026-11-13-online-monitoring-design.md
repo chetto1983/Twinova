@@ -1,7 +1,6 @@
 # Spec: online monitoring in the ST editor (ROADMAP 4.8)
 
-Date: 2026-11-13. Status: **approved** (user, 2026-11-13), decisions 1 to 8; decisions 9 to 11, the variables table,
-**for approval**.
+Date: 2026-11-13. Status: **approved** (user, 2026-11-13), decisions 1 to 11.
 
 ROADMAP 4.8: "Online monitoring in the editor (research [17]): each line's values beside the code, TRUE/FALSE on
 conditions, an FB instance chosen to watch; modify and force from the code, as TIA Portal and CODESYS do. From the
@@ -139,11 +138,13 @@ All measured on the line's PLC, the controller's harness:
   - `Line::step_ms` writes every input every millisecond. After `release_io`, the next scan reads the plant's value
     (`a_forced_input_holds_against_the_plant_and_the_plant_comes_back`).
   - The forcing section's claim above came from a probe that read an input a carton was really covering.
-- **Only a program's own variables can be written or forced.**
-  - truST discards a force on an instance's member without a word: `carry.PT` and `arrived.Q` were dropped at the next
-    scan, while `count` held.
-  - Twinova refuses a dotted target with a message rather than list a force that does nothing.
-  - FB members are still monitored.
+- **A member of an instance is written or forced on that instance** (user: "devi modificare il valore della variabile
+  di istanza").
+  - truST drops a force named by a dotted path (`carry.PT`) at the next scan.
+  - It holds a force given to the member's own instance (`carry`'s id, `PT`): measured at 100 ms for 1,000 ms
+    although the call writes `PT := T#1500MS` every scan.
+  - So Twinova resolves the path to the instance that holds its last name.
+  - A write on a member the FB computes (a timer's `ET`) is computed again at the next scan, as on a PLC.
 - **A BOOL takes TRUE or FALSE.** truST does not parse `BOOL#1`; a click toggles a BOOL anyway.
 
 ### Amendment of 2026-11-13: a variables table, which also edits the declarations (user)
@@ -160,7 +161,7 @@ The user asked for the variables in a table, as in CODESYS and TIA Portal (a scr
   RETAIN or CONSTANT), Type, Address (`AT`), Initial value, Comment; then, while Monitoring is on, Value and Forced.
 - **Online:** each row's value is a path watch (`Main.<name>`, or `F.<device>.<name>` for a block).
   - An FB instance's row unfolds into its members, read-only.
-  - A row's Value can be written or forced as decision 6 says: the program's own variables only.
+  - A row's Value can be written or forced as decision 6 says, an FB member included.
 - **Offline (and online, as an edit of the text):**
   - add a row;
   - delete a row;
