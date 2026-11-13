@@ -8,7 +8,9 @@ use twinova_physics::{Carton, World};
 use twinova_project::Project;
 use twinova_project::model::SignalType;
 
+use crate::controller::Target;
 use crate::line::Line;
+use crate::watch::{self, Compiled, Scope, Watch};
 
 const NS_PER_MS: i64 = 1_000_000;
 /// At most this many scans per pacing tick, so a stalled UI thread cannot freeze the loop; the lag stays visible.
@@ -66,6 +68,10 @@ enum Input {
     SinkBlocked(usize, bool),
     /// An online change of the line program, its files as (path, text).
     Program(Vec<(String, String)>),
+    /// The user's write, force and release (spec 2026-11-13-online-monitoring-design.md, decision 3).
+    Write(Target, Value),
+    Force(Target, Value),
+    Release(Target),
 }
 
 /// A state to come back to (spec 2026-11-08-run-modes-design.md, decision 3): truST cannot save its VM's state, so a
@@ -91,6 +97,8 @@ pub struct Engine {
     inputs: Vec<(i64, Input)>,
     fault: Option<String>,
     pub lag_ms: i64,
+    /// What the editor monitors, ready to read.
+    watches: Vec<Compiled>,
 }
 
 fn text(value: &Value, ty: SignalType) -> String {
@@ -161,6 +169,7 @@ impl Engine {
             inputs: Vec::new(),
             fault: None,
             lag_ms: 0,
+            watches: Vec::new(),
         };
         Ok((engine, warnings))
     }
@@ -209,6 +218,78 @@ impl Engine {
         self.apply(Input::Program(program))
     }
 
+    /// Writes `text` into a program variable once, at the next scan.
+    pub fn write(&mut self, target: Target, text: &str) -> Result<(), String> {
+        let value = self.line.controller_mut().value_for(&target, text)?;
+        self.apply(Input::Write(target, value)).map(drop)
+    }
+
+    /// Holds a variable or an address at `text`'s value until released.
+    pub fn force(&mut self, target: Target, text: &str) -> Result<(), String> {
+        let value = self.line.controller_mut().value_for(&target, text)?;
+        self.apply(Input::Force(target, value)).map(drop)
+    }
+
+    pub fn release(&mut self, target: Target) -> Result<(), String> {
+        self.apply(Input::Release(target)).map(drop)
+    }
+
+    /// The forces in effect, with their values as the editor shows them.
+    pub fn forces(&self) -> Vec<(Target, String)> {
+        self.line.controller().forces()
+    }
+
+    /// Whether the PLC's debug control is attached (spec 2026-11-13-online-monitoring-design.md, decision 2).
+    pub fn debugged(&self) -> bool {
+        self.line.controller().debugged()
+    }
+
+    /// What the editor monitors from now on: each path kept, each condition parsed once. A watch on the field of a
+    /// project without blocks reads nothing.
+    pub fn watch(&mut self, watches: &[Watch]) {
+        let line = &mut self.line;
+        self.watches = (watches.iter())
+            .map(|w| match w {
+                Watch::Path(Scope::Plc, _) | Watch::Condition(Scope::Plc, _) => {
+                    watch::compile(line.controller_mut().harness_mut(), w)
+                }
+                Watch::Path(Scope::Field, _) | Watch::Condition(Scope::Field, _) => (line
+                    .field_mut())
+                .map_or(Compiled::Nothing, |f| watch::compile(f.harness_mut(), w)),
+            })
+            .collect();
+    }
+
+    /// The member names of the instance at `path`, for the variables table to unfold it.
+    pub fn members(&mut self, scope: Scope, path: &str) -> Vec<String> {
+        match scope {
+            Scope::Plc => watch::members(self.line.controller_mut().harness_mut(), path),
+            Scope::Field => (self.line.field_mut())
+                .map_or_else(Vec::new, |f| watch::members(f.harness_mut(), path)),
+        }
+    }
+
+    /// Whether the editor monitors anything.
+    pub fn watching(&self) -> bool {
+        !self.watches.is_empty()
+    }
+
+    /// The monitored values after the last scan, in the order they were watched.
+    pub fn watched(&mut self) -> Vec<Option<String>> {
+        let line = &mut self.line;
+        (self.watches.iter())
+            .map(|c| match c {
+                Compiled::Path(Scope::Plc, _) | Compiled::Expr(Scope::Plc, _) => {
+                    watch::read(line.controller_mut().harness_mut(), c)
+                }
+                Compiled::Path(Scope::Field, _) | Compiled::Expr(Scope::Field, _) => line
+                    .field_mut()
+                    .and_then(|f| watch::read(f.harness_mut(), c)),
+                Compiled::Nothing => None,
+            })
+            .collect()
+    }
+
     /// The program the engine runs now, with its online changes.
     pub fn program(&self) -> &[(String, String)] {
         &self.project.program
@@ -233,6 +314,18 @@ impl Engine {
                 let warnings = self.line.change_program(&changed)?;
                 self.project = changed;
                 warnings
+            }
+            Input::Write(target, value) => {
+                (self.line.controller_mut()).write_once(target, value.clone())?;
+                Vec::new()
+            }
+            Input::Force(target, value) => {
+                (self.line.controller_mut()).force(target, value.clone())?;
+                Vec::new()
+            }
+            Input::Release(target) => {
+                self.line.controller_mut().release(target)?;
+                Vec::new()
             }
         };
         self.inputs.push((self.line.time_ns(), input));
@@ -328,3 +421,7 @@ mod tests;
 #[cfg(test)]
 #[path = "engine_change_tests.rs"]
 mod change_tests;
+
+#[cfg(test)]
+#[path = "engine_monitor_tests.rs"]
+mod monitor_tests;

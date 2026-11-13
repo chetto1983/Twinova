@@ -84,6 +84,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { fileOf, marker, type Problems } from "./analysis";
+  import { decorations, spotAt, type Spot } from "./monitor";
   import type { Source } from "./sources";
 
   let {
@@ -91,16 +92,32 @@
     active,
     problems,
     reveal,
+    spots = [],
+    spotValues = [],
+    forced = new Set<string>(),
+    onVisible,
+    onSpot,
+    onToggleMonitor,
   }: {
     sources: Source[];
     active: number;
     problems: Problems;
     /** A place to show: a Problems row the user clicked. */
     reveal: { key: string; line: number; column: number } | null;
+    /** While monitoring: where the values go in the shown tab, and the values (monitor.rs). */
+    spots?: Spot[];
+    spotValues?: (string | null)[];
+    forced?: Set<string>;
+    /** The first and last lines in view, for the monitoring to read only those. */
+    onVisible?: (first: number, last: number) => void;
+    /** A drawn value was clicked: its spot's index. */
+    onSpot?: (index: number) => void;
+    onToggleMonitor?: () => void;
   } = $props();
 
   let host = $state<HTMLDivElement>();
   let editor = $state<monaco.editor.IStandaloneCodeEditor>();
+  let values: monaco.editor.IEditorDecorationsCollection | undefined;
   const models = new Map<string, monaco.editor.ITextModel>();
 
   /** A tab's model, made on first use; what is typed in it goes back to the tab's source. */
@@ -137,6 +154,23 @@
     // drops typed spaces.
     (host as HTMLDivElement & { editor?: unknown }).editor = made;
     editor = made;
+    values = made.createDecorationsCollection();
+    const visible = (): void => {
+      const ranges = made.getVisibleRanges();
+      if (ranges.length > 0) onVisible?.(ranges[0].startLineNumber, ranges[ranges.length - 1].endLineNumber);
+    };
+    made.onDidScrollChange(visible);
+    made.onDidLayoutChange(visible);
+    made.onDidChangeModel(visible);
+    // Monitoring on and off, as TIA Portal's Ctrl+T.
+    made.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyT, () => onToggleMonitor?.());
+    // A click on a drawn value lands on its spot's column (Monaco gives injected text no column of its own).
+    made.onMouseDown((e) => {
+      const at = e.target.position;
+      if (!at || !e.target.element?.classList.contains("monitor-value")) return;
+      const index = spotAt(spots, at.lineNumber, at.column);
+      if (index >= 0) onSpot?.(index);
+    });
     const themes = new MutationObserver(applyTheme);
     themes.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => {
@@ -174,6 +208,12 @@
     }
   });
 
+  // The monitored values after their references and conditions (spec 2026-11-13-online-monitoring-design.md, decision 5).
+  $effect(() => {
+    const drawn = decorations(spots, spotValues, forced);
+    if (editor) values?.set(drawn);
+  });
+
   $effect(() => {
     if (!editor || !reveal) return;
     editor.revealLineInCenter(reveal.line);
@@ -185,6 +225,23 @@
 <div class="monaco-host" bind:this={host}></div>
 
 <style>
+  :global(.monitor-value) {
+    color: var(--color-text-muted);
+    background: var(--color-surface-2);
+    border-radius: 3px;
+    margin-left: 4px;
+    padding: 0 3px;
+    cursor: pointer;
+  }
+  :global(.monitor-true) {
+    color: var(--color-success);
+  }
+  :global(.monitor-false) {
+    color: var(--color-text-faint);
+  }
+  :global(.monitor-forced) {
+    outline: 1px solid var(--color-warning);
+  }
   .monaco-host {
     width: 100%;
     height: 100%;

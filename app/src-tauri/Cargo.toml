@@ -39,6 +39,12 @@ notify = "=8.2.1"
 # frontend at v0.39.0, followed upstream as the 2.6 policy says (spec 2026-11-07-trust-upstream-policy-design.md). The
 # runtime stays at 6405915, so trust-syntax, trust-hir and trust-ide are built at both revisions. MIT OR Apache-2.0.
 trust-wasm-analysis = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "5eb7f8cd9c137840a5a5db8049edae99c481ace9" }
+# Online monitoring (spec 2026-11-13-online-monitoring-design.md): which references a line shows (trust-ide's inline
+# values) and its conditions (the syntax tree), from the same frontend; already built for trust-wasm-analysis.
+trust-ide = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "5eb7f8cd9c137840a5a5db8049edae99c481ace9" }
+trust-hir = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "5eb7f8cd9c137840a5a5db8049edae99c481ace9" }
+trust-syntax = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "5eb7f8cd9c137840a5a5db8049edae99c481ace9" }
+text-size = "=1.1.1"
 
 [dev-dependencies]
 # mock_app for the command tests (src/commands_tests.rs), as in chetto1983/ModbusTool.
@@ -49,6 +55,11 @@ tempfile = "=3.27.0"
 # The webview's language under a C locale (src/webview_locale.rs).
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
+
+# No debug info in dev builds, as CI builds (CARGO_PROFILE_DEV_DEBUG=0): smaller and faster to link. A target dir with
+# it reached 19 GB and filled the session's disk, and each cleaning cost a full rebuild (2026-11-13).
+[profile.dev]
+debug = 0
 
 # Rapier and truST optimised in dev builds too: the line tests step tens of thousands of 1 ms frames through the
 # physics and two ST runtimes, and cargo mutants reruns them for every mutant against a 60 s timeout (mutation.yml).

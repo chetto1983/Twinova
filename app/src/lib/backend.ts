@@ -7,6 +7,7 @@ import type { Edit, ProjectView } from "./project";
 import type { Built, Snapshot, ScanTiming } from "./snapshot";
 import type { DiskSources } from "./sources";
 import type { Problems } from "./analysis";
+import type { Change, Declaration, Force, Target, Watched } from "./monitor";
 
 export const backend = {
   scanTiming: () => invoke<ScanTiming>("scan_timing"),
@@ -53,6 +54,29 @@ export const analysis = {
     invoke<Completion[]>("completion", { file, text, line, column }),
 };
 
+/** Online monitoring and forcing (src-tauri/src/monitor.rs). */
+export const monitor = {
+  watchRange: (file: string, first: number, last: number, device: string | null, unfolded: string[]) =>
+    invoke<Watched>("watch_range", { file, first, last, device, unfolded }),
+  unwatch: () => invoke<void>("unwatch"),
+  watched: () => invoke<(string | null)[]>("watched"),
+  forces: () => invoke<Force[]>("forces"),
+  force: (target: Target, text: string) => invoke<Force[]>("force", { target, text }),
+  release: (target: Target) => invoke<Force[]>("release", { target }),
+  writeValue: (target: Target, text: string) => invoke<void>("write_value", { target, text }),
+};
+
+/** The variables table's declarations (src-tauri/src/declarations.rs). */
+export const declarations = {
+  of: (text: string) => invoke<Declaration[]>("declarations_of", { text }),
+  edit: (text: string, change: Change) => invoke<string>("edit_declaration", { text, change }),
+  rename: (files: [string, string][], file: string, index: number, newName: string) =>
+    invoke<[string, string][]>("rename_declaration", { files, file, index, newName }),
+};
+
+/** The monitored values after each tick of Run, in `watch_range`'s order. */
+export const onMonitor = (f: (values: (string | null)[]) => void): Promise<UnlistenFn> =>
+  listen<(string | null)[]>("monitor", (e) => f(e.payload));
 export const onSnapshot = (f: (s: Snapshot) => void): Promise<UnlistenFn> =>
   listen<Snapshot>("snapshot", (e) => f(e.payload));
 export const onEngineError = (f: (error: string) => void): Promise<UnlistenFn> =>

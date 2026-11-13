@@ -12,5 +12,6 @@ pub mod line;
 mod line_bind;
 mod locate;
 pub mod timing;
+pub mod watch;
 
 pub use build::{build, diagnostics};

@@ -10,10 +10,15 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { app, browser, button, click, selectSpeed, sessions, virtualSeconds } from "./helpers.mjs";
+import { app, browser, button, click, dock, selectSpeed, sessions, virtualSeconds } from "./helpers.mjs";
 
 const PHASE_S = Number(process.argv[2] ?? 60);
 const PROJECT = process.argv[3] ? [`--project=${resolve(process.argv[3])}`] : [];
+/** SOAK_MONITOR=1 turns Monitoring on in the PLC pane before the phases; SOAK_FORCE=<variable> also forces that
+ *  BOOL variable to the opposite of its value, which attaches the runtime's debug control (spec
+ *  2026-11-13-online-monitoring-design.md, acceptance 5). */
+const MONITOR = process.env.SOAK_MONITOR === "1";
+const FORCE = process.env.SOAK_FORCE;
 const SAMPLE_MS = 2000;
 const TICKS_PER_S = 100; // USER_HZ, the unit of utime and stime in /proc/<pid>/stat
 
@@ -87,6 +92,22 @@ async function phase(name, seconds) {
 sessions(() =>
   app("release", PROJECT, async () => {
     await sleep(3000);
+    if (MONITOR) {
+      await dock("plc");
+      await click(button("Monitoring (Ctrl+T)"));
+      await sleep(1000);
+    }
+    if (FORCE) {
+      // Through the variables table and the write/force bar, as a user forces it.
+      await browser.execute((name) => {
+        const rows = [...document.querySelectorAll('[aria-label="Variables"] tbody tr')];
+        const row = rows.find((r) => r.querySelector('input[aria-label="Name"]')?.value === name);
+        row.querySelector(".value button").click();
+      }, FORCE);
+      await click('//div[@role="group"][@aria-label="Value to write or force"]//button[normalize-space()="Force"]');
+      await sleep(500);
+      console.log(`forced ${FORCE}`);
+    }
     await phase("Idle after start", PHASE_S);
     await click(button("Run"));
     if (await browser.$(button("Start")).isExisting()) await click(button("Start"));

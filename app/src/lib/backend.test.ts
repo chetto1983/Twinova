@@ -10,7 +10,18 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open, save }));
 
-import { analysis, backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./backend";
+import {
+  analysis,
+  backend,
+  declarations,
+  monitor,
+  onDiskSources,
+  onEngineError,
+  onMonitor,
+  onSnapshot,
+  onStopped,
+  projects,
+} from "./backend";
 
 describe("backend bridge", () => {
   beforeEach(() => {
@@ -70,18 +81,61 @@ describe("backend bridge", () => {
     ]);
   });
 
+  it("calls the monitoring and declaration commands with their argument names", async () => {
+    const target = { kind: "variable", program: "Main", path: "count" } as const;
+    const row = {
+      pou: "Main",
+      name: "x",
+      class: "VAR",
+      qualifier: null,
+      type_name: "INT",
+      address: null,
+      initial: null,
+      comment: null,
+    };
+    await monitor.watchRange("plc/Main.st", 3, 9, null, ["carry"]);
+    await monitor.unwatch();
+    await monitor.watched();
+    await monitor.forces();
+    await monitor.force(target, "5");
+    await monitor.release(target);
+    await monitor.writeValue(target, "6");
+    await declarations.of("PROGRAM Main END_PROGRAM");
+    await declarations.edit("T", { op: "add", row });
+    await declarations.rename([["plc/Main.st", "T"]], "plc/Main.st", 2, "y");
+    expect(invoke.mock.calls).toEqual([
+      ["watch_range", { file: "plc/Main.st", first: 3, last: 9, device: null, unfolded: ["carry"] }],
+      ["unwatch"],
+      ["watched"],
+      ["forces"],
+      ["force", { target, text: "5" }],
+      ["release", { target }],
+      ["write_value", { target, text: "6" }],
+      ["declarations_of", { text: "PROGRAM Main END_PROGRAM" }],
+      ["edit_declaration", { text: "T", change: { op: "add", row } }],
+      ["rename_declaration", { files: [["plc/Main.st", "T"]], file: "plc/Main.st", index: 2, newName: "y" }],
+    ]);
+  });
+
   it("hands each event's payload to its listener", async () => {
     const seen: unknown[] = [];
     await onSnapshot((s) => seen.push(s));
     await onEngineError((e) => seen.push(e));
     await onStopped(() => seen.push("stopped"));
     await onDiskSources((d) => seen.push(d));
-    expect(listen.mock.calls.map((c) => c[0])).toEqual(["snapshot", "engine-error", "stopped", "disk-sources"]);
+    await onMonitor((v) => seen.push(v));
+    expect(listen.mock.calls.map((c) => c[0])).toEqual([
+      "snapshot",
+      "engine-error",
+      "stopped",
+      "disk-sources",
+      "monitor",
+    ]);
     const disk = { kind: "program", program: [], behaviours: {} };
-    for (const [i, payload] of [{ time_ms: 10 }, "boom", null, disk].entries()) {
+    for (const [i, payload] of [{ time_ms: 10 }, "boom", null, disk, ["3", null]].entries()) {
       listen.mock.calls[i][1]({ payload });
     }
-    expect(seen).toEqual([{ time_ms: 10 }, "boom", "stopped", disk]);
+    expect(seen).toEqual([{ time_ms: 10 }, "boom", "stopped", disk, ["3", null]]);
   });
 });
 

@@ -11,7 +11,8 @@ profile = "mutants"
 examine_globs = [
   "engine/src/engine.rs", "engine/src/line.rs", "engine/src/drive.rs", "engine/src/field.rs",
   "engine/src/field_image.rs", "engine/src/controller.rs", "engine/src/build.rs", "engine/src/locate.rs",
-  "engine/src/line_bind.rs", "src/watch.rs", "src/analysis.rs",
+  "engine/src/line_bind.rs", "engine/src/watch.rs", "engine/src/controller_monitor.rs",
+  "src/watch.rs", "src/analysis.rs", "src/monitor.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs", "project/src/edit.rs",
   "project/src/history.rs", "project/src/library.rs", "project/src/sources.rs",
