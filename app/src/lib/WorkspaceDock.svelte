@@ -9,6 +9,8 @@
     CircleCheck,
     Maximize2,
     Minimize2,
+    ExternalLink,
+    PanelBottom,
   } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import type { ProjectView } from "./project";
@@ -28,6 +30,9 @@
     notice,
     snapshot,
     selected = null,
+    detached = false,
+    onDetach,
+    onAttach,
     onPlace,
     onDrag,
     onSinkBlocked,
@@ -44,6 +49,10 @@
     snapshot: Snapshot | null;
     /** The instance selected in the scene, for a block's tab to monitor. */
     selected?: string | null;
+    /** The PLC pane is in its own window (spec 2026-11-13-plc-window-design.md): one editor at a time. */
+    detached?: boolean;
+    onDetach: () => void;
+    onAttach: () => void;
     onPlace: (key: string) => void;
     onDrag: (key: string) => void;
     onSinkBlocked: (sink: number, blocked: boolean) => void;
@@ -124,6 +133,12 @@
     </div>
     <span class="spacer"></span>
     <span class="dock-hint">{tab === "parts" ? m.ui_library_hint() : tab === "plc" ? "IEC 61131-3 · truST" : ""}</span>
+    {#if tab === "plc" && !detached}<button
+        class="icon-button"
+        aria-label={m.plc_window_open()}
+        title={m.plc_window_open()}
+        onclick={onDetach}><ExternalLink size={14} /></button
+      >{/if}
     <button
       class="icon-button"
       aria-label={maximized ? m.ui_restore() : m.ui_maximize()}
@@ -150,7 +165,10 @@
       <Catalogue {onPlace} {onDrag} />
     </div>
     <div class="tab-content" id="panel-plc" role="tabpanel" aria-labelledby="dock-plc" hidden={tab !== "plc"}>
-      <Editor bind:sources {status} {problems} {reveal} {selected} instances={project.instances} />
+      {#if detached}<div class="all-clear">
+          <ExternalLink size={22} /><strong>{m.plc_window_detached()}</strong>
+          <button class="btn small" onclick={onAttach}><PanelBottom size={14} />{m.plc_window_attach()}</button>
+        </div>{:else}<Editor bind:sources {status} {problems} {reveal} {selected} instances={project.instances} />{/if}
     </div>
     <div
       class="tab-content problems"

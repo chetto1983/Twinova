@@ -163,5 +163,8 @@
   "value_release": "Rilascia",
   "forces_title": "Forzature",
   "forces_none": "Nessun valore forzato",
-  "io_force": "Forza questo indirizzo"
+  "io_force": "Forza questo indirizzo",
+  "plc_window_open": "Apri il PLC in una finestra",
+  "plc_window_detached": "Il PLC è in una finestra separata.",
+  "plc_window_attach": "Riporta nel pannello"
 }

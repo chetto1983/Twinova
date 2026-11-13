@@ -120,6 +120,8 @@
     return () => {
       void unlisten.then((stop) => stop());
       clearInterval(timer);
+      // The pane moving to its own window unmounts this editor: its watches go with it.
+      if (watched) void monitor.unwatch().catch(() => {});
     };
   });
 
