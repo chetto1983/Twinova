@@ -15,14 +15,17 @@ fn app() -> tauri::App<MockRuntime> {
 }
 
 /// The app on a copy of `fixture`, and that project.
-fn opened(fixture: &str) -> (tauri::App<MockRuntime>, Project) {
+pub(crate) fn opened(fixture: &str) -> (tauri::App<MockRuntime>, Project) {
     let app = app();
     open_project(app.state(), copied(fixture).1).unwrap();
     let project = app.state::<ProjectState>().project().unwrap();
     (app, project)
 }
 
-fn analyzed(app: &tauri::App<MockRuntime>, project: &Project) -> BTreeMap<String, Vec<Problem>> {
+pub(crate) fn analyzed(
+    app: &tauri::App<MockRuntime>,
+    project: &Project,
+) -> BTreeMap<String, Vec<Problem>> {
     let (program, behaviours) = (project.program.clone(), project.behaviours.clone());
     analyze(app.state(), app.state(), program, behaviours).unwrap()
 }

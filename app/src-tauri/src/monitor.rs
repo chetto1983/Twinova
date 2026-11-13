@@ -11,10 +11,10 @@
 
 use std::collections::BTreeSet;
 
+use crate::frontend::{frontend_of, id_of};
 use serde::Serialize;
 use tauri::State;
 use text_size::{TextRange, TextSize};
-use trust_hir::project::{Project as Frontend, SourceKey};
 use trust_ide::inline_values::{InlineValueScope, InlineValueTarget, inline_value_data};
 use trust_syntax::parser::parse;
 use trust_syntax::syntax::{SyntaxKind, SyntaxNode};
@@ -25,6 +25,7 @@ use twinova_engine::watch::{Scope, Watch};
 use crate::analysis::sources;
 use crate::commands::{AppState, with_engine};
 use crate::declarations::declarations;
+use crate::positions::position;
 
 /// Where a value is drawn and what it shows.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -45,15 +46,6 @@ enum Owner<'a> {
     Program,
     /// A block's file, for one device's instance in the field: `F.belt_a.motor`.
     Device(&'a str),
-}
-
-/// The 1-based line and UTF-16 column just after byte `offset` of `text`.
-fn position(text: &str, offset: usize) -> (u32, u32) {
-    let before = &text[..offset];
-    let line_start = before.rfind('\n').map_or(0, |n| n + 1);
-    let line = before.matches('\n').count() as u32 + 1;
-    let column = before[line_start..].encode_utf16().count() as u32 + 1;
-    (line, column)
 }
 
 /// The byte range of 1-based lines `first` to `last` of `text`, both whole.
@@ -141,11 +133,8 @@ pub fn spots(
         (true, Some(device)) => Owner::Device(device),
         (true, None) => return Vec::new(),
     };
-    let mut frontend = Frontend::new();
-    for (path, source) in files {
-        frontend.set_source_text(SourceKey::from_virtual(path.clone()), source.clone());
-    }
-    let id = frontend.file_id_for_key(&SourceKey::from_virtual(file.to_string()));
+    let (frontend, ids) = frontend_of(files);
+    let id = id_of(files, &ids, file);
     let range = lines(text, first, last);
     let targets = id.map_or_else(Vec::new, |id| {
         inline_value_data(frontend.database(), id, range).targets

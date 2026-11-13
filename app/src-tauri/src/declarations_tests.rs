@@ -246,3 +246,36 @@ fn the_diverter_s_program_reads_whole() {
     let edited = edit_declaration(text.clone(), Change::Delete { index: 0 }).unwrap();
     assert!(!edited.contains("eye_a AT"));
 }
+
+#[test]
+fn f2_renames_the_symbol_at_its_place_but_never_inside_a_block() {
+    let files = vec![("plc/Main.st".to_string(), SAMPLE.to_string())];
+    let line = SAMPLE
+        .lines()
+        .position(|l| l.contains("count := count + 1"))
+        .unwrap() as u32
+        + 1;
+    let column = SAMPLE
+        .lines()
+        .nth(line as usize - 1)
+        .unwrap()
+        .find("count")
+        .unwrap() as u32
+        + 1;
+    let renamed = rename_at(&files, "plc/Main.st", line, column, "cartons").unwrap();
+    assert!(
+        renamed[0].1.contains("cartons := cartons + 1;"),
+        "{}",
+        renamed[0].1
+    );
+    assert_eq!(
+        rename_at(&files, "plc/Main.st", 900, 1, "x").unwrap_err(),
+        "no such place"
+    );
+    let block = "FUNCTION_BLOCK B\nVAR_INPUT\n    speed : REAL;\nEND_VAR\nspeed := speed;\nEND_FUNCTION_BLOCK\n";
+    let files = vec![("components/twinova.b@1.st".to_string(), block.to_string())];
+    assert_eq!(
+        rename_at(&files, "components/twinova.b@1.st", 5, 1, "v").unwrap_err(),
+        "components/twinova.b@1.st is read-only: the rename would change it"
+    );
+}

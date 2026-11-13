@@ -6,10 +6,13 @@
 
 use serde::{Deserialize, Serialize};
 use text_size::{TextRange, TextSize};
-use trust_hir::project::{Project as Frontend, SourceKey};
 use trust_ide::rename::rename_checked;
 use trust_syntax::parser::parse;
 use trust_syntax::syntax::{SyntaxKind, SyntaxNode, SyntaxToken};
+
+use crate::frontend::{frontend_of, id_of, text_of};
+use crate::lsp_files::FIELD;
+use crate::positions::offset;
 
 /// A row of the table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -301,10 +304,7 @@ pub fn rename(
     index: usize,
     new_name: &str,
 ) -> Result<Vec<(String, String)>, String> {
-    let (_, text) = files
-        .iter()
-        .find(|(f, _)| f == file)
-        .ok_or("no such file")?;
+    let text = text_of(files, file)?;
     let rows = walk(text);
     let (_, decl) = rows
         .get(index)
@@ -318,16 +318,32 @@ pub fn rename(
         .ok_or("no name")?
         .text_range()
         .start();
-    let mut frontend = Frontend::new();
-    let ids: Vec<_> = (files.iter())
-        .map(|(path, source)| {
-            frontend.set_source_text(SourceKey::from_virtual(path.clone()), source.clone())
-        })
-        .collect();
-    let id = ids[files
-        .iter()
-        .position(|(f, _)| f == file)
-        .expect("found above")];
+    rename_from(files, file, at, new_name)
+}
+
+/// Renames the symbol at 1-based `line` and UTF-16 `column` of `file`, as F2 in the code does (spec
+/// 2026-11-13-completion-navigation-design.md, decision 2).
+pub fn rename_at(
+    files: &[(String, String)],
+    file: &str,
+    line: u32,
+    column: u32,
+    new_name: &str,
+) -> Result<Vec<(String, String)>, String> {
+    let at = offset(text_of(files, file)?, line, column).ok_or("no such place")?;
+    rename_from(files, file, TextSize::from(at as u32), new_name)
+}
+
+/// truST's rename of the symbol at `at` of `file`, applied to each file it changes. A block or the field's
+/// configuration is read-only (4.8), so a rename that would change one is refused.
+fn rename_from(
+    files: &[(String, String)],
+    file: &str,
+    at: TextSize,
+    new_name: &str,
+) -> Result<Vec<(String, String)>, String> {
+    let (frontend, ids) = frontend_of(files);
+    let id = id_of(files, &ids, file).ok_or("no such file")?;
     let result =
         rename_checked(frontend.database(), id, at, new_name).map_err(|e| format!("{e:?}"))?;
     let mut changed = Vec::new();
@@ -335,6 +351,9 @@ pub fn rename(
         let Some(edits) = result.edits.get(file_id) else {
             continue;
         };
+        if path.starts_with("components/") || path == FIELD {
+            return Err(format!("{path} is read-only: the rename would change it"));
+        }
         let mut edits = edits.clone();
         edits.sort_by_key(|e| std::cmp::Reverse(e.range.start()));
         let mut out = source.clone();
@@ -359,6 +378,18 @@ pub fn declarations_of(text: String) -> Vec<Declaration> {
 #[tauri::command]
 pub fn edit_declaration(text: String, change: Change) -> Result<String, String> {
     edit(&text, &change)
+}
+
+/// The tabs' texts F2 on a symbol changes, from every source the editor holds.
+#[tauri::command]
+pub fn rename_symbol(
+    files: Vec<(String, String)>,
+    file: String,
+    line: u32,
+    column: u32,
+    new_name: String,
+) -> Result<Vec<(String, String)>, String> {
+    rename_at(&files, &file, line, column, &new_name)
 }
 
 /// The tabs' texts a rename changes, from every source the editor holds.

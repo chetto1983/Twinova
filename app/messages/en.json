@@ -185,5 +185,10 @@
   "bp_remove": "Remove",
   "debug_log": "Log",
   "value_held": "Held: the program takes the value at the next cycle",
-  "debug_log_clear": "Clear"
+  "debug_log_clear": "Clear",
+  "call_all": "All parameters",
+  "call_required": "Mandatory parameters",
+  "declare_action": "Declare {name}",
+  "declare_title": "Declare variable",
+  "declare_cancel": "Cancel"
 }

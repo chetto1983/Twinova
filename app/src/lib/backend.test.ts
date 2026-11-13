@@ -16,6 +16,7 @@ import {
   debug,
   declarations,
   monitor,
+  navigation,
   onDiskSources,
   onEngineError,
   onMonitor,
@@ -62,6 +63,22 @@ describe("backend bridge", () => {
       ["press", { address: "%IX1.0" }],
       ["set_sink_blocked", { sink: 0, blocked: true }],
       ["scan_timing"],
+    ]);
+  });
+
+  it("calls the navigation commands with their argument names", async () => {
+    const files: [string, string][] = [["plc/Main.st", "PROGRAM Main"]];
+    await navigation.definition("plc/Main.st", "PROGRAM Main", 3, 5);
+    await navigation.references("plc/Main.st", "PROGRAM Main", 3, 5);
+    await navigation.rename(files, "plc/Main.st", 3, 5, "cartons");
+    await navigation.callTemplate(files, "plc/Main.st", 4, 7);
+    await navigation.declareProposal(files, "plc/Main.st", 5, 1);
+    expect(invoke.mock.calls).toEqual([
+      ["definition", { file: "plc/Main.st", text: "PROGRAM Main", line: 3, column: 5 }],
+      ["references", { file: "plc/Main.st", text: "PROGRAM Main", line: 3, column: 5 }],
+      ["rename_symbol", { files, file: "plc/Main.st", line: 3, column: 5, newName: "cartons" }],
+      ["call_template", { files, file: "plc/Main.st", line: 4, column: 7 }],
+      ["declare_proposal", { files, file: "plc/Main.st", line: 5, column: 1 }],
     ]);
   });
 

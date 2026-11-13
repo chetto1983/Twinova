@@ -14,7 +14,7 @@
     "import/no-unassigned-import": [
       "error",
       {
-        "allow": ["**/*.css", "monaco-editor/editor/contrib/**"]
+        "allow": ["**/*.css", "monaco-editor/editor/contrib/**", "monaco-editor/editor/standalone/browser/**"]
       }
     ]
   },

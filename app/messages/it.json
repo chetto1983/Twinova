@@ -185,5 +185,10 @@
   "bp_remove": "Rimuovi",
   "debug_log": "Log",
   "value_held": "In HOLD: il programma riceve il valore al ciclo successivo",
-  "debug_log_clear": "Svuota"
+  "debug_log_clear": "Svuota",
+  "call_all": "Tutti i parametri",
+  "call_required": "Parametri obbligatori",
+  "declare_action": "Dichiara {name}",
+  "declare_title": "Dichiara variabile",
+  "declare_cancel": "Annulla"
 }
