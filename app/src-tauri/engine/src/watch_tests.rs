@@ -94,3 +94,13 @@ fn a_text_of_another_type_is_refused_with_the_type_wanted() {
         Err("'5' is not a value of its type".into())
     );
 }
+
+#[test]
+fn an_instance_lists_its_members_and_a_variable_none() {
+    let members = super::members(&harness(), "Main.timer");
+    for name in ["IN", "PT", "Q", "ET"] {
+        assert!(members.iter().any(|m| m == name), "{members:?}");
+    }
+    assert!(super::members(&harness(), "Main.count").is_empty());
+    assert!(super::members(&harness(), "Main.nowhere").is_empty());
+}

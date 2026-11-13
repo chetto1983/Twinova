@@ -136,14 +136,36 @@ fn built(app: &tauri::App<MockRuntime>) {
 fn the_commands_watch_read_force_and_release() {
     let app = app();
     assert_eq!(
-        watch_range(app.state(), MAIN.into(), 37, 40, None).unwrap_err(),
+        watch_range(app.state(), MAIN.into(), 37, 40, None, vec![]).unwrap_err(),
         "build the project first"
     );
     built(&app);
-    let spots = watch_range(app.state(), MAIN.into(), 37, 37, None).unwrap();
+    let watched_now =
+        watch_range(app.state(), MAIN.into(), 37, 37, None, vec!["carry".into()]).unwrap();
+    let spots = watched_now.spots;
     assert_eq!(spots.len(), 1);
+    let rows = &watched_now.rows;
+    assert_eq!(
+        (rows.len(), rows[0].name.as_str()),
+        (20 + 5, "detected_a"),
+        "20 declarations, carry's 5 members"
+    );
+    let carry = rows.iter().position(|r| r.name == "carry").unwrap();
+    assert!(rows[carry].instance && rows[carry].target.is_none());
+    let pt = &rows[carry + 1..carry + 6];
+    assert!(
+        pt.iter()
+            .all(|r| r.name.starts_with("carry.") && r.declaration.is_none() && r.target.is_some()),
+        "{pt:?}"
+    );
     step(app.state()).unwrap();
-    assert_eq!(watched(app.state()).unwrap(), [Some("TRUE".to_string())]);
+    let values = watched(app.state()).unwrap();
+    assert_eq!(values[0], Some("TRUE".to_string()));
+    assert_eq!(values.len(), 1 + rows.len());
+    assert_eq!(
+        values[1 + rows.iter().position(|r| r.name == "carry.PT").unwrap()],
+        Some("T#1500ms".into())
+    );
     let target = spots[0].target.clone().unwrap();
     let forced = force(app.state(), target.clone(), "FALSE".into()).unwrap();
     assert_eq!(
@@ -155,7 +177,7 @@ fn the_commands_watch_read_force_and_release() {
         }]
     );
     step(app.state()).unwrap();
-    assert_eq!(watched(app.state()).unwrap(), [Some("FALSE".to_string())]);
+    assert_eq!(watched(app.state()).unwrap()[0], Some("FALSE".to_string()));
     assert_eq!(forces(app.state()).unwrap(), forced);
     assert!(release(app.state(), target.clone()).unwrap().is_empty());
     write_value(app.state(), target, "FALSE".into()).unwrap();

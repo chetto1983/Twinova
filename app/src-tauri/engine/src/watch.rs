@@ -66,6 +66,18 @@ pub(crate) fn read(harness: &mut TestHarness, compiled: &Compiled) -> Option<Str
     value.and_then(scalar).map(|v| format_user_value(&v))
 }
 
+/// The names of the members of the instance at `path`, as the runtime holds them: an FB's inputs, outputs and
+/// locals, a standard block's included. Empty when `path` is not an instance.
+pub(crate) fn members(harness: &TestHarness, path: &str) -> Vec<String> {
+    let Some(Value::Instance(id)) = harness.get_output(path) else {
+        return Vec::new();
+    };
+    let instance = harness.runtime().storage().get_instance(id);
+    instance.map_or_else(Vec::new, |i| {
+        i.variables.keys().map(ToString::to_string).collect()
+    })
+}
+
 /// The ST type a typed literal names for `value`'s kind (IEC 61131-3 §6.3.3, `DINT#5`).
 fn type_name(value: &Value) -> Option<&'static str> {
     Some(match value {

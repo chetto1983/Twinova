@@ -260,6 +260,15 @@ impl Engine {
             .collect();
     }
 
+    /// The member names of the instance at `path`, for the variables table to unfold it.
+    pub fn members(&mut self, scope: Scope, path: &str) -> Vec<String> {
+        match scope {
+            Scope::Plc => watch::members(self.line.controller_mut().harness_mut(), path),
+            Scope::Field => (self.line.field_mut())
+                .map_or_else(Vec::new, |f| watch::members(f.harness_mut(), path)),
+        }
+    }
+
     /// Whether the editor monitors anything.
     pub fn watching(&self) -> bool {
         !self.watches.is_empty()

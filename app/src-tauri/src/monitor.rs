@@ -19,10 +19,12 @@ use trust_ide::inline_values::{InlineValueScope, InlineValueTarget, inline_value
 use trust_syntax::parser::parse;
 use trust_syntax::syntax::{SyntaxKind, SyntaxNode};
 use twinova_engine::controller::Target;
+use twinova_engine::engine::Engine;
 use twinova_engine::watch::{Scope, Watch};
 
 use crate::analysis::sources;
 use crate::commands::{AppState, with_engine};
+use crate::declarations::declarations;
 
 /// Where a value is drawn and what it shows.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -219,9 +221,67 @@ fn conditions(
         .collect()
 }
 
-/// Monitors lines `first` to `last` of `file`, a block's file for `device`: the engine reads them after every scan
-/// from now on, and the Run loop sends their values as `monitor`. Returns where each value is drawn, in the order of the
-/// values.
+/// A row of the variables table that the engine reads: a declaration, or a member of an unfolded instance.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Row {
+    /// The declaration's name, or `instance.member`.
+    pub name: String,
+    /// The declaration's index in `declarations::declarations`, for a declaration's row.
+    pub declaration: Option<usize>,
+    /// What writing or forcing the row changes; none in a block's file, which is read-only.
+    pub target: Option<Target>,
+    /// Whether the row is an instance, which unfolds into its members.
+    pub instance: bool,
+}
+
+/// What the editor shows of a file while monitoring: the spots in the code, then the table's rows, the values coming
+/// in that order.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Watched {
+    pub spots: Vec<Spot>,
+    pub rows: Vec<Row>,
+}
+
+/// The table's rows of `text` with their watches: each declaration, and the members of each instance in `unfolded`,
+/// read from the runtime (`Engine::members`), so a standard block's members come too.
+fn rows(engine: &mut Engine, text: &str, owner: &Owner, unfolded: &[String]) -> Vec<(Row, Watch)> {
+    let mut out = Vec::new();
+    for (index, decl) in declarations(text).into_iter().enumerate() {
+        let (scope, prefix) = match owner {
+            Owner::Program => (Scope::Plc, format!("{}.", decl.pou)),
+            Owner::Device(device) => (Scope::Field, format!("F.{device}.")),
+        };
+        let target =
+            |name: &str| matches!(owner, Owner::Program).then(|| Target::variable(&decl.pou, name));
+        let path = format!("{prefix}{}", decl.name);
+        let members = engine.members(scope, &path);
+        let row = Row {
+            target: target(&decl.name).filter(|_| members.is_empty()),
+            name: decl.name.clone(),
+            declaration: Some(index),
+            instance: !members.is_empty(),
+        };
+        out.push((row, Watch::Path(scope, path.clone())));
+        if !unfolded.contains(&decl.name) {
+            continue;
+        }
+        for member in members {
+            let name = format!("{}.{member}", decl.name);
+            let row = Row {
+                target: target(&name),
+                name,
+                declaration: None,
+                instance: false,
+            };
+            out.push((row, Watch::Path(scope, format!("{path}.{member}"))));
+        }
+    }
+    out
+}
+
+/// Monitors lines `first` to `last` of `file`, a block's file for `device`, and its variables table with the instances
+/// in `unfolded` unfolded: the engine reads them after every scan from now on, and the Run loop sends their values as
+/// `monitor`, the spots' first, then the rows'.
 #[tauri::command]
 pub fn watch_range(
     state: State<'_, AppState>,
@@ -229,15 +289,33 @@ pub fn watch_range(
     first: u32,
     last: u32,
     device: Option<String>,
-) -> Result<Vec<Spot>, String> {
+    unfolded: Vec<String>,
+) -> Result<Watched, String> {
     let project = state.built_project()?.ok_or("build the project first")?;
-    let (spots, watches): (Vec<Spot>, Vec<Watch>) =
-        spots(&sources(&project)?, &file, first, last, device.as_deref())
-            .into_iter()
-            .unzip();
+    let files = sources(&project)?;
+    let found = spots(&files, &file, first, last, device.as_deref());
+    let text = files
+        .iter()
+        .find(|(f, _)| *f == file)
+        .map(|(_, t)| t.clone());
+    let owner = match (file.starts_with("components/"), device.as_deref()) {
+        (false, _) => Some(Owner::Program),
+        (true, Some(device)) => Some(Owner::Device(device)),
+        (true, None) => None,
+    };
     with_engine(&state, |e| {
+        let table = match (text, owner) {
+            (Some(text), Some(owner)) => rows(e, &text, &owner, &unfolded),
+            _ => Vec::new(),
+        };
+        let watches: Vec<Watch> = (found.iter().map(|(_, w)| w.clone()))
+            .chain(table.iter().map(|(_, w)| w.clone()))
+            .collect();
         e.watch(&watches);
-        Ok(spots)
+        Ok(Watched {
+            spots: found.into_iter().map(|(s, _)| s).collect(),
+            rows: table.into_iter().map(|(r, _)| r).collect(),
+        })
     })
 }
 
