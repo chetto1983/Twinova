@@ -118,7 +118,7 @@
   - The commands and the `monitor` event.
   - `cargo mutants` on `monitor.rs`.
   - Commit `feat(app): watch the visible lines and force from commands`.
-- [ ] **Task 4: the declarations in Rust** (spec decisions 9 and 10).
+- [x] **Task 4: the declarations in Rust** (spec decisions 9 and 10).
   - `src/declarations.rs`, tests first, on the diverter and a sample with every class:
     - rows read from the syntax tree: name, class, retain or constant, type, address, initial value, comment;
     - each edit's new text: add, delete, change of a field, change of class (the line moves), a new block when its

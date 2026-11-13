@@ -1,5 +1,6 @@
 pub mod analysis;
 pub mod commands;
+pub mod declarations;
 pub mod demo;
 pub mod edit_commands;
 pub mod lsp_files;
@@ -46,6 +47,9 @@ pub fn run() {
             commands::run,
             commands::save_state,
             commands::restore_state,
+            declarations::declarations_of,
+            declarations::edit_declaration,
+            declarations::rename_declaration,
             monitor::watch_range,
             monitor::unwatch,
             monitor::watched,
