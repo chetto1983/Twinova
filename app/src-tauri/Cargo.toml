@@ -56,6 +56,11 @@ tempfile = "=3.27.0"
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
 
+# No debug info in dev builds, as CI builds (CARGO_PROFILE_DEV_DEBUG=0): smaller and faster to link. A target dir with
+# it reached 19 GB and filled the session's disk, and each cleaning cost a full rebuild (2026-11-13).
+[profile.dev]
+debug = 0
+
 # Rapier and truST optimised in dev builds too: the line tests step tens of thousands of 1 ms frames through the
 # physics and two ST runtimes, and cargo mutants reruns them for every mutant against a 60 s timeout (mutation.yml).
 [profile.dev.package.rapier3d]

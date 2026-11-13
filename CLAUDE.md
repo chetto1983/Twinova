@@ -128,7 +128,9 @@ mai il loro materiale.
 - **MUTATION ≥70%** on the critical files of each task (Rust: `cargo mutants`): event scheduler,
   protocol codecs, data-type conversions, conveyor kinematics. The `cargo mutants` gate in
   `mutation.yml` is stricter: no surviving mutant (user, 2026-11-08). A mutant shown to be equivalent
-  is excluded in `.cargo/mutants.toml`, with the reason next to it.
+  is excluded in `.cargo/mutants.toml`, with the reason next to it. Mutation runs in CI only (`mutation.yml`, on the
+  lines a pull request changes); locally, only the one mutant CI reports as surviving is reproduced (user,
+  2026-11-13: a task's local mutants took over an hour).
 - **BASELINE OR DROP.** Any heuristic or optimisation must be measured against the plain behaviour
   on a reference scene, or it is dropped.
 - **DEFINITION OF DONE.** A job is complete only when validated E2E on a real scenario: the scene
@@ -137,7 +139,9 @@ mai il loro materiale.
 - **GIT PUSH DISCIPLINE.** Push at the end of a task or completed job, then check that all CI runs
   on the pushed SHA are green. Never leave work only in a local branch. CI runs on pushes to `main`
   and on pull requests (the Aura scheme), so a working branch needs an open PR to be checked; a
-  change made only of Markdown files or of `docs/` runs nothing (nothing in CI reads them).
+  change made only of Markdown files or of `docs/` runs nothing (nothing in CI reads them). Open the phase's pull
+  request as a draft when its first code is pushed, so CI checks every push while the work goes on (user,
+  2026-11-13).
 
 ## truST, the ST runtime
 
@@ -152,23 +156,25 @@ Policy: `docs/superpowers/specs/2026-11-07-trust-upstream-policy-design.md`.
 ## Post-edit validation (Gate 2)
 
 The set comes from `chetto1983/ModbusTool`; CI runs it in `.github/workflows/ci.yml` and
-`mutation.yml`, and `lefthook.yml` runs the fast part as git hooks (`cd app && npm run hooks`).
+`mutation.yml`, and `lefthook.yml` runs the fast part as git hooks (`cd app && npm run hooks`). The slow part, the
+whole test suites with coverage and mutation, runs in CI only: the pre-push `cargo test` took 6 to 8 minutes a push
+(user, 2026-11-13).
 
 After every Rust edit, in `app/src-tauri` (a workspace: the app and `project/`, the format crate):
 
 - `cargo fmt --all --check`
 - `cargo clippy --workspace --all-targets -- -D warnings`
-- `cargo test --workspace` (CI: `cargo llvm-cov --workspace --fail-under-lines 85`). On Windows the app is covered by
-  the E2E, because its test binaries link Tauri and do not start there; `twinova-project` has no Tauri and CI tests it
-  on windows-2022.
-- engine core or protocol changes: `cargo mutants` (scope in `.cargo/mutants.toml`)
+- the tests of what changed: `cargo test -p <crate> [filter]`. CI runs the workspace with coverage (`cargo llvm-cov
+  --workspace --fail-under-lines 85`) and `cargo mutants` (scope in `.cargo/mutants.toml`). On Windows the app is
+  covered by the E2E, because its test binaries link Tauri and do not start there; `twinova-project` has no Tauri and CI
+  tests it on windows-2022.
 
 After every TypeScript or Svelte edit, in `app`:
 
 - `npm run check` (svelte-check, zero warnings) and `npm run lint` (oxlint, zero warnings)
 - `npm run format:check`, `npm run check:i18n`, `npm run deadcode` (knip), `npm run dup` (jscpd)
-- `npm run coverage` (85 % thresholds in `vite.config.ts`) and `npm run build`
-- `src/lib` helpers: `npm run mutation` (Stryker, breaks below 70 %)
+- the tests of what changed (`npx vitest run <file>`) and `npm run build`; CI runs `npm run coverage` (85 %
+  thresholds in `vite.config.ts`) and Stryker on the `src/lib` helpers (breaks below 70 %)
 - the real app: `npx tauri build --debug --no-bundle && npm run e2e` (tauri-driver; under `xvfb-run` on Linux)
 - CPU and memory of the production build, when a change can affect them: `npx tauri build --no-bundle && npm run soak`
   (Linux, under `xvfb-run`; seconds per phase as argument)
