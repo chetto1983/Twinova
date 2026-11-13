@@ -5,6 +5,7 @@ pub mod demo;
 pub mod edit_commands;
 pub mod lsp_files;
 pub mod monitor;
+pub mod plc_window;
 pub mod project_commands;
 #[cfg(test)]
 mod test_fixtures;
@@ -16,6 +17,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .on_window_event(plc_window::on_window_event)
         .setup(|app| {
             let handle = app.handle().clone();
             let watch = watch::SourceWatch::new(move |folder| watch::settled(&handle, folder));
@@ -57,6 +59,8 @@ pub fn run() {
             monitor::force,
             monitor::release,
             monitor::write_value,
+            plc_window::open_plc_window,
+            plc_window::close_plc_window,
             project_commands::current_project,
             project_commands::open_demo,
             project_commands::open_project,
