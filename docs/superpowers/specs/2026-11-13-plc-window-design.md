@@ -1,6 +1,6 @@
 # Spec: the PLC pane in a window of its own (ROADMAP 4.8b)
 
-Date: 2026-11-13. Status: **proposed**, decisions 1 to 8 awaiting the user's approval.
+Date: 2026-11-13. Status: **approved** (user, 2026-11-13), decisions 1 to 8, decision 3 with Run, Pause and Step added by the user.
 
 The user, 2026-11-13: "Bisognerebbe espandere la parte di PLC magari staccandola dalla pagina principale", then
 "Pulsante massimizza prima, poi finestra separata". 4.8a, the maximized dock, is pull request #46. This spec is the
@@ -77,12 +77,19 @@ state through `emitTo`: main to `plc` with the whole state, `plc` to main with t
    - `App.svelte` stays the owner of `sources`, the analysis, Build and the folder's changes.
    - Main sends the window, with `emitTo("plc", …)`, the state the editor takes: sources, status, problems, the
      selected instance and the instances.
-   - The window sends main the sources after each edit.
+   - The window sends main the sources after each edit, numbered.
+   - Main's state names the last number it took. The window takes main's texts only when main has taken all of its
+     edits, so an echo never undoes what was typed since.
+   - Main's own change of a text (Build marks it built, or the folder changed) made while an edit is still on its way
+     is overwritten by that edit. The window is a few milliseconds behind.
    - Measured at 4 ms round trip for 10 kB, against 16 kB of sources for the 4.4a line.
    - Moving the texts into Rust would rewrite `fromDisk`, `mergeSources` and Build for no measured need.
-3. **The window's bar has Build and the Monitoring toggle.**
-   - The window asks main to build (an event), so one Build exists.
-   - Run, Pause, Step and Reset stay in the main window, as do Problems and Watch (forces).
+3. **The window's bar has Build, Run/Pause and Step (user, 2026-11-13), and the editor's own Monitoring toggle.**
+   - The window asks main for each (an event), so one Build and one run state exist.
+   - The request carries the window's texts, so main builds what the window shows, whatever order the events arrive
+     in.
+   - Reset, the speed, Problems and Watch (forces) stay in the main window.
+   - The buttons are the toolbar's, moved into a component both windows use.
 4. **The window is opened by an async Rust command** (`open_plc_window`), as Tauri's documentation requires on
    Windows.
    - The capability `default` grants `plc` too.
@@ -114,6 +121,9 @@ state through `emitTo`: main to `plc` with the whole state, `plc` to main with t
 - **Soak:** the release build at Run ×1 with the window open and monitoring, against the window closed.
 
 ## What this does not prove
+
+- A Problems row opening its line in the PLC window: the row opens the dock's PLC tab, which says where the pane is.
+- A theme or a language changed while the window is open: the window reads both when it opens.
 
 - Two PLC panes at once, or the scene in a window of its own.
 - Windows' window switching, until CI's windows-2022 E2E runs.
