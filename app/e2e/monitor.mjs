@@ -91,6 +91,13 @@ const drawn = () =>
       .map((d) => `${d.range.startLineNumber} ${d.options.after.inlineClassName} ${d.options.after.content.trim()}`),
   );
 
+/** The number drawn after line 40's `count`. */
+const countDrawn = async () => {
+  const value = (await drawn()).find((v) => /^40 monitor-value \d+$/.test(v));
+  if (!value) throw new Error("no value at line 40");
+  return Number(value.split(" ").at(-1));
+};
+
 const built = () =>
   eventually(
     async () => expectEqual(await textOf(".statusbar .build-status"), "Built: ready to run", "built"),
@@ -137,6 +144,23 @@ sessions(() =>
         10_000,
       );
       await browser.saveScreenshot(`${out}/monitor-values.png`);
+    });
+    await check("the values are drawn while the dock is maximized", async () => {
+      await click(button("Maximize panel"));
+      await browser.execute(() => document.querySelector(".monaco-host").editor.revealLineInCenter(40));
+      // Line 40 counts the cartons that entered, so a run as fast as possible raises it (selectSpeed above).
+      const before = await eventually(countDrawn, "drawn", 10_000);
+      await runFor(1_500);
+      await eventually(
+        async () => {
+          const now = await countDrawn();
+          if (now <= before) throw new Error(`count ${now} after ${before}`);
+        },
+        "counted",
+        10_000,
+      );
+      await browser.saveScreenshot(`${out}/monitor-maximized.png`);
+      await click(button("Restore panel"));
     });
     await check("the table's values equal the Watch pane's", async () => {
       const [belt, eye] = [await tableValue("belt_b_run"), await tableValue("detected_a")];

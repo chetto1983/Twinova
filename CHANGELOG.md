@@ -134,6 +134,9 @@ and build inside the app, on Windows and Linux.
   - opening, saving or building a project folder writes `trust-lsp.toml` and `.twinova/lsp/field.st`, so the
     extension reads the project without false errors in the program; the blocks keep three false E202 errors, a
     limit of truST's per-file check.
+- The dock can be maximized over the workspace (ROADMAP 4.8a): a button in its bar gives the PLC pane, or any other
+  tab, the room of the scene and both side panels, while the toolbar and the status bar stay; the same button restores
+  its height.
 - Online monitoring in the ST editor (ROADMAP 4.8), as TIA Portal's and CODESYS's:
   - Monitoring (Ctrl+T) draws each visible variable's value after the scan, and TRUE or FALSE after a condition;
   - a variables table above the code lists the POU's declarations with their class, type, address, initial value and

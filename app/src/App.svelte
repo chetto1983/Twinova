@@ -406,6 +406,7 @@
     min-width: 0;
   }
   .workspace {
+    position: relative;
     flex: 1;
     min-height: 0;
     display: grid;

@@ -119,6 +119,8 @@
   "ui_delivered": "Consegnati",
   "ui_collapse": "Comprimi pannello",
   "ui_expand": "Espandi pannello",
+  "ui_maximize": "Massimizza pannello",
+  "ui_restore": "Ripristina pannello",
   "ui_resize": "Ridimensiona pannello",
   "ui_organizer": "Organizer PLC",
   "ui_programs": "Programmi",
