@@ -1,0 +1,16 @@
+[package]
+name = "twinova-ladder"
+version = "0.1.0"
+description = "Twinova's Ladder Diagram: the model, its text grammar, its lowering to Structured Text and PLCopen <LD>"
+authors = ["The Twinova contributors"]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+# Property tests of the grammar's round trip (CLAUDE.md: property-based tests for codecs). MIT OR Apache-2.0.
+proptest = "=1.12.0"

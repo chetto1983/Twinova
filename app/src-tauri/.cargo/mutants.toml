@@ -14,6 +14,7 @@ examine_globs = [
   "engine/src/line_bind.rs", "engine/src/watch.rs", "engine/src/controller_monitor.rs", "engine/src/debugger.rs", "engine/src/debugger_kinds.rs",
   "src/watch.rs", "src/analysis.rs", "src/monitor.rs", "src/navigation.rs", "src/call_templates.rs",
   "src/positions.rs",
+  "ladder/src/parse.rs", "ladder/src/print.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs", "project/src/edit.rs",
   "project/src/history.rs", "project/src/library.rs", "project/src/sources.rs",

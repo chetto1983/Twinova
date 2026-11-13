@@ -10,7 +10,7 @@ rust-version = "1.99"
 # The project format and the run engine are crates of their own without Tauri, so their tests also run on Windows, where
 # a test binary that links Tauri does not start (0xc0000139, run 42378063592).
 [workspace]
-members = ["project", "physics", "engine", "agent"]
+members = ["project", "physics", "engine", "agent", "ladder"]
 
 [lib]
 name = "twinova_lib"

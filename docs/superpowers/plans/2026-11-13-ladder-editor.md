@@ -103,7 +103,7 @@ con il piano"), decisions 1 to 8. Research 18, 19 and 20.
     BOOL per element.
   - The `plcopen` crate on Beremiz's examples, against porting OIP's reader.
   - Record each answer in the spec. Commit.
-- [ ] **Task 2: the crate's model, parser and printer** (OIP's `ladder.ts` types and `parserLadder.ts`, their tests
+- [x] **Task 2: the crate's model, parser and printer** (OIP's `ladder.ts` types and `parserLadder.ts`, their tests
   ported). Commit.
 - [ ] **Task 3: the lowering, with the power temporaries** (OIP's `Lowerer`). Tests run the lowered ST in truST, scan by
   scan, against expected values and against an ST twin's fingerprint. Commit.
