@@ -37,7 +37,8 @@ fn the_demo_builds_and_warns_about_the_unused_counter() {
 #[test]
 fn the_roller_conveyor_runs_on_its_behaviour_and_carries_onto_belt_b() {
     let (mut line, _) = Line::build(&fixture("two_belts_diverter")).unwrap();
-    // From the entry to past belt B's start: 5 m at 0.5 m/s; before the third carton holds the infeed at 11.4 s.
+    // From the entry to past belt B's start: 3 m at 0.5 m/s, then 2 m at the roller's 0.8 m/s; before the third carton
+    // raises the chains at about 12 s.
     run_ms(&mut line, 11_000);
     assert!(bit(&line, "%QX0.3"), "the program's roller_run");
     // The roller's motor is its block's: a carton past the roller shows the block turned it on.

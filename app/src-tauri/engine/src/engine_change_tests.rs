@@ -69,7 +69,7 @@ fn an_online_change_keeps_the_plant_and_restarts_the_program_warm() {
     let (mut engine, built_warnings) = Engine::new(&project).unwrap();
     steps(&mut engine, 800);
     let (before, fingerprint) = (engine.snapshot(), engine.fingerprint());
-    assert_eq!(variable(&engine, "count"), Some(Value::DInt(1)));
+    assert_eq!(variable(&engine, "count"), Some(Value::DInt(2)));
     let v2 = v1.replace("count MOD 3", "count MOD 2");
     let warnings = engine.change_program(main(&v2)).unwrap();
     assert_eq!(warnings, built_warnings);
@@ -80,12 +80,12 @@ fn an_online_change_keeps_the_plant_and_restarts_the_program_warm() {
     assert_eq!(variable(&engine, "scans"), Some(Value::DInt(800)));
     steps(&mut engine, 1);
     assert_eq!(variable(&engine, "scans"), Some(Value::DInt(801)));
-    // Counted from 0 again, the second carton after the change is rejected under MOD 2, at about 10.5 s; without the
-    // change the third carton of the run is, at about 12.5 s (measured 2026-11-12).
+    // Counted from 0 again at belt A's end, the second carton after the change is rejected under MOD 2, at about 14.4 s;
+    // without the change the third carton of the run is, at about 12.4 s (measured 2026-11-13).
     let changed = 801 + first_reject(&mut engine);
     let plain = first_reject(&mut Engine::new(&project).unwrap().0);
     assert!(
-        (1_000..1_100).contains(&changed),
+        (1_400..1_500).contains(&changed),
         "changed at scan {changed}"
     );
     assert!((1_200..1_300).contains(&plain), "plain at scan {plain}");

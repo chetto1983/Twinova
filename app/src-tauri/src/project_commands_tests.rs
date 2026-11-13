@@ -29,7 +29,7 @@ fn a_project_opens_into_a_view_of_its_instances() {
     let (_dir, folder) = copied("two_belts_diverter");
     let view = open_project(app.state(), folder.clone()).unwrap();
     assert_eq!(view.name, "Two belts and a chain transfer");
-    assert_eq!(view.instances.len(), 9);
+    assert_eq!(view.instances.len(), 10);
     assert_eq!(
         view.definitions["twinova.belt@1"].parameters[0].name,
         "length"
@@ -49,7 +49,8 @@ fn a_project_opens_into_a_view_of_its_instances() {
         [
             mount("sensor_a", "roller_r", 1.0),
             mount("sensor_b", "belt_b", 1.5),
-            mount("chain_transfer", "roller_r", 1.0)
+            mount("chain_transfer", "roller_r", 1.0),
+            mount("sensor_in", "belt_a", 2.95)
         ]
     );
     assert_eq!(view.folder, Some(folder));
