@@ -56,6 +56,9 @@ WASM**. Le note che valutano il WASM (07, 08, 09, 10) restano come registro; non
 | [15](15-fisica-nastri-oip-rapier.md) | Nastri con la fisica: come fa OIP (Jolt, velocità superficiale, filtri sulle giunzioni, letto il sorgente), Rapier e Jolt via jolt-rust misurati sulla stessa sonda; scelta di Rapier | – |
 | [16](16-simulatori-commerciali-trasporto-sincronia.md) | Simulatori commerciali (NX MCD, Emulate3D, Visual Components, SIMIT, Process Simulate, Factory I/O, Simumatik): fisica con superfici di trasporto per la messa in servizio virtuale, modelli cinematici per la capacità; lockstep su tempo virtuale con PLCSIM Advanced (SIMIT bus synchronous) | – |
 | [17](17-ide-plc-tia-codesys.md) | L'IDE di un PLC: editor SCL/ST, completamento e chiamate di blocco, breakpoint e HOLD, monitoraggio in linea, modifica e forzatura, caricamento in TIA Portal V20 e CODESYS V3.5 (guide pubbliche); cosa offre già truST e cosa resta da misurare | – |
+| [18](18-ld2-codesys.md) | CODESYS LD2 ("CODESYS Ladder"), dall'help pubblico: layout automatico ad albero, marcatori di inserimento, varianti come modificatori, box con EN/ENO, modo online (power flow ricalcolato nell'IDE), ordine di esecuzione; confronto con TIA LAD V20 | – |
+| [19](19-ladder-oip.md) | Il Ladder di Open Industry Project (MIT): albero serie/parallelo, elementi, lowering a ST, PLCopen `<LD>`, monitoraggio, editor, test; confronto con trust-visual di truST | – |
+| [20](20-ladder-open-source.md) | Editor e motori Ladder open source più avanzati di truST, con licenze lette: nautilus (Apache-2.0, Svelte 5), SoftLadder, il crate `plcopen`; OpenPLC Editor, Beremiz e LDmicro solo come idee (GPL) | – |
 | [benchmark/](benchmark/) | Schede prodotto con URL: virtual commissioning (g1), flusso/DES (g2), didattici e open source (g3) | – |
 | [ricerca/](ricerca/) | Note di ricerca con URL: eventi discreti (r1), passo fisso e fisica (r2), virtual commissioning e PLCSIM (r3) | – |
 
