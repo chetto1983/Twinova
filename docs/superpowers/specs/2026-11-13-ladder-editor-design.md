@@ -82,9 +82,14 @@ Text and Ladder. The PLC pane has an LD button, disabled ("Ladder is not availab
 | Power temporaries: 20 s of virtual time on the 4.4a line, release, best of 3 | as is 0.837 s; with 60 hidden BOOLs written each scan 0.800 s (within noise); with 200, 0.973 s (+16 %); the fingerprint is unchanged in all three |
 | The `plcopen` crate (MIT, 0.3.1) on Beremiz's 5 projects with `<LD>` | each read, written back and read again; contacts, coils and blocks counted the same: 10/2/46, 10/2/46, 3/2/10, 1/0/11, 3/2/9 |
 
+| truST's calls (Task 3, a probe in the crate's tests, not committed) | named arguments to standard functions compile and run: `GT(IN1 := a, IN2 := b)`, `ADD(IN1, IN2, IN3)` by name, `LIMIT(MN, IN, MX)`, `SEL`, `MOVE`, `NOT(t)`. `AND(...)` and `MOD(...)` as calls do not parse; `EN` and `ENO` are unknown parameters |
+
 Consequences:
 - An LD file is lowered to a PROGRAM of its own, listed after `Main.st`'s files: no CONFIGURATION is needed.
 - The power temporaries stay in the design: one per element costs nothing measurable at a realistic count.
+- A function is lowered as a call with named arguments, so the lowering needs no table of argument order. truST
+  checks the pins' names, which keeps one compiler. AND, OR, XOR and MOD are written as operators. EN is an `IF`
+  around the call, as in OIP.
 - PLCopen's XML is read and written with the `plcopen` crate. OIP's reduction from the graph to the series/parallel
   tree is ported on top of it.
 
@@ -128,7 +133,15 @@ What these do not show:
    nautilus's Svelte renderer and evaluator (Apache-2.0) are read first. What fits is reused with NOTICE and
    attribution, split under 600 lines.
 5. **The power flow is the runtime's, not recomputed.**
-   - The lowering emits a hidden BOOL per element, its power in, set as the scan reaches it.
+   - The lowering emits a hidden BOOL per element, its power out, set as the scan reaches it. (Amended in Task 3,
+     2026-11-13: the spec said "power in". An element's power in is the power out of the one before it, but the
+     power in of every element leaves the end of a branch's path undrawn: in `[|A| |B|, |C|] (X)`, no element's power
+     in is `A AND B`. A coil, and a function behind EN, pass their power in on unchanged, so they take no BOOL of
+     their own.)
+   - Since each element's power is held as the scan reaches it, the lowering evaluates each element there and then.
+     OIP keeps a rung's condition as an expression and captures it before a later write changes what it reads; with
+     a BOOL per element that capture always holds, so it is not ported. The behaviour is the same, and OIP's cases
+     are the tests.
    - The monitoring reads them through the existing watches, at the scan's end, as the other values. A wire is then
      drawn energised exactly as the program ran.
    - Neither OIP nor CODESYS does this; Twinova can, because its runtime is in the app.
