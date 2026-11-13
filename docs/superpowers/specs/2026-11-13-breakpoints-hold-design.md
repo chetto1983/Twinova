@@ -1,6 +1,6 @@
 # Spec: breakpoints as HOLD (ROADMAP 4.9)
 
-Date: 2026-11-13. Status: **proposed**, decisions 1 to 10 awaiting the user's approval.
+Date: 2026-11-13. Status: **approved** (user, 2026-11-13: "Ok"), decisions 1 to 10 as written, with VS Code's keys (decision 5).
 
 ROADMAP 4.9: "Breakpoints as HOLD (research [17]): a breakpoint in the editor's gutter stops the program, its timers
 and the simulated plant, as an S7-1500 in HOLD; Run, Run to cursor, step over/into/out and the call stack". It is
