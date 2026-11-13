@@ -347,7 +347,6 @@ impl Parser<'_> {
         for (i, c) in rest.char_indices() {
             match (quote, c) {
                 (Some(q), _) if c == q => quote = None,
-                (Some(_), _) => {}
                 (None, '\'' | '"') => quote = Some(c),
                 (None, '(' | '[') if !(depth == 0 && ends.contains(&c)) => depth += 1,
                 (None, ')' | ']') if depth > 0 => depth -= 1,
