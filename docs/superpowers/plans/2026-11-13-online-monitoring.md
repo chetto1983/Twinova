@@ -127,7 +127,7 @@
     - an edit that does not parse is refused.
   - The commands `declarations` and `edit_declaration`.
   - Commit `feat(app): read and edit a POU's declarations`.
-- [ ] **Task 5: the webview.**
+- [x] **Task 5: the webview.**
   - `monitor.ts`, tests first: decorations from values, forced marks, rows' values.
   - The Monitoring toggle and Ctrl+T, the values in the code, the variables table above it (online values, write and
     force, edits), the Forces list; i18n.

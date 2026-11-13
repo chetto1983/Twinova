@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { Search, Timer } from "@lucide/svelte";
+  import { Lock, Search, Timer } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
-  import { backend } from "./backend";
+  import { backend, monitor } from "./backend";
+  import { toggled, type Force } from "./monitor";
   import { deliveredOf, formatTime, isBehind, type Snapshot, type ScanTiming } from "./snapshot";
   let {
     snapshot,
@@ -15,6 +16,19 @@
   let filter = $state("");
   let timing = $state<ScanTiming | null>(null);
   let timingError = $state("");
+  // The forces in effect, and an address being forced (spec 2026-11-13-online-monitoring-design.md, decision 3).
+  let forces = $state<Force[]>([]);
+  let forcing = $state<{ address: string; text: string } | null>(null);
+  let forceError = $state("");
+  const forcedAddresses = $derived(new Set(forces.map((f) => f.label)));
+  async function settle(next: Promise<Force[]>): Promise<void> {
+    try {
+      forces = await next;
+      forceError = "";
+    } catch (e) {
+      forceError = String(e);
+    }
+  }
   const signals = $derived(
     (snapshot?.signals ?? []).filter((s) => `${s.name} ${s.address}`.toLowerCase().includes(filter.toLowerCase())),
   );
@@ -33,6 +47,8 @@
           timing = next;
           timingError = "";
         }
+        const now = await monitor.forces();
+        if (alive) forces = now;
       } catch (e) {
         if (alive) {
           timing = null;
@@ -79,6 +95,13 @@
               class="muted data">{signal.address}</span
             ><span class="spacer"></span><span class="data" class:true-value={signal.value === "TRUE"}
               >{signal.value}</span
+            ><button
+              class="force"
+              class:on={forcedAddresses.has(signal.address)}
+              title={m.io_force()}
+              aria-label={`${m.io_force()} ${signal.address}`}
+              onclick={() => (forcing = { address: signal.address, text: toggled(signal.value) ?? signal.value })}
+              ><Lock size={11} /></button
             >
           </li>
         {/each}
@@ -109,6 +132,30 @@
             />{m.fault_sink_blocked({ sink: sink.id })}</label
           >{/each}
       {/if}
+      <h3>{m.forces_title()}</h3>
+      {#if forcing}
+        <div class="forcing">
+          <span class="data">{forcing.address}</span>
+          <input aria-label={m.value_prepared()} bind:value={forcing.text} />
+          <button
+            onclick={() =>
+              forcing && settle(monitor.force({ kind: "address", address: forcing.address }, forcing.text))}
+            >{m.value_force()}</button
+          >
+        </div>
+      {/if}
+      <ul class="forces">
+        {#each forces as force (force.label)}
+          <li>
+            <span class="data">{force.label} = {force.value}</span><button
+              onclick={() => settle(monitor.release(force.target))}>{m.value_release()}</button
+            >
+          </li>
+        {:else}
+          <li class="muted">{m.forces_none()}</li>
+        {/each}
+      </ul>
+      {#if forceError}<p class="muted">{forceError}</p>{/if}
       {#if timingError}<p class="muted timing-error" title={timingError}>{m.ui_timing_unavailable()}</p>{/if}
     </aside>
   </div>
@@ -170,6 +217,39 @@
   .search-field input {
     height: 22px;
     font-size: 10px;
+  }
+  .force {
+    display: inline-flex;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-disabled);
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .force.on {
+    color: var(--color-warning);
+  }
+  .forcing {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-size: 10px;
+  }
+  .forcing input {
+    width: 60px;
+    font-family: var(--font-mono);
+  }
+  .forces {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0;
+    font-size: 10px;
+  }
+  .forces li {
+    display: flex;
+    gap: 6px;
+    justify-content: space-between;
+    align-items: center;
   }
   .bits {
     padding: 0;

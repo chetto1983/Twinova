@@ -364,6 +364,7 @@
         {problems}
         notice={noticeText}
         {snapshot}
+        {selected}
         onPlace={place}
         onDrag={(family) => (dragging = family)}
         onSinkBlocked={(sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked))}

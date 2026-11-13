@@ -17,6 +17,7 @@
     problems,
     notice,
     snapshot,
+    selected = null,
     onPlace,
     onDrag,
     onSinkBlocked,
@@ -31,6 +32,8 @@
     problems: Problems;
     notice: string;
     snapshot: Snapshot | null;
+    /** The instance selected in the scene, for a block's tab to monitor. */
+    selected?: string | null;
     onPlace: (key: string) => void;
     onDrag: (key: string) => void;
     onSinkBlocked: (sink: number, blocked: boolean) => void;
@@ -122,7 +125,7 @@
       <Catalogue {onPlace} {onDrag} />
     </div>
     <div class="tab-content" id="panel-plc" role="tabpanel" aria-labelledby="dock-plc" hidden={tab !== "plc"}>
-      <Editor bind:sources {status} {problems} {reveal} />
+      <Editor bind:sources {status} {problems} {reveal} {selected} instances={project.instances} />
     </div>
     <div
       class="tab-content problems"
