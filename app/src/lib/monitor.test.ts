@@ -50,10 +50,14 @@ describe("online monitoring in the editor", () => {
     const found = decorations([spot(40, 10), spot(41, 5), spot(42, 7)], ["3", null], new Set());
     expect(found).toEqual([
       {
-        range: { startLineNumber: 40, startColumn: 10, endLineNumber: 40, endColumn: 10 },
+        range: { startLineNumber: 40, startColumn: 9, endLineNumber: 40, endColumn: 10 },
         options: { after: { content: " 3", inlineClassName: "monitor-value" } },
       },
     ]);
+  });
+
+  it("starts a value's range at the line's first column at most", () => {
+    expect(decorations([spot(3, 1)], ["7"], new Set())[0].range.startColumn).toBe(1);
   });
 
   it("finds the spot a click hits", () => {

@@ -1,6 +1,7 @@
 //! Online monitoring on the 4.4a line (spec 2026-11-13-online-monitoring-design.md, acceptance 1 to 4).
 use super::*;
 use std::path::Path;
+use trust_runtime::value::Value;
 use twinova_project::storage::open_folder;
 
 fn diverter() -> Engine {
@@ -41,6 +42,17 @@ fn a_forced_variable_holds_against_the_program_until_released() {
         engine.step().unwrap();
         assert_eq!(var(&engine, "belt_b_run"), "FALSE");
     }
+    // The force reaches the output and the plant, as a PLC's does.
+    let output = |e: &Engine| e.line.controller().read("%QX0.1").unwrap();
+    assert_eq!(
+        output(&engine),
+        Value::Bool(false),
+        "the output is forced too"
+    );
+    let belt_b = (0..3)
+        .find(|&k| engine.line.world().belt_id(k) == "belt_b")
+        .unwrap();
+    assert_eq!(engine.line.world().belt_speed(belt_b), 0.0, "belt B stands");
     assert_eq!(
         engine.forces(),
         [(main_var("belt_b_run"), "FALSE".to_string())]
@@ -51,6 +63,11 @@ fn a_forced_variable_holds_against_the_program_until_released() {
         var(&engine, "belt_b_run"),
         "TRUE",
         "the program writes it again"
+    );
+    assert_eq!(
+        output(&engine),
+        Value::Bool(true),
+        "the output is released too"
     );
     assert!(engine.forces().is_empty());
 }

@@ -68,14 +68,15 @@ export function valueClass(spot: Spot, value: string, forced: Set<string>): stri
   return classes.join(" ");
 }
 
-/** Monaco decorations drawing each value after its spot; a spot without a value draws nothing. */
+/** Monaco decorations drawing each value after its spot; a spot without a value draws nothing. Each covers the last
+ *  character before its spot: Monaco 0.57 draws no `after` text on an empty range (measured 2026-11-13). */
 export function decorations(spots: Spot[], values: (string | null)[], forced: Set<string>) {
   return spots.flatMap((spot, i) => {
     const value = values[i];
     if (value === null || value === undefined) return [];
     const at = {
       startLineNumber: spot.line,
-      startColumn: spot.column,
+      startColumn: Math.max(1, spot.column - 1),
       endLineNumber: spot.line,
       endColumn: spot.column,
     };

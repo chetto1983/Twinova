@@ -44,10 +44,7 @@ fn a_line_shows_each_reference_once_qualified_by_its_program() {
 
 #[test]
 fn a_member_shows_whole_and_a_condition_shows_qualified() {
-    assert_eq!(
-        shown(MAIN, 39, 39, None),
-        ["39:13 Plc Main.entered.Q", "39:13 Plc if Main.entered.Q"]
-    );
+    assert_eq!(shown(MAIN, 39, 39, None), ["39:13 Plc Main.entered.Q"]);
     assert_eq!(
         shown(MAIN, 45, 45, None),
         [
@@ -55,6 +52,11 @@ fn a_member_shows_whole_and_a_condition_shows_qualified() {
             "45:30 Plc Main.reject_next",
             "45:30 Plc if Main.released.Q AND Main.reject_next"
         ]
+    );
+    let merged = &spots(&diverter(), MAIN, 39, 39, None)[0].0;
+    assert!(
+        merged.condition,
+        "a one-reference condition colours its reference's value"
     );
 }
 
@@ -66,24 +68,14 @@ fn a_program_s_variables_and_members_are_targets() {
         .collect();
     assert_eq!(
         targets,
-        [
-            Some("Main.entered.Q".into()),
-            None,
-            Some("Main.count".into())
-        ]
+        [Some("Main.entered.Q".into()), Some("Main.count".into())]
     );
 }
 
 #[test]
 fn a_block_s_file_shows_the_selected_device_s_instance() {
     let lines = shown(TRANSFER, 22, 22, Some("chain_transfer"));
-    assert_eq!(
-        lines,
-        [
-            "22:10 Field F.chain_transfer.raised",
-            "22:10 Field if F.chain_transfer.raised"
-        ]
-    );
+    assert_eq!(lines, ["22:10 Field F.chain_transfer.raised"]);
     assert!(
         shown(TRANSFER, 22, 22, None).is_empty(),
         "no device, no instance to read"

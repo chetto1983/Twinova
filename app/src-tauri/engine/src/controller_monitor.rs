@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 
 use trust_runtime::debug::DebugControl;
+use trust_runtime::io::IoAddress;
 use trust_runtime::memory::InstanceId;
 use trust_runtime::value::{Value, format_user_value};
 
@@ -77,6 +78,17 @@ impl Controller {
         }
     }
 
+    /// The address a program's own variable is declared at, when its image holds a value of the same kind: a force on
+    /// the variable then holds the address too. truST applies a variable's force after the scan has written the
+    /// image, so `belt_b_run` forced FALSE read FALSE while `%QX0.1` stayed TRUE and belt B ran (measured 2026-11-13);
+    /// on a PLC a forced output variable reaches its output.
+    fn bound(&self, path: &str, value: &Value) -> Option<IoAddress> {
+        let declared = self.declared.iter().find(|d| d.name == path)?;
+        let image = self.harness.runtime().io().read(&declared.address).ok()?;
+        (std::mem::discriminant(&image) == std::mem::discriminant(value))
+            .then(|| declared.address.clone())
+    }
+
     /// The value `target` holds now, which sets the type a written text must have.
     fn current(&self, target: &Target) -> Result<Value, String> {
         match target {
@@ -107,9 +119,16 @@ impl Controller {
         match target {
             Target::Variable { program, path } => {
                 let (id, name) = self.holder(program, path)?;
-                self.debug()
+                let address = self.bound(path, &value);
+                let debug = self.debug();
+                debug
                     .try_force_instance(id, name, value.clone())
                     .map_err(refused)?;
+                if let Some(address) = address {
+                    debug
+                        .try_force_io(address, value.clone())
+                        .map_err(refused)?;
+                }
             }
             Target::Address { address } => {
                 let port = Port::parse(address)?;
@@ -130,7 +149,13 @@ impl Controller {
         match target {
             Target::Variable { program, path } => {
                 let (id, name) = self.holder(program, path)?;
-                self.debug().release_instance(id, name);
+                let declared = self.declared.iter().find(|d| d.name == *path);
+                let address = declared.map(|d| d.address.clone());
+                let debug = self.debug();
+                debug.release_instance(id, name);
+                if let Some(address) = address {
+                    debug.release_io(&address);
+                }
             }
             Target::Address { address } => self.debug().release_io(&Port::parse(address)?.at),
         }

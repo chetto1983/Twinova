@@ -145,6 +145,14 @@ All measured on the line's PLC, the controller's harness:
     although the call writes `PT := T#1500MS` every scan.
   - So Twinova resolves the path to the instance that holds its last name.
   - A write on a member the FB computes (a timer's `ET`) is computed again at the next scan, as on a PLC.
+- **A forced variable at an address forces the address too** (measured in the E2E, then in `engine_monitor_tests.rs`).
+  - truST forces the variable after the scan has written the image: `belt_b_run` forced FALSE read FALSE, while
+    `%QX0.1` stayed TRUE and belt B ran.
+  - On a PLC a forced output variable reaches its output, so the controller also forces the address the variable is
+    declared at, when the image holds the same kind of value (a BOOL bit), and releases both.
+- **A value is drawn on the reference's last character.** Monaco 0.57 draws no `after` text on an empty range, with or
+  without `showIfCollapsed` (measured in the app). A condition that is one reference shares that reference's value,
+  coloured as a condition.
 - **A BOOL takes TRUE or FALSE.** truST does not parse `BOOL#1`; a click toggles a BOOL anyway.
 
 ### Amendment of 2026-11-13: a variables table, which also edits the declarations (user)

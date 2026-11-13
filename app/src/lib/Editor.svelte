@@ -427,11 +427,13 @@
     display: flex;
     flex: 1;
     min-height: 0;
+    position: relative;
+    overflow: hidden;
     background: var(--color-bg);
   }
   .table-area {
     flex: none;
-    height: 150px;
+    height: 35%;
     min-height: 48px;
     max-height: 70%;
     overflow: hidden;

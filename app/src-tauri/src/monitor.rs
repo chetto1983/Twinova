@@ -174,7 +174,19 @@ pub fn spots(
         };
         out.push((spot, Watch::Path(scope, format!("{prefix}{path}"))));
     }
-    out.extend(conditions(&root, text, range, &targets, &owner));
+    for (spot, watch) in conditions(&root, text, range, &targets, &owner) {
+        // A condition that is one reference (`IF entered.Q THEN`) is that reference's value, coloured as a condition.
+        let same = |(s, w): &&mut (Spot, Watch)| match (w, &watch) {
+            (Watch::Path(_, p), Watch::Condition(_, c)) => {
+                (s.line, s.column) == (spot.line, spot.column) && p == c
+            }
+            _ => false,
+        };
+        match out.iter_mut().find(same) {
+            Some((path, _)) => path.condition = true,
+            None => out.push((spot, watch)),
+        }
+    }
     out.sort_by_key(|(spot, _)| (spot.line, spot.column));
     out
 }
