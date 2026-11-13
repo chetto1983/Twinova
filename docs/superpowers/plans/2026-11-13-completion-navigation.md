@@ -106,4 +106,4 @@ tutto"), decisions 1 to 5.
 - [x] **Task 2: the webview.** `navigation.ts` tests first, then the providers, snippets, templates, opener and bar.
   Commit.
 - [x] **Task 3: the E2E**, `navigation.mjs` (spec test plan), locally once. Commit.
-- [ ] **Task 4: documents.** Verification, CHANGELOG, ROADMAP. The pull request, merged when green.
+- [x] **Task 4: documents.** Verification, CHANGELOG, ROADMAP. The pull request, merged when green.

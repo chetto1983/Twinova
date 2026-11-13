@@ -134,6 +134,15 @@ and build inside the app, on Windows and Linux.
   - opening, saving or building a project folder writes `trust-lsp.toml` and `.twinova/lsp/field.st`, so the
     extension reads the project without false errors in the program; the blocks keep three false E202 errors, a
     limit of truST's per-file check.
+- Completion as in PLC IDEs, and navigation, in the ST editor (ROADMAP 4.10):
+  - F12 or Ctrl+click goes to a symbol's declaration, in another tab too; Shift+F12 lists its references; a symbol's
+    occurrences are highlighted, writes apart from reads;
+  - F2 renames a variable in every tab, as the variables table does; a rename that would change a block is refused;
+  - typing `(` after an FB instance or a function offers its parameters, all of them or the mandatory ones only,
+    `:=` for inputs and `=>` for outputs, Tab moving to the next;
+  - an undeclared name gets a quick fix and Shift+F2, as CODESYS's Auto Declare: class, type proposed from the other
+    side of its assignment, initial value and comment, added to the variables table;
+  - truST's own completions, such as a call's `IN :=`, go in as snippets, with no `$0` left in the text.
 - Breakpoints as HOLD (ROADMAP 4.9), as an S7-1500's:
   - a breakpoint set from the program's gutter or with F9 stops the program, its timers, the plant and virtual time;
     the status bar reads HOLD at the file and line;
