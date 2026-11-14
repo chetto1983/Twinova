@@ -15,7 +15,7 @@ use twinova_ladder::{
 use crate::locate::line_of;
 
 /// A Ladder file read: its path, its text, its program's name, its rungs and its declarations alone.
-type Parsed<'a> = (
+pub(crate) type Parsed<'a> = (
     &'a String,
     &'a String,
     &'a str,
@@ -101,9 +101,8 @@ impl ProgramFiles {
     }
 }
 
-/// Every Ladder file of `program` lowered, each box resolved by `declarations_compiled`; a file that does not read
-/// fails them all.
-fn lowered(program: &[(String, String)]) -> Result<Vec<Ladder>, String> {
+/// Every Ladder file of `program` read, with its declarations alone; a file that does not read fails them all.
+pub(crate) fn parsed(program: &[(String, String)]) -> Result<Vec<Parsed<'_>>, String> {
     let mut parsed = Vec::new();
     for (path, text) in program.iter().filter(|(path, _)| is_ladder(path)) {
         let name = program_name(path)?;
@@ -114,6 +113,13 @@ fn lowered(program: &[(String, String)]) -> Result<Vec<Ladder>, String> {
         let declarations = declarations_only(name, text).map_err(unreadable)?;
         parsed.push((path, text, name, ladder, declarations));
     }
+    Ok(parsed)
+}
+
+/// Every Ladder file of `program` lowered, each box resolved by `declarations_compiled`; a file that does not read
+/// fails them all.
+fn lowered(program: &[(String, String)]) -> Result<Vec<Ladder>, String> {
+    let parsed = parsed(program)?;
     let resolver = declarations_compiled(program, &parsed);
     let ladders = (parsed.iter())
         .map(|(path, text, name, ladder, _)| Ladder {
@@ -129,7 +135,10 @@ fn lowered(program: &[(String, String)]) -> Result<Vec<Ladder>, String> {
 
 /// The ST files and each Ladder file's declarations, compiled. None when they do not compile: every box is then
 /// lowered by its bare pins, and the program's own compile reports the problem.
-fn declarations_compiled(program: &[(String, String)], ladders: &[Parsed]) -> Option<Runtime> {
+pub(crate) fn declarations_compiled(
+    program: &[(String, String)],
+    ladders: &[Parsed],
+) -> Option<Runtime> {
     let sources: Vec<&str> = (program.iter())
         .filter(|(path, _)| !is_ladder(path))
         .map(|(_, text)| text.as_str())

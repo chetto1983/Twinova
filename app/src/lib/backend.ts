@@ -10,6 +10,7 @@ import type { Problems } from "./analysis";
 import type { Change, Declaration, Force, Target, Watched } from "./monitor";
 import type { Breakpoint, Hold, Log, Resume } from "./debug";
 import type { Proposal, Reference, Span, Template } from "./navigation";
+import type { CatalogEntry } from "./ladder/catalog";
 import type { Lowering, Program } from "./ladder/model";
 
 /** Each invoke is a fetch of its own (Tauri 2.12 `scripts/ipc-protocol.js`, `sendIpcMessage`), so two not awaited
@@ -83,6 +84,7 @@ export const ladder = {
   parse: (text: string) => invoke<Program>("ladder_parse", { text }),
   print: (program: Program) => invoke<string>("ladder_print", { program }),
   lowering: (program: [string, string][], file: string) => invoke<Lowering>("ladder_lowering", { program, file }),
+  catalog: (program: [string, string][]) => invoke<CatalogEntry[]>("ladder_catalog", { program }),
   complete: (file: string, text: string, typed: string) =>
     invoke<Completion[]>("ladder_completion", { file, text, typed }),
 };

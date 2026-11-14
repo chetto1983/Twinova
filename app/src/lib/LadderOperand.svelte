@@ -6,7 +6,7 @@
   import { m } from "../paraglide/messages.js";
   import { ladder } from "./backend";
   import { debounce } from "./analysis";
-  import { candidates, type Role } from "./ladder/operand";
+  import { candidates, completedPart, type Role } from "./ladder/operand";
 
   let {
     value,
@@ -31,7 +31,8 @@
   let field: HTMLInputElement | undefined = $state();
   let done = false;
 
-  const ask = debounce((start: string) => {
+  const ask = debounce((typedNow: string) => {
+    const start = completedPart(typedNow, role) ?? "";
     if (start === "") {
       names = [];
       return;

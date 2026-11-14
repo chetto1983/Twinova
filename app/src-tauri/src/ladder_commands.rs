@@ -4,6 +4,8 @@
 //! (`twinova_engine::plcopen`).
 
 use serde::Serialize;
+use trust_ide::stdlib_docs::{standard_fb_doc, standard_function_doc, standard_function_entries};
+use twinova_engine::ladder_catalog::{CatalogEntry, catalog};
 use twinova_engine::plcopen::{Imported, export_ladder, import_ladder};
 use twinova_engine::program_files::ProgramFiles;
 use twinova_ladder::{BoxPins, ElementId, LowerError, ParseError, Power, Program, parse, print};
@@ -36,6 +38,53 @@ pub fn ladder_lowering(program: Vec<(String, String)>, file: String) -> Result<L
         boxes: lowered.boxes,
         errors: lowered.errors,
     })
+}
+
+/// A box the catalogue offers, with the table of IEC 61131-3 Ed.3 its standard group is (truST's documentation of
+/// it, `stdlib_docs.rs`): what the picker groups by. None for the project's own.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Catalogued {
+    #[serde(flatten)]
+    pub entry: CatalogEntry,
+    pub table: Option<u32>,
+}
+
+/// The table a standard block's or function's documentation names: "… (IEC 61131-3 Ed.3, Table 46)." is 46, and
+/// "Tables 22-27" is 22.
+fn table_of(doc: &str) -> Option<u32> {
+    let after = doc
+        .split_once("Table")?
+        .1
+        .trim_start_matches('s')
+        .trim_start();
+    after
+        .split(|c: char| !c.is_ascii_digit())
+        .next()?
+        .parse()
+        .ok()
+}
+
+/// Every box the Ladder files of `program`, the editor's texts, may hold (`twinova_engine::ladder_catalog`).
+#[tauri::command]
+pub fn ladder_catalog(program: Vec<(String, String)>) -> Result<Vec<Catalogued>, String> {
+    let names: Vec<&str> = standard_function_entries()
+        .iter()
+        .map(|e| e.name.as_str())
+        .collect();
+    let entries = catalog(&program, &names)?;
+    Ok((entries.into_iter())
+        .map(|entry| {
+            let doc = match (entry.own, entry.block) {
+                (true, _) => None,
+                (false, true) => standard_fb_doc(&entry.name),
+                (false, false) => standard_function_doc(&entry.name),
+            };
+            Catalogued {
+                table: doc.and_then(table_of),
+                entry,
+            }
+        })
+        .collect())
 }
 
 /// The Ladder file `file` of `program`, the editor's texts, as a PLCopen TC6 project written at `created` (the

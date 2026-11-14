@@ -8,6 +8,7 @@ import {
   insertElement,
   modify,
   place,
+  replaceElement,
   setOperand,
   removeSelected,
   step,
@@ -162,20 +163,19 @@ describe("modifiers on the selected contact or coil", () => {
 });
 
 describe("the toolbox", () => {
-  it("places a blank contact, coil, box or branch by the selection", () => {
+  it("places a blank contact, coil or branch by the selection", () => {
     const rungs = series();
     expect(text(place(rungs, at(0, 0), "contact"))).toEqual(["|Start| |?| |/Stop| (Motor)"]);
     expect(text(place(rungs, at(0), "coil"))).toEqual(["|Start| |/Stop| (Motor) (?)"]);
-    expect(text(place(rungs, at(0, 1), "box"))).toEqual(["|Start| |/Stop| ?() (Motor)"]);
     expect(place(rungs, at(0, 0), "branch").selection).toEqual(at(0, 1, 1));
   });
 });
 
 describe("an operand typed in", () => {
-  it("names a contact's or a coil's variable, or a box's head; blank leaves it to fill", () => {
+  it("names a contact's or a coil's variable; blank leaves it to fill; a box is retyped whole", () => {
     const rungs = [rung(NO, { kind: "box", head: null, pins: [] }, COIL)];
     expect(text(setOperand(rungs, at(0, 0), " Start "))).toEqual(["|Start| ?() (?)"]);
-    expect(text(setOperand(rungs, at(0, 1), "T1"))).toEqual(["|?| T1() (?)"]);
+    expect(setOperand(rungs, at(0, 1), "T1").rungs).toEqual(rungs);
     expect(text(setOperand(rungs, at(0, 2), "Motor"))).toEqual(["|?| ?() (Motor)"]);
     const started = setOperand(rungs, at(0, 0), "Start");
     expect(started.selection).toEqual(at(0, 0));
@@ -183,5 +183,17 @@ describe("an operand typed in", () => {
     expect(setOperand(rungs, at(0), "X").rungs).toEqual(rungs);
     const branched = [rung({ kind: "branch", paths: [[], []] })];
     expect(setOperand(branched, at(0, 0), "X").rungs).toEqual(branched);
+  });
+});
+
+describe("a box retyped", () => {
+  it("takes the selected element's place, and nothing off an element", () => {
+    const box: Element = { kind: "box", head: "T1", pins: [{ name: "IN", value: null, out: false }] };
+    const done = replaceElement(series(), at(0, 1), box);
+    expect(text(done)).toEqual(["|Start| T1() (Motor)"]);
+    expect(done.rungs[0]?.elements[1]).toEqual(box);
+    expect(done.selection).toEqual(at(0, 1));
+    for (const off of [at(0), at(0, 7), at(3, 0), at(0, 0, 0)])
+      expect(replaceElement(series(), off, box).rungs).toEqual(series());
   });
 });

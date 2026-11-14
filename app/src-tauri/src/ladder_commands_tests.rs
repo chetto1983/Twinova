@@ -107,3 +107,32 @@ fn a_ladder_file_goes_to_plcopen_and_back_through_the_commands() {
         "the file is not a PLCopen project: its root is not <project>"
     );
 }
+
+#[test]
+fn the_catalogue_groups_standard_boxes_by_their_iec_table_and_the_project_s_apart() {
+    let program = vec![
+        (
+            "plc/Main.st".to_string(),
+            "PROGRAM Main\nEND_PROGRAM\nFUNCTION_BLOCK Valve\nVAR_INPUT Open : BOOL; END_VAR\nEND_FUNCTION_BLOCK\n".to_string(),
+        ),
+        ("plc/Pump.ld".to_string(), "|A| (A);\n".to_string()),
+    ];
+    let found = ladder_catalog(program).unwrap();
+    let table = |name: &str| found.iter().find(|c| c.entry.name == name).map(|c| c.table);
+    assert_eq!(table("TON"), Some(Some(46)));
+    assert_eq!(table("CTU"), Some(Some(45)));
+    assert_eq!(table("R_TRIG"), Some(Some(44)));
+    assert_eq!(table("EQ"), Some(Some(33)));
+    assert_eq!(table("ADD"), Some(Some(29)));
+    assert_eq!(table("Valve"), Some(None));
+    let json = serde_json::to_value(&found[0]).unwrap();
+    assert!(
+        json.get("name").is_some() && json.get("table").is_some(),
+        "{json}"
+    );
+    assert_eq!(
+        table_of("Standard conversion function (IEC 61131-3 Ed.3, Tables 22-27)."),
+        Some(22)
+    );
+    assert_eq!(table_of("no table"), None);
+}

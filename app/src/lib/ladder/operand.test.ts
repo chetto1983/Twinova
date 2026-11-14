@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Completion } from "../backend";
 import type { Element } from "./model";
-import { boolRow, candidates, elementType, declarable, operandOf, roleOf } from "./operand";
+import { candidates, completedPart, declarable, declared, elementType, operandOf, roleOf } from "./operand";
 
 const c = (label: string, kind: string, detail: string | null = null): Completion => ({
   label,
@@ -51,8 +51,13 @@ describe("an element's operand", () => {
     expect([roleOf({ kind: "branch", paths: [] }), roleOf(null)]).toEqual([null, null]);
     expect([operandOf(contact), operandOf(box), operandOf({ kind: "coil", mode: "set", operand: null })]).toEqual([
       "A",
-      "T1",
+      "T1()",
       "",
+    ]);
+    expect([completedPart("T1", "box"), completedPart("T1(IN", "box"), completedPart("a(", "bit")]).toEqual([
+      "T1",
+      null,
+      "a(",
     ]);
     expect([operandOf({ kind: "branch", paths: [] }), operandOf(null)]).toEqual(["", ""]);
   });
@@ -69,7 +74,7 @@ describe("an element's operand", () => {
       false,
       false,
     ]);
-    expect(boolRow("Pump", "Run")).toEqual({
+    expect(declared("Pump", "Run", "BOOL")).toEqual({
       pou: "Pump",
       name: "Run",
       class: "VAR",

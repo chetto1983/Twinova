@@ -169,26 +169,36 @@ export function modify(rungs: readonly Rung[], s: Selection, mod: Modifier): Edi
   return { rungs: next, selection: s };
 }
 
-/** What a toolbox button places. */
-export type Placed = "contact" | "coil" | "box" | "branch";
+/** What a toolbox button places; a box comes from the picker, whole (`LadderPicker.svelte`). */
+export type Placed = "contact" | "coil" | "branch";
 
 const NEW: Record<Exclude<Placed, "branch">, Element> = {
   contact: { kind: "contact", mode: "open", operand: null },
   coil: { kind: "coil", mode: "normal", operand: null },
-  box: { kind: "box", head: null, pins: [] },
 };
 
 /** The rungs with a new, blank element of the toolbox placed by the selection. */
 export const place = (rungs: readonly Rung[], s: Selection, what: Placed): Edit =>
   what === "branch" ? addBranch(rungs, s) : insertElement(rungs, s, NEW[what]);
 
-/** The selected contact's or coil's operand, or box's head, set to `text`: blank leaves it to fill (`???`). */
+/** The selected contact's or coil's operand set to `text`: blank leaves it to fill (`???`). A box is retyped whole
+ *  (`replaceElement`). */
 export function setOperand(rungs: readonly Rung[], s: Selection, text: string): Edit {
   const next = copy(rungs);
   const el = elementAt(next, s);
   const value = text.trim() === "" ? null : text.trim();
-  if (el?.kind === "contact" || el?.kind === "coil") el.operand = value;
-  else if (el?.kind === "box") el.head = value;
-  else return unchanged(rungs, s);
+  if (el?.kind !== "contact" && el?.kind !== "coil") return unchanged(rungs, s);
+  el.operand = value;
+  return { rungs: next, selection: s };
+}
+
+/** The selected element replaced by `el`, selected: a box whose call was retyped. */
+export function replaceElement(rungs: readonly Rung[], s: Selection, el: Element): Edit {
+  const next = copy(rungs);
+  const rung = next[s.rung];
+  const series = rung && selectionKind(s) === "element" ? seriesAt(rung, s.path.slice(0, -1)) : null;
+  const at = s.path[s.path.length - 1] as number;
+  if (!series?.[at]) return unchanged(rungs, s);
+  series[at] = clone(el);
   return { rungs: next, selection: s };
 }

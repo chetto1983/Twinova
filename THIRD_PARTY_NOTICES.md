@@ -59,6 +59,8 @@ for Twinova's model; the order of an operand's candidates, `app/src/lib/ladder/o
 
 <https://github.com/joyautomation/nautilus>, read at commit `2db093e1e2e967a3a1b6b09a32fb575a84791748`. Since ROADMAP
 4.11 the Ladder editor's layout, `app/src/lib/ladder/layout.ts`, is ported from its
-`tools/vscode-iec/webview-ui/src/ladderLayout.ts` and changed for Twinova's model; the file says what changed.
+`tools/vscode-iec/webview-ui/src/ladderLayout.ts` and changed for Twinova's model; the file says what changed. Its box
+picker, `app/src/lib/LadderPicker.svelte` with `app/src/lib/ladder/catalog.ts`, is ported from
+`tools/vscode-iec/webview-ui/src/LdBlockPicker.svelte`, its catalogue now truST's.
 Copyright 2026 Joy Automation, under the Apache License 2.0, whose text is in `LICENSE-APACHE`. The repository has no
 `NOTICE` file.

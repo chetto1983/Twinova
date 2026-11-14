@@ -5,6 +5,7 @@
 // truST offers none after a dot (spec 2026-11-13-ladder-editor-design.md, decision 4, amended 2026-11-14).
 import type { Completion } from "../backend";
 import type { Declaration } from "../monitor";
+import { callOf } from "./catalog";
 import type { Element } from "./model";
 
 /** What an operand names: a variable for a contact or a coil; a block instance or a function for a box. */
@@ -13,9 +14,13 @@ export type Role = "bit" | "box";
 export const roleOf = (el: Element | null): Role | null =>
   el?.kind === "contact" || el?.kind === "coil" ? "bit" : el?.kind === "box" ? "box" : null;
 
-/** The text an element's operand field holds: a contact's or a coil's variable, a box's head. */
+/** The text an element's operand field holds: a contact's or a coil's variable, a box's whole call. */
 export const operandOf = (el: Element | null): string =>
-  (el?.kind === "contact" || el?.kind === "coil" ? el.operand : el?.kind === "box" ? el.head : null) ?? "";
+  el?.kind === "box" ? callOf(el) : ((el?.kind === "contact" || el?.kind === "coil" ? el.operand : null) ?? "");
+
+/** The part of `typed` names are completed on: a box's head, before its call opens; none past it. */
+export const completedPart = (typed: string, role: Role): string | null =>
+  role === "box" && typed.includes("(") ? null : typed;
 
 const KINDS: Record<Role, ReadonlySet<string>> = {
   bit: new Set(["variable"]),
@@ -44,13 +49,14 @@ export function candidates(found: readonly Completion[], typed: string, role: Ro
 export const declarable = (text: string): boolean =>
   /^[A-Za-z_][A-Za-z0-9_]*$/.test(text) && !/__/.test(text) && !/^(TRUE|FALSE)$/i.test(text);
 
-/** The row Auto Declare adds for a contact's or a coil's undeclared operand `name` of program `pou`: a BOOL. */
-export const boolRow = (pou: string, name: string): Declaration => ({
+/** The row a variable `name` of `type` declared in program `pou` adds: Auto Declare's BOOL, a picked block's
+ *  instance. */
+export const declared = (pou: string, name: string, type: string): Declaration => ({
   pou,
   name,
   class: "VAR",
   qualifier: null,
-  type_name: "BOOL",
+  type_name: type,
   address: null,
   initial: null,
   comment: null,

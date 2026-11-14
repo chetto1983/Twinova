@@ -51,6 +51,7 @@ pub fn run() {
             ladder_commands::ladder_lowering,
             ladder_commands::ladder_export,
             ladder_commands::ladder_import,
+            ladder_commands::ladder_catalog,
             ladder_operand::ladder_completion,
             navigation::definition,
             navigation::references,

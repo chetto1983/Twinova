@@ -10,6 +10,7 @@ mod drive;
 pub mod engine;
 pub mod field;
 mod field_image;
+pub mod ladder_catalog;
 pub mod line;
 mod line_bind;
 mod locate;

@@ -9,14 +9,26 @@
   import { buildArgs, type Source } from "./sources";
   import { layoutRungs } from "./ladder/layout";
   import { keyAction, lineOf, resolver, rungErrors, selectionOf } from "./ladder/view";
-  import { addRung, elementAt, modify, place, removeSelected, setOperand, step } from "./ladder/edit";
-  import { boolRow, declarable, operandOf, roleOf } from "./ladder/operand";
+  import {
+    addRung,
+    elementAt,
+    insertElement,
+    modify,
+    place,
+    removeSelected,
+    replaceElement,
+    setOperand,
+    step,
+  } from "./ladder/edit";
+  import { declarable, declared, operandOf, roleOf } from "./ladder/operand";
+  import type { CatalogEntry } from "./ladder/catalog";
   import type { Edit, Modifier, Selection } from "./ladder/edit";
   import { History } from "./ladder/history";
-  import type { Lowering, ParseError, Program } from "./ladder/model";
+  import type { Element, Lowering, ParseError, Program } from "./ladder/model";
   import LadderRung from "./LadderRung.svelte";
   import LadderToolbar, { type Tool } from "./LadderToolbar.svelte";
   import LadderOperand from "./LadderOperand.svelte";
+  import LadderPicker from "./LadderPicker.svelte";
 
   let { source, sources, onText }: { source: Source; sources: Source[]; onText: (text: string) => void } = $props();
   // the tree of the text it was read from: an edit starts only from the text on screen, never from a stale tree
@@ -29,6 +41,8 @@
   let editing = $state<Selection | null>(null);
   let undeclared = $state<string | null>(null);
   let view: HTMLDivElement | undefined = $state();
+  // the box picker, open on its catalogue and the names the file declares
+  let picker = $state<{ entries: CatalogEntry[]; taken: string[]; problem: string } | null>(null);
   const histories = new Map<string, History>();
   let changes = $state(0);
 
@@ -89,26 +103,70 @@
     onText(text);
   }
 
+  /** The one box `call` reads as (`T1(IN, PT := T#2s)`), read by the grammar Rust reads files with. */
+  async function boxOf(call: string): Promise<Element> {
+    const tree = await ladder.parse(`${call};`).catch((e: ParseError) => Promise.reject(e.message));
+    const [only, ...more] = tree.rungs[0]?.elements ?? [];
+    if (only?.kind !== "box" || more.length > 0 || tree.rungs.length !== 1) throw m.ladder_not_a_box({ call });
+    return only;
+  }
+
   async function typedIn(at: Selection, operand: string): Promise<void> {
     editing = null;
     view?.focus();
     if (!program) return;
-    const bit = roleOf(elementAt(program.rungs, at)) === "bit";
+    if (roleOf(elementAt(program.rungs, at)) === "box") {
+      try {
+        await commit(replaceElement(program.rungs, at, await boxOf(operand)));
+      } catch (e) {
+        failed = String(e);
+      }
+      return;
+    }
     const text = await commit(setOperand(program.rungs, at, operand));
     const name = operand.trim();
-    if (text === null || !bit || !declarable(name)) return;
+    if (text === null || !declarable(name)) return;
     // Auto Declare (4.10): what truST knows by this name, the file's variables and the globals, is declared already
     const known = await ladder.complete(source.key, text, name).catch(() => []);
     const same = known.some((c) => c.kind === "variable" && c.label.toLowerCase() === name.toLowerCase());
     undeclared = same ? null : name;
   }
 
-  async function declare(name: string): Promise<void> {
+  async function declare(name: string, type = "BOOL"): Promise<void> {
     undeclared = null;
     try {
-      keep(await declarations.edit(source.key, source.text, { op: "add", row: boolRow(pou, name) }));
+      keep(await declarations.edit(source.key, source.text, { op: "add", row: declared(pou, name, type) }));
     } catch (e) {
       failed = String(e);
+    }
+  }
+
+  async function openPicker(): Promise<void> {
+    if (!editable || !selection) return;
+    try {
+      const [entries, rows] = await Promise.all([
+        ladder.catalog(buildArgs(sources).program),
+        declarations.of(source.key, source.text),
+      ]);
+      picker = { entries, taken: rows.map((r) => r.name), problem: "" };
+    } catch (e) {
+      failed = String(e);
+    }
+  }
+
+  /** A box picked: placed by the selection, and a block's instance declared when nothing declares it yet. */
+  async function picked(choice: { entry: CatalogEntry | null; head: string; pins: string }): Promise<void> {
+    const open = picker;
+    if (!program || !selection || !open) return;
+    try {
+      const box = await boxOf(`${choice.head}(${choice.pins})`);
+      picker = null;
+      view?.focus();
+      const text = await commit(insertElement(program.rungs, selection, box));
+      const known = open.taken.some((t) => t.toLowerCase() === choice.head.toLowerCase());
+      if (text !== null && choice.entry?.block && !known) await declare(choice.head, choice.entry.name);
+    } catch (e) {
+      picker = { ...open, problem: String(e) };
     }
   }
 
@@ -124,6 +182,7 @@
     if (tool === "undo" || tool === "redo") return travel(tool === "undo");
     if (!program) return;
     if (tool === "rung") void commit(addRung(program.rungs, selection?.rung ?? program.rungs.length - 1));
+    else if (tool === "box") void openPicker();
     else if (selection && tool === "delete") void commit(removeSelected(program.rungs, selection));
     else if (selection && tool !== "delete") void commit(place(program.rungs, selection, tool));
   }
@@ -134,7 +193,7 @@
 
   function onclick(e: MouseEvent): void {
     const target = e.target as globalThis.Element;
-    if (target.closest("[role=toolbar], .operand, .declare")) return;
+    if (target.closest("[role=toolbar], [role=dialog], .operand, .declare")) return;
     const rung = target.closest<HTMLElement>("[data-rung]")?.dataset.rung;
     selection = selectionOf(rung, target.closest("[data-path]")?.getAttribute("data-path") ?? undefined);
   }
@@ -143,7 +202,7 @@
     const action = keyAction(e);
     if (!action) return;
     e.preventDefault();
-    if (action === "undo" || action === "redo" || action === "delete") return onTool(action);
+    if (action === "undo" || action === "redo" || action === "delete" || action === "box") return onTool(action);
     if (action === "edit") editing = roleOf(selected) ? selection : null;
     else if (action === "escape") selection = null;
     else if (program && selection) selection = step(program.rungs, selection, action === "left" ? -1 : 1) ?? selection;
@@ -164,6 +223,18 @@
   {onkeydown}
 >
   <LadderToolbar {editable} selected={!!selection} element={selected} {canUndo} {canRedo} {onTool} {onModifier} />
+  {#if picker}
+    <LadderPicker
+      entries={picker.entries}
+      taken={picker.taken}
+      problem={picker.problem}
+      onInsert={picked}
+      onClose={() => {
+        picker = null;
+        view?.focus();
+      }}
+    />
+  {/if}
   {#if unreadable || failed}<p class="note" role="status">{unreadable || failed}</p>{/if}
   {#if undeclared}
     {@const name = undeclared}
@@ -197,7 +268,13 @@
               {@const el = elementAt(program.rungs, at)}
               {@const role = roleOf(el)}
               {#if role}
-                <div class="place" style="left: {node.x - 4}px; top: {node.y - 20}px; width: {node.w + 40}px">
+                <div
+                  class="place"
+                  style="left: {node.x - 4}px; top: {node.y - 20}px; width: {Math.max(
+                    node.w + 40,
+                    role === 'box' ? 300 : 0,
+                  )}px"
+                >
                   <LadderOperand
                     value={operandOf(el)}
                     {role}

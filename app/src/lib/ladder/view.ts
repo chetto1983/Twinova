@@ -28,14 +28,15 @@ export function selectionOf(rung: string | undefined, path: string | undefined):
 }
 
 /** What a key does in the Ladder view, CODESYS's keys: delete, undo, redo, Left and Right along the elements, Escape,
- *  and Enter or F2 to type the selected element's operand. */
-export type KeyAction = "delete" | "undo" | "redo" | "left" | "right" | "escape" | "edit";
+ *  Enter or F2 to type the selected element's operand, and Ctrl+B to pick a box. */
+export type KeyAction = "delete" | "undo" | "redo" | "left" | "right" | "escape" | "edit" | "box";
 
 export function keyAction(e: { key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): KeyAction | null {
   const ctrl = e.ctrlKey || e.metaKey;
   const key = e.key.toLowerCase();
   if (ctrl && key === "z") return e.shiftKey ? "redo" : "undo";
   if (ctrl && key === "y") return "redo";
+  if (ctrl && key === "b") return "box";
   if (ctrl) return null;
   const plain: Record<string, KeyAction> = {
     delete: "delete",

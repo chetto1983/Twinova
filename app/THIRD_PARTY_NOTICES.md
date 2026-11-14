@@ -31,6 +31,7 @@
 | `src/lib/ladder/edit.ts`, `edit.test.ts` (the editor's gestures, changed for Twinova's model) | Open Industry Project at `1e7488c` (`src/plc/ladder/ladderEdit.ts`, `ladderEdit.test.ts`); notice in the repository's `THIRD_PARTY_NOTICES.md` | MIT |
 | `src/lib/ladder/operand.ts` (the operand's candidates in the order of the type it takes) | Open Industry Project at `1e7488c` (`src/plc/ladder/ladderComplete.ts`, `rankByWanted`, `elementType`); notice in the repository's `THIRD_PARTY_NOTICES.md` | MIT |
 | `src/lib/ladder/layout.ts` | nautilus at `2db093e` (`tools/vscode-iec/webview-ui/src/ladderLayout.ts`), Copyright 2026 Joy Automation; notice in the repository's `THIRD_PARTY_NOTICES.md` | Apache-2.0 |
+| `src/lib/LadderPicker.svelte`, `src/lib/ladder/catalog.ts` (the box picker: the filter's order, a free instance name, the pins editable before the insert) | nautilus at `2db093e` (`tools/vscode-iec/webview-ui/src/LdBlockPicker.svelte`), Copyright 2026 Joy Automation; notice in the repository's `THIRD_PARTY_NOTICES.md` | Apache-2.0 |
 | `src-tauri/project/tests/fixtures/**/twinova.*.st` (the conveyor drive, the chain transfer, the stopper, the pusher and the turntable, re-expressed in ST) | Open Industry Project at `1e7488c` (`examples/parts/_shared/conveyorDrive.js`, `examples/parts/{chain-transfer,blade-stop,diverter,turntable-conveyor}/`) | MIT |
 
 ## Direct runtime dependencies

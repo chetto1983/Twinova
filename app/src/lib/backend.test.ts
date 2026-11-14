@@ -130,6 +130,7 @@ describe("backend bridge", () => {
     await ladder.parse("|A| (B);");
     await ladder.print({ declarations: "", rungs: [] });
     await ladder.complete("plc/Main.ld", "|A| (B);", "St");
+    await ladder.catalog([["plc/Main.ld", "|A| (B);"]]);
     await ladder.lowering([["plc/Main.ld", "|A| (B);"]], "plc/Main.ld");
     expect(invoke.mock.calls).toEqual([
       ["watch_range", { file: "plc/Main.st", first: 3, last: 9, device: null, unfolded: ["carry"] }],
@@ -150,6 +151,7 @@ describe("backend bridge", () => {
       ["ladder_parse", { text: "|A| (B);" }],
       ["ladder_print", { program: { declarations: "", rungs: [] } }],
       ["ladder_completion", { file: "plc/Main.ld", text: "|A| (B);", typed: "St" }],
+      ["ladder_catalog", { program: [["plc/Main.ld", "|A| (B);"]] }],
       ["ladder_lowering", { program: [["plc/Main.ld", "|A| (B);"]], file: "plc/Main.ld" }],
     ]);
   });
