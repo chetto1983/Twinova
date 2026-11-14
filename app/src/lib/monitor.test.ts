@@ -28,13 +28,20 @@ describe("online monitoring in the editor", () => {
     expect(labelOf(eye)).toBe("%IX0.0");
   });
 
-  it("splits the values into the spots' and the rows'", () => {
+  it("splits the values into the spots', a Ladder drawing's and the rows'", () => {
     const watched = {
       spots: [spot(1, 2), spot(2, 3)],
+      ladder: [],
       rows: [{ name: "a", declaration: 0, target: null, instance: false }],
     };
-    expect(split(watched, ["1", "TRUE", "7"])).toEqual({ spots: ["1", "TRUE"], rows: ["7"] });
-    expect(split(watched, [])).toEqual({ spots: [], rows: [] });
+    expect(split(watched, ["1", "TRUE", "7"])).toEqual({ spots: ["1", "TRUE"], ladder: [], rows: ["7"] });
+    expect(split(watched, [])).toEqual({ spots: [], ladder: [], rows: [] });
+    const drawn = {
+      spots: [],
+      ladder: [{ element: { rung: 0, path: [0] }, pin: null, power: true, target: null }],
+      rows: watched.rows,
+    };
+    expect(split(drawn, ["TRUE", "5"])).toEqual({ spots: [], ladder: ["TRUE"], rows: ["5"] });
   });
 
   it("colours a condition and marks a forced value", () => {

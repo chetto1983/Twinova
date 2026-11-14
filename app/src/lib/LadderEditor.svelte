@@ -8,7 +8,8 @@
   import { debounce } from "./analysis";
   import { buildArgs, type Source } from "./sources";
   import { layoutRungs } from "./ladder/layout";
-  import { keyAction, lineOf, resolver, rungErrors, selectionOf } from "./ladder/view";
+  import { keyAction, lineOf, onlineOf, resolver, rungErrors, selectionOf } from "./ladder/view";
+  import { labelOf, type LadderSpot, type Target } from "./monitor";
   import {
     addRung,
     copied,
@@ -35,7 +36,22 @@
   import LadderPicker from "./LadderPicker.svelte";
   import LadderRungHead from "./LadderRungHead.svelte";
 
-  let { source, sources, onText }: { source: Source; sources: Source[]; onText: (text: string) => void } = $props();
+  let {
+    source,
+    sources,
+    onText,
+    online = null,
+    forced = new Set(),
+    onPick = () => {},
+  }: {
+    source: Source;
+    sources: Source[];
+    onText: (text: string) => void;
+    /** while monitoring: what the drawing shows (`watch_range`) and its values, in the same order */
+    online?: { spots: LadderSpot[]; values: (string | null)[] } | null;
+    forced?: Set<string>;
+    onPick?: (target: Target, value: string | null) => void;
+  } = $props();
   // the tree of the text it was read from: an edit starts only from the text on screen, never from a stale tree
   let read = $state<{ key: string; text: string; program: Program } | null>(null);
   let lowering = $state<Lowering | null>(null);
@@ -238,8 +254,17 @@
     if (program && selection) void commit(modify(program.rungs, selection, modifier));
   }
 
+  /** Whether the value of spot `index` is forced, by its target's label (`Main.start`). */
+  const isForced = (index: number): boolean => {
+    const target = online?.spots[index]?.target;
+    return !!target && forced.has(labelOf(target));
+  };
+
   function onclick(e: MouseEvent): void {
     const target = e.target as globalThis.Element;
+    const reading = target.closest<SVGElement>("[data-spot]")?.dataset.spot;
+    const spot = reading === undefined ? undefined : online?.spots[Number(reading)];
+    if (spot?.target) return onPick(spot.target, online?.values[Number(reading)] ?? null);
     if (target.closest("[role=toolbar], [role=dialog], [role=group], .operand, .declare")) return;
     const rung = target.closest<HTMLElement>("[data-rung]")?.dataset.rung;
     selection = selectionOf(rung, target.closest("[data-path]")?.getAttribute("data-path") ?? undefined);
@@ -323,7 +348,13 @@
           {@const at = editing?.rung === i ? editing : null}
           {@const node = at && layout.nodes.find((n) => "path" in n && n.path.join() === at.path.join())}
           <div class="drawing">
-            <LadderRung {layout} selected={selection?.rung === i ? selection.path : null} />
+            <LadderRung
+              {layout}
+              selected={selection?.rung === i ? selection.path : null}
+              rung={i}
+              online={online ? onlineOf(online.spots, online.values, i) : null}
+              forced={isForced}
+            />
             {#if at && node && program}
               {@const el = elementAt(program.rungs, at)}
               {@const role = roleOf(el)}

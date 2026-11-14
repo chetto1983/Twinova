@@ -11,6 +11,7 @@ mod ladder_operand;
 mod ladder_table;
 pub mod lsp_files;
 pub mod monitor;
+mod monitor_ladder;
 pub mod navigation;
 pub mod plc_window;
 mod positions;

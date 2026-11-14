@@ -44,10 +44,21 @@ export type LNode =
       w: number;
       h: number;
       path: number[];
+      feed: Feed;
       mode: ContactMode;
       operand: string | null;
     }
-  | { kind: "coil"; x: number; y: number; w: number; h: number; path: number[]; mode: CoilMode; operand: string | null }
+  | {
+      kind: "coil";
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      path: number[];
+      feed: Feed;
+      mode: CoilMode;
+      operand: string | null;
+    }
   | {
       kind: "box";
       x: number;
@@ -55,6 +66,7 @@ export type LNode =
       w: number;
       h: number;
       path: number[];
+      feed: Feed;
       title: string;
       instance: string | null;
       left: PinRow[];
@@ -62,16 +74,21 @@ export type LNode =
     }
   | { kind: "exit"; x: number; y: number; w: number; h: number; text: string };
 
+/** Whose power a wire carries, online: the element at that path's power out, or the left rail's (null). */
+export type Feed = number[] | null;
+
 export interface LWire {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
+  feed: Feed;
 }
 export interface LVLine {
   x: number;
   y1: number;
   y2: number;
+  feed: Feed;
 }
 export interface LBranch {
   x: number;
@@ -139,16 +156,30 @@ export function boxPins(pins: readonly Pin[], resolved: BoxPins | undefined): { 
 
 const longestName = (rows: readonly PinRow[]): number => Math.max(0, ...rows.map((r) => r.name.length));
 
-const labelWidth = (rows: readonly PinRow[]): number =>
-  Math.max(0, ...rows.map((r) => (r.value === null ? 0 : Math.ceil(textW(r.value, 10)) + 8)));
+/** Whether a pin's value names a variable, which shows its value online (monitor_ladder.rs `reference`). */
+export const isReference = (value: string | null): boolean =>
+  value !== null && /^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$/.test(value) && !/^(TRUE|FALSE)$/i.test(value);
 
-/** Lay out a series of elements on the wire at `cy` from `x`; `path` addresses the series in the rung's tree. */
+/** The room kept beside a pin's reference for its value online, so the drawing does not move when monitoring starts. */
+export const READING_W = 44;
+
+const labelWidth = (rows: readonly PinRow[]): number =>
+  Math.max(
+    0,
+    ...rows.map((r) =>
+      r.value === null ? 0 : Math.ceil(textW(r.value, 10)) + 8 + (isReference(r.value) ? READING_W : 0),
+    ),
+  );
+
+/** Lay out a series of elements on the wire at `cy` from `x`; `path` addresses the series in the rung's tree, `feed`
+ *  the power it takes. */
 export function layoutSeries(
   elements: readonly Element[],
   x: number,
   cy: number,
   path: number[],
   resolve: Resolve,
+  feed: Feed = null,
 ): Res {
   const res: Res = {
     nodes: [],
@@ -161,16 +192,17 @@ export function layoutSeries(
   };
   let cursor = x;
   if (elements.length === 0) {
-    // an empty path is a wire, always on
-    res.wires.push({ x1: cursor, y1: cy, x2: cursor + L.EMPTY_LEG_W, y2: cy });
+    // an empty path is a wire: it carries what feeds it
+    res.wires.push({ x1: cursor, y1: cy, x2: cursor + L.EMPTY_LEG_W, y2: cy, feed });
     res.width = L.EMPTY_LEG_W;
     return res;
   }
+  let into = feed;
   elements.forEach((element, i) => {
     if (i > 0) {
       const nearBranch = element.kind === "branch" || elements[i - 1]?.kind === "branch";
       const gap = nearBranch ? L.BRANCH_OUTER_GAP : L.WIRE_GAP;
-      res.wires.push({ x1: cursor, y1: cy, x2: cursor + gap, y2: cy });
+      res.wires.push({ x1: cursor, y1: cy, x2: cursor + gap, y2: cy, feed: into });
       cursor += gap;
     }
     const at = [...path, i];
@@ -178,7 +210,7 @@ export function layoutSeries(
       case "contact":
       case "coil": {
         const w = symbolWidth(element.operand);
-        const common = { x: cursor, y: cy - halfH, w, h: L.SYMBOL_H, path: at, operand: element.operand };
+        const common = { x: cursor, y: cy - halfH, w, h: L.SYMBOL_H, path: at, feed: into, operand: element.operand };
         res.nodes.push(
           element.kind === "contact"
             ? { kind: "contact", mode: element.mode, ...common }
@@ -188,12 +220,13 @@ export function layoutSeries(
         break;
       }
       case "box":
-        cursor = placeBox(res, element.head, element.pins, resolve(at), at, cursor, cy);
+        cursor = placeBox(res, element.head, element.pins, resolve(at), at, cursor, cy, into);
         break;
       case "branch":
-        cursor = placeBranch(res, element.paths, at, cursor, cy, resolve);
+        cursor = placeBranch(res, element.paths, at, cursor, cy, resolve, into);
         break;
     }
+    into = at;
   });
   res.width = cursor - x;
   return res;
@@ -207,6 +240,7 @@ function placeBox(
   at: number[],
   x: number,
   cy: number,
+  feed: Feed,
 ): number {
   const { left, right } = boxPins(pins, resolved);
   const instance = resolved && !resolved.function ? head : null;
@@ -222,9 +256,9 @@ function placeBox(
   const y = cy - L.BOX_HEAD - L.PIN_STEP / 2;
   const before = labelWidth(left);
   const after = labelWidth(right);
-  if (before > 0) res.wires.push({ x1: x, y1: cy, x2: x + before, y2: cy });
-  res.nodes.push({ kind: "box", x: x + before, y, w, h, path: at, title, instance, left, right });
-  if (after > 0) res.wires.push({ x1: x + before + w, y1: cy, x2: x + before + w + after, y2: cy });
+  if (before > 0) res.wires.push({ x1: x, y1: cy, x2: x + before, y2: cy, feed });
+  res.nodes.push({ kind: "box", x: x + before, y, w, h, path: at, feed, title, instance, left, right });
+  if (after > 0) res.wires.push({ x1: x + before + w, y1: cy, x2: x + before + w + after, y2: cy, feed: at });
   res.ascent = Math.max(res.ascent, cy - y + (instance === null ? 6 : L.LABEL_TOP));
   res.descent = Math.max(res.descent, y + h - cy + L.LABEL_BOT);
   return x + before + w + after;
@@ -237,6 +271,7 @@ function placeBranch(
   x: number,
   cy: number,
   resolve: Resolve,
+  feed: Feed,
 ): number {
   const probes = paths.map((p, j) => layoutSeries(p, 0, 0, [...at, j], resolve));
   const maxW = Math.max(L.EMPTY_LEG_W, ...probes.map((p) => p.width));
@@ -247,16 +282,18 @@ function placeBranch(
     const probe = probes[j] as Res;
     if (j > 0) pen += (probes[j - 1] as Res).descent + L.BRANCH_GAP + probe.ascent;
     ys.push(pen);
-    const r = layoutSeries(p, x, pen, [...at, j], resolve);
+    const r = layoutSeries(p, x, pen, [...at, j], resolve, feed);
     res.nodes.push(...r.nodes);
     res.branches.push(...r.branches);
     res.wires.push(...r.wires);
     res.vlines.push(...r.vlines);
-    if (r.width < maxW) res.wires.push({ x1: x + r.width, y1: pen, x2: x + maxW, y2: pen });
+    // a shorter path's end is padded with the wire its last element feeds
+    const end = p.length > 0 ? [...at, j, p.length - 1] : feed;
+    if (r.width < maxW) res.wires.push({ x1: x + r.width, y1: pen, x2: x + maxW, y2: pen, feed: end });
   });
   const top = ys[0] as number;
   const bottom = ys[ys.length - 1] as number;
-  res.vlines.push({ x, y1: top, y2: bottom }, { x: x + maxW, y1: top, y2: bottom });
+  res.vlines.push({ x, y1: top, y2: bottom, feed }, { x: x + maxW, y1: top, y2: bottom, feed: at });
   const first = probes[0] as Res;
   const last = probes[probes.length - 1] as Res;
   res.branches.push({
@@ -298,6 +335,9 @@ export function rungMinWidth(rung: Rung, resolve: Resolve): number {
   return L.RAIL_LEFT + layoutSeries(series, 0, 0, [], resolve).width + L.WIRE_GAP + zone.width + L.RAIL_RIGHT_MARGIN;
 }
 
+/** The power out of element `n` of a rung's root series, or the rail's before the first. */
+const outOf = (n: number): Feed => (n >= 0 ? [n] : null);
+
 /** One rung laid out `width` wide: its logic from the left rail, its last coils and its exit against the right one. */
 export function layoutRung(rung: Rung, width: number, resolve: Resolve): RungLayout {
   const zone = coilZone(rung);
@@ -306,13 +346,13 @@ export function layoutRung(rung: Rung, width: number, resolve: Resolve): RungLay
   const wireY = L.RUNG_PAD_Y + probe.ascent;
   const r = layoutSeries(series, L.RAIL_LEFT, wireY, [], resolve);
   const nodes = [...r.nodes];
-  const wires = [...r.wires, { x1: L.RAIL_X, y1: wireY, x2: L.RAIL_LEFT, y2: wireY }];
+  const wires: LWire[] = [...r.wires, { x1: L.RAIL_X, y1: wireY, x2: L.RAIL_LEFT, y2: wireY, feed: null }];
   const zoneX = Math.max(width - L.RAIL_RIGHT_MARGIN - zone.width, L.RAIL_LEFT + r.width + L.WIRE_GAP);
-  wires.push({ x1: L.RAIL_LEFT + r.width, y1: wireY, x2: zoneX, y2: wireY });
+  wires.push({ x1: L.RAIL_LEFT + r.width, y1: wireY, x2: zoneX, y2: wireY, feed: outOf(series.length - 1) });
   let cx = zoneX;
   zone.coils.forEach((coil, i) => {
     if (i > 0) {
-      wires.push({ x1: cx, y1: wireY, x2: cx + L.WIRE_GAP, y2: wireY });
+      wires.push({ x1: cx, y1: wireY, x2: cx + L.WIRE_GAP, y2: wireY, feed: outOf(series.length + i - 1) });
       cx += L.WIRE_GAP;
     }
     const w = zone.widths[i] as number;
@@ -325,6 +365,7 @@ export function layoutRung(rung: Rung, width: number, resolve: Resolve): RungLay
         w,
         h: L.SYMBOL_H,
         path,
+        feed: outOf(series.length + i - 1),
         mode: coil.mode,
         operand: coil.operand,
       });
@@ -332,11 +373,12 @@ export function layoutRung(rung: Rung, width: number, resolve: Resolve): RungLay
     cx += w;
   });
   const exit = exitText(rung);
+  const last = outOf(rung.elements.length - 1);
   if (exit === null) {
-    wires.push({ x1: cx, y1: wireY, x2: width - L.RAIL_X, y2: wireY });
+    wires.push({ x1: cx, y1: wireY, x2: width - L.RAIL_X, y2: wireY, feed: last });
   } else {
     nodes.push({ kind: "exit", x: cx + 8, y: wireY - halfH, w: zone.exitW - 8, h: L.SYMBOL_H, text: exit });
-    wires.push({ x1: cx, y1: wireY, x2: cx + 8, y2: wireY });
+    wires.push({ x1: cx, y1: wireY, x2: cx + 8, y2: wireY, feed: last });
   }
   return {
     nodes,

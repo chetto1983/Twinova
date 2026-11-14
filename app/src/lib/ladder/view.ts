@@ -1,6 +1,7 @@
 // What the Ladder view (LadderEditor.svelte) reads off a file and its lowering.
 import type { Selection } from "./edit";
 import type { Resolve } from "./layout";
+import type { LadderSpot } from "../monitor";
 import { keyOf, type BoxPins, type Lowering } from "./model";
 
 /** The line of byte `offset` in `text`, from 1: where a file stops reading as Ladder. */
@@ -51,4 +52,32 @@ export function keyAction(e: { key: string; ctrlKey: boolean; metaKey: boolean; 
     f2: "edit",
   };
   return plain[key] ?? null;
+}
+
+/** What the drawing of rung `rung` shows online (monitor_ladder.rs): whether each element's power out is on, and each
+ *  operand's or box pin's value with the spot it comes from, by `keyOf` and `#pin`. Empty offline. */
+export interface Online {
+  power: Map<string, boolean>;
+  values: Map<string, { value: string; spot: number }>;
+}
+
+export function onlineOf(spots: readonly LadderSpot[], values: readonly (string | null)[], rung: number): Online {
+  const power = new Map<string, boolean>();
+  const shown = new Map<string, { value: string; spot: number }>();
+  spots.forEach((s, i) => {
+    const value = values[i];
+    if (s.element.rung !== rung || value === null || value === undefined) return;
+    const key = keyOf(s.element.rung, s.element.path);
+    if (s.power) power.set(key, value === "TRUE");
+    else shown.set(s.pin === null ? key : `${key}#${s.pin}`, { value, spot: i });
+  });
+  return { power, values: shown };
+}
+
+/** Whether the power `feed` names is on in rung `rung`: the left rail's always, an element's as the scan left it;
+ *  null while unknown (offline, or not read yet). */
+export function powered(online: Online | null, rung: number, feed: number[] | null): boolean | null {
+  if (!online) return null;
+  if (feed === null) return true;
+  return online.power.get(keyOf(rung, feed)) ?? null;
 }

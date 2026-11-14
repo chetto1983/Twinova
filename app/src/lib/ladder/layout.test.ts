@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { L, boxPins, layoutRung, layoutRungs, rungMinWidth, textW, type LNode, type Resolve } from "./layout";
+import {
+  L,
+  READING_W,
+  boxPins,
+  isReference,
+  layoutRung,
+  layoutRungs,
+  rungMinWidth,
+  textW,
+  type LNode,
+  type Resolve,
+} from "./layout";
 import type { BoxPins, Element, Rung } from "./model";
 
 const contact = (operand: string | null, mode: "open" | "closed" | "rising" | "falling" = "open"): Element => ({
@@ -10,6 +21,7 @@ const contact = (operand: string | null, mode: "open" | "closed" | "rising" | "f
 const coil = (operand: string, mode: "normal" | "set" = "normal"): Element => ({ kind: "coil", mode, operand });
 const rung = (elements: Element[], exit: Rung["exit"] = null): Rung => ({ comment: null, label: null, elements, exit });
 const none: Resolve = () => undefined;
+const feeds = (list: { feed: number[] | null }[]) => list.map((w) => (w.feed === null ? "rail" : w.feed.join(".")));
 const at = (nodes: LNode[], path: number[]) => nodes.find((n) => "path" in n && n.path.join() === path.join());
 
 const TON: BoxPins = { function: false, type_name: "TON", input: "IN", output: "Q" };
@@ -46,6 +58,9 @@ describe("a rung laid out (nautilus's layout, ported)", () => {
     expect(motor && r.height > motor.y + motor.h).toBe(true);
     // the wire runs from the left rail to the right one
     expect(r.wires.some((w) => w.x1 === L.RAIL_X && w.y1 === r.wireY)).toBe(true);
+    // each wire and rail carries one element's power out, or the left rail's
+    expect(feeds(r.vlines)).toEqual(["rail", "0"]);
+    expect(feeds(r.wires.filter((w) => w.y1 === r.wireY)).toSorted()).toEqual(["0", "1", "2", "rail"]);
     expect(r.wires.some((w) => w.x2 === 600 - L.RAIL_X && w.y2 === r.wireY)).toBe(true);
   });
 
@@ -81,7 +96,16 @@ describe("a rung laid out (nautilus's layout, ported)", () => {
     ]);
     // the first pins sit on the rung's wire
     expect(box.y + L.BOX_HEAD + L.PIN_STEP / 2).toBe(r.wireY);
-    // room before it for T#2s, and after it for W
+    // room before it for T#2s, and after it for W and its value online
+    expect(r.wires.some((w) => w.x2 - w.x1 === Math.ceil(textW("W", 10)) + 8 + READING_W)).toBe(true);
+    expect([
+      isReference("W"),
+      isReference("T1.Q"),
+      isReference("T#2s"),
+      isReference("count MOD 3 = 0"),
+      isReference("TRUE"),
+      isReference(null),
+    ]).toEqual([true, true, false, false, false, false]);
     const a = at(r.nodes, [0]);
     expect(a && box.x - (a.x + a.w)).toBeGreaterThanOrEqual(Math.ceil(textW("T#2s", 10)));
   });

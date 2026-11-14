@@ -89,7 +89,7 @@
           : "",
   );
   const live = $derived(monitoring && status === "ok" && !!current && !blocked);
-  const parts = $derived(watched ? split(watched, values) : { spots: [], rows: [] });
+  const parts = $derived(watched ? split(watched, values) : { spots: [], ladder: [], rows: [] });
 
   // Breakpoints and HOLD (specs 2026-11-13-breakpoints-hold-design.md and -breakpoints-complete-design.md), in the
   // program's files and the blocks'.
@@ -351,6 +351,9 @@
             <LadderEditor
               source={current}
               {sources}
+              online={watched && live ? { spots: watched.ladder, values: parts.ladder } : null}
+              {forced}
+              onPick={pick}
               onText={(text) => {
                 if (current) current.text = text;
               }}

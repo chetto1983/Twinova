@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keyAction, lineOf, resolver, rungErrors, selectionOf } from "./view";
+import { keyAction, lineOf, onlineOf, powered, resolver, rungErrors, selectionOf } from "./view";
 import type { Lowering } from "./model";
 
 const lowering: Lowering = {
@@ -15,6 +15,13 @@ const lowering: Lowering = {
     { element: { rung: 2, path: [] }, message: "there is no rung labelled 'X' to jump to" },
   ],
 };
+
+const spot = (rung: number, path: number[], power: boolean, pin: string | null = null) => ({
+  element: { rung, path },
+  pin,
+  power,
+  target: null,
+});
 
 const key = (k: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }> = {}) =>
   keyAction({ key: k, ctrlKey: false, metaKey: false, shiftKey: false, ...mods });
@@ -70,5 +77,32 @@ describe("the Ladder view's reading of a file", () => {
       "paste",
     ]);
     expect([key("a"), key("Delete", { ctrlKey: true }), key("q", { ctrlKey: true })]).toEqual([null, null, null]);
+  });
+
+  it("reads the values online: each element's power out, each operand's and pin's value, by rung", () => {
+    const spots = [
+      spot(0, [0], true),
+      spot(0, [1, 0, 0], true),
+      spot(1, [0], true),
+      spot(0, [0], false),
+      spot(0, [2], false, "ET"),
+    ];
+    const online = onlineOf(spots, ["TRUE", "FALSE", "TRUE", "TRUE", null], 0);
+    expect([...online.power]).toEqual([
+      ["0.0", true],
+      ["0.1.0.0", false],
+    ]);
+    expect([...online.values]).toEqual([["0.0", { value: "TRUE", spot: 3 }]]);
+    expect(onlineOf(spots, ["TRUE", "TRUE", "TRUE", "1", "T#2s"], 0).values.get("0.2#ET")).toEqual({
+      value: "T#2s",
+      spot: 4,
+    });
+    expect([
+      powered(online, 0, null),
+      powered(online, 0, [0]),
+      powered(online, 0, [1, 0, 0]),
+      powered(online, 0, [5]),
+    ]).toEqual([true, true, false, null]);
+    expect(powered(null, 0, null)).toBeNull();
   });
 });
