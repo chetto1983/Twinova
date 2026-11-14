@@ -103,13 +103,10 @@ fn element_size(element: &Element) -> (usize, usize) {
             // as `block` draws it, from its rung pin's step above the wire: a step for each pin on its taller side, the
             // rung's and those with a value (the rung's counted for a function that starts the rung too, a row more at
             // most), and one under them
-            let side = |out: bool| {
-                1 + pins
-                    .iter()
-                    .filter(|p| p.out == out && p.value.is_some())
-                    .count()
-            };
-            let height = ROW / 2 - PIN_STEP + (side(false).max(side(true)) + 1) * PIN_STEP;
+            let (outputs, inputs): (Vec<&Pin>, Vec<&Pin>) = (pins.iter())
+                .filter(|p| p.value.is_some())
+                .partition(|p| p.out);
+            let height = ROW / 2 - PIN_STEP + (inputs.len().max(outputs.len()) + 2) * PIN_STEP;
             let width = box_offset(pins) + BOX_W + COL / 2;
             (width.div_ceil(COL), height.div_ceil(ROW))
         }

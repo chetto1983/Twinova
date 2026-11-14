@@ -100,3 +100,13 @@ fn a_ladder_file_shows_each_element_s_power_and_operand_as_the_program_runs() {
         values[8]
     );
 }
+
+#[test]
+fn a_pin_s_value_is_watched_when_it_names_a_variable_or_a_member() {
+    for named in ["start", "_spare", "T1.Q", "Line.belt_a.run"] {
+        assert!(reference(named), "{named}");
+    }
+    for constant in ["10", "2.5", "T#20ms", "TRUE", "false", "a.", "16#FF"] {
+        assert!(!reference(constant), "{constant}");
+    }
+}
