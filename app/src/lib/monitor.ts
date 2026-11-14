@@ -1,3 +1,4 @@
+import type { ElementId } from "./ladder/model";
 // Online monitoring and the variables table on the webview's side (spec 2026-11-13-online-monitoring-design.md,
 // decisions 4 to 11): the types `monitor.rs` and `declarations.rs` send, the values drawn in the code as Monaco
 // decorations, and the small pure helpers the editor and the table share.
@@ -22,8 +23,18 @@ export interface Row {
   instance: boolean;
 }
 
+/** A value a Ladder file's drawing shows (monitor_ladder.rs `LadderSpot`): an element's power out, its operand's
+ *  value, or a box pin's. */
+export interface LadderSpot {
+  element: ElementId;
+  pin: string | null;
+  power: boolean;
+  target: Target | null;
+}
+
 export interface Watched {
   spots: Spot[];
+  ladder: LadderSpot[];
   rows: Row[];
 }
 
@@ -54,10 +65,11 @@ export const CLASSES = ["VAR", "VAR_INPUT", "VAR_OUTPUT", "VAR_IN_OUT", "VAR_TEM
 export const labelOf = (target: Target): string =>
   target.kind === "variable" ? `${target.program}.${target.path}` : target.address;
 
-/** The values `monitor` sends, split as `watch_range` ordered them: the spots' first, then the rows'. */
+/** The values `monitor` sends, split as `watch_range` ordered them: the spots', a Ladder drawing's, the rows'. */
 export function split(watched: Watched, values: (string | null)[]) {
   const n = watched.spots.length;
-  return { spots: values.slice(0, n), rows: values.slice(n, n + watched.rows.length) };
+  const d = n + watched.ladder.length;
+  return { spots: values.slice(0, n), ladder: values.slice(n, d), rows: values.slice(d, d + watched.rows.length) };
 }
 
 /** The class names of a value: a condition's colour, and a mark when its target is forced. */

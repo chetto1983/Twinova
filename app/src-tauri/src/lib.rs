@@ -6,8 +6,12 @@ pub mod declarations;
 pub mod demo;
 pub mod edit_commands;
 mod frontend;
+pub mod ladder_commands;
+mod ladder_operand;
+mod ladder_table;
 pub mod lsp_files;
 pub mod monitor;
+mod monitor_ladder;
 pub mod navigation;
 pub mod plc_window;
 mod positions;
@@ -43,6 +47,13 @@ pub fn run() {
             analysis::analyze,
             analysis::hover,
             analysis::completion,
+            ladder_commands::ladder_parse,
+            ladder_commands::ladder_print,
+            ladder_commands::ladder_lowering,
+            ladder_commands::ladder_export,
+            ladder_commands::ladder_import,
+            ladder_commands::ladder_catalog,
+            ladder_operand::ladder_completion,
             navigation::definition,
             navigation::references,
             call_templates::call_template,

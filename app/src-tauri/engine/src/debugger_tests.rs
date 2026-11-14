@@ -202,8 +202,10 @@ r := add.q;
 END_PROGRAM
 ";
 
-/// A program calling a user's block, scanned on a thread until `debugger` lets it go.
-fn calling() -> (Debugger, JoinHandle<()>) {
+/// A program calling a user's block, scanned on a thread until `debugger` lets it go, its breakpoints at `lines` set
+/// before the first scan: set after, they would race the scans, which may all be over first (CI's coverage run,
+/// 2026-11-14).
+fn calling(lines: &[u32]) -> (Debugger, JoinHandle<()>) {
     let mut harness = TestHarness::from_source(BLOCK).unwrap();
     let control = harness.runtime_mut().enable_debug();
     let files = vec![(MAIN.to_string(), BLOCK.to_string())];
@@ -216,6 +218,7 @@ fn calling() -> (Debugger, JoinHandle<()>) {
         Vec::new(),
         None,
     );
+    set(&debugger, MAIN, lines).unwrap();
     let thread = std::thread::spawn(move || {
         for _ in 0..20 {
             harness.cycle();
@@ -226,8 +229,7 @@ fn calling() -> (Debugger, JoinHandle<()>) {
 
 #[test]
 fn into_enters_a_block_out_leaves_it_and_the_stack_lists_the_innermost_first() {
-    let (debugger, thread) = calling();
-    set(&debugger, MAIN, &[8]).unwrap();
+    let (debugger, thread) = calling(&[8]);
     assert_eq!(held(&debugger).line, 8);
     debugger.resume(Resume::Into);
     let inside = held(&debugger);

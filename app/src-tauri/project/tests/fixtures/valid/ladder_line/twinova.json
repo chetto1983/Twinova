@@ -1,0 +1,31 @@
+{
+  "app": "0.1.0",
+  "components": [
+    "components/twinova.belt@1.json",
+    "components/twinova.chain_transfer@1.json",
+    "components/twinova.roller@1.json",
+    "components/twinova.sensor_diffuse@1.json",
+    "components/twinova.sink@1.json",
+    "components/twinova.source@1.json"
+  ],
+  "files": {
+    "components/twinova.belt@1.json": "4f0e7245eb15416fba20508485b743f198e5a4a03a1ffe0036554c20a01a29ac",
+    "components/twinova.belt@1.st": "5f73cdc71d1e4f6307fcdc8690ac7a411ae06cfd59c6f0ea1686f17f188929f0",
+    "components/twinova.chain_transfer@1.json": "c3478d4a7b05df7087d409a14224f0735696dd664912681b85046cca1505fe4c",
+    "components/twinova.chain_transfer@1.st": "5737f5d2966dc1ba7d03d5cf2466f6c30981bc8652ccbe64b1d2ea05358d217f",
+    "components/twinova.roller@1.json": "e73639d40e788052454d393ae45cd2e12a531d6d0fa2d5e63d156f43cff417b1",
+    "components/twinova.roller@1.st": "47b2b8b33d16bef69d8ab143c4e3ce3ba9c9fb8dc06b544d7990f099f678e088",
+    "components/twinova.sensor_diffuse@1.json": "616309237a0d45025c88d37366112a1a84f851a068a7231686d623cfffb2139e",
+    "components/twinova.sink@1.json": "078b3d259353e46b410d57e2bd67276ef1f4d6e0109822656294fb46a27e7d1d",
+    "components/twinova.source@1.json": "257098bb1e4507d8ae3aaf06957ff5bd825b591277e2a12646bfa4161d57c2c6",
+    "plc/Main.ld": "9a91c12d1c1275a12bb9a8f1718fc07daa23508088de5cc61f8f478b5cccf564",
+    "scene.json": "f9eaecbc2103374fad1f71bd4d29d9c812b697b449c9c1d33ebe78e4a787308f"
+  },
+  "format": "twinova-project",
+  "name": "Two belts and a chain transfer",
+  "program": [
+    "plc/Main.ld"
+  ],
+  "scene": "scene.json",
+  "version": 1
+}

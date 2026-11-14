@@ -4,7 +4,7 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
-## v0.1.0 — unreleased
+## v0.1.0 — 2026-11-14
 
 The first runnable slice: one belt conveyor in 3D, driven by a Structured Text program you edit
 and build inside the app, on Windows and Linux.
@@ -143,6 +143,23 @@ and build inside the app, on Windows and Linux.
   - an undeclared name gets a quick fix and Shift+F2, as CODESYS's Auto Declare: class, type proposed from the other
     side of its assignment, initial value and comment, added to the variables table;
   - truST's own completions, such as a call's `IN :=`, go in as snippets, with no `$0` left in the text.
+- The Ladder editor (ROADMAP 4.11): a PLC file ending in `.ld` is a Ladder program, drawn and edited in the PLC pane
+  as CODESYS's LD2 and built to ST for the runtime. The LD button opens it.
+  - Contacts (normally open, negated, rising, falling), coils (set, reset, negated, edges), parallel branches nested
+    without limit, boxes for every function block and function of the program and the standard library, jumps,
+    labels, RETURN and a comment per rung.
+  - A toolbox and the keys insert at the selection. Enter or F2 edits an operand, with completion from truST; Delete,
+    Undo and Redo, and copy, cut and paste of elements and rungs.
+  - Ctrl+B opens a box picker grouped by kind: a new block's instance is named and declared, and its pins are set
+    before the insert.
+  - An undeclared operand gets Auto Declare's offer as a BOOL. The variables table edits the file's declarations as an
+    ST file's.
+  - Online, the wires show the power the runtime computed in that scan, not a recomputation: energised wires thick
+    and coloured, dead ones thick and dashed. Each operand and pin shows its value, and a click writes or forces it.
+  - PLCopen TC6 `<LD>` import and export, read back and run alike.
+  - What TC6 cannot draw (an empty path, a branch closing another's path) is written as a contact on `TRUE`.
+  - Not yet: insertion markers and drag and drop, breakpoints in Ladder, backward jumps, ST inside a rung (4.11b).
+- The ST editor starts in the light theme: Monaco refused a shortened `#fff` token colour, and the editor stayed empty.
 - Breakpoints as HOLD (ROADMAP 4.9), as an S7-1500's:
   - a breakpoint set from the program's gutter or with F9 stops the program, its timers, the plant and virtual time;
     the status bar reads HOLD at the file and line;

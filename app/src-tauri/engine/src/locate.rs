@@ -1,6 +1,8 @@
 //! Where in the project a truST compile error is. truST locates a problem as `at <start>..<end>`, in bytes of the
 //! source it compiled (measured on `6405915`, 2026-11-09; `CompileError` carries only its message); Build rewrites
-//! each location as a file and line, `at plc/Main.st:12`.
+//! each location as a file and line, `at plc/Main.st:12`, or a Ladder file's rung, `at plc/Pump.ld, rung 3`.
+
+use crate::program_files::ProgramFiles;
 
 /// `message` with each `at <start>..<end>` rewritten by `at(start)`; text that only looks like one stays.
 pub(crate) fn rewrite_spans(message: &str, at: impl Fn(usize) -> String) -> String {
@@ -29,16 +31,16 @@ pub(crate) fn line_of(text: &str, offset: usize) -> usize {
 }
 
 /// truST's message for program files it compiled with their paths (`<path>: <problem>` a line): each span rewritten
-/// as the file and line it is in, the label then dropped; a line with no span keeps its label.
-pub(crate) fn locate_in_files(message: &str, files: &[(String, String)]) -> String {
+/// as the place it comes from (`ProgramFiles::placer`), the label then dropped; a line with no span keeps its label.
+pub(crate) fn locate_in_files(message: &str, program: &ProgramFiles) -> String {
     let line = |l: &str| {
         let Some((label, problem)) = l.split_once(": ") else {
             return l.to_string();
         };
-        let Some((path, text)) = files.iter().find(|(path, _)| path == label) else {
+        let Some(place) = program.placer(label) else {
             return l.to_string();
         };
-        let located = rewrite_spans(problem, |start| format!("{path}:{}", line_of(text, start)));
+        let located = rewrite_spans(problem, place);
         if located == problem {
             l.to_string()
         } else {

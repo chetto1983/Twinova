@@ -10,6 +10,7 @@ use twinova_project::Project;
 use twinova_project::model::SignalType;
 
 use crate::locate::locate_in_files;
+use crate::program_files::ProgramFiles;
 use crate::timing::ScanTiming;
 
 /// The scan period of a program that declares no periodic `TASK`: M1's 10 ms.
@@ -44,6 +45,8 @@ impl Port {
 pub struct Controller {
     timing: ScanTiming,
     harness: TestHarness,
+    /// The files truST compiled, Ladder files lowered (`program_files.rs`), in the order of its file ids.
+    sources: Vec<(String, String)>,
     scan_ns: i64,
     declared: Vec<Declared>,
     /// Panel bits pressed since the last scan; each holds for the next scan only.
@@ -62,17 +65,25 @@ fn st_type(ty: SignalType) -> &'static str {
 /// A compile error of the program, at its files and lines. `TestHarness` compiles unlabelled sources, so the failed
 /// program is compiled again as truST's `CompileSession` with each file's path and labelled errors (truST
 /// `host/harness/build.rs`, `source_label`), whose spans are in bytes of that file. A build that succeeds pays nothing.
-fn located(project: &Project, error: &impl ToString) -> String {
-    let files: Vec<SourceFile> = (project.program.iter())
+fn located(program: &ProgramFiles, error: &impl ToString) -> String {
+    let files: Vec<SourceFile> = (program.files.iter())
         .map(|(path, text)| SourceFile::with_path(path.clone(), text.clone()))
         .collect();
     match CompileSession::from_sources(files)
         .label_errors(true)
         .build_runtime()
     {
-        Err(labelled) => locate_in_files(&labelled.to_string(), &project.program),
+        Err(labelled) => locate_in_files(&labelled.to_string(), program),
         Ok(_) => error.to_string(),
     }
+}
+
+fn texts(program: &ProgramFiles) -> Vec<&str> {
+    program
+        .files
+        .iter()
+        .map(|(_, text)| text.as_str())
+        .collect()
 }
 
 impl Controller {
@@ -80,12 +91,9 @@ impl Controller {
     /// signal or a panel button must have that signal's type (BOOL for a button), or Build fails. An address the
     /// program does not declare is a warning, because a real line may leave a signal unused.
     pub fn build(project: &Project) -> Result<(Self, Vec<String>), String> {
-        let sources: Vec<&str> = project
-            .program
-            .iter()
-            .map(|(_, text)| text.as_str())
-            .collect();
-        let harness = TestHarness::from_sources(&sources).map_err(|e| located(project, &e))?;
+        let program = ProgramFiles::of(&project.program)?;
+        let harness =
+            TestHarness::from_sources(&texts(&program)).map_err(|e| located(&program, &e))?;
         let scan_ns = scan_period(&harness)?;
         let runtime = harness.runtime();
         let declared = runtime
@@ -104,6 +112,7 @@ impl Controller {
         let controller = Self {
             timing: ScanTiming::default(),
             harness,
+            sources: program.files,
             scan_ns,
             declared,
             pressed: Vec::new(),
@@ -156,8 +165,9 @@ impl Controller {
         let (checked, warnings) = Self::build(project)?;
         let io = self.harness.runtime().io();
         let images = [("I", io.inputs().to_vec()), ("Q", io.outputs().to_vec())];
-        let sources: Vec<&str> = project.program.iter().map(|(_, t)| t.as_str()).collect();
-        (self.harness.reload_sources(&sources)).map_err(|e| located(project, &e))?;
+        let program = ProgramFiles::of(&project.program)?;
+        (self.harness.reload_sources(&texts(&program))).map_err(|e| located(&program, &e))?;
+        self.sources = program.files;
         self.scan_ns = checked.scan_ns;
         self.timing = ScanTiming::default();
         self.declared = checked.declared;
@@ -288,6 +298,11 @@ impl Controller {
     /// A variable of the program by name, for the UI (M3's `jam`).
     pub fn variable(&self, name: &str) -> Option<Value> {
         self.harness.get_output(name)
+    }
+
+    /// The files truST compiled, in the order of its file ids.
+    pub(crate) fn sources(&self) -> &[(String, String)] {
+        &self.sources
     }
 
     pub(crate) fn harness_mut(&mut self) -> &mut TestHarness {

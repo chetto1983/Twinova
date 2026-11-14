@@ -10,6 +10,8 @@ import type { Problems } from "./analysis";
 import type { Change, Declaration, Force, Target, Watched } from "./monitor";
 import type { Breakpoint, Hold, Log, Resume } from "./debug";
 import type { Proposal, Reference, Span, Template } from "./navigation";
+import type { CatalogEntry } from "./ladder/catalog";
+import type { Lowering, Program } from "./ladder/model";
 
 /** Each invoke is a fetch of its own (Tauri 2.12 `scripts/ipc-protocol.js`, `sendIpcMessage`), so two not awaited
  * may reach the app in either order; WebView2 was measured doing so (CI, 2026-11-13). A command that moves the line
@@ -76,6 +78,17 @@ export const navigation = {
     invoke<Proposal | null>("declare_proposal", { files, file, line, column }),
 };
 
+/** The Ladder editor (ladder_commands.rs): a file read into its tree, which rejects with a `ParseError`, and lowered
+ *  with the program's other files, as Build lowers it. */
+export const ladder = {
+  parse: (text: string) => invoke<Program>("ladder_parse", { text }),
+  print: (program: Program) => invoke<string>("ladder_print", { program }),
+  lowering: (program: [string, string][], file: string) => invoke<Lowering>("ladder_lowering", { program, file }),
+  catalog: (program: [string, string][]) => invoke<CatalogEntry[]>("ladder_catalog", { program }),
+  complete: (file: string, text: string, typed: string) =>
+    invoke<Completion[]>("ladder_completion", { file, text, typed }),
+};
+
 /** Online monitoring and forcing (src-tauri/src/monitor.rs). */
 /** Breakpoints and HOLD (debug_commands.rs): the lines a file's breakpoints landed on, and where the program is held. */
 export const debug = {
@@ -105,8 +118,8 @@ export const monitor = {
 
 /** The variables table's declarations (src-tauri/src/declarations.rs). */
 export const declarations = {
-  of: (text: string) => invoke<Declaration[]>("declarations_of", { text }),
-  edit: (text: string, change: Change) => invoke<string>("edit_declaration", { text, change }),
+  of: (file: string, text: string) => invoke<Declaration[]>("declarations_of", { file, text }),
+  edit: (file: string, text: string, change: Change) => invoke<string>("edit_declaration", { file, text, change }),
   rename: (files: [string, string][], file: string, index: number, newName: string) =>
     invoke<[string, string][]>("rename_declaration", { files, file, index, newName }),
 };

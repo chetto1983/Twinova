@@ -1,0 +1,381 @@
+{
+  "connections": [
+    {
+      "from": [
+        "source",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "belt_a",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "belt_a",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "roller_r",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "roller_r",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "belt_b",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "belt_b",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "sink_ok",
+        "in"
+      ]
+    },
+    {
+      "from": [
+        "chain_transfer",
+        "out"
+      ],
+      "kind": "flow",
+      "to": [
+        "sink_reject",
+        "in"
+      ]
+    },
+    {
+      "device": [
+        "sensor_a",
+        "mount"
+      ],
+      "host": [
+        "roller_r",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "device": [
+        "sensor_b",
+        "mount"
+      ],
+      "host": [
+        "belt_b",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.5,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "device": [
+        "chain_transfer",
+        "mount"
+      ],
+      "host": [
+        "roller_r",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "device": [
+        "sensor_in",
+        "mount"
+      ],
+      "host": [
+        "belt_a",
+        "rail"
+      ],
+      "kind": "mount",
+      "position": [
+        2.95,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "controller": {
+    "panel": []
+  },
+  "groups": [
+    {
+      "children": [
+        "source",
+        "belt_a",
+        "sensor_a"
+      ],
+      "id": "infeed",
+      "name": "Infeed",
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "instances": [
+    {
+      "definition": "twinova.source@1",
+      "id": "source",
+      "name": "Source",
+      "parameters": {},
+      "position": [
+        -0.5,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {}
+    },
+    {
+      "definition": "twinova.belt@1",
+      "id": "belt_a",
+      "name": "Belt A",
+      "parameters": {},
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "run": "%QX0.0",
+        "running": "%IX0.2"
+      }
+    },
+    {
+      "definition": "twinova.roller@1",
+      "id": "roller_r",
+      "name": "Roller R",
+      "parameters": {
+        "left_guard": false,
+        "speed": 0.8
+      },
+      "position": [
+        3.085,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "run": "%QX0.3",
+        "running": "%IX0.5"
+      }
+    },
+    {
+      "definition": "twinova.chain_transfer@1",
+      "id": "chain_transfer",
+      "name": "Chain transfer",
+      "parameters": {},
+      "position": [
+        4.085,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "popup": "%QX0.2",
+        "raised_fb": "%IX0.4"
+      }
+    },
+    {
+      "definition": "twinova.belt@1",
+      "id": "belt_b",
+      "name": "Belt B",
+      "parameters": {
+        "length": 2.0
+      },
+      "position": [
+        5.17,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "run": "%QX0.1",
+        "running": "%IX0.3"
+      }
+    },
+    {
+      "definition": "twinova.sink@1",
+      "id": "sink_ok",
+      "name": "Normal sink",
+      "parameters": {},
+      "position": [
+        7.255,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "count": "%ID4"
+      }
+    },
+    {
+      "definition": "twinova.sink@1",
+      "id": "sink_reject",
+      "name": "Reject sink",
+      "parameters": {},
+      "position": [
+        4.085,
+        0.0,
+        -0.6
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "count": "%ID8"
+      }
+    },
+    {
+      "definition": "twinova.sensor_diffuse@1",
+      "id": "sensor_a",
+      "name": "Sensor a",
+      "parameters": {},
+      "position": [
+        4.085,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "detected": "%IX0.0"
+      }
+    },
+    {
+      "definition": "twinova.sensor_diffuse@1",
+      "id": "sensor_b",
+      "name": "Sensor b",
+      "parameters": {},
+      "position": [
+        5.67,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "detected": "%IX0.1"
+      }
+    },
+    {
+      "definition": "twinova.sensor_diffuse@1",
+      "id": "sensor_in",
+      "name": "Sensor in",
+      "parameters": {},
+      "position": [
+        2.95,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "signals": {
+        "detected": "%IX0.6"
+      }
+    }
+  ]
+}
