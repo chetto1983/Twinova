@@ -6,11 +6,9 @@ use std::collections::HashMap;
 
 use proptest::prelude::*;
 
-use super::run::trace;
 use crate::lower::lower;
-use crate::model::{CoilMode, ContactMode, Element, Program, Rung};
-
-const VARIABLES: [&str; 5] = ["V0", "V1", "V2", "V3", "V4"];
+use crate::model::{CoilMode, ContactMode, Element, Program};
+use crate::test_support::{VARIABLES, program, trace};
 
 #[derive(Default)]
 struct Oracle {
@@ -79,56 +77,6 @@ impl Oracle {
         }
         power
     }
-}
-
-fn variable() -> impl Strategy<Value = Option<String>> {
-    proptest::sample::select(&VARIABLES[..]).prop_map(|v| Some(v.to_string()))
-}
-
-fn element() -> impl Strategy<Value = Element> {
-    let contact = (
-        prop_oneof![
-            Just(ContactMode::Open),
-            Just(ContactMode::Closed),
-            Just(ContactMode::Rising),
-            Just(ContactMode::Falling)
-        ],
-        variable(),
-    )
-        .prop_map(|(mode, operand)| Element::Contact { mode, operand });
-    let coil = (
-        prop_oneof![
-            Just(CoilMode::Normal),
-            Just(CoilMode::Negated),
-            Just(CoilMode::Set),
-            Just(CoilMode::Reset),
-            Just(CoilMode::Rising),
-            Just(CoilMode::Falling)
-        ],
-        variable(),
-    )
-        .prop_map(|(mode, operand)| Element::Coil { mode, operand });
-    prop_oneof![2 => contact, 1 => coil].prop_recursive(3, 24, 4, |inner| {
-        proptest::collection::vec(proptest::collection::vec(inner, 0..4), 2..4)
-            .prop_map(|paths| Element::Branch { paths })
-    })
-}
-
-fn program() -> impl Strategy<Value = Program> {
-    proptest::collection::vec(proptest::collection::vec(element(), 1..5), 1..4).prop_map(|rungs| {
-        Program {
-            declarations: format!("VAR {} : BOOL; END_VAR", VARIABLES.join(", ")),
-            rungs: rungs
-                .into_iter()
-                .map(|elements| Rung {
-                    comment: None,
-                    label: None,
-                    elements,
-                    exit: None,
-                })
-                .collect(),
-        }
-    })
 }
 
 proptest! {

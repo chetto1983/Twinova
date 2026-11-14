@@ -10,6 +10,8 @@ publish = false
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+# PLCopen TC6 XML read in document order (spec, Task 5): the version truST's trust-plcopen already builds. MIT OR Apache-2.0.
+roxmltree = "=0.21.2"
 
 [dev-dependencies]
 # Property tests of the grammar's round trip (CLAUDE.md: property-based tests for codecs). MIT OR Apache-2.0.

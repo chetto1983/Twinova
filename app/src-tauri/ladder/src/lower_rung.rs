@@ -1,7 +1,7 @@
 //! One rung lowered to ST, element by element (`lower.rs` holds the semantics). A power is the text of a BOOL: `TRUE`
 //! at the left rail, else the hidden variable holding the power out of the element before.
 
-use crate::lower::{Block, ElementId, Field, LowerError, Names, Power, Segment};
+use crate::lower::{Block, BoxPins, ElementId, Field, LowerError, Names, Power, Segment};
 use crate::model::{CoilMode, ContactMode, Element, Exit, Pin, Rung};
 
 const RAIL: &str = "TRUE";
@@ -17,6 +17,7 @@ pub(crate) struct Part {
     pub lines: Vec<(usize, ElementId)>,
     pub temps: Vec<String>,
     pub power: Vec<Power>,
+    pub boxes: Vec<(ElementId, BoxPins)>,
 }
 
 impl Part {
@@ -117,6 +118,26 @@ impl<'a> RungLowerer<'a> {
         let name = self.names.fresh(stem);
         self.out.temps.push(name.clone());
         name
+    }
+
+    fn resolved(
+        &mut self,
+        path: &[usize],
+        function: bool,
+        type_name: &str,
+        input: Option<&str>,
+        output: &str,
+    ) {
+        let element = self.id(path);
+        self.out.boxes.push((
+            element,
+            BoxPins {
+                function,
+                type_name: type_name.into(),
+                input: input.map(Into::into),
+                output: output.into(),
+            },
+        ));
     }
 
     fn record(&mut self, path: &[usize], variable: &str) {
@@ -302,9 +323,17 @@ impl<'a> RungLowerer<'a> {
             (self.block)(head)
         } {
             Some(Block::Function) => self.function(head, pins, path, power, rail),
-            Some(Block::Instance { inputs, outputs }) => {
-                self.instance(head, pins, path, power, Some((&inputs, &outputs)))
-            }
+            Some(Block::Instance {
+                type_name,
+                inputs,
+                outputs,
+            }) => self.instance(
+                head,
+                pins,
+                path,
+                power,
+                Some((&type_name, &inputs, &outputs)),
+            ),
             None => self.instance(head, pins, path, power, None),
         }
     }

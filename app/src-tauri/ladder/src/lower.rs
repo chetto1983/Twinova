@@ -23,6 +23,7 @@ use crate::model::{Exit, Program};
 pub enum Block {
     Function,
     Instance {
+        type_name: String,
         inputs: Vec<BlockPin>,
         outputs: Vec<BlockPin>,
     },
@@ -64,6 +65,17 @@ pub struct Power {
     pub variable: String,
 }
 
+/// How a box sits on its rung, as the lowering resolved it: a function or an instance, its block type (empty when
+/// unknown), the input the rung feeds (none for a function that starts the rung) and the output that carries the rung
+/// on. PLCopen's `<block>` needs them all (`plcopen_write.rs`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoxPins {
+    pub function: bool,
+    pub type_name: String,
+    pub input: Option<String>,
+    pub output: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct LowerError {
     pub element: ElementId,
@@ -83,6 +95,7 @@ pub(crate) struct Segment {
 pub struct Lowered {
     pub st: String,
     pub power: Vec<Power>,
+    pub boxes: Vec<(ElementId, BoxPins)>,
     pub errors: Vec<LowerError>,
     declarations: (usize, usize),
     segments: Vec<Segment>,
@@ -258,6 +271,7 @@ fn assemble(
     let mut lowered = Lowered {
         st,
         power: Vec::new(),
+        boxes: Vec::new(),
         errors,
         declarations: (declarations_at, declarations.len()),
         segments: Vec::new(),
@@ -276,6 +290,7 @@ fn assemble(
             .lines
             .extend(part.lines.into_iter().map(|(at, e)| (at + shift, e)));
         lowered.power.extend(part.power);
+        lowered.boxes.extend(part.boxes);
     }
     lowered.st.push_str("END_PROGRAM\n");
     lowered

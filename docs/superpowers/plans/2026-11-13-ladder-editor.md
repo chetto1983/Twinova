@@ -119,6 +119,10 @@ con il piano"), decisions 1 to 8. Research 18, 19 and 20.
   - Commands: `ladder_parse`, `ladder_print`, `ladder_lowering`. The catalogue of boxes moves to Task 6, its picker:
     truST's standard library has no public list of its functions, so its source is that task's inventory.
 - [ ] **Task 5: PLCopen `<LD>` reader and writer,** OIP's tests ported, with the semantic round trip. Commit.
+  - [x] The `<LD>` body: OIP's writer and reader ported on roxmltree, with what random programs showed TC6 cannot draw
+    (spec). OIP's cases, every refusal, and 2000 random programs written and read back, run alike in truST.
+  - [ ] The POU's interface, converted by Twinova from the declarations read with `trust-syntax` (the user's choice),
+    the project wrapper, and the app's commands.
 - [ ] **Task 6: the editor.**
   - The tree, edits and layout in TypeScript (vitest first).
   - The SVG rungs, markers, modifiers, picker, keyboard, undo.

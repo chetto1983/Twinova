@@ -67,6 +67,7 @@ impl RungLowerer<'_> {
                     ),
                 ));
             }
+            self.resolved(path, true, head, None, "OUT");
             let out = self.temp("LD_P");
             self.put(&format!("{out} := "));
             self.call(head, pins, path);
@@ -74,6 +75,7 @@ impl RungLowerer<'_> {
             self.end_line(path);
             return Ok(out);
         }
+        self.resolved(path, true, head, Some("EN"), "ENO");
         // a function whose result goes nowhere does nothing: IEC functions have no side effects
         if let Some(t) = target {
             self.guarded(power, |me| {
@@ -134,8 +136,9 @@ impl RungLowerer<'_> {
         pins: &[Pin],
         path: &[usize],
         power: &str,
-        pins_of: Option<(&[BlockPin], &[BlockPin])>,
+        type_of: Option<(&str, &[BlockPin], &[BlockPin])>,
     ) -> Lowering<String> {
+        let pins_of = type_of.map(|(_, inputs, outputs)| (inputs, outputs));
         let bare: Vec<&Pin> = pins.iter().filter(|p| p.value.is_none()).collect();
         let (ins, outs): (Vec<&Pin>, Vec<&Pin>) = match pins_of {
             Some((_, outputs)) => bare.iter().partition(|p| {
@@ -180,6 +183,13 @@ impl RungLowerer<'_> {
                 format!("cannot tell which pins of '{head}' sit on the rung: name them bare, as in {head}(IN, ..., Q)"),
             ));
         };
+        self.resolved(
+            path,
+            false,
+            type_of.map_or("", |t| t.0),
+            Some(&input),
+            &output,
+        );
         let fed = (!enabled).then_some(input.as_str());
         if enabled {
             self.guarded(power, |me| me.invoke(head, pins, path, None, power));

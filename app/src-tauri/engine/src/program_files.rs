@@ -162,6 +162,7 @@ fn block(runtime: &Runtime, program: &str, head: &str) -> Option<Block> {
                 .collect()
         };
         return Some(Block::Instance {
+            type_name: fb.name.to_string(),
             inputs: pins(ParamDirection::In),
             outputs: pins(ParamDirection::Out),
         });

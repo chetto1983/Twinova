@@ -1,6 +1,6 @@
 use super::*;
 use crate::parse::parse;
-use run::{blocks, lowered};
+use crate::test_support::{blocks, lowered};
 
 #[path = "lower_run_tests.rs"]
 mod run;
