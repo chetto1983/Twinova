@@ -130,6 +130,30 @@ What these do not show:
 - PLCopen's meaning, beyond its structure: the semantic round trip is Task 5's;
 - the power temporaries' cost on a program of a thousand rungs.
 
+### Measured in the plan's Task 9 (a probe outside the repository, 2026-11-14)
+
+The power temporaries against the same lowering without them, on the 4.4a line's program in Ladder (`MAIN_4_4A` of
+`engine/src/program_files_tests.rs`, 9 rungs, 24 temporaries). The baseline was written by hand as OIP lowers: each
+element's power inlined, a condition captured only where a later coil of its rung writes what it reads (2 BOOLs). It
+gives the ST program's fingerprints over 15 s, so it runs the line as the program does. Test profile, truST and Rapier
+at `opt-level = 3` (the workspace's `[profile.dev.package]`), on the 4-core cloud container.
+
+| What | Result |
+|---|---|
+| The whole line, 20 s of virtual time (2000 scans with the physics), best of 5, two rounds | ST program 1.220 and 1.239 s; Ladder 1.220 and 1.143 s; fingerprints equal |
+| The program's scan alone, truST's harness with no scene, 100 000 scans, best of 7, four rounds | the ST program 14.0 to 16.0 µs; the lowering without temporaries 16.1 to 18.8 µs; with them 25.8 to 28.6 µs, +45 to +68 % on the one without |
+
+Consequences:
+- The temporaries stay (decision 5): at a 10 ms scan their 10 µs are 0.1 % of the period, and on the line the physics
+  hides them.
+- Each temporary costs about 0.4 µs in truST's bytecode VM, an assignment read again by the next element. Hypothesis,
+  not measured: a program of 1000 rungs of 5 elements would pay about 2 ms a scan, a fifth of a 10 ms period.
+
+What this does not show:
+- a program of a thousand rungs, as before;
+- the scan with inputs changing: the harness ran with every input FALSE, so the same branches every scan;
+- the release build (`lto`, `opt-level = "s"`), in which Task 1 measured the line.
+
 ## Decisions
 
 1. **A Twinova crate, `twinova-ladder`** (Rust, in the app's workspace), holds:
@@ -186,7 +210,9 @@ What these do not show:
      drawn energised exactly as the program ran.
    - Neither OIP nor CODESYS does this; Twinova can, because its runtime is in the app.
    - The cost of the temporaries is measured (BASELINE OR DROP): a rung's scan with and without them, on a reference
-     program.
+     program. Measured in Task 9 (2026-11-14, below): on the 4.4a line they cost nothing measurable; the program's scan
+     alone takes about 10 µs more, +45 to +68 %. They stay: the drawing's power flow is read from them, and nothing
+     else gives it. A lowering without them when no one monitors is left for when a program's scan shows the cost.
 6. **Online, as LD2's:**
    - energised wires thick and coloured, dead ones thick and dark, unknown ones thin;
    - values beside the operands and on the boxes' pins;

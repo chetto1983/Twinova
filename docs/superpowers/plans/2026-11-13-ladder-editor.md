@@ -124,11 +124,14 @@ con il piano"), decisions 1 to 8. Research 18, 19 and 20.
   - [x] The POU's interface, converted by Twinova from the declarations read with `trust-syntax` (the user's choice),
     the project wrapper, and the app's commands (`ladder_export`, `ladder_import`). The 4.4a line's `Main.ld`,
     exported, imported and run, gives the ST program's fingerprints over 15 s, and exports again to the same file.
-- [ ] **Task 6: the editor.**
+- [x] **Task 6: the editor.**
   - The tree, edits and layout in TypeScript (vitest first).
   - The SVG rungs, markers, modifiers, picker, keyboard, undo.
   - The LD button.
   - Commit.
-- [ ] **Task 7: online:** power and values drawn, write and force from the view. Commit.
-- [ ] **Task 8: the E2E,** `ladder.mjs` (spec test plan). Commit.
-- [ ] **Task 9: documents.** Verification, CHANGELOG, ROADMAP. The pull request, merged when green.
+  - Done in three parts (6a drawing, 6b toolbox and operands, 6c picker, rung heads, copy and paste). The insertion
+    markers and drag and drop were left for ROADMAP 4.11c when the user closed 4.11 (2026-11-14).
+- [x] **Task 7: online:** power and values drawn, write and force from the view. Commit.
+- [x] **Task 8: the E2E,** `ladder.mjs` (spec test plan). Commit.
+- [x] **Task 9: documents.** Verification, CHANGELOG, ROADMAP. The pull request, merged when green.
+  - With the power temporaries' cost against the lowering without them (spec, "Measured in the plan's Task 9").
