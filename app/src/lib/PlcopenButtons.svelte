@@ -1,7 +1,7 @@
 <script lang="ts">
   // PLCopen TC6 XML from the PLC pane (spec 2026-11-13-ladder-editor-design.md, decision 7), through the system
   // dialogs: the Ladder file shown, exported as the editor has it; a file's Ladder programs imported into the program's
-  // tabs, a file it has replaced and a new one added, which Build runs and Save writes.
+  // tabs, a file it has replaced once the user agrees and a new one added, which Build runs and Save writes.
   import { FileDown, FileUp } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { ladder } from "./backend";
@@ -37,9 +37,16 @@
   function importFile(): void {
     ladder
       .importPlcopen()
-      .then((imported) => {
+      .then(async (imported) => {
         if (imported === null) return;
         if (imported.files.length === 0) return onNote([m.plcopen_nothing(), ...imported.notes].join(" · "));
+        const asked = withImported(sources, imported.files).replaced.join(", ");
+        if (
+          asked &&
+          !(await ladder.confirm(m.plcopen_replace_ask({ files: asked }), m.plcopen_import(), m.plcopen_replace()))
+        )
+          return onNote(m.plcopen_kept({ files: asked }));
+        // the tabs as they are once the user answered
         const next = withImported(sources, imported.files);
         sources = next.sources;
         onShow(imported.files[0]?.[0] ?? "");

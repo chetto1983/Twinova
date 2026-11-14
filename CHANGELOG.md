@@ -9,8 +9,8 @@ publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full hi
 ### Added
 
 - PLCopen TC6 `<LD>` from the PLC pane: two buttons in its header export the Ladder file shown, and import a file's
-  Ladder programs: a file the program has takes the imported text, a new one becomes a new program tab, and Build
-  runs them, Save writes them. A program edited in another tool comes back this way. In v0.1.0 import and export were
+  Ladder programs: a file the program has takes the imported text once you agree to replace it, a new one becomes a
+  new program tab, and Build runs them, Save writes them. A program edited in another tool comes back this way. In v0.1.0 import and export were
   the app's commands only, which no button reached.
 - Coding agents export and import PLCopen too: `twinova-agent`'s `export_ladder` writes a Ladder file of the program
   to a path, and `import_ladder` brings a file's Ladder programs in as the app does, answering what it replaced and

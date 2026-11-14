@@ -248,5 +248,8 @@
   "plcopen_imported": "Added {files}",
   "plcopen_nothing": "No Ladder program in the file",
   "plcopen_replaced": "Replaced {files}",
-  "plcopen_build": "Build to run"
+  "plcopen_build": "Build to run",
+  "plcopen_replace_ask": "Replace {files} with the imported program? The tab's text is replaced; what was built stays until Build.",
+  "plcopen_replace": "Replace",
+  "plcopen_kept": "Import cancelled: {files} kept as it was"
 }

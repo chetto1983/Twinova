@@ -71,10 +71,11 @@ Date: 2026-11-14. Spec `2026-11-13-ladder-editor-design.md`, plan `2026-11-13-la
   write the file the system dialogs pick, as the project archives do, and two buttons in the PLC pane's header call
   them. An import brings its programs into the program's tabs, not built yet: a file the program has takes the
   imported text (a first version refused it, and the user pointed out that a program edited in another tool then
-  could not come back), a new one is added. Tested:
+  could not come back), after a system dialog asks to replace it (the user's request), and a new one is added. Tested:
   the commands through a temporary folder (written, read back alike, a file that is not PLCopen, a missing file, a
   folder that is not there); the dialogs' paths and the tabs in vitest; the buttons on the Ladder file's pane in
-  `e2e/ladder.mjs`. Not proven: the dialogs themselves, which tauri-driver cannot drive (as for the archives).
+  `e2e/ladder.mjs`; the question's text, title and button in vitest. Not proven: the dialogs themselves, the question
+  included, which tauri-driver cannot drive (as for the archives).
 - **The same over MCP** (the user: everything the app does must be testable over MCP too): `twinova-agent`'s
   `export_ladder` and `import_ladder` call the engine's `export_ladder` and `import_ladder` as the app's commands do.
   `agent/tests/plcopen.rs`, through a real MCP client on HTTP: the 4.4a line's `Main.ld` exported (the XML carries

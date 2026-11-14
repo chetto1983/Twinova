@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main and PLC windows: core events, and the open and save dialogs for project folders and archives",
+  "description": "The main and PLC windows: core events, the open and save dialogs for project folders, archives and PLCopen files, and the question before an import replaces a file",
   "windows": [
     "main",
     "plc"
@@ -9,6 +9,7 @@
   "permissions": [
     "core:default",
     "dialog:allow-open",
-    "dialog:allow-save"
+    "dialog:allow-save",
+    "dialog:allow-message"
   ]
 }
