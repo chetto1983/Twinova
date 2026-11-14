@@ -9,17 +9,25 @@ export interface Imported {
   notes: string[];
 }
 
-/** The tabs with `files` added as program tabs not built yet, after the program's own, so Build runs them and Save
- *  writes them; or, when a file of the program has one of their paths, those paths, and nothing is added. */
+/** The tabs after an import: a file the program has takes the imported text, a new one is added after the program's
+ *  own tabs; either is a tab Build has not run yet, which Build runs and Save writes. The paths replaced and added. */
 export function withImported(
   sources: Source[],
   files: [string, string][],
-): { sources: Source[] } | { taken: string[] } {
-  const taken = files.map(([path]) => path).filter((path) => sources.some((s) => s.key === path));
-  if (taken.length > 0) return { taken };
-  const added: Source[] = files.map(([path, text]) => ({ key: path, label: path, kind: "program", text, base: "" }));
-  const programs = sources.filter((s) => s.kind === "program");
-  return { sources: [...programs, ...added, ...sources.filter((s) => s.kind !== "program")] };
+): { sources: Source[]; replaced: string[]; added: string[] } {
+  const texts = new Map(files);
+  const replaced = files.map(([path]) => path).filter((path) => sources.some((s) => s.key === path));
+  const added = files.map(([path]) => path).filter((path) => !replaced.includes(path));
+  const kept = sources.map((s) => (texts.has(s.key) ? { ...s, text: texts.get(s.key) ?? s.text } : s));
+  const tabs: Source[] = added.map((path) => ({
+    key: path,
+    label: path,
+    kind: "program",
+    text: texts.get(path) ?? "",
+    base: "",
+  }));
+  const programs = kept.filter((s) => s.kind === "program");
+  return { sources: [...programs, ...tabs, ...kept.filter((s) => s.kind !== "program")], replaced, added };
 }
 
 /** The name the save dialog offers for Ladder file `file`: `plc/Pump.ld` as `Pump.xml`. */

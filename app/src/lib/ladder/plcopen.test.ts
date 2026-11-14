@@ -14,16 +14,28 @@ describe("PLCopen in the PLC pane", () => {
         { key: "plc/Pump.ld", label: "plc/Pump.ld", kind: "program", text: "|A| (X);\n", base: "" },
         SOURCES[1],
       ],
+      replaced: [],
+      added: ["plc/Pump.ld"],
     });
   });
 
-  it("refuses files the program has already, adding none of them", () => {
-    expect(
-      withImported(SOURCES, [
-        ["plc/Pump.ld", ""],
-        ["plc/Main.st", ""],
-      ]),
-    ).toEqual({ taken: ["plc/Main.st"] });
+  it("replaces the text of a file the program has, which stays to build until Build", () => {
+    const pump = tab("plc/Pump.ld", "program", "|A| (X);\n");
+    const next = withImported(
+      [SOURCES[0] as Source, pump, SOURCES[1] as Source],
+      [
+        ["plc/Pump.ld", "|B| (X);\n"],
+        ["plc/Valve.ld", "|C| (Y);\n"],
+      ],
+    );
+    expect(next.replaced).toEqual(["plc/Pump.ld"]);
+    expect(next.added).toEqual(["plc/Valve.ld"]);
+    expect(next.sources.map((s) => [s.key, s.text, s.base])).toEqual([
+      ["plc/Main.st", "PROGRAM Main END_PROGRAM", "PROGRAM Main END_PROGRAM"],
+      ["plc/Pump.ld", "|B| (X);\n", "|A| (X);\n"],
+      ["plc/Valve.ld", "|C| (Y);\n", ""],
+      ["twinova.belt@1", "", ""],
+    ]);
   });
 
   it("offers an export under the file's own name", () => {

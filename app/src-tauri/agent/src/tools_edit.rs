@@ -350,9 +350,10 @@ impl Agent {
     }
 
     #[tool(
-        description = "Add the Ladder programs of a PLCopen TC6 XML file to the program, each as plc/<name>.ld, as \
-                          the app's import does: refused, adding none, when the program has one of their paths. \
-                          Answers the files added and what the file had that was left out. Compiled at build."
+        description = "Bring the Ladder programs of a PLCopen TC6 XML file into the program, each as \
+                          plc/<name>.ld, as the app's import does: a file the program has takes the imported text, \
+                          a new one is added. Answers the files replaced and added, and what the file had that was \
+                          left out. Compiled at build."
     )]
     async fn import_ladder(
         &self,
@@ -362,19 +363,20 @@ impl Agent {
         let imported = plcopen::import_ladder(&xml).map_err(|e| format!("{}: {e}", a.path))?;
         let mut session = self.session()?;
         let program = &mut session.working()?.program;
-        let taken: Vec<&str> = (imported.files.iter())
-            .map(|(path, _)| path.as_str())
-            .filter(|path| program.iter().any(|(p, _)| p == path))
-            .collect();
-        if !taken.is_empty() {
-            return Err(format!(
-                "not imported: {} is a file of the program already",
-                taken.join(", ")
-            ));
+        let (mut replaced, mut added) = (Vec::new(), Vec::new());
+        for (path, text) in imported.files {
+            match program.iter_mut().find(|(p, _)| *p == path) {
+                Some(file) => {
+                    file.1 = text;
+                    replaced.push(path);
+                }
+                None => {
+                    program.push((path.clone(), text));
+                    added.push(path);
+                }
+            }
         }
-        let files: Vec<String> = imported.files.iter().map(|(p, _)| p.clone()).collect();
-        program.extend(imported.files);
-        structured(&json!({ "files": files, "notes": imported.notes }))
+        structured(&json!({ "replaced": replaced, "added": added, "notes": imported.notes }))
     }
 
     #[tool(

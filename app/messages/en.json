@@ -245,7 +245,8 @@
   "plcopen_export": "Export the Ladder file to PLCopen XML",
   "plcopen_import": "Import Ladder programs from PLCopen XML",
   "plcopen_exported": "Written to {file}",
-  "plcopen_imported": "Imported {files}: Build to run",
-  "plcopen_taken": "Not imported: {files} is a file of the program already",
-  "plcopen_nothing": "No Ladder program in the file"
+  "plcopen_imported": "Added {files}",
+  "plcopen_nothing": "No Ladder program in the file",
+  "plcopen_replaced": "Replaced {files}",
+  "plcopen_build": "Build to run"
 }

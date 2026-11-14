@@ -1,7 +1,7 @@
 //! PLCopen TC6 `<LD>` over MCP (spec 2026-11-13-ladder-editor-design.md, decision 7): what the app's PLC pane exports
-//! and imports through the system dialogs, an agent does with paths. The 4.4a line's Main.ld is exported, refused as an
-//! import into its own program, imported again under another name, exported again to the same file, built, and run
-//! beside it.
+//! and imports through the system dialogs, an agent does with paths. The 4.4a line's Main.ld is exported, edited outside
+//! and imported over itself, imported again under another name, exported again to the same file, built, and run beside
+//! it.
 
 mod common;
 
@@ -43,9 +43,20 @@ async fn an_agent_exports_a_ladder_program_and_imports_it_back() {
         "plc/Pump.ld is not a file of the program"
     );
 
+    // edited in another tool and imported again, the file the program has takes the new text
+    let edited = folder.path().join("Main-edited.xml");
+    assert!(xml.contains("T#800MS"), "{xml}");
+    std::fs::write(&edited, xml.replace("T#800MS", "T#900MS")).unwrap();
     assert_eq!(
-        refused(&c, "import_ladder", json!({ "path": exported })).await,
-        "not imported: plc/Main.ld is a file of the program already"
+        ok(&c, "import_ladder", json!({ "path": edited })).await,
+        json!({ "replaced": ["plc/Main.ld"], "added": [], "notes": [] })
+    );
+    let text = ok(&c, "read_source", json!({ "file": "plc/Main.ld" })).await;
+    assert!(
+        text.as_str()
+            .unwrap()
+            .contains("deck_clear(IN, PT := T#900MS"),
+        "{text}"
     );
     let nowhere = folder.path().join("no/such/folder.xml");
     assert!(
@@ -69,7 +80,8 @@ async fn an_agent_exports_a_ladder_program_and_imports_it_back() {
     let renamed = xml.replace(r#"name="Main""#, r#"name="Copy""#);
     std::fs::write(&copy, &renamed).unwrap();
     let imported = ok(&c, "import_ladder", json!({ "path": copy })).await;
-    assert_eq!(imported["files"], json!(["plc/Copy.ld"]));
+    assert_eq!(imported["added"], json!(["plc/Copy.ld"]));
+    assert_eq!(imported["replaced"], json!([]));
     let program = &ok(&c, "describe", json!({})).await["program"];
     assert_eq!(program, &json!(["plc/Main.ld", "plc/Copy.ld"]));
     // the round trip is semantic (spec, decision 7): read back, the program exports to the same file

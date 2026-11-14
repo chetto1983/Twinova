@@ -1,7 +1,7 @@
 <script lang="ts">
   // PLCopen TC6 XML from the PLC pane (spec 2026-11-13-ladder-editor-design.md, decision 7), through the system
-  // dialogs: the Ladder file shown, exported as the editor has it; a file's Ladder programs imported as new program
-  // tabs, which Build runs and Save writes.
+  // dialogs: the Ladder file shown, exported as the editor has it; a file's Ladder programs imported into the program's
+  // tabs, a file it has replaced and a new one added, which Build runs and Save writes.
   import { FileDown, FileUp } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { ladder } from "./backend";
@@ -41,11 +41,13 @@
         if (imported === null) return;
         if (imported.files.length === 0) return onNote([m.plcopen_nothing(), ...imported.notes].join(" · "));
         const next = withImported(sources, imported.files);
-        if ("taken" in next) return onNote(m.plcopen_taken({ files: next.taken.join(", ") }));
-        const paths = imported.files.map(([path]) => path).join(", ");
         sources = next.sources;
         onShow(imported.files[0]?.[0] ?? "");
-        onNote([m.plcopen_imported({ files: paths }), ...imported.notes].join(" · "));
+        const done = [
+          ...(next.replaced.length > 0 ? [m.plcopen_replaced({ files: next.replaced.join(", ") })] : []),
+          ...(next.added.length > 0 ? [m.plcopen_imported({ files: next.added.join(", ") })] : []),
+        ];
+        onNote([...done, m.plcopen_build(), ...imported.notes].join(" · "));
       })
       .catch(fail);
   }

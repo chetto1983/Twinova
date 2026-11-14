@@ -69,16 +69,18 @@ Date: 2026-11-14. Spec `2026-11-13-ladder-editor-design.md`, plan `2026-11-13-la
 - **PLCopen `<LD>` was not reachable from the app** (2026-11-14, after v0.1.0, found while writing the README): Task 5
   made it two commands, `ladder_export` and `ladder_import`, and no part of the webview called them. They now read and
   write the file the system dialogs pick, as the project archives do, and two buttons in the PLC pane's header call
-  them; an import adds its programs as program tabs not built yet, and refuses a path the program has. Tested:
+  them. An import brings its programs into the program's tabs, not built yet: a file the program has takes the
+  imported text (a first version refused it, and the user pointed out that a program edited in another tool then
+  could not come back), a new one is added. Tested:
   the commands through a temporary folder (written, read back alike, a file that is not PLCopen, a missing file, a
   folder that is not there); the dialogs' paths and the tabs in vitest; the buttons on the Ladder file's pane in
   `e2e/ladder.mjs`. Not proven: the dialogs themselves, which tauri-driver cannot drive (as for the archives).
 - **The same over MCP** (the user: everything the app does must be testable over MCP too): `twinova-agent`'s
   `export_ladder` and `import_ladder` call the engine's `export_ladder` and `import_ladder` as the app's commands do.
   `agent/tests/plcopen.rs`, through a real MCP client on HTTP: the 4.4a line's `Main.ld` exported (the XML carries
-  `<LD>` and the default date), an unknown file and an unwritable path refused, the export refused as an import into
-  its own program, a missing file refused, the same XML imported as `Copy`, exported again to the same file, built and
-  run 2 s beside `Main`.
+  `<LD>` and the default date); edited outside (`deck_clear`'s PT from 800 to 900 ms) and imported over itself, the
+  program's `Main.ld` reads the new time; an unknown file, an unwritable path and a missing file refused; the XML
+  imported as `Copy`, exported again to the same file, built and run 2 s beside `Main`.
 
 ## What this does not prove
 
