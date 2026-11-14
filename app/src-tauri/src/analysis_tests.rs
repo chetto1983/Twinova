@@ -96,6 +96,25 @@ fn a_broken_program_shows_its_errors_before_build() {
     );
 }
 
+/// A Ladder file's rungs answer for its own variables only: a name they use is still unused in an ST file after it.
+#[test]
+fn an_st_file_after_a_ladder_file_keeps_its_own_unused_variables() {
+    let (app, mut project) = opened("two_belts_diverter");
+    let ld = "VAR spare : BOOL; END_VAR\n|spare| (spare);\n";
+    let st = "PROGRAM Other\nVAR\n    spare : BOOL;\nEND_VAR\nEND_PROGRAM\n";
+    project.program.push(("plc/Pump.ld".into(), ld.into()));
+    project.program.push(("plc/Other.st".into(), st.into()));
+    let found = analyzed(&app, &project);
+    let unused = |file: &str| -> Vec<String> {
+        (found[file].iter())
+            .filter(|p| p.code == "W001")
+            .map(|p| p.message.clone())
+            .collect()
+    };
+    assert_eq!(unused("plc/Other.st"), ["unused variable 'spare'"]);
+    assert_eq!(unused("plc/Pump.ld"), Vec::<String>::new());
+}
+
 /// A Ladder file reaches the frontend as its declarations alone: their problems show at the file's own lines and
 /// columns, and the ST files see its program.
 #[test]

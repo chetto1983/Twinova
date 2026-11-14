@@ -449,3 +449,15 @@ fn an_element_with_no_local_id_takes_no_other_element_s_place() {
     let body = format!("{rail}{}{unnamed}", symbol("coil", 2, "X", "", &[1]));
     assert_eq!(read(&body).unwrap(), "(X);\n(* note *)\n;\n");
 }
+
+#[test]
+fn a_connection_naming_no_element_links_to_none() {
+    let rail = "<leftPowerRail localId=\"1\"><position x=\"0\" y=\"0\"/><connectionPointOut formalParameter=\"\"/></leftPowerRail>";
+    let contact = "<contact localId=\"2\"><position x=\"0\" y=\"0\"/><connectionPointIn><connection/></connectionPointIn>\
+                   <connectionPointOut/><variable>a</variable></contact>";
+    let body = format!("{rail}{contact}{}", symbol("coil", 3, "q", "", &[2]));
+    assert_eq!(
+        read(&body).unwrap_err(),
+        "POU 'P': an element of its ladder is not connected to the left rail, so the POU was left out"
+    );
+}
