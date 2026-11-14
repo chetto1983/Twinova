@@ -40,6 +40,14 @@ on:
     - cron: "13 5 * * 1"
   workflow_dispatch:
 
+# A newer push to a pull request makes its older run moot, as in ci.yml (PR #51's superseded runs held the runners for
+# hours). On main every run measures a commit and saves it, so none is cancelled there (the user, 2026-11-14): each run
+# off a pull request has a group of its own, since a group keeps one pending run and cancels the one pending before it
+# whatever cancel-in-progress says (GitHub docs, "Control the concurrency of workflows and jobs").
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
