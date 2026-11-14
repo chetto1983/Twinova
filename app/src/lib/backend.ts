@@ -83,6 +83,8 @@ export const ladder = {
   parse: (text: string) => invoke<Program>("ladder_parse", { text }),
   print: (program: Program) => invoke<string>("ladder_print", { program }),
   lowering: (program: [string, string][], file: string) => invoke<Lowering>("ladder_lowering", { program, file }),
+  complete: (file: string, text: string, typed: string) =>
+    invoke<Completion[]>("ladder_completion", { file, text, typed }),
 };
 
 /** Online monitoring and forcing (src-tauri/src/monitor.rs). */

@@ -181,3 +181,14 @@ const NEW: Record<Exclude<Placed, "branch">, Element> = {
 /** The rungs with a new, blank element of the toolbox placed by the selection. */
 export const place = (rungs: readonly Rung[], s: Selection, what: Placed): Edit =>
   what === "branch" ? addBranch(rungs, s) : insertElement(rungs, s, NEW[what]);
+
+/** The selected contact's or coil's operand, or box's head, set to `text`: blank leaves it to fill (`???`). */
+export function setOperand(rungs: readonly Rung[], s: Selection, text: string): Edit {
+  const next = copy(rungs);
+  const el = elementAt(next, s);
+  const value = text.trim() === "" ? null : text.trim();
+  if (el?.kind === "contact" || el?.kind === "coil") el.operand = value;
+  else if (el?.kind === "box") el.head = value;
+  else return unchanged(rungs, s);
+  return { rungs: next, selection: s };
+}

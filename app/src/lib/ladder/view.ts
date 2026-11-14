@@ -27,8 +27,9 @@ export function selectionOf(rung: string | undefined, path: string | undefined):
   return { rung: Number(rung), path: path ? path.split(".").map(Number) : [] };
 }
 
-/** What a key does in the Ladder view, CODESYS's keys: delete, undo, redo, Left and Right along the elements, Escape. */
-export type KeyAction = "delete" | "undo" | "redo" | "left" | "right" | "escape";
+/** What a key does in the Ladder view, CODESYS's keys: delete, undo, redo, Left and Right along the elements, Escape,
+ *  and Enter or F2 to type the selected element's operand. */
+export type KeyAction = "delete" | "undo" | "redo" | "left" | "right" | "escape" | "edit";
 
 export function keyAction(e: { key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }): KeyAction | null {
   const ctrl = e.ctrlKey || e.metaKey;
@@ -42,6 +43,8 @@ export function keyAction(e: { key: string; ctrlKey: boolean; metaKey: boolean; 
     arrowleft: "left",
     arrowright: "right",
     escape: "escape",
+    enter: "edit",
+    f2: "edit",
   };
   return plain[key] ?? null;
 }

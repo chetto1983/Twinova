@@ -8,6 +8,7 @@ import {
   insertElement,
   modify,
   place,
+  setOperand,
   removeSelected,
   step,
   takesModifier,
@@ -167,5 +168,20 @@ describe("the toolbox", () => {
     expect(text(place(rungs, at(0), "coil"))).toEqual(["|Start| |/Stop| (Motor) (?)"]);
     expect(text(place(rungs, at(0, 1), "box"))).toEqual(["|Start| |/Stop| ?() (Motor)"]);
     expect(place(rungs, at(0, 0), "branch").selection).toEqual(at(0, 1, 1));
+  });
+});
+
+describe("an operand typed in", () => {
+  it("names a contact's or a coil's variable, or a box's head; blank leaves it to fill", () => {
+    const rungs = [rung(NO, { kind: "box", head: null, pins: [] }, COIL)];
+    expect(text(setOperand(rungs, at(0, 0), " Start "))).toEqual(["|Start| ?() (?)"]);
+    expect(text(setOperand(rungs, at(0, 1), "T1"))).toEqual(["|?| T1() (?)"]);
+    expect(text(setOperand(rungs, at(0, 2), "Motor"))).toEqual(["|?| ?() (Motor)"]);
+    const started = setOperand(rungs, at(0, 0), "Start");
+    expect(started.selection).toEqual(at(0, 0));
+    expect(text(setOperand(started.rungs, at(0, 0), "  "))).toEqual(["|?| ?() (?)"]);
+    expect(setOperand(rungs, at(0), "X").rungs).toEqual(rungs);
+    const branched = [rung({ kind: "branch", paths: [[], []] })];
+    expect(setOperand(branched, at(0, 0), "X").rungs).toEqual(branched);
   });
 });

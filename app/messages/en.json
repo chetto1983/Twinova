@@ -209,5 +209,9 @@
   "ladder_reset": "Reset (R)",
   "ladder_delete": "Delete the selection (Del)",
   "ladder_undo": "Undo (Ctrl+Z)",
-  "ladder_redo": "Redo (Ctrl+Y)"
+  "ladder_redo": "Redo (Ctrl+Y)",
+  "ladder_operand": "Operand of the selected element",
+  "ladder_candidates": "Names that fit",
+  "ladder_undeclared": "{name} is declared nowhere.",
+  "ladder_declare_bool": "Declare {name} : BOOL"
 }

@@ -7,6 +7,7 @@ pub mod demo;
 pub mod edit_commands;
 mod frontend;
 pub mod ladder_commands;
+mod ladder_operand;
 mod ladder_table;
 pub mod lsp_files;
 pub mod monitor;
@@ -50,6 +51,7 @@ pub fn run() {
             ladder_commands::ladder_lowering,
             ladder_commands::ladder_export,
             ladder_commands::ladder_import,
+            ladder_operand::ladder_completion,
             navigation::definition,
             navigation::references,
             call_templates::call_template,

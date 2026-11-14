@@ -63,6 +63,7 @@ describe("the Ladder view's reading of a file", () => {
       key("Z", { metaKey: true, shiftKey: true }),
       key("y", { ctrlKey: true }),
     ]).toEqual(["undo", "redo", "redo"]);
+    expect([key("Enter"), key("F2")]).toEqual(["edit", "edit"]);
     expect([key("a"), key("Delete", { ctrlKey: true }), key("c", { ctrlKey: true })]).toEqual([null, null, null]);
   });
 });

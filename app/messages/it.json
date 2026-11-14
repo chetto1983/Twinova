@@ -209,5 +209,9 @@
   "ladder_reset": "Reset (R)",
   "ladder_delete": "Elimina la selezione (Canc)",
   "ladder_undo": "Annulla (Ctrl+Z)",
-  "ladder_redo": "Ripeti (Ctrl+Y)"
+  "ladder_redo": "Ripeti (Ctrl+Y)",
+  "ladder_operand": "Operando dell'elemento selezionato",
+  "ladder_candidates": "Nomi adatti",
+  "ladder_undeclared": "{name} non è dichiarato.",
+  "ladder_declare_bool": "Dichiara {name} : BOOL"
 }

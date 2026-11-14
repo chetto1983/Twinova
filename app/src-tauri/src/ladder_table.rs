@@ -6,7 +6,7 @@ use twinova_ladder::{declarations_only, declarations_prefix, parse, program_name
 
 use crate::declarations::{Change, Declaration, declarations, edit};
 
-const END: &str = "\nEND_PROGRAM\n";
+pub(crate) const END: &str = "\nEND_PROGRAM\n";
 
 /// Whether `file` is a Ladder file, whose table goes through this module.
 pub(crate) fn is_ladder(file: &str) -> bool {

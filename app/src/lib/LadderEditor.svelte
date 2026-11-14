@@ -4,17 +4,19 @@
   // lowering, and laid out (ladder/layout.ts). An edit is a transform on the tree (ladder/edit.ts) that Rust prints back
   // as the file's text, so the text and the drawing never disagree.
   import { m } from "../paraglide/messages.js";
-  import { ladder } from "./backend";
+  import { declarations, ladder } from "./backend";
   import { debounce } from "./analysis";
   import { buildArgs, type Source } from "./sources";
   import { layoutRungs } from "./ladder/layout";
   import { keyAction, lineOf, resolver, rungErrors, selectionOf } from "./ladder/view";
-  import { addRung, elementAt, modify, place, removeSelected, step } from "./ladder/edit";
+  import { addRung, elementAt, modify, place, removeSelected, setOperand, step } from "./ladder/edit";
+  import { boolRow, declarable, operandOf, roleOf } from "./ladder/operand";
   import type { Edit, Modifier, Selection } from "./ladder/edit";
   import { History } from "./ladder/history";
   import type { Lowering, ParseError, Program } from "./ladder/model";
   import LadderRung from "./LadderRung.svelte";
   import LadderToolbar, { type Tool } from "./LadderToolbar.svelte";
+  import LadderOperand from "./LadderOperand.svelte";
 
   let { source, sources, onText }: { source: Source; sources: Source[]; onText: (text: string) => void } = $props();
   // the tree of the text it was read from: an edit starts only from the text on screen, never from a stale tree
@@ -23,6 +25,10 @@
   let unreadable = $state("");
   let failed = $state("");
   let selection = $state<Selection | null>(null);
+  // the element whose operand is being typed, and a contact's or coil's operand typed that nothing declares
+  let editing = $state<Selection | null>(null);
+  let undeclared = $state<string | null>(null);
+  let view: HTMLDivElement | undefined = $state();
   const histories = new Map<string, History>();
   let changes = $state(0);
 
@@ -54,8 +60,12 @@
   const canUndo = $derived(changes >= 0 && history.canUndo);
   const canRedo = $derived(changes >= 0 && history.canRedo);
 
-  async function commit(edit: Edit): Promise<void> {
-    if (!editable || !program) return;
+  const selected = $derived(program && selection ? elementAt(program.rungs, selection) : null);
+  const pou = $derived(source.key.replace(/^.*\//, "").replace(/\.ld$/, ""));
+
+  /** The file's text after `edit`, given to the editor; null when it changed nothing or could not print. */
+  async function commit(edit: Edit): Promise<string | null> {
+    if (!editable || !program) return null;
     const next: Program = { declarations: program.declarations, rungs: edit.rungs };
     let text: string;
     try {
@@ -63,14 +73,43 @@
       failed = "";
     } catch (e) {
       failed = String(e);
-      return;
+      return null;
     }
     selection = edit.selection;
-    if (text === source.text) return;
+    if (text === source.text) return null;
+    keep(text);
+    read = { key: source.key, text, program: next };
+    return text;
+  }
+
+  /** `text` as the file's, the one it replaces kept for Undo. */
+  function keep(text: string): void {
     history.record(source.text);
     changes++;
-    read = { key: source.key, text, program: next };
     onText(text);
+  }
+
+  async function typedIn(at: Selection, operand: string): Promise<void> {
+    editing = null;
+    view?.focus();
+    if (!program) return;
+    const bit = roleOf(elementAt(program.rungs, at)) === "bit";
+    const text = await commit(setOperand(program.rungs, at, operand));
+    const name = operand.trim();
+    if (text === null || !bit || !declarable(name)) return;
+    // Auto Declare (4.10): what truST knows by this name, the file's variables and the globals, is declared already
+    const known = await ladder.complete(source.key, text, name).catch(() => []);
+    const same = known.some((c) => c.kind === "variable" && c.label.toLowerCase() === name.toLowerCase());
+    undeclared = same ? null : name;
+  }
+
+  async function declare(name: string): Promise<void> {
+    undeclared = null;
+    try {
+      keep(await declarations.edit(source.key, source.text, { op: "add", row: boolRow(pou, name) }));
+    } catch (e) {
+      failed = String(e);
+    }
   }
 
   function travel(back: boolean): void {
@@ -95,7 +134,7 @@
 
   function onclick(e: MouseEvent): void {
     const target = e.target as globalThis.Element;
-    if (target.closest("[role=toolbar]")) return;
+    if (target.closest("[role=toolbar], .operand, .declare")) return;
     const rung = target.closest<HTMLElement>("[data-rung]")?.dataset.rung;
     selection = selectionOf(rung, target.closest("[data-path]")?.getAttribute("data-path") ?? undefined);
   }
@@ -105,7 +144,8 @@
     if (!action) return;
     e.preventDefault();
     if (action === "undo" || action === "redo" || action === "delete") return onTool(action);
-    if (action === "escape") selection = null;
+    if (action === "edit") editing = roleOf(selected) ? selection : null;
+    else if (action === "escape") selection = null;
     else if (program && selection) selection = step(program.rungs, selection, action === "left" ? -1 : 1) ?? selection;
   }
 </script>
@@ -118,19 +158,21 @@
   role="application"
   aria-label={m.ladder_view({ file: source.label })}
   tabindex="0"
+  bind:this={view}
   {onclick}
+  ondblclick={() => (editing = roleOf(selected) ? selection : null)}
   {onkeydown}
 >
-  <LadderToolbar
-    {editable}
-    selected={!!selection}
-    element={program && selection ? elementAt(program.rungs, selection) : null}
-    {canUndo}
-    {canRedo}
-    {onTool}
-    {onModifier}
-  />
+  <LadderToolbar {editable} selected={!!selection} element={selected} {canUndo} {canRedo} {onTool} {onModifier} />
   {#if unreadable || failed}<p class="note" role="status">{unreadable || failed}</p>{/if}
+  {#if undeclared}
+    {@const name = undeclared}
+    <p class="declare" role="status">
+      {m.ladder_undeclared({ name })}
+      <button onclick={() => declare(name)}>{m.ladder_declare_bool({ name })}</button>
+      <button aria-label="✕" onclick={() => (undeclared = null)}>✕</button>
+    </p>
+  {/if}
   {#if program}
     {#each program.rungs as rung, i (i)}
       {@const errors = rungErrors(lowering, i)}
@@ -145,7 +187,33 @@
           {#if rung.label}<span class="label">{rung.label}:</span>{/if}
           {#if rung.comment}<span class="comment">{rung.comment}</span>{/if}
         </header>
-        {#if layouts[i]}<LadderRung layout={layouts[i]} selected={selection?.rung === i ? selection.path : null} />{/if}
+        {#if layouts[i]}
+          {@const layout = layouts[i]}
+          {@const at = editing?.rung === i ? editing : null}
+          {@const node = at && layout.nodes.find((n) => "path" in n && n.path.join() === at.path.join())}
+          <div class="drawing">
+            <LadderRung {layout} selected={selection?.rung === i ? selection.path : null} />
+            {#if at && node && program}
+              {@const el = elementAt(program.rungs, at)}
+              {@const role = roleOf(el)}
+              {#if role}
+                <div class="place" style="left: {node.x - 4}px; top: {node.y - 20}px; width: {node.w + 40}px">
+                  <LadderOperand
+                    value={operandOf(el)}
+                    {role}
+                    file={source.key}
+                    text={source.text}
+                    onCommit={(operand) => typedIn(at, operand)}
+                    onCancel={() => {
+                      editing = null;
+                      view?.focus();
+                    }}
+                  />
+                </div>
+              {/if}
+            {/if}
+          </div>
+        {/if}
         {#each errors as error, k (k)}<p class="error">{error}</p>{/each}
       </section>
     {/each}
@@ -188,6 +256,24 @@
   .comment {
     white-space: pre-wrap;
     color: var(--color-text-faint);
+  }
+  .drawing,
+  .place {
+    position: relative;
+  }
+  .place {
+    position: absolute;
+  }
+  .declare {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 10px;
+    font-size: 11px;
+    color: var(--color-warning);
+  }
+  .declare button {
+    font-size: 10px;
   }
   .note,
   .error {
