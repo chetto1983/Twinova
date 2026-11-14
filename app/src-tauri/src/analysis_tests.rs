@@ -118,6 +118,12 @@ fn a_ladder_file_shows_the_problems_of_its_declarations_where_it_has_them() {
         })
         .collect();
     assert_eq!(errors, ["1:9-1:19 E102", "4:9-4:16 E102"]);
+    // the rungs use y: the frontend, which reads the declarations alone, would call it unused
+    let unused: Vec<String> = (found["plc/Pump.ld"].iter())
+        .filter(|p| p.code == "W001")
+        .map(|p| p.message.clone())
+        .collect();
+    assert_eq!(unused, ["unused variable 'x'", "unused variable 'z'"]);
     assert_eq!(
         found["plc/Bad.ld"],
         [],
