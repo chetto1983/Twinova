@@ -6,7 +6,7 @@
 use serde::Serialize;
 use twinova_engine::plcopen::{Imported, export_ladder, import_ladder};
 use twinova_engine::program_files::ProgramFiles;
-use twinova_ladder::{LowerError, ParseError, Power, Program, parse, print};
+use twinova_ladder::{BoxPins, ElementId, LowerError, ParseError, Power, Program, parse, print};
 
 #[tauri::command]
 pub fn ladder_parse(text: String) -> Result<Program, ParseError> {
@@ -18,10 +18,12 @@ pub fn ladder_print(program: Program) -> String {
     print(&program)
 }
 
-/// A Ladder file lowered, as the editor draws it.
+/// A Ladder file lowered, as the editor draws it: each element's power, how each box sits on its rung, and the rungs
+/// that do not lower.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Lowering {
     pub power: Vec<Power>,
+    pub boxes: Vec<(ElementId, BoxPins)>,
     pub errors: Vec<LowerError>,
 }
 
@@ -31,6 +33,7 @@ pub fn ladder_lowering(program: Vec<(String, String)>, file: String) -> Result<L
     let lowered = ProgramFiles::ladder(&program, &file)?;
     Ok(Lowering {
         power: lowered.power,
+        boxes: lowered.boxes,
         errors: lowered.errors,
     })
 }

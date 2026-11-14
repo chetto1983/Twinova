@@ -170,7 +170,7 @@
     const tab = shown();
     if (!tab) return;
     try {
-      tab.text = await declarations.edit(tab.text, { op: "add", row });
+      tab.text = await declarations.edit(fileOf(tab), tab.text, { op: "add", row });
       declaring = null;
     } catch (e) {
       declareError = String(e);

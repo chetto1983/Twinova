@@ -56,6 +56,7 @@ fn a_file_lowers_to_the_power_of_each_element_and_its_rungs_that_do_not() {
                 {"element": {"rung": 0, "path": [0]}, "variable": "LD_P1"},
                 {"element": {"rung": 0, "path": [1]}, "variable": "LD_P1"}
             ],
+            "boxes": [],
             "errors": [
                 {"element": {"rung": 1, "path": [0]}, "message": "This coil has no variable yet: the ? on this rung"}
             ]
@@ -64,6 +65,19 @@ fn a_file_lowers_to_the_power_of_each_element_and_its_rungs_that_do_not() {
     assert_eq!(
         ladder_lowering(program, "plc/Other.ld".into()).unwrap_err(),
         "plc/Other.ld is not a Ladder file of the program"
+    );
+}
+
+#[test]
+fn a_box_comes_with_its_type_and_the_pins_the_rung_feeds_and_carries_on() {
+    let program = vec![(
+        "plc/Pump.ld".to_string(),
+        "VAR A, X : BOOL; T1 : TON; END_VAR\n|A| T1(PT := T#1s) (X);".to_string(),
+    )];
+    let lowering = ladder_lowering(program, "plc/Pump.ld".into()).unwrap();
+    assert_eq!(
+        serde_json::to_value(&lowering.boxes).unwrap(),
+        json!([[{"rung": 0, "path": [1]}, {"function": false, "type_name": "TON", "input": "IN", "output": "Q"}]])
     );
 }
 

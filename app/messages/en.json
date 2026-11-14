@@ -125,7 +125,7 @@
   "ui_organizer": "PLC organizer",
   "ui_programs": "Programs",
   "ui_function_blocks": "Function blocks",
-  "ui_ladder_unavailable": "This runtime currently supports Structured Text. Ladder is not available.",
+  "ui_ladder_unavailable": "Ladder is for the PLC's .ld files: open one to draw it.",
   "ui_last": "Last",
   "ui_average": "Average",
   "ui_maximum": "Maximum",
@@ -190,5 +190,10 @@
   "call_required": "Mandatory parameters",
   "declare_action": "Declare {name}",
   "declare_title": "Declare variable",
-  "declare_cancel": "Cancel"
+  "declare_cancel": "Cancel",
+  "ladder_view": "Ladder diagram of {file}",
+  "ladder_rung": "Rung {number}",
+  "ladder_unreadable": "Line {line} does not read as Ladder: {message}",
+  "ladder_drawing": "Ladder: draw the file's rungs",
+  "ladder_text": "Text: edit the file as written"
 }

@@ -125,7 +125,7 @@
   "ui_organizer": "Organizer PLC",
   "ui_programs": "Programmi",
   "ui_function_blocks": "Blocchi funzione",
-  "ui_ladder_unavailable": "Questo runtime supporta Structured Text. Ladder non è ancora disponibile.",
+  "ui_ladder_unavailable": "Il Ladder è per i file .ld del PLC: aprine uno per disegnarlo.",
   "ui_last": "Ultimo",
   "ui_average": "Medio",
   "ui_maximum": "Massimo",
@@ -190,5 +190,10 @@
   "call_required": "Parametri obbligatori",
   "declare_action": "Dichiara {name}",
   "declare_title": "Dichiara variabile",
-  "declare_cancel": "Annulla"
+  "declare_cancel": "Annulla",
+  "ladder_view": "Schema Ladder di {file}",
+  "ladder_rung": "Segmento {number}",
+  "ladder_unreadable": "La riga {line} non si legge come Ladder: {message}",
+  "ladder_drawing": "Ladder: disegna i segmenti del file",
+  "ladder_text": "Testo: modifica il file come è scritto"
 }

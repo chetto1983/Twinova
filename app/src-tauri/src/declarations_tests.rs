@@ -221,7 +221,7 @@ fn the_diverter_s_program_reads_whole() {
         "/project/tests/fixtures/valid/two_belts_diverter/plc/Main.st"
     );
     let text = std::fs::read_to_string(path).unwrap();
-    let rows = declarations_of(text.clone());
+    let rows = declarations_of("plc/Main.st".into(), text.clone());
     let detected_a = Declaration {
         address: Some("%IX0.0".into()),
         ..row("Main", "detected_a", "VAR", "BOOL")
@@ -243,7 +243,12 @@ fn the_diverter_s_program_reads_whole() {
     );
     let text = &renamed.unwrap()[0].1;
     assert!(text.contains("eye_a AT %IX0.0 : BOOL;") && text.contains("arrived(CLK := eye_a);"));
-    let edited = edit_declaration(text.clone(), Change::Delete { index: 0 }).unwrap();
+    let edited = edit_declaration(
+        "plc/Main.st".into(),
+        text.clone(),
+        Change::Delete { index: 0 },
+    )
+    .unwrap();
     assert!(!edited.contains("eye_a AT"));
 }
 

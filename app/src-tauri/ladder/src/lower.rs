@@ -68,7 +68,7 @@ pub struct Power {
 /// How a box sits on its rung, as the lowering resolved it: a function or an instance, its block type (empty when
 /// unknown), the input the rung feeds (none for a function that starts the rung) and the output that carries the rung
 /// on. PLCopen's `<block>` needs them all (`plcopen_write.rs`).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BoxPins {
     pub function: bool,
     pub type_name: String,

@@ -15,6 +15,7 @@ import {
   backend,
   debug,
   declarations,
+  ladder,
   monitor,
   navigation,
   onDiskSources,
@@ -118,14 +119,16 @@ describe("backend bridge", () => {
     await monitor.force(target, "5");
     await monitor.release(target);
     await monitor.writeValue(target, "6");
-    await declarations.of("PROGRAM Main END_PROGRAM");
-    await declarations.edit("T", { op: "add", row });
+    await declarations.of("plc/Main.st", "PROGRAM Main END_PROGRAM");
+    await declarations.edit("plc/Main.ld", "T", { op: "add", row });
     await declarations.rename([["plc/Main.st", "T"]], "plc/Main.st", 2, "y");
     await debug.setBreakpoints("plc/Main.st", [{ line: 37, condition: "count = 2" }]);
     await debug.runToCursor("plc/Main.st", 40);
     await debug.resume("over");
     await debug.hold();
     await debug.logs();
+    await ladder.parse("|A| (B);");
+    await ladder.lowering([["plc/Main.ld", "|A| (B);"]], "plc/Main.ld");
     expect(invoke.mock.calls).toEqual([
       ["watch_range", { file: "plc/Main.st", first: 3, last: 9, device: null, unfolded: ["carry"] }],
       ["unwatch"],
@@ -134,14 +137,16 @@ describe("backend bridge", () => {
       ["force", { target, text: "5" }],
       ["release", { target }],
       ["write_value", { target, text: "6" }],
-      ["declarations_of", { text: "PROGRAM Main END_PROGRAM" }],
-      ["edit_declaration", { text: "T", change: { op: "add", row } }],
+      ["declarations_of", { file: "plc/Main.st", text: "PROGRAM Main END_PROGRAM" }],
+      ["edit_declaration", { file: "plc/Main.ld", text: "T", change: { op: "add", row } }],
       ["rename_declaration", { files: [["plc/Main.st", "T"]], file: "plc/Main.st", index: 2, newName: "y" }],
       ["set_breakpoints", { file: "plc/Main.st", breakpoints: [{ line: 37, condition: "count = 2" }] }],
       ["run_to_cursor", { file: "plc/Main.st", line: 40 }],
       ["resume", { how: "over" }],
       ["hold"],
       ["debug_logs"],
+      ["ladder_parse", { text: "|A| (B);" }],
+      ["ladder_lowering", { program: [["plc/Main.ld", "|A| (B);"]], file: "plc/Main.ld" }],
     ]);
   });
 

@@ -7,6 +7,7 @@ pub mod demo;
 pub mod edit_commands;
 mod frontend;
 pub mod ladder_commands;
+mod ladder_table;
 pub mod lsp_files;
 pub mod monitor;
 pub mod navigation;

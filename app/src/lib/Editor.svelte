@@ -1,5 +1,16 @@
 <script lang="ts">
-  import { Cpu, ChevronDown, FileCode2, Braces, Clock3, Folder, Activity, Table2, X } from "@lucide/svelte";
+  import {
+    Cpu,
+    ChevronDown,
+    FileCode2,
+    Braces,
+    Clock3,
+    Folder,
+    Activity,
+    Table2,
+    Code,
+    Workflow,
+  } from "@lucide/svelte";
   import { onMount, untrack } from "svelte";
   import { m } from "../paraglide/messages.js";
   import { edited, type Source } from "./sources";
@@ -9,7 +20,6 @@
   import { Breakpoints } from "./breakpoints.svelte";
   import {
     deviceOf,
-    labelOf,
     split,
     toggled,
     type Change,
@@ -23,6 +33,8 @@
   import DebugBar from "./DebugBar.svelte";
   import BreakpointBar from "./BreakpointBar.svelte";
   import LogList from "./LogList.svelte";
+  import LadderEditor from "./LadderEditor.svelte";
+  import ValueBar from "./ValueBar.svelte";
   import { applyChanged } from "./navigation";
   let {
     sources = $bindable(),
@@ -47,6 +59,12 @@
     if (at >= 0) active = at;
   });
   const current = $derived(sources[Math.min(active, sources.length - 1)]);
+  // A Ladder file is drawn (spec 2026-11-13-ladder-editor-design.md, decision 4), or shown as its text.
+  let drawing = $state(true);
+  const ladderFile = $derived(!!current?.key.endsWith(".ld"));
+  const drawn = $derived(drawing && ladderFile);
+  // the button names the view it switches to
+  const viewTitle = $derived(!ladderFile ? m.ui_ladder_unavailable() : drawn ? m.ladder_text() : m.ladder_drawing());
 
   // Online monitoring and the variables table (spec 2026-11-13-online-monitoring-design.md).
   let monitoring = $state(false);
@@ -96,14 +114,14 @@
     if (at >= 0) untrack(() => (active = at));
   });
 
-  const readRows = debounce((text: string) => {
+  const readRows = debounce((file: string, text: string) => {
     declared
-      .of(text)
+      .of(file, text)
       .then((found) => (rows = found))
       .catch(() => (rows = []));
   }, 200);
   $effect(() => {
-    if (current) readRows.call(current.text);
+    if (current) readRows.call(fileOf(current), current.text);
   });
 
   const rewatch = debounce((file: string, first: number, last: number, dev: string | null, open: string[]) => {
@@ -160,7 +178,7 @@
   async function change(edit: Change): Promise<void> {
     if (!current) return;
     try {
-      current.text = await declared.edit(current.text, edit);
+      current.text = await declared.edit(fileOf(current), current.text, edit);
       problem = "";
     } catch (e) {
       problem = String(e);
@@ -182,19 +200,6 @@
     picked = { target, text: toggled(value) ?? value ?? "" };
   };
 
-  async function apply(action: "write" | "force" | "release"): Promise<void> {
-    if (!picked) return;
-    try {
-      if (action === "write") await monitor.writeValue(picked.target, picked.text);
-      else
-        forces = await (action === "force"
-          ? monitor.force(picked.target, picked.text)
-          : monitor.release(picked.target));
-      problem = "";
-    } catch (e) {
-      problem = String(e);
-    }
-  }
   const task = $derived(
     sources
       .filter((s) => s.kind !== "behaviour")
@@ -271,7 +276,16 @@
         bind:hold
         bind:logs
         onError={(text) => (problem = text)}
-      /><span class="language">ST</span><button class="ladder" disabled title={m.ui_ladder_unavailable()}>LD</button>
+      /><span class="language">{ladderFile ? "LD" : "ST"}</span><button
+        class="ladder"
+        class:on={drawn}
+        aria-pressed={drawn}
+        disabled={!ladderFile}
+        aria-label={viewTitle}
+        title={viewTitle}
+        onclick={() => (drawing = !drawing)}
+        >{#if drawn}<Code size={12} />{:else}<Workflow size={12} />{/if}</button
+      >
     </header>
     {#if blocked || problem}<p class="note" role="status">{problem || blocked}</p>{/if}
     {#if editing && debugFile}
@@ -289,18 +303,7 @@
         onClose={() => (editing = null)}
       />
     {/if}
-    {#if picked}
-      <div class="prepare" role="group" aria-label={m.value_prepared()}>
-        <strong class="data">{labelOf(picked.target)}</strong>
-        <input aria-label={m.value_prepared()} bind:value={picked.text} />
-        <button onclick={() => apply("write")} disabled={picked.target.kind === "address"}>{m.value_write()}</button>
-        <button onclick={() => apply("force")} disabled={!!hold}>{m.value_force()}</button>
-        <button onclick={() => apply("release")} disabled={!!hold || !forced.has(labelOf(picked.target))}
-          >{m.value_release()}</button
-        >{#if hold}<span class="held-note">{m.value_held()}</span>{/if}
-        <button class="close" aria-label="✕" onclick={() => (picked = null)}><X size={12} /></button>
-      </div>
-    {/if}
+    <ValueBar bind:picked {hold} {forced} onForces={(list) => (forces = list)} onProblem={(text) => (problem = text)} />
     {#if current}
       {#if showTable}
         <div class="table-area">
@@ -344,6 +347,7 @@
           }}
           onCursor={(line) => (cursor = line)}
         />
+        {#if drawn}<div class="ladder-area"><LadderEditor source={current} {sources} /></div>{/if}
       </div>
     {/if}
     <LogList bind:logs />
@@ -353,7 +357,7 @@
       ><span class="spacer"></span>{#if current && edited(current)}<button
           class="revert"
           onclick={() => (current.text = current.base)}>{m.editor_revert()}</button
-        >{/if}<span title={m.editor_hint()}>Structured Text · UTF-8</span>
+        >{/if}<span title={m.editor_hint()}>{drawn ? "Ladder Diagram" : "Structured Text"} · UTF-8</span>
     </footer>
   </div>
 </section>
@@ -486,9 +490,22 @@
     border-radius: 3px;
   }
   .ladder {
+    display: inline-flex;
     border: 0;
     background: transparent;
+    color: var(--color-text-muted);
+  }
+  .ladder:disabled {
     color: var(--color-text-disabled);
+  }
+  .ladder.on {
+    color: var(--color-ring);
+  }
+  /* over Monaco, which stays mounted with its other tabs */
+  .ladder-area {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
   }
   .code-area {
     display: flex;
@@ -530,36 +547,6 @@
     font-size: 10px;
     color: var(--color-text-muted);
     border-bottom: 1px solid var(--color-border);
-  }
-  .held-note {
-    color: var(--color-warning);
-    font-size: 10px;
-  }
-  .prepare {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    font-size: 10px;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-surface-2);
-  }
-  .prepare input {
-    width: 120px;
-    font-family: var(--font-mono);
-  }
-  .prepare button {
-    font-size: 10px;
-  }
-  .prepare .close {
-    margin-left: auto;
-    display: inline-flex;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-  }
-  .data {
-    font-family: var(--font-mono);
   }
   footer {
     display: flex;
