@@ -64,6 +64,16 @@ Date: 2026-11-14. Spec `2026-11-13-ladder-editor-design.md`, plan `2026-11-13-la
 - **A minified `#fff`** made Monaco refuse the light theme's token colours, so the ST editor never started in the light
   theme. Found while taking the light-theme screenshots; `hexColor.ts` expands it (728b0fe).
 
+## Found after closing
+
+- **PLCopen `<LD>` was not reachable from the app** (2026-11-14, after v0.1.0, found while writing the README): Task 5
+  made it two commands, `ladder_export` and `ladder_import`, and no part of the webview called them. They now read and
+  write the file the system dialogs pick, as the project archives do, and two buttons in the PLC pane's header call
+  them; an import adds its programs as program tabs not built yet, and refuses a path the program has. Tested:
+  the commands through a temporary folder (written, read back alike, a file that is not PLCopen, a missing file, a
+  folder that is not there); the dialogs' paths and the tabs in vitest; the buttons on the Ladder file's pane in
+  `e2e/ladder.mjs`. Not proven: the dialogs themselves, which tauri-driver cannot drive (as for the archives).
+
 ## What this does not prove
 
 - **Insertion markers and drag and drop**, as LD2's: elements go in from the toolbox and the keys at the selection.

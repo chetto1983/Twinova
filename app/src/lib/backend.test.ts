@@ -226,6 +226,23 @@ describe("project bridge", () => {
     expect(invoke.mock.calls.map((c) => c[0])).toEqual(["set_breakpoints", "run", "step", "resume", "run_to_cursor"]);
   });
 
+  it("writes and reads PLCopen XML where the dialogs say", async () => {
+    const PLCOPEN = [{ name: "PLCopen XML", extensions: ["xml"] }];
+    save.mockResolvedValueOnce("/p/Pump.xml");
+    open.mockResolvedValueOnce("/p/in.xml");
+    invoke.mockResolvedValueOnce(undefined).mockResolvedValueOnce({ files: [], notes: [] });
+    const program: [string, string][] = [["plc/Pump.ld", "|A| (X);\n"]];
+    expect(await ladder.exportPlcopen(program, "plc/Pump.ld")).toBe("/p/Pump.xml");
+    expect(await ladder.importPlcopen()).toEqual({ files: [], notes: [] });
+    expect(save.mock.calls).toEqual([[{ filters: PLCOPEN, defaultPath: "Pump.xml" }]]);
+    expect(open.mock.calls).toEqual([[{ filters: PLCOPEN }]]);
+    const [exported, imported] = invoke.mock.calls;
+    expect(exported?.[0]).toBe("ladder_export");
+    expect(exported?.[1]).toMatchObject({ program, file: "plc/Pump.ld", target: "/p/Pump.xml" });
+    expect(exported?.[1].created).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/);
+    expect(imported).toEqual(["ladder_import", { source: "/p/in.xml" }]);
+  });
+
   it("does nothing when a dialog is cancelled", async () => {
     open.mockResolvedValue(null);
     save.mockResolvedValue(null);
@@ -233,6 +250,8 @@ describe("project bridge", () => {
     expect(await projects.saveAs()).toBeNull();
     expect(await projects.importArchive()).toBeNull();
     expect(await projects.exportArchive()).toBeNull();
+    expect(await ladder.exportPlcopen([], "plc/Pump.ld")).toBeNull();
+    expect(await ladder.importPlcopen()).toBeNull();
     expect(invoke).not.toHaveBeenCalled();
   });
 });

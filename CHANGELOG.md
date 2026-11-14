@@ -4,6 +4,14 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
+## Unreleased
+
+### Added
+
+- PLCopen TC6 `<LD>` from the PLC pane: two buttons in its header export the Ladder file shown, and import a file's
+  Ladder programs as new program tabs, which Build runs and Save writes. In v0.1.0 import and export were the app's
+  commands only, which no button reached.
+
 ## v0.1.0 — 2026-11-14
 
 The first release: lay out a conveyor line in 3D from a library of components after Open Industry
