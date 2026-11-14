@@ -23,7 +23,8 @@ const SYMBOL_H: usize = 20;
 const BOX_W: usize = 64;
 const PIN_STEP: usize = 20;
 
-pub(crate) fn esc(s: &str) -> String {
+/// `s` as XML text or an attribute's value.
+pub fn esc(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
@@ -71,7 +72,16 @@ fn wire_contact() -> Element {
 
 /// Columns and rows an element takes on the grid.
 fn size_of(elements: &[Element]) -> (usize, usize) {
-    (elements.iter().map(element_size)).fold((0, 1), |(cols, rows), (c, r)| (cols + c, rows.max(r)))
+    // coils in series at the end are drawn in parallel (`Writer::series`), so they take the room of that branch
+    let coils = (elements.iter().rev())
+        .take_while(|e| matches!(e, Element::Coil { .. }))
+        .count();
+    let (series, tail) = elements.split_at(elements.len() - if coils > 1 { coils } else { 0 });
+    let drawn = (!tail.is_empty()).then(|| Element::Branch {
+        paths: tail.iter().map(|e| vec![e.clone()]).collect(),
+    });
+    (series.iter().chain(&drawn).map(element_size))
+        .fold((0, 1), |(cols, rows), (c, r)| (cols + c, rows.max(r)))
 }
 
 fn element_size(element: &Element) -> (usize, usize) {

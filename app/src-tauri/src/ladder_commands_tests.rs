@@ -66,3 +66,30 @@ fn a_file_lowers_to_the_power_of_each_element_and_its_rungs_that_do_not() {
         "plc/Other.ld is not a Ladder file of the program"
     );
 }
+
+#[test]
+fn a_ladder_file_goes_to_plcopen_and_back_through_the_commands() {
+    let program = vec![(
+        "plc/Pump.ld".to_string(),
+        "VAR\n    A AT %IX0.0 : BOOL;\n    X : BOOL;\nEND_VAR\n\n|A| (X);\n".to_string(),
+    )];
+    let xml = ladder_export(
+        program.clone(),
+        "plc/Pump.ld".into(),
+        "2026-11-14T09:00:00".into(),
+    )
+    .unwrap();
+    assert!(
+        xml.contains(r#"creationDateTime="2026-11-14T09:00:00""#),
+        "{xml}"
+    );
+    let imported = ladder_import(xml).unwrap();
+    assert_eq!(
+        serde_json::to_value(&imported).unwrap(),
+        json!({"files": [["plc/Pump.ld", program[0].1]], "notes": []})
+    );
+    assert_eq!(
+        ladder_import("<x/>".into()).unwrap_err(),
+        "the file is not a PLCopen project: its root is not <project>"
+    );
+}

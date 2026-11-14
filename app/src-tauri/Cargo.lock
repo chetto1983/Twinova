@@ -7200,9 +7200,11 @@ dependencies = [
 name = "twinova-engine"
 version = "0.1.0"
 dependencies = [
+ "roxmltree",
  "serde",
  "trust-hir 0.24.75",
  "trust-runtime",
+ "trust-syntax 0.24.75",
  "twinova-ladder",
  "twinova-physics",
  "twinova-project",

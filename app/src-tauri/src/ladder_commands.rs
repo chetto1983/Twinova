@@ -1,8 +1,10 @@
 //! The Ladder editor's commands (spec 2026-11-13-ladder-editor-design.md). The editor holds a file as its tree, which
 //! Rust reads from the text and prints back (the plan's decision 1), and asks for the file lowered as Build lowers it:
-//! the BOOL holding each element's power, and the rungs that do not lower.
+//! the BOOL holding each element's power, and the rungs that do not lower. A file goes to PLCopen TC6 and back
+//! (`twinova_engine::plcopen`).
 
 use serde::Serialize;
+use twinova_engine::plcopen::{Imported, export_ladder, import_ladder};
 use twinova_engine::program_files::ProgramFiles;
 use twinova_ladder::{LowerError, ParseError, Power, Program, parse, print};
 
@@ -31,6 +33,23 @@ pub fn ladder_lowering(program: Vec<(String, String)>, file: String) -> Result<L
         power: lowered.power,
         errors: lowered.errors,
     })
+}
+
+/// The Ladder file `file` of `program`, the editor's texts, as a PLCopen TC6 project written at `created` (the
+/// webview's clock: the engine keeps none).
+#[tauri::command]
+pub fn ladder_export(
+    program: Vec<(String, String)>,
+    file: String,
+    created: String,
+) -> Result<String, String> {
+    export_ladder(&program, &file, &created)
+}
+
+/// The Ladder programs of PLCopen TC6 project `xml`, as files of the PLC, and why the rest was left out.
+#[tauri::command]
+pub fn ladder_import(xml: String) -> Result<Imported, String> {
+    import_ladder(&xml)
 }
 
 #[cfg(test)]

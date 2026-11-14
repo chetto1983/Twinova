@@ -15,7 +15,12 @@ serde = { version = "1", features = ["derive"] }
 trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }
 # truST's frontend as the patched runtime builds it (the root manifest's [patch]): the same package, for the parameter
 # directions of the runtime's program model, which trust-runtime does not re-export. MIT OR Apache-2.0.
+# PLCopen TC6 XML read in document order, the version the Ladder crate reads it with. MIT OR Apache-2.0.
+roxmltree = "=0.21.2"
 trust-hir = { git = "https://github.com/chetto1983/trust-platform", rev = "1e249be7b41e4674ed44b97e4db2cc0b4ead52f2" }
 twinova-ladder = { path = "../ladder" }
+# truST's ST parser, the same package (the root manifest's [patch]): a Ladder file's declarations read for PLCopen's
+# <interface> (spec 2026-11-13-ladder-editor-design.md, Task 5, the user's choice). MIT OR Apache-2.0.
+trust-syntax = { git = "https://github.com/chetto1983/trust-platform", rev = "1e249be7b41e4674ed44b97e4db2cc0b4ead52f2" }
 twinova-physics = { path = "../physics" }
 twinova-project = { path = "../project" }

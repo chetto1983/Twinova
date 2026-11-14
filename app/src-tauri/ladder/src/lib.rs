@@ -19,6 +19,6 @@ pub use lower::{
 pub use model::{CoilMode, ContactMode, Element, Exit, Pin, Program, Rung};
 pub use parse::{ParseError, parse};
 pub use plcopen_read::read_ld_body;
-pub use plcopen_write::ld_body;
+pub use plcopen_write::{esc, ld_body};
 pub use print::print;
 pub use program::{declarations_only, declarations_prefix, program_name};

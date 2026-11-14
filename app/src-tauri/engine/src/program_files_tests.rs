@@ -164,7 +164,7 @@ fn a_ladder_program_scans_after_main_on_the_process_image() {
 }
 
 /// The 4.4a line's program as Ladder, rung for statement (`two_belts_diverter/plc/Main.st`).
-const MAIN_4_4A: &str = "VAR
+pub(crate) const MAIN_4_4A: &str = "VAR
     detected_a AT %IX0.0 : BOOL;
     detected_b AT %IX0.1 : BOOL;
     detected_in AT %IX0.6 : BOOL;
@@ -205,28 +205,35 @@ MOVE(IN := count MOD 3 = 0, OUT => reject_next);
 |/popup| (roller_run);
 ";
 
+/// The 4.4a line's project, its program as the fixture writes it.
+pub(crate) fn diverter() -> Project {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../project/tests/fixtures/valid/two_belts_diverter");
+    open_folder(&dir).unwrap().opened.project
+}
+
+/// `project` run 15 s through Build (the format writes its files and reads them back): the line's fingerprint every
+/// second, and where it ends.
+pub(crate) fn fifteen_seconds(project: &Project) -> (Vec<u64>, crate::engine::Snapshot) {
+    let (_, mut engine, _) = crate::build(project).unwrap();
+    let mut marks = Vec::new();
+    for step in 1..=1_500 {
+        engine.step().unwrap();
+        if step % 100 == 0 {
+            marks.push(engine.fingerprint());
+        }
+    }
+    (marks, engine.snapshot())
+}
+
 /// The plan's Global Constraints: the Ladder program and its ST twin give the same fingerprint on the 4.4a line.
 #[test]
 fn the_4_4a_line_runs_alike_from_its_st_program_and_from_the_same_program_in_ladder() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../project/tests/fixtures/valid/two_belts_diverter");
-    let st = open_folder(&dir).unwrap().opened.project;
+    let st = diverter();
     let mut ld = st.clone();
     ld.program = files(&[("plc/Main.ld", MAIN_4_4A)]);
-    let run = |project: &Project| {
-        // through Build: the format writes the Ladder file and reads it back
-        let (_, mut engine, _) = crate::build(project).unwrap();
-        let mut marks = Vec::new();
-        for step in 1..=1_500 {
-            engine.step().unwrap();
-            if step % 100 == 0 {
-                marks.push(engine.fingerprint());
-            }
-        }
-        (marks, engine.snapshot())
-    };
-    let (st_marks, st_end) = run(&st);
-    let (ld_marks, ld_end) = run(&ld);
+    let (st_marks, st_end) = fifteen_seconds(&st);
+    let (ld_marks, ld_end) = fifteen_seconds(&ld);
     assert_eq!(
         st_end.sinks[1].delivered, 1,
         "the third carton went to reject"

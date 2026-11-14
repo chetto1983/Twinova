@@ -47,6 +47,8 @@ pub fn run() {
             ladder_commands::ladder_parse,
             ladder_commands::ladder_print,
             ladder_commands::ladder_lowering,
+            ladder_commands::ladder_export,
+            ladder_commands::ladder_import,
             navigation::definition,
             navigation::references,
             call_templates::call_template,

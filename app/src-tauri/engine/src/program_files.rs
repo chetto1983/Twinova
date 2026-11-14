@@ -176,4 +176,4 @@ fn block(runtime: &Runtime, program: &str, head: &str) -> Option<Block> {
 
 #[cfg(test)]
 #[path = "program_files_tests.rs"]
-mod tests;
+pub(crate) mod tests;
