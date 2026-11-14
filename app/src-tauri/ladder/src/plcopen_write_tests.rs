@@ -291,7 +291,8 @@ fn the_checks_catch_a_drawing_that_would_misread() {
 /// Every kind of element, a comment, a label, a jump, a RETURN and boxes with values, drawn as the writer draws them:
 /// the file is the drawing, checked once by eye in Beremiz's terms (positions, sizes, pins) and by `misdrawn`.
 const GOLDEN_LD: &str = "(* starts\n   the line *)\nTop: |A| [|/B|, |P C|] T1(IN, PT := T#1500MS) (S X) >>Done;\n\
-                         EQ(IN1 := N, IN2 := 2, OUT) C1(CU, R := B, PV := 10, CV => N) (Y) (N Z);\nDone: |C| RETURN;\n";
+                         EQ(IN1 := N, IN2 := 2, OUT) C1(CU, R := B, PV := 10, CV => N) (Y) (N Z);\n\
+                         [|A| (Q), |/B| (Z)];\nT1(IN, PT := T#2S) (Z);\nDone: |C| RETURN;\n";
 
 #[test]
 fn the_drawing_is_the_one_the_golden_file_holds() {

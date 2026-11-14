@@ -100,13 +100,18 @@ fn element_size(element: &Element) -> (usize, usize) {
             (cols, sizes.iter().map(|s| s.1).sum())
         }
         Element::Box { pins, .. } => {
-            // the rung's pin counted for every box, a function's that starts the rung too: a row more at most
-            let inputs = 1 + pins.iter().filter(|p| !p.out && p.value.is_some()).count();
+            // as `block` draws it, from its rung pin's step above the wire: a step for each pin on its taller side, the
+            // rung's and those with a value (the rung's counted for a function that starts the rung too, a row more at
+            // most), and one under them
+            let side = |out: bool| {
+                1 + pins
+                    .iter()
+                    .filter(|p| p.out == out && p.value.is_some())
+                    .count()
+            };
+            let height = ROW / 2 - PIN_STEP + (side(false).max(side(true)) + 1) * PIN_STEP;
             let width = box_offset(pins) + BOX_W + COL / 2;
-            (
-                width.div_ceil(COL),
-                ((inputs * PIN_STEP + PIN_STEP).div_ceil(ROW)).max(1),
-            )
+            (width.div_ceil(COL), height.div_ceil(ROW))
         }
         _ => (1, 1),
     }
@@ -285,10 +290,10 @@ impl Writer<'_> {
                 feed.clone(),
             )?
         };
-        // a jump or a RETURN ends the rung before its right rail
+        // a jump or a RETURN ends the rung before its right rail, fed as the coils beside it are, or by the rung's
+        // end when it has none: `feed` either way
         let mut rail_x = x + cols * COL + RAIL_GAP;
         if let Some(exit) = &rung.exit {
-            let from = if coils > 0 { feed } else { out.clone() };
             let (tag, label, width) = match exit {
                 Exit::Jump { label } => (
                     "jump",
@@ -304,7 +309,7 @@ impl Writer<'_> {
             );
             let (jx, jy) = (rail_x - RAIL_GAP / 2, top + ROW / 2 - 10);
             self.put(1, &format!("<position x=\"{jx}\" y=\"{jy}\"/>"));
-            self.point_in(1, &from, 0, 10);
+            self.point_in(1, &feed, 0, 10);
             self.put(0, &format!("</{tag}>"));
             rail_x = jx + width + RAIL_GAP / 2;
         }

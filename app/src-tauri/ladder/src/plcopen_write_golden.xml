@@ -229,17 +229,25 @@ the line</xhtml:p></content>
     <connection refLocalId="20"/>
   </connectionPointIn>
 </rightPowerRail>
-<label localId="22" height="20" width="48" label="Done">
-  <position x="32" y="414"/>
-</label>
-<leftPowerRail localId="23" width="3" height="64">
+<leftPowerRail localId="22" width="3" height="128">
   <position x="88" y="392"/>
   <connectionPointOut formalParameter="">
     <relPosition x="3" y="32"/>
   </connectionPointOut>
 </leftPowerRail>
-<contact localId="24" negated="false" edge="none" storage="none" width="21" height="20">
+<contact localId="23" negated="false" edge="none" storage="none" width="21" height="20">
   <position x="128" y="414"/>
+  <connectionPointIn>
+    <relPosition x="0" y="10"/>
+    <connection refLocalId="22"/>
+  </connectionPointIn>
+  <connectionPointOut>
+    <relPosition x="21" y="10"/>
+  </connectionPointOut>
+  <variable>TRUE</variable>
+</contact>
+<contact localId="24" negated="false" edge="none" storage="none" width="21" height="20">
+  <position x="224" y="414"/>
   <connectionPointIn>
     <relPosition x="0" y="10"/>
     <connection refLocalId="23"/>
@@ -247,15 +255,132 @@ the line</xhtml:p></content>
   <connectionPointOut>
     <relPosition x="21" y="10"/>
   </connectionPointOut>
-  <variable>C</variable>
+  <variable>A</variable>
 </contact>
-<return localId="25" height="20" width="56">
-  <position x="244" y="414"/>
+<coil localId="25" negated="false" edge="none" storage="none" width="21" height="20">
+  <position x="320" y="414"/>
   <connectionPointIn>
     <relPosition x="0" y="10"/>
     <connection refLocalId="24"/>
   </connectionPointIn>
+  <connectionPointOut>
+    <relPosition x="21" y="10"/>
+  </connectionPointOut>
+  <variable>Q</variable>
+</coil>
+<contact localId="26" negated="true" edge="none" storage="none" width="21" height="20">
+  <position x="224" y="478"/>
+  <connectionPointIn>
+    <relPosition x="0" y="10"/>
+    <connection refLocalId="23"/>
+  </connectionPointIn>
+  <connectionPointOut>
+    <relPosition x="21" y="10"/>
+  </connectionPointOut>
+  <variable>B</variable>
+</contact>
+<coil localId="27" negated="false" edge="none" storage="none" width="21" height="20">
+  <position x="320" y="478"/>
+  <connectionPointIn>
+    <relPosition x="0" y="10"/>
+    <connection refLocalId="26"/>
+  </connectionPointIn>
+  <connectionPointOut>
+    <relPosition x="21" y="10"/>
+  </connectionPointOut>
+  <variable>Z</variable>
+</coil>
+<rightPowerRail localId="28" width="3" height="128">
+  <position x="552" y="392"/>
+  <connectionPointIn>
+    <relPosition x="0" y="32"/>
+    <connection refLocalId="25"/>
+    <connection refLocalId="27"/>
+  </connectionPointIn>
+</rightPowerRail>
+<leftPowerRail localId="29" width="3" height="128">
+  <position x="88" y="552"/>
+  <connectionPointOut formalParameter="">
+    <relPosition x="3" y="32"/>
+  </connectionPointOut>
+</leftPowerRail>
+<inVariable localId="30" width="32" height="20">
+  <position x="128" y="594"/>
+  <connectionPointOut>
+    <relPosition x="32" y="10"/>
+  </connectionPointOut>
+  <expression>T#2S</expression>
+</inVariable>
+<block localId="31" width="64" height="60" typeName="TON" instanceName="T1">
+  <position x="180" y="564"/>
+  <inputVariables>
+    <variable formalParameter="IN">
+      <connectionPointIn>
+        <relPosition x="0" y="20"/>
+        <connection refLocalId="29"/>
+      </connectionPointIn>
+    </variable>
+    <variable formalParameter="PT">
+      <connectionPointIn>
+        <relPosition x="0" y="40"/>
+        <connection refLocalId="30"/>
+      </connectionPointIn>
+    </variable>
+  </inputVariables>
+  <inOutVariables/>
+  <outputVariables>
+    <variable formalParameter="Q">
+      <connectionPointOut>
+        <relPosition x="64" y="20"/>
+      </connectionPointOut>
+    </variable>
+  </outputVariables>
+</block>
+<coil localId="32" negated="false" edge="none" storage="none" width="21" height="20">
+  <position x="320" y="574"/>
+  <connectionPointIn>
+    <relPosition x="0" y="10"/>
+    <connection refLocalId="31" formalParameter="Q"/>
+  </connectionPointIn>
+  <connectionPointOut>
+    <relPosition x="21" y="10"/>
+  </connectionPointOut>
+  <variable>Z</variable>
+</coil>
+<rightPowerRail localId="33" width="3" height="128">
+  <position x="456" y="552"/>
+  <connectionPointIn>
+    <relPosition x="0" y="32"/>
+    <connection refLocalId="32"/>
+  </connectionPointIn>
+</rightPowerRail>
+<label localId="34" height="20" width="48" label="Done">
+  <position x="32" y="734"/>
+</label>
+<leftPowerRail localId="35" width="3" height="64">
+  <position x="88" y="712"/>
+  <connectionPointOut formalParameter="">
+    <relPosition x="3" y="32"/>
+  </connectionPointOut>
+</leftPowerRail>
+<contact localId="36" negated="false" edge="none" storage="none" width="21" height="20">
+  <position x="128" y="734"/>
+  <connectionPointIn>
+    <relPosition x="0" y="10"/>
+    <connection refLocalId="35"/>
+  </connectionPointIn>
+  <connectionPointOut>
+    <relPosition x="21" y="10"/>
+  </connectionPointOut>
+  <variable>C</variable>
+</contact>
+<return localId="37" height="20" width="56">
+  <position x="244" y="734"/>
+  <connectionPointIn>
+    <relPosition x="0" y="10"/>
+    <connection refLocalId="36"/>
+  </connectionPointIn>
 </return>
-<rightPowerRail localId="26" width="3" height="64">
-  <position x="320" y="392"/>
+<rightPowerRail localId="38" width="3" height="64">
+  <position x="320" y="712"/>
 </rightPowerRail>
