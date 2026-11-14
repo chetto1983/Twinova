@@ -115,6 +115,20 @@ fn an_st_file_after_a_ladder_file_keeps_its_own_unused_variables() {
     assert_eq!(unused("plc/Pump.ld"), Vec::<String>::new());
 }
 
+/// A name in a rung's comment is not a use: only the rungs' elements use a variable.
+#[test]
+fn a_variable_named_only_in_a_rung_s_comment_is_unused() {
+    let (app, mut project) = opened("two_belts_diverter");
+    let ld = "VAR spare, run : BOOL; END_VAR\n(* spare is wired later *)\n|run| (run);\n";
+    project.program.push(("plc/Pump.ld".into(), ld.into()));
+    let found = analyzed(&app, &project);
+    let unused: Vec<String> = (found["plc/Pump.ld"].iter())
+        .filter(|p| p.code == "W001")
+        .map(|p| p.message.clone())
+        .collect();
+    assert_eq!(unused, ["unused variable 'spare'"]);
+}
+
 /// A Ladder file reaches the frontend as its declarations alone: their problems show at the file's own lines and
 /// columns, and the ST files see its program.
 #[test]
