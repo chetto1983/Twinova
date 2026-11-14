@@ -7159,7 +7159,7 @@ dependencies = [
 
 [[package]]
 name = "twinova"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "notify",
  "serde",
@@ -7182,7 +7182,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-agent"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "axum",
  "rmcp",
@@ -7198,7 +7198,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-engine"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "roxmltree",
  "serde",
@@ -7212,7 +7212,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-ladder"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proptest",
  "roxmltree",
@@ -7222,7 +7222,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-physics"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "glamx",
  "rapier3d",
@@ -7232,7 +7232,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-project"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "proptest",
  "serde",

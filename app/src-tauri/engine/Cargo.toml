@@ -1,6 +1,6 @@
 [package]
 name = "twinova-engine"
-version = "0.1.0"
+version = "0.2.0"
 description = "Twinova's run engine: the line (physics, field and controller) in lockstep on virtual time, with no UI dependency"
 authors = ["The Twinova contributors"]
 license = "MIT OR Apache-2.0"

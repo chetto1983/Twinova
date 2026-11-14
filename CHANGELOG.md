@@ -4,7 +4,10 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
-## Unreleased
+## v0.2.0 — 2026-11-14
+
+Ladder programs to and from PLCopen XML, from the PLC pane and over MCP, so a program edited in another tool comes
+back into the line.
 
 ### Added
 
