@@ -24,6 +24,7 @@
   import { completionKind } from "./analysis";
   import { isSnippet } from "./navigation";
   import { ST, fileOfModel } from "./stNavigation";
+  import { fullHex } from "./hexColor";
 
   monaco.languages.register({ id: ST, extensions: [".st"] });
   monaco.languages.setLanguageConfiguration(ST, conf);
@@ -64,7 +65,8 @@
     },
   });
 
-  const token = (name: string): string => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const token = (name: string): string =>
+    fullHex(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
 
   /** A Monaco theme from the app's Aura tokens, as the page computes them now. */
   function themeFromTokens(dark: boolean): monaco.editor.IStandaloneThemeData {
