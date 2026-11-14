@@ -11,24 +11,29 @@
   import { keyAction, lineOf, resolver, rungErrors, selectionOf } from "./ladder/view";
   import {
     addRung,
+    copied,
     elementAt,
+    headOf,
     insertElement,
     modify,
+    paste,
     place,
     removeSelected,
     replaceElement,
+    setHead,
     setOperand,
     step,
   } from "./ladder/edit";
   import { declarable, declared, operandOf, roleOf } from "./ladder/operand";
   import type { CatalogEntry } from "./ladder/catalog";
-  import type { Edit, Modifier, Selection } from "./ladder/edit";
+  import type { Edit, Modifier, RungHead, Selection } from "./ladder/edit";
   import { History } from "./ladder/history";
   import type { Element, Lowering, ParseError, Program } from "./ladder/model";
   import LadderRung from "./LadderRung.svelte";
   import LadderToolbar, { type Tool } from "./LadderToolbar.svelte";
   import LadderOperand from "./LadderOperand.svelte";
   import LadderPicker from "./LadderPicker.svelte";
+  import LadderRungHead from "./LadderRungHead.svelte";
 
   let { source, sources, onText }: { source: Source; sources: Source[]; onText: (text: string) => void } = $props();
   // the tree of the text it was read from: an edit starts only from the text on screen, never from a stale tree
@@ -39,6 +44,10 @@
   let selection = $state<Selection | null>(null);
   // the element whose operand is being typed, and a contact's or coil's operand typed that nothing declares
   let editing = $state<Selection | null>(null);
+  // what Copy and Cut took last, as `.ld` text, should the system's clipboard not give it back
+  let clipboard = "";
+  // the rung whose comment, label and exit are being typed
+  let heading = $state<number | null>(null);
   let undeclared = $state<string | null>(null);
   let view: HTMLDivElement | undefined = $state();
   // the box picker, open on its catalogue and the names the file declares
@@ -84,6 +93,8 @@
     let text: string;
     try {
       text = await ladder.print(next);
+      // an edit never leaves a file that does not read: an operand `A B`, a label `1st`, are refused here
+      await ladder.parse(text).catch((e: ParseError) => Promise.reject(e.message));
       failed = "";
     } catch (e) {
       failed = String(e);
@@ -94,6 +105,42 @@
     keep(text);
     read = { key: source.key, text, program: next };
     return text;
+  }
+
+  /** What Enter or a double-click opens on the selection: an element's operand, or a rung's head. */
+  function openAt(at: Selection | null): void {
+    if (!at || !editable) return;
+    if (at.path.length === 0) heading = at.rung;
+    else editing = roleOf(selected) ? at : null;
+  }
+
+  async function headed(index: number, head: RungHead): Promise<void> {
+    heading = null;
+    view?.focus();
+    if (program) await commit({ rungs: setHead(program.rungs, index, head), selection: { rung: index, path: [] } });
+  }
+
+  /** The selected rung, or element, to the clipboard as `.ld` text; Cut takes it off the rungs too. */
+  async function copySelection(cut: boolean): Promise<void> {
+    if (!program || !selection) return;
+    const rungs = copied(program.rungs, selection);
+    if (rungs.length === 0) return;
+    clipboard = await ladder.print({ declarations: "", rungs });
+    await navigator.clipboard?.writeText(clipboard).catch(() => {});
+    if (cut) await commit(removeSelected(program.rungs, selection));
+  }
+
+  /** The clipboard's rungs where the selection says (`paste`): the system's text when it reads as Ladder, else what
+   *  Copy took last. Declarations pasted with them are left out: the table declares. */
+  async function pasteHere(): Promise<void> {
+    if (!program || !selection) return;
+    const system = (await navigator.clipboard?.readText().catch(() => "")) ?? "";
+    const tree = await ladder.parse(system).catch(() => ladder.parse(clipboard).catch(() => null));
+    if (!tree || tree.rungs.length === 0) {
+      failed = m.ladder_nothing_to_paste();
+      return;
+    }
+    await commit(paste(program.rungs, selection, tree.rungs));
   }
 
   /** `text` as the file's, the one it replaces kept for Undo. */
@@ -193,7 +240,7 @@
 
   function onclick(e: MouseEvent): void {
     const target = e.target as globalThis.Element;
-    if (target.closest("[role=toolbar], [role=dialog], .operand, .declare")) return;
+    if (target.closest("[role=toolbar], [role=dialog], [role=group], .operand, .declare")) return;
     const rung = target.closest<HTMLElement>("[data-rung]")?.dataset.rung;
     selection = selectionOf(rung, target.closest("[data-path]")?.getAttribute("data-path") ?? undefined);
   }
@@ -203,7 +250,9 @@
     if (!action) return;
     e.preventDefault();
     if (action === "undo" || action === "redo" || action === "delete" || action === "box") return onTool(action);
-    if (action === "edit") editing = roleOf(selected) ? selection : null;
+    if (action === "copy" || action === "cut") void copySelection(action === "cut");
+    else if (action === "paste") void pasteHere();
+    else if (action === "edit") openAt(selection);
     else if (action === "escape") selection = null;
     else if (program && selection) selection = step(program.rungs, selection, action === "left" ? -1 : 1) ?? selection;
   }
@@ -219,7 +268,7 @@
   tabindex="0"
   bind:this={view}
   {onclick}
-  ondblclick={() => (editing = roleOf(selected) ? selection : null)}
+  ondblclick={() => openAt(selection)}
   {onkeydown}
 >
   <LadderToolbar {editable} selected={!!selection} element={selected} {canUndo} {canRedo} {onTool} {onModifier} />
@@ -258,6 +307,17 @@
           {#if rung.label}<span class="label">{rung.label}:</span>{/if}
           {#if rung.comment}<span class="comment">{rung.comment}</span>{/if}
         </header>
+        {#if heading === i}
+          <LadderRungHead
+            head={headOf(rung)}
+            number={i + 1}
+            onCommit={(head) => headed(i, head)}
+            onCancel={() => {
+              heading = null;
+              view?.focus();
+            }}
+          />
+        {/if}
         {#if layouts[i]}
           {@const layout = layouts[i]}
           {@const at = editing?.rung === i ? editing : null}

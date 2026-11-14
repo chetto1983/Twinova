@@ -234,5 +234,12 @@
   "ladder_group_string": "Stringhe",
   "ladder_group_time": "Ora e data",
   "ladder_group_conversion": "Conversioni",
-  "ladder_group_other": "Altro"
+  "ladder_group_other": "Altro",
+  "ladder_head": "Segmento {number}: commento, etichetta e come finisce",
+  "ladder_label": "Etichetta",
+  "ladder_comment": "Commento",
+  "ladder_exit": "Finisce con",
+  "ladder_exit_hint": "un'etichetta a cui saltare, o RETURN",
+  "ladder_ok": "OK",
+  "ladder_nothing_to_paste": "Gli appunti non contengono segmenti: copia prima un segmento o un elemento del disegno."
 }

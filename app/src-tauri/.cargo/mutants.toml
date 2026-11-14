@@ -17,7 +17,7 @@ examine_globs = [
   "ladder/src/parse.rs", "ladder/src/print.rs", "ladder/src/lower.rs", "ladder/src/lower_rung.rs",
   "ladder/src/lower_boxes.rs", "ladder/src/program.rs", "engine/src/program_files.rs",
   "ladder/src/plcopen_read.rs", "ladder/src/plcopen_read_graph.rs", "ladder/src/plcopen_write.rs",
-  "engine/src/plcopen.rs", "engine/src/plcopen_interface.rs",
+  "engine/src/plcopen.rs", "engine/src/plcopen_interface.rs", "engine/src/ladder_catalog.rs",
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs", "project/src/edit.rs",
   "project/src/history.rs", "project/src/library.rs", "project/src/sources.rs",

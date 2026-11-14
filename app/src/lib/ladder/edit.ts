@@ -3,7 +3,7 @@
 // Ported from Open Industry Project (`src/plc/ladder/ladderEdit.ts` at 1e7488c, MIT; THIRD_PARTY_NOTICES.md), changed
 // for Twinova's model: a branch is `{ kind: "branch" }`, a rung's comment, label and exit are null when absent, and a
 // coil picked with a rung or a path selected goes at its end, where coils stand, not at its start.
-import type { CoilMode, ContactMode, Element, Rung } from "./model";
+import type { CoilMode, ContactMode, Element, Exit, Rung } from "./model";
 
 /** What is selected on rung `rung`: `path` walks down from its series, an element's index then a path's in turn, so
  *  `[2]` is its third element, `[2, 1]` the second path of the branch there, `[2, 1, 0]` that path's first element.
@@ -53,7 +53,8 @@ function slotFor(rungs: Rung[], s: Selection, el: Element): { series: Element[];
   const home = onElement ? s.path.slice(0, -1) : s.path;
   const series = rung ? seriesAt(rung, home) : null;
   if (!series) return null;
-  if (onElement) return { series, home, at: (s.path[s.path.length - 1] as number) + 1 };
+  const last = s.path[s.path.length - 1] as number;
+  if (onElement) return series[last] ? { series, home, at: last + 1 } : null;
   return { series, home, at: el.kind === "coil" ? series.length : 0 };
 }
 
@@ -201,4 +202,77 @@ export function replaceElement(rungs: readonly Rung[], s: Selection, el: Element
   if (!series?.[at]) return unchanged(rungs, s);
   series[at] = clone(el);
   return { rungs: next, selection: s };
+}
+
+/** What stands around a rung's elements: its comment above, its label, and how it ends. */
+export interface RungHead {
+  comment: string;
+  label: string;
+  /** a label to jump to, `RETURN`, or empty for neither */
+  exit: string;
+}
+
+export const headOf = (rung: Rung): RungHead => ({
+  comment: rung.comment ?? "",
+  label: rung.label ?? "",
+  exit: rung.exit === null ? "" : rung.exit.kind === "return" ? "RETURN" : rung.exit.label,
+});
+
+const blank = (text: string): string | null => (text.trim() === "" ? null : text.trim());
+
+/** Rung `index` with `head` (OIP's `setComment`, with the label and the exit beside it): each trimmed, blank for none,
+ *  `RETURN` in any case for a RETURN. */
+export function setHead(rungs: readonly Rung[], index: number, head: RungHead): Rung[] {
+  const next = copy(rungs);
+  const rung = next[index];
+  if (!rung) return next;
+  const exit = blank(head.exit);
+  rung.comment = blank(head.comment);
+  rung.label = blank(head.label);
+  rung.exit =
+    exit === null
+      ? null
+      : exit.toUpperCase() === "RETURN"
+        ? { kind: "return" }
+        : ({ kind: "jump", label: exit } as Exit);
+  return next;
+}
+
+/** Pasted rungs below rung `after` (-1 for the top), the last of them selected (OIP's `insertRungs`). */
+export function insertRungs(rungs: readonly Rung[], after: number, added: readonly Rung[]): Edit {
+  if (added.length === 0) return unchanged(rungs, null);
+  const next = copy(rungs);
+  const at = Math.max(0, Math.min(after + 1, next.length));
+  next.splice(at, 0, ...copy(added));
+  return { rungs: next, selection: { rung: at + added.length - 1, path: [] } };
+}
+
+/** Pasted elements where the selection says, each after the one before, the last of them selected (OIP's
+ *  `insertElements`). */
+function insertElements(rungs: readonly Rung[], s: Selection, els: readonly Element[]): Edit {
+  let edit: Edit = { rungs: [...rungs], selection: s };
+  for (const el of els) {
+    const at = edit.selection as Selection;
+    edit = insertElement(edit.rungs, at, el);
+    if (edit.selection === at) return unchanged(rungs, s);
+  }
+  return edit;
+}
+
+/** What a copy of the selection holds, as rungs: the selected rung, or a rung of the selected element alone. */
+export function copied(rungs: readonly Rung[], s: Selection): Rung[] {
+  const rung = rungs[s.rung];
+  if (!rung) return [];
+  if (s.path.length === 0) return copy([rung]);
+  const el = elementAt(rungs, s);
+  return el ? [{ comment: null, label: null, elements: [clone(el)], exit: null }] : [];
+}
+
+/** `pasted` rungs put where the selection says: a single rung's elements beside a selected element or into a
+ *  selected path; otherwise the rungs below the selected one. */
+export function paste(rungs: readonly Rung[], s: Selection, pasted: readonly Rung[]): Edit {
+  const [only, ...more] = pasted;
+  const plain = only && more.length === 0 && only.comment === null && only.label === null && only.exit === null;
+  if (plain && s.path.length > 0) return insertElements(rungs, s, only.elements);
+  return insertRungs(rungs, s.rung, pasted);
 }

@@ -8,6 +8,11 @@ import {
   insertElement,
   modify,
   place,
+  copied,
+  insertRungs,
+  paste,
+  headOf,
+  setHead,
   replaceElement,
   setOperand,
   removeSelected,
@@ -59,6 +64,7 @@ describe("the Ladder editor's gestures (OIP's, ported)", () => {
     // off the rungs: nothing changes
     expect(insertElement(rungs, at(4), NO).rungs).toEqual(rungs);
     expect(insertElement(rungs, at(0, 0, 1), NO).rungs).toEqual(rungs);
+    expect(insertElement(rungs, at(0, 3), NO).rungs).toEqual(rungs);
   });
 
   it("inserts an empty branch after the selected element and selects its lower path, for what runs in parallel", () => {
@@ -195,5 +201,61 @@ describe("a box retyped", () => {
     expect(done.selection).toEqual(at(0, 1));
     for (const off of [at(0), at(0, 7), at(3, 0), at(0, 0, 0)])
       expect(replaceElement(series(), off, box).rungs).toEqual(series());
+  });
+});
+
+describe("a rung's comment, label and exit", () => {
+  it("are set trimmed, blank for none, a jump by its label and RETURN in any case", () => {
+    const rungs = series();
+    const head = { comment: "  Motor runs\n  while held ", label: " Start_up ", exit: "Done" };
+    const set = setHead(rungs, 0, head);
+    expect(set[0]).toMatchObject({
+      comment: "Motor runs\n  while held",
+      label: "Start_up",
+      exit: { kind: "jump", label: "Done" },
+    });
+    expect(headOf(set[0] as Rung)).toEqual({ comment: "Motor runs\n  while held", label: "Start_up", exit: "Done" });
+    const back = setHead(set, 0, { comment: " ", label: "", exit: "return" });
+    expect(back[0]).toMatchObject({ comment: null, label: null, exit: { kind: "return" } });
+    expect(headOf(back[0] as Rung)).toEqual({ comment: "", label: "", exit: "RETURN" });
+    expect(setHead(back, 0, { comment: "", label: "", exit: "" })[0]?.exit).toBeNull();
+    expect(setHead(rungs, 4, head)).toEqual(rungs);
+  });
+});
+
+describe("copy and paste (OIP's insertRungs and insertElements)", () => {
+  it("copies the selected rung, or the selected element as a rung of its own", () => {
+    const rungs = setHead(series(), 0, { comment: "Motor", label: "", exit: "" });
+    expect(copied(rungs, at(0))).toEqual(rungs);
+    expect(text(copied(rungs, at(0, 1)))).toEqual(["|/Stop|"]);
+    expect(copied(rungs, at(0, 1))[0]?.comment).toBeNull();
+    expect(copied(rungs, at(2))).toEqual([]);
+    expect(copied(rungs, at(0, 7))).toEqual([]);
+  });
+
+  it("pastes rungs below the selected one, the last of them selected", () => {
+    const two = [rung(named(NO, "A")), rung(named(NO, "B"))];
+    const done = insertRungs(series(), 0, two);
+    expect(text(done)).toEqual(["|Start| |/Stop| (Motor)", "|A|", "|B|"]);
+    expect(done.selection).toEqual(at(2));
+    expect(text(insertRungs(series(), -1, two))).toEqual(["|A|", "|B|", "|Start| |/Stop| (Motor)"]);
+    expect(insertRungs(series(), 0, [])).toEqual({ rungs: series(), selection: null });
+  });
+
+  it("pastes one plain rung's elements beside an element, each after the one before", () => {
+    const pasted = [rung(named(NO, "A"), named(NC, "B"))];
+    const done = paste(series(), at(0, 0), pasted);
+    expect(text(done)).toEqual(["|Start| |A| |/B| |/Stop| (Motor)"]);
+    expect(done.selection).toEqual(at(0, 2));
+    // into a branch's path
+    const branched = addBranch(series(), at(0, 0));
+    expect(text(paste(branched.rungs, branched.selection as Selection, pasted))).toEqual([
+      "|Start| [, |A| |/B|] |/Stop| (Motor)",
+    ]);
+    // a rung with a comment, or several, or onto a rung, go below as rungs
+    const commented = setHead(pasted, 0, { comment: "c", label: "", exit: "" });
+    expect(text(paste(series(), at(0, 0), commented))).toEqual(["|Start| |/Stop| (Motor)", "|A| |/B|"]);
+    expect(text(paste(series(), at(0), pasted))).toEqual(["|Start| |/Stop| (Motor)", "|A| |/B|"]);
+    expect(paste(series(), at(0, 9), pasted).rungs).toEqual(series());
   });
 });

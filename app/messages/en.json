@@ -234,5 +234,12 @@
   "ladder_group_string": "Strings",
   "ladder_group_time": "Time and date",
   "ladder_group_conversion": "Conversions",
-  "ladder_group_other": "Other"
+  "ladder_group_other": "Other",
+  "ladder_head": "Rung {number}: its comment, label and how it ends",
+  "ladder_label": "Label",
+  "ladder_comment": "Comment",
+  "ladder_exit": "Ends with",
+  "ladder_exit_hint": "a label to jump to, or RETURN",
+  "ladder_ok": "OK",
+  "ladder_nothing_to_paste": "The clipboard holds no rungs: copy a rung or an element of the drawing first."
 }

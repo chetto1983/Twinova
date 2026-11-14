@@ -64,6 +64,11 @@ describe("the Ladder view's reading of a file", () => {
       key("y", { ctrlKey: true }),
     ]).toEqual(["undo", "redo", "redo"]);
     expect([key("Enter"), key("F2"), key("b", { ctrlKey: true })]).toEqual(["edit", "edit", "box"]);
-    expect([key("a"), key("Delete", { ctrlKey: true }), key("c", { ctrlKey: true })]).toEqual([null, null, null]);
+    expect([key("c", { ctrlKey: true }), key("X", { metaKey: true }), key("v", { ctrlKey: true })]).toEqual([
+      "copy",
+      "cut",
+      "paste",
+    ]);
+    expect([key("a"), key("Delete", { ctrlKey: true }), key("q", { ctrlKey: true })]).toEqual([null, null, null]);
   });
 });
