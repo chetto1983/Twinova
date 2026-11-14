@@ -181,6 +181,8 @@ and build inside the app, on Windows and Linux.
   - taking a block's last breakpoint off turns the field's debug off: left on, the line ran 7.7 times slower.
   - Run and Step wait for the Build in flight and the breakpoints it sets again: on Windows the line could start with the
     breakpoints' old lines.
+  - F5, F10 and F11 pressed as the status bar shows HOLD take effect: the debug keys asked where the line was held on
+    their own, and could drop a key pressed in the first 200 ms of a stop.
 - The PLC pane in a window of its own (ROADMAP 4.8b), for example on a second monitor:
   - a button in the dock's PLC tab opens it, and the dock says where it went;
   - the window has Build, Run/Pause and Step, and the editor with Monitoring, the variables table and forcing;

@@ -20,10 +20,7 @@ export class Breakpoints {
     return file ? (this.byFile[file] ?? []) : [];
   }
 
-  /** Some breakpoint is set; some is a logpoint. */
-  get armed(): boolean {
-    return Object.values(this.byFile).some((list) => list.length > 0);
-  }
+  /** Some breakpoint is a logpoint. */
   get logging(): boolean {
     return Object.values(this.byFile).some((list) => list.some((b) => b.log));
   }

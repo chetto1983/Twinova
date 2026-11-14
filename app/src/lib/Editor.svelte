@@ -16,7 +16,8 @@
   import { edited, type Source } from "./sources";
   import { debounce, fileOf, type Problems } from "./analysis";
   import { declarations as declared, monitor, onMonitor } from "./backend";
-  import { replaced, toggle, trimmed, type Breakpoint, type Hold, type Log } from "./debug";
+  import { replaced, toggle, trimmed, type Breakpoint, type Log } from "./debug";
+  import { plcHold } from "./held.svelte";
   import { Breakpoints } from "./breakpoints.svelte";
   import {
     deviceOf,
@@ -97,7 +98,7 @@
     (file) => sources.some((s) => fileOf(s) === file && edited(s)),
     (error) => (problem = error),
   );
-  let hold = $state<Hold | null>(null);
+  const hold = $derived(plcHold.current);
   let logs = $state<Log[]>([]);
   let cursor = $state(1);
   /** The breakpoint the bar edits. */
@@ -270,10 +271,8 @@
       ><DebugBar
         file={debugFile}
         {cursor}
-        armed={breakpoints.armed}
         logging={breakpoints.logging}
         ready={status === "ok"}
-        bind:hold
         bind:logs
         onError={(text) => (problem = text)}
       /><span class="language">{ladderFile ? "LD" : "ST"}</span><button
