@@ -4,7 +4,7 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
-## v0.1.0 — unreleased
+## v0.1.0 — 2026-11-14
 
 The first runnable slice: one belt conveyor in 3D, driven by a Structured Text program you edit
 and build inside the app, on Windows and Linux.
