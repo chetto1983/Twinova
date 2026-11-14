@@ -433,3 +433,19 @@ fn a_body_with_no_rungs_is_an_empty_program_and_other_tools_pin_names_read_as_ie
     );
     assert_eq!(read(&counter).unwrap(), "|a| C1(R, Q) (q);\n");
 }
+
+#[test]
+fn a_rung_of_a_lone_contact_on_true_keeps_its_place_as_the_empty_rung_it_is() {
+    assert_eq!(
+        round_trip(&format!("{BOOLS}|TRUE|;\n|A| (X);\n")),
+        ";\n|A| (X);\n"
+    );
+}
+
+#[test]
+fn an_element_with_no_local_id_takes_no_other_element_s_place() {
+    let rail = "<leftPowerRail localId=\"1\"><position x=\"0\" y=\"0\"/><connectionPointOut formalParameter=\"\"/></leftPowerRail>";
+    let unnamed = "<comment height=\"0\" width=\"0\"><position x=\"0\" y=\"0\"/><content><xhtml:p>note</xhtml:p></content></comment>";
+    let body = format!("{rail}{}{unnamed}", symbol("coil", 2, "X", "", &[1]));
+    assert_eq!(read(&body).unwrap(), "(X);\n(* note *)\n;\n");
+}

@@ -17,6 +17,7 @@ use crate::model::{CoilMode, ContactMode, Element, Exit, Pin, Program, Rung};
 const COL: usize = 96;
 const ROW: usize = 64;
 const LEFT: usize = 32;
+const LABEL_GAP: usize = 8;
 const RAIL_GAP: usize = 40;
 const SYMBOL_W: usize = 21;
 const SYMBOL_H: usize = 20;
@@ -51,6 +52,12 @@ pub fn ld_body(
         indent,
         boxes,
         rung: 0,
+        left: LEFT
+            + (program.rungs.iter())
+                .filter_map(|r| r.label.as_deref())
+                .map(|l| label_width(l) + LABEL_GAP)
+                .max()
+                .unwrap_or(0),
     };
     let mut top = 32;
     for (index, rung) in program.rungs.iter().enumerate() {
@@ -95,10 +102,35 @@ fn element_size(element: &Element) -> (usize, usize) {
         Element::Box { pins, .. } => {
             // the rung's pin counted for every box, a function's that starts the rung too: a row more at most
             let inputs = 1 + pins.iter().filter(|p| !p.out && p.value.is_some()).count();
-            (2, ((inputs * PIN_STEP + PIN_STEP).div_ceil(ROW)).max(1))
+            let width = box_offset(pins) + BOX_W + COL / 2;
+            (
+                width.div_ceil(COL),
+                ((inputs * PIN_STEP + PIN_STEP).div_ceil(ROW)).max(1),
+            )
         }
         _ => (1, 1),
     }
+}
+
+/// The width of a label's box, or a jump's to it.
+fn label_width(label: &str) -> usize {
+    label.len() * 8 + 16
+}
+
+/// The width of the `inVariable` a value on an input is drawn as.
+fn value_width(value: &str) -> usize {
+    (value.len() * 8).max(24)
+}
+
+/// How far right of its column a box stands: room for the widest value on its inputs, drawn left of it.
+fn box_offset(pins: &[Pin]) -> usize {
+    let widest = (pins.iter())
+        .filter(|p| !p.out)
+        .filter_map(|p| p.value.as_deref())
+        .map(value_width)
+        .max()
+        .unwrap_or(0);
+    (widest + PIN_STEP).max(COL / 2)
 }
 
 /// A box's pins as TC6 lists them: the one on the rung first, then those with a value, as written. A function that
@@ -127,6 +159,8 @@ struct Writer<'a> {
     indent: &'a str,
     boxes: &'a [(ElementId, BoxPins)],
     rung: usize,
+    /// where every rung's left rail stands: right of the widest label
+    left: usize,
 }
 
 impl Writer<'_> {
@@ -161,51 +195,59 @@ impl Writer<'_> {
         self.put(depth, "</connectionPointOut>");
     }
 
+    /// A rung's comment, above its rails from `top`; where the rails may start.
+    fn comment(&mut self, comment: &str, top: usize) -> usize {
+        let lines: Vec<&str> = comment.lines().collect();
+        let width = lines.iter().map(|l| l.len()).max().unwrap_or(0) * 7 + 16;
+        let height = lines.len() * 16;
+        let id = self.id();
+        self.put(
+            0,
+            &format!("<comment localId=\"{id}\" height=\"{height}\" width=\"{width}\">"),
+        );
+        self.put(1, &format!("<position x=\"{}\" y=\"{top}\"/>", self.left));
+        self.put(
+            1,
+            &format!("<content><xhtml:p>{}</xhtml:p></content>", esc(comment)),
+        );
+        self.put(0, "</comment>");
+        top + height + LABEL_GAP
+    }
+
+    /// A rung's label, left of its rails at its wire, the rails' top at `top`.
+    fn label(&mut self, label: &str, top: usize) {
+        let id = self.id();
+        let width = label_width(label);
+        self.put(
+            0,
+            &format!(
+                "<label localId=\"{id}\" height=\"20\" width=\"{width}\" label=\"{}\">",
+                esc(label)
+            ),
+        );
+        let (x, y) = (self.left - LABEL_GAP - width, top + ROW / 2 - 10);
+        self.put(1, &format!("<position x=\"{x}\" y=\"{y}\"/>"));
+        self.put(0, "</label>");
+    }
+
     /// One rung between its own rails, from `top`; where the next may start.
     fn write_rung(&mut self, rung: &Rung, top: usize) -> Result<usize, String> {
         let (cols, rows) = size_of(&rung.elements);
         let height = rows * ROW;
         // a rung's comment and its label stand ahead of it in the file: a reader gives each to the network after it
-        if let Some(comment) = &rung.comment {
-            let lines: Vec<&str> = comment.lines().collect();
-            let width = lines.iter().map(|l| l.len()).max().unwrap_or(0) * 7 + 16;
-            let id = self.id();
-            self.put(
-                0,
-                &format!(
-                    "<comment localId=\"{id}\" height=\"{}\" width=\"{width}\">",
-                    lines.len() * 16
-                ),
-            );
-            self.put(1, &format!("<position x=\"{LEFT}\" y=\"{top}\"/>"));
-            self.put(
-                1,
-                &format!("<content><xhtml:p>{}</xhtml:p></content>", esc(comment)),
-            );
-            self.put(0, "</comment>");
-        }
+        let top = match &rung.comment {
+            Some(comment) => self.comment(comment, top),
+            None => top,
+        };
         if let Some(label) = &rung.label {
-            let id = self.id();
-            let width = label.len() * 8 + 16;
-            self.put(
-                0,
-                &format!(
-                    "<label localId=\"{id}\" height=\"20\" width=\"{width}\" label=\"{}\">",
-                    esc(label)
-                ),
-            );
-            self.put(
-                1,
-                &format!("<position x=\"0\" y=\"{}\"/>", top + ROW / 2 - 10),
-            );
-            self.put(0, "</label>");
+            self.label(label, top);
         }
         let left = self.id();
         self.put(
             0,
             &format!("<leftPowerRail localId=\"{left}\" width=\"3\" height=\"{height}\">"),
         );
-        self.put(1, &format!("<position x=\"{LEFT}\" y=\"{top}\"/>"));
+        self.put(1, &format!("<position x=\"{}\" y=\"{top}\"/>", self.left));
         self.put(1, "<connectionPointOut formalParameter=\"\">");
         self.put(2, &format!("<relPosition x=\"3\" y=\"{}\"/>", ROW / 2));
         self.put(1, "</connectionPointOut>");
@@ -219,14 +261,13 @@ impl Writer<'_> {
             None => 0,
         };
         let (head, tail) = rung.elements.split_at(rung.elements.len() - coils);
-        let rail = vec![Producer {
+        let mut rail = vec![Producer {
             id: left,
             param: None,
         }];
-        let mut x = LEFT + RAIL_GAP;
+        let mut x = self.left + RAIL_GAP;
         // a rung that is one branch runs rail to rail on each path, which reads back as separate rungs: a contact on
         // TRUE at the rail gives the paths a node of their own, and leaves the coils at the right end
-        let mut rail = rail;
         if rung.exit.is_none() && matches!(rung.elements[..], [Element::Branch { .. }]) {
             rail = self.element(&wire_contact(), &[], x, top, rail)?;
             x += COL;
@@ -244,14 +285,15 @@ impl Writer<'_> {
                 feed.clone(),
             )?
         };
-        let rail_x = x + cols * COL + RAIL_GAP;
+        // a jump or a RETURN ends the rung before its right rail
+        let mut rail_x = x + cols * COL + RAIL_GAP;
         if let Some(exit) = &rung.exit {
             let from = if coils > 0 { feed } else { out.clone() };
             let (tag, label, width) = match exit {
                 Exit::Jump { label } => (
                     "jump",
                     format!(" label=\"{}\"", esc(label)),
-                    label.len() * 8 + 24,
+                    label_width(label) + 8,
                 ),
                 Exit::Return => ("return", String::new(), 56),
             };
@@ -260,16 +302,11 @@ impl Writer<'_> {
                 0,
                 &format!("<{tag} localId=\"{id}\" height=\"20\" width=\"{width}\"{label}>"),
             );
-            self.put(
-                1,
-                &format!(
-                    "<position x=\"{}\" y=\"{}\"/>",
-                    rail_x - RAIL_GAP / 2,
-                    top + ROW / 2 - 10
-                ),
-            );
+            let (jx, jy) = (rail_x - RAIL_GAP / 2, top + ROW / 2 - 10);
+            self.put(1, &format!("<position x=\"{jx}\" y=\"{jy}\"/>"));
             self.point_in(1, &from, 0, 10);
             self.put(0, &format!("</{tag}>"));
+            rail_x = jx + width + RAIL_GAP / 2;
         }
         let right = self.id();
         self.put(
@@ -429,7 +466,7 @@ impl Writer<'_> {
             ));
         };
         let (inputs, outputs) = box_pins(pins, resolved);
-        let bx = x + COL / 2;
+        let bx = x + box_offset(pins);
         let by = y + ROW / 2 - PIN_STEP;
         let height = inputs.len().max(outputs.len()) * PIN_STEP + PIN_STEP;
         // a value on a pin is an element of its own, drawn beside the box; they follow the pin the rung feeds, if any,
@@ -443,7 +480,7 @@ impl Writer<'_> {
         for (i, (_, value)) in valued.iter().enumerate() {
             let v = self.id();
             sources.push(v);
-            let width = (value.len() * 8).max(24);
+            let width = value_width(value);
             self.put(
                 0,
                 &format!("<inVariable localId=\"{v}\" width=\"{width}\" height=\"20\">"),
@@ -452,7 +489,7 @@ impl Writer<'_> {
                 1,
                 &format!(
                     "<position x=\"{}\" y=\"{}\"/>",
-                    bx - COL / 2,
+                    bx - PIN_STEP - width,
                     by + (fed + i + 1) * PIN_STEP - 10
                 ),
             );
@@ -522,3 +559,7 @@ impl Writer<'_> {
         }])
     }
 }
+
+#[cfg(test)]
+#[path = "plcopen_write_tests.rs"]
+mod tests;
