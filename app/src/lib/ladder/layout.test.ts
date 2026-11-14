@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   L,
-  READING_W,
+  READING_MIN,
   boxPins,
   isReference,
   layoutRung,
@@ -96,8 +96,8 @@ describe("a rung laid out (nautilus's layout, ported)", () => {
     ]);
     // the first pins sit on the rung's wire
     expect(box.y + L.BOX_HEAD + L.PIN_STEP / 2).toBe(r.wireY);
-    // room before it for T#2s, and after it for W and its value online
-    expect(r.wires.some((w) => w.x2 - w.x1 === Math.ceil(textW("W", 10)) + 8 + READING_W)).toBe(true);
+    // room before it for T#2s, and after it for W, and for W's value online under it
+    expect(r.wires.some((w) => w.x2 - w.x1 === Math.max(Math.ceil(textW("W", 10)) + 8, READING_MIN))).toBe(true);
     expect([
       isReference("W"),
       isReference("T1.Q"),

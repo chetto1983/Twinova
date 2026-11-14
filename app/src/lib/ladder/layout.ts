@@ -26,7 +26,7 @@ export const L = {
   MIN_WIDTH: 560,
   BOX_MIN_W: 72,
   BOX_HEAD: 18,
-  PIN_STEP: 16,
+  PIN_STEP: 24,
 } as const;
 
 /** A pin drawn on a box: its name, the value or place written beside it, and whether the rung's wire meets it. */
@@ -160,14 +160,15 @@ const longestName = (rows: readonly PinRow[]): number => Math.max(0, ...rows.map
 export const isReference = (value: string | null): boolean =>
   value !== null && /^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$/.test(value) && !/^(TRUE|FALSE)$/i.test(value);
 
-/** The room kept beside a pin's reference for its value online, so the drawing does not move when monitoring starts. */
-export const READING_W = 44;
+/** The least room beside a box for a pin's reference: its value online is drawn under it, and may be as wide as
+ *  FALSE. Kept offline too, so the drawing does not move when monitoring starts. */
+export const READING_MIN = Math.ceil(textW("FALSE", 9)) + 8;
 
 const labelWidth = (rows: readonly PinRow[]): number =>
   Math.max(
     0,
     ...rows.map((r) =>
-      r.value === null ? 0 : Math.ceil(textW(r.value, 10)) + 8 + (isReference(r.value) ? READING_W : 0),
+      r.value === null ? 0 : Math.max(Math.ceil(textW(r.value, 10)) + 8, isReference(r.value) ? READING_MIN : 0),
     ),
   );
 

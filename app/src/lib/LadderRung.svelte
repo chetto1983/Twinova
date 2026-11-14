@@ -5,16 +5,7 @@
   // Online (spec 2026-11-13-ladder-editor-design.md, decision 6, as LD2's): a wire or a symbol carrying power is thick
   // and green, one without it thick and dark, one not read yet thin; thickness tells as well as colour. Each operand's
   // and box pin's value is drawn under it, and a click on it prepares a write or a force (`data-spot`).
-  import {
-    L,
-    OPERAND_MAX,
-    READING_W,
-    isReference,
-    textW,
-    type Feed,
-    type LNode,
-    type RungLayout,
-  } from "./ladder/layout";
+  import { L, OPERAND_MAX, textW, type Feed, type LNode, type RungLayout } from "./ladder/layout";
   import { powered, type Online } from "./ladder/view";
   import { keyOf } from "./ladder/model";
   let {
@@ -108,16 +99,15 @@
         {#if n.instance}<text class="operand" x={mid(n)} y={n.y - 5}>{n.instance}</text>{/if}
         {#each n.left as pin, k (k)}
           <text class="pin" x={n.x + 4} y={row(n, k) + 3}>{pin.name}</text>
-          {@const kept = isReference(pin.value) ? READING_W : 0}
-          {#if pin.value !== null}<text class="value end" x={n.x - 4 - kept} y={row(n, k) - 3}>{pin.value}</text>{/if}
+          {#if pin.value !== null}<text class="value end" x={n.x - 4} y={row(n, k) - 3}>{pin.value}</text>{/if}
           {@const live = valueAt(n.path, pin.name)}
-          {#if live}{@render reading(live, n.x - 4, row(n, k) - 3, "end")}{/if}
+          {#if live}{@render reading(live, n.x - 4, row(n, k) + 10, "end")}{/if}
         {/each}
         {#each n.right as pin, k (k)}
           <text class="pin end" x={n.x + n.w - 4} y={row(n, k) + 3}>{pin.name}</text>
           {#if pin.value !== null}<text class="value" x={n.x + n.w + 4} y={row(n, k) - 3}>{pin.value}</text>{/if}
           {@const live = valueAt(n.path, pin.name)}
-          {#if live}{@render reading(live, n.x + n.w + 14 + textW(pin.value ?? "", 10), row(n, k) - 3, "start")}{/if}
+          {#if live}{@render reading(live, n.x + n.w + 4, row(n, k) + 10, "start")}{/if}
         {/each}
       </g>
     {:else}
@@ -130,16 +120,15 @@
   {/each}
 </svg>
 
-{#snippet reading(live: { value: string; spot: number }, x: number, y: number, anchor: string)}
-  <text
-    class="reading"
-    class:true={live.value === "TRUE"}
-    class:forced={forced(live.spot)}
-    data-spot={live.spot}
-    {x}
-    {y}
-    text-anchor={anchor}>{live.value}</text
-  >
+{#snippet reading(live: { value: string; spot: number }, x: number, y: number, anchor: "start" | "middle" | "end")}
+  <!-- a value read online sits on a pill, so it is not taken for a constant written on the pin -->
+  {@const w = textW(live.value, 9) + 6}
+  {@const left = anchor === "start" ? x - 3 : anchor === "end" ? x - w + 3 : x - w / 2}
+  <g class="reading" class:true={live.value === "TRUE"} class:forced={forced(live.spot)} data-spot={live.spot}>
+    <rect x={left} y={y - 9} width={w} height="12" rx="2" />
+    <!-- the anchor goes in `style`: the stylesheet's `text-anchor: middle` would win over the attribute -->
+    <text {x} {y} style="text-anchor: {anchor}">{live.value}</text>
+  </g>
 {/snippet}
 
 <style>
@@ -180,14 +169,22 @@
     stroke-dasharray: 5 3;
   }
   .reading {
-    font-size: 9px;
-    fill: var(--color-text-muted);
     cursor: pointer;
   }
-  .reading.true {
+  .reading rect {
+    fill: var(--color-surface-3);
+  }
+  .reading text {
+    font-size: 9px;
+    fill: var(--color-text-muted);
+  }
+  .reading.true text {
     fill: var(--color-success);
   }
-  .reading.forced {
+  .reading.forced rect {
+    stroke: var(--color-warning);
+  }
+  .reading.forced text {
     fill: var(--color-warning);
     font-weight: 600;
   }
