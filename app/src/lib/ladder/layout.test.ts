@@ -42,6 +42,7 @@ describe("a rung laid out (nautilus's layout, ported)", () => {
     // the branch's rails join the paths, and the rung is tall enough for its lower path
     expect(r.vlines).toHaveLength(2);
     expect(r.branches[0]?.path).toEqual([0]);
+    expect(r.branches[0]?.legs).toEqual([r.wireY, (motor?.y ?? 0) + L.SYMBOL_H / 2]);
     expect(motor && r.height > motor.y + motor.h).toBe(true);
     // the wire runs from the left rail to the right one
     expect(r.wires.some((w) => w.x1 === L.RAIL_X && w.y1 === r.wireY)).toBe(true);

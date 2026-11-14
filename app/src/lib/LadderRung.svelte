@@ -1,8 +1,10 @@
 <script lang="ts">
   // One rung of a Ladder file drawn from its layout (ladder/layout.ts): rails, wires, contacts, coils, boxes and its
   // exit, as CODESYS's and TIA's Ladder draw them.
+  // A click is read off `data-path` by the view (LadderEditor.svelte): an element's, or a branch path's on its wire.
   import { L, OPERAND_MAX, type LNode, type RungLayout } from "./ladder/layout";
-  let { layout }: { layout: RungLayout } = $props();
+  let { layout, selected }: { layout: RungLayout; selected: number[] | null } = $props();
+  const picked = (path: number[]): boolean => !!selected && selected.length > 0 && path.join() === selected.join();
 
   /** An operand as drawn: `???` while blank, cut in the middle past what the box grows to fit. */
   const shown = (operand: string | null): string => {
@@ -22,8 +24,27 @@
   <line class="rail" x1={layout.width - L.RAIL_X} y1="0" x2={layout.width - L.RAIL_X} y2={layout.height} />
   {#each layout.wires as w, i (i)}<line class="wire" x1={w.x1} y1={w.y1} x2={w.x2} y2={w.y2} />{/each}
   {#each layout.vlines as v, i (i)}<line class="wire" x1={v.x} y1={v.y1} x2={v.x} y2={v.y2} />{/each}
+  {#each layout.branches as b (b.path.join())}
+    {#each b.legs as y, j (j)}
+      {@const path = [...b.path, j]}
+      <line
+        class="leg"
+        class:picked={picked(path)}
+        data-path={path.join(".")}
+        x1={b.x + 6}
+        y1={y}
+        x2={b.x + b.w - 6}
+        y2={y}
+      />
+    {/each}
+  {/each}
   {#each layout.nodes as n, i (i)}
     {@const cy = n.y + n.h / 2}
+    {#if n.kind !== "exit"}
+      {#if picked(n.path)}<rect class="picked" x={n.x - 4} y={n.y - 16} width={n.w + 8} height={n.h + 20} rx="3" />{/if}
+      <!-- the whole symbol takes the click, its gaps too -->
+      <rect class="hit" data-path={n.path.join(".")} x={n.x} y={n.y - 14} width={n.w} height={n.h + 14} />
+    {/if}
     {#if n.kind === "contact"}
       <g class="contact" data-path={n.path.join(".")}>
         <title>{n.operand ?? "???"}</title>
@@ -72,6 +93,23 @@
   svg {
     display: block;
     overflow: visible;
+  }
+  .leg {
+    stroke: transparent;
+    stroke-width: 10;
+    cursor: pointer;
+  }
+  .leg.picked {
+    stroke: var(--color-accent-soft);
+  }
+  rect.picked {
+    fill: var(--color-accent-soft);
+    stroke: var(--color-ring);
+    stroke-width: 1;
+  }
+  .hit {
+    fill: transparent;
+    cursor: pointer;
   }
   .rail {
     stroke: var(--color-text-muted);

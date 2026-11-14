@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lineOf, resolver, rungErrors } from "./view";
+import { keyAction, lineOf, resolver, rungErrors, selectionOf } from "./view";
 import type { Lowering } from "./model";
 
 const lowering: Lowering = {
@@ -15,6 +15,9 @@ const lowering: Lowering = {
     { element: { rung: 2, path: [] }, message: "there is no rung labelled 'X' to jump to" },
   ],
 };
+
+const key = (k: string, mods: Partial<{ ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }> = {}) =>
+  keyAction({ key: k, ctrlKey: false, metaKey: false, shiftKey: false, ...mods });
 
 describe("the Ladder view's reading of a file", () => {
   it("names the line a byte offset is on, counting bytes as Rust does", () => {
@@ -38,5 +41,28 @@ describe("the Ladder view's reading of a file", () => {
     ]);
     expect(rungErrors(lowering, 0)).toEqual([]);
     expect(rungErrors(null, 2)).toEqual([]);
+  });
+
+  it("reads a click as the element, the branch path or the rung it landed on", () => {
+    expect(selectionOf("2", "1.0.3")).toEqual({ rung: 2, path: [1, 0, 3] });
+    expect(selectionOf("0", undefined)).toEqual({ rung: 0, path: [] });
+    expect(selectionOf("0", "")).toEqual({ rung: 0, path: [] });
+    expect(selectionOf(undefined, "1")).toBeNull();
+  });
+
+  it("reads the keys the view acts on", () => {
+    expect([key("Delete"), key("Backspace"), key("ArrowLeft"), key("ArrowRight"), key("Escape")]).toEqual([
+      "delete",
+      "delete",
+      "left",
+      "right",
+      "escape",
+    ]);
+    expect([
+      key("z", { ctrlKey: true }),
+      key("Z", { metaKey: true, shiftKey: true }),
+      key("y", { ctrlKey: true }),
+    ]).toEqual(["undo", "redo", "redo"]);
+    expect([key("a"), key("Delete", { ctrlKey: true }), key("c", { ctrlKey: true })]).toEqual([null, null, null]);
   });
 });

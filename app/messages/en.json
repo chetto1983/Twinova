@@ -195,5 +195,19 @@
   "ladder_rung": "Rung {number}",
   "ladder_unreadable": "Line {line} does not read as Ladder: {message}",
   "ladder_drawing": "Ladder: draw the file's rungs",
-  "ladder_text": "Text: edit the file as written"
+  "ladder_text": "Text: edit the file as written",
+  "ladder_tools": "Ladder elements",
+  "ladder_add_rung": "New rung, below the selected one",
+  "ladder_add_contact": "Contact: after the selected element, or first on the selected rung or path",
+  "ladder_add_coil": "Coil: after the selected element, or last on the selected rung or path",
+  "ladder_add_box": "Box: a function or a function block, after the selected element",
+  "ladder_add_branch": "Parallel branch after the selected element: the next element goes on its lower path",
+  "ladder_negated": "Negated (/)",
+  "ladder_rising": "Rising edge (P)",
+  "ladder_falling": "Falling edge (N)",
+  "ladder_set": "Set (S)",
+  "ladder_reset": "Reset (R)",
+  "ladder_delete": "Delete the selection (Del)",
+  "ladder_undo": "Undo (Ctrl+Z)",
+  "ladder_redo": "Redo (Ctrl+Y)"
 }

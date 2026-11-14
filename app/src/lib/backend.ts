@@ -81,6 +81,7 @@ export const navigation = {
  *  with the program's other files, as Build lowers it. */
 export const ladder = {
   parse: (text: string) => invoke<Program>("ladder_parse", { text }),
+  print: (program: Program) => invoke<string>("ladder_print", { program }),
   lowering: (program: [string, string][], file: string) => invoke<Lowering>("ladder_lowering", { program, file }),
 };
 

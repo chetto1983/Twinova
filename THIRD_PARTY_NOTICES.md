@@ -33,7 +33,9 @@ copies and translates part of it, under the licence below; each file names its s
 
 Since ROADMAP 4.11 (read at commit `0572868`), `app/src-tauri/ladder/` ports its Ladder Diagram: the model, the `.ld`
 text grammar (`src/plc/parserLadder.ts`), the lowering to Structured Text and the PLCopen TC6 `<LD>` reader and writer
-(`src/plc/ladder/`), translated into Rust; the crate's `NOTICE` repeats this licence.
+(`src/plc/ladder/`), translated into Rust; the crate's `NOTICE` repeats this licence. The editor's gestures,
+`app/src/lib/ladder/edit.ts`, are copied from `src/plc/ladder/ladderEdit.ts` at `1e7488c`, with its tests, and changed
+for Twinova's model.
 
 > The MIT License (MIT)
 >

@@ -195,5 +195,19 @@
   "ladder_rung": "Segmento {number}",
   "ladder_unreadable": "La riga {line} non si legge come Ladder: {message}",
   "ladder_drawing": "Ladder: disegna i segmenti del file",
-  "ladder_text": "Testo: modifica il file come è scritto"
+  "ladder_text": "Testo: modifica il file come è scritto",
+  "ladder_tools": "Elementi Ladder",
+  "ladder_add_rung": "Nuovo segmento, sotto quello selezionato",
+  "ladder_add_contact": "Contatto: dopo l'elemento selezionato, o primo nel segmento o nel percorso selezionato",
+  "ladder_add_coil": "Bobina: dopo l'elemento selezionato, o ultima nel segmento o nel percorso selezionato",
+  "ladder_add_box": "Box: una funzione o un blocco funzionale, dopo l'elemento selezionato",
+  "ladder_add_branch": "Ramo parallelo dopo l'elemento selezionato: l'elemento successivo va sul suo percorso inferiore",
+  "ladder_negated": "Negato (/)",
+  "ladder_rising": "Fronte di salita (P)",
+  "ladder_falling": "Fronte di discesa (N)",
+  "ladder_set": "Set (S)",
+  "ladder_reset": "Reset (R)",
+  "ladder_delete": "Elimina la selezione (Canc)",
+  "ladder_undo": "Annulla (Ctrl+Z)",
+  "ladder_redo": "Ripeti (Ctrl+Y)"
 }

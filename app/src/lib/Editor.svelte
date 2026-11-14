@@ -347,7 +347,15 @@
           }}
           onCursor={(line) => (cursor = line)}
         />
-        {#if drawn}<div class="ladder-area"><LadderEditor source={current} {sources} /></div>{/if}
+        {#if drawn}<div class="ladder-area">
+            <LadderEditor
+              source={current}
+              {sources}
+              onText={(text) => {
+                if (current) current.text = text;
+              }}
+            />
+          </div>{/if}
       </div>
     {/if}
     <LogList bind:logs />

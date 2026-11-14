@@ -79,6 +79,8 @@ export interface LBranch {
   w: number;
   h: number;
   path: number[];
+  /** each path's wire, top to bottom */
+  legs: number[];
 }
 
 export interface RungLayout {
@@ -263,6 +265,7 @@ function placeBranch(
     w: maxW + 12,
     h: bottom + last.descent - (top - first.ascent),
     path: at,
+    legs: ys,
   });
   res.ascent = Math.max(res.ascent, first.ascent);
   res.descent = Math.max(res.descent, bottom - cy + last.descent);
