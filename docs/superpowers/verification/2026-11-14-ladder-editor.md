@@ -38,6 +38,8 @@ Date: 2026-11-14. Spec `2026-11-13-ladder-editor-design.md`, plan `2026-11-13-la
     - stop_pb drops the coil;
   - a force on start_pb from the drawing energises the coil and marks the value as forced.
   - Regressions: `monitor` 7/7, `plc_window` 6/6, `editor` 10/10, `editor_st` 6/6.
+- **E2E on Windows:** the whole suite, `ladder.mjs` with it, green on windows-2022 in CI (run 43589986504, on
+  516880f).
 - **Seen in the app** (Linux, xvfb), dark and light themes:
   - the toolbar, the operand completion and Auto Declare;
   - the box picker, which inserts `TON_1` and declares it;
@@ -72,4 +74,3 @@ Date: 2026-11-14. Spec `2026-11-13-ladder-editor-design.md`, plan `2026-11-13-la
 - **A program of a thousand rungs,** for the editor's speed and the temporaries' cost (the spec's estimate is a
   hypothesis).
 - **Breakpoints, backward jumps, ST inside a rung** (4.11b), and FBD: left out by the spec, decision 8.
-- **Windows,** until CI's windows-2022 E2E on the pull request's last SHA.
