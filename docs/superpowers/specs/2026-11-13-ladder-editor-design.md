@@ -200,7 +200,8 @@ What these do not show:
    - breakpoints and stepping in LD;
    - backward jumps;
    - LD ↔ ST conversion of the user's code;
-   - ST blocks inside a rung;
+   - ST blocks inside a rung: ROADMAP 4.11b, after this one (user, 2026-11-14), both an EXECUTE element as CODESYS's
+     and a whole rung of ST as TIA Portal's;
    - free placement (CFC);
    - FBD.
 
