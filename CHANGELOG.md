@@ -6,8 +6,10 @@ publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full hi
 
 ## v0.1.0 — 2026-11-14
 
-The first runnable slice: one belt conveyor in 3D, driven by a Structured Text program you edit
-and build inside the app, on Windows and Linux.
+The first release: lay out a conveyor line in 3D from a library of components after Open Industry
+Project, program its PLC in Structured Text or Ladder (IEC 61131-3) inside the app, and run it with
+online monitoring, forcing and breakpoints, on Windows and Linux. The PLC is truST's runtime, built
+into the app; connecting an external PLC (PLCSIM Advanced, S7, OPC UA) is ROADMAP phase 5.
 
 ### Added
 
@@ -156,7 +158,8 @@ and build inside the app, on Windows and Linux.
     ST file's.
   - Online, the wires show the power the runtime computed in that scan, not a recomputation: energised wires thick
     and coloured, dead ones thick and dashed. Each operand and pin shows its value, and a click writes or forces it.
-  - PLCopen TC6 `<LD>` import and export, read back and run alike.
+  - PLCopen TC6 `<LD>` import and export, read back and run alike, as the app's commands (`ladder_export`,
+    `ladder_import`): no menu reaches them yet.
   - What TC6 cannot draw (an empty path, a branch closing another's path) is written as a contact on `TRUE`.
   - Not yet: insertion markers and drag and drop, breakpoints in Ladder, backward jumps, ST inside a rung (4.11b).
 - The ST editor starts in the light theme: Monaco refused a shortened `#fff` token colour, and the editor stayed empty.

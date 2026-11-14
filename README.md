@@ -13,7 +13,7 @@ Build the line. Run deterministic material flow. Test PLC logic before the hardw
 [![Rust](https://img.shields.io/badge/Rust-1.99-000000?logo=rust)](app/src-tauri/rust-toolchain.toml)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://v2.tauri.app/)
 
-[What is Twinova?](#what-is-twinova) · [Current prototype](#current-prototype) · [Architecture](#architecture) · [Quick Start](#quick-start) · [Documentation](#documentation) · [Development](#development)
+[What is Twinova?](#what-is-twinova) · [What it does today](#what-it-does-today) · [Architecture](#architecture) · [Quick Start](#quick-start) · [Documentation](#documentation) · [Development](#development)
 
 </div>
 
@@ -21,58 +21,63 @@ Build the line. Run deterministic material flow. Test PLC logic before the hardw
 
 ## What is Twinova?
 
-Twinova is an open-source 3D factory simulator and virtual-commissioning tool for automation engineers. The long-term goal is to lay out a production line from reusable components, run its material flow deterministically, and connect a real or emulated PLC before the machine exists.
+Twinova is an open-source 3D factory simulator and virtual-commissioning tool for automation engineers. You lay out a production line from reusable components, run its material flow deterministically, and program its PLC; the goal is to connect a real or emulated PLC to it before the machine exists.
 
-The project is **headless first**: the simulation engine is designed as a library or service, while the desktop editor is one client. PLC-in-the-loop, repeatable runs, open component models, and open industrial connectivity are product foundations rather than paid extensions.
+The project is **headless first**: the simulation engine is a library, the desktop app one client of it and an MCP server for coding agents another. PLC-in-the-loop, repeatable runs, open component models and open industrial connectivity are product foundations rather than paid extensions.
 
-> **Status: early prototype.** The repository contains the research and engineering foundation plus a runnable first desktop slice. The broader component library, physics integration, PLC drivers, and lockstep commissioning workflow remain on the [Roadmap](ROADMAP.md).
+> **Status: first release, [v0.1.0](https://github.com/chetto1983/Twinova/releases/tag/v0.1.0).** Lines run in the app against its built-in PLC (truST's IEC 61131-3 runtime). Connecting an external PLC (PLCSIM Advanced in lockstep, S7, Modbus TCP, OPC UA) is [Roadmap](ROADMAP.md) phase 5; robots, axes and CAD import come after it.
 
 <div align="center">
 
-<img src="docs/images/twinova-app.png" alt="Twinova desktop prototype showing the Structured Text editor, 3D conveyor and I/O panel" width="1100" />
+<img src="docs/images/twinova-app.png" alt="Twinova running the two-belt line with a chain transfer: scene tree, 3D view and the PLC pane with its Ladder program" width="1100" />
 
-<sub>The current desktop shell: IEC 61131-3 Structured Text, a 3D conveyor scene, deterministic controls, and live I/O.</sub>
+<sub>A line from the component library running in 3D, its PLC program below.</sub>
+
+<img src="docs/images/twinova-ladder.png" alt="The PLC pane maximized: the variables table with live values above the Ladder rungs, energised wires drawn green" width="1100" />
+
+<sub>The same program in Ladder, online: values from the running PLC and the power flow its scan computed.</sub>
 
 </div>
 
-## Current prototype
+## What it does today
 
-The runnable application in `app/` is a Tauri 2 desktop app built around one analytically simulated belt conveyor:
-
-- **Structured Text in the app** — edit and build an IEC 61131-3 program without installing a PLC compiler. The program runs on truST's bytecode VM.
-- **Deterministic discrete-event engine** — nexosim runs on one thread with integer nanosecond time; belt motion is computed in closed form, so sensor edges are not tied to a render frame.
-- **PLC scan semantics** — the scan period comes from the IEC task configuration instead of an unrelated UI timer.
-- **Controllable time** — run from ×0.25 to ×10 wall-clock speed, run unpaced, pause, step one scan, and save or restore simulation state.
-- **3D operator view** — Three.js renders the conveyor and parts while the Rust engine remains authoritative.
-- **Operator-facing diagnostics** — I/O values, virtual time, delivered-part count, blocked-outlet fault injection, and visible real-time lag.
-- **Desktop basics** — English and Italian interfaces, light and dark themes, Windows MSI plus Linux deb/AppImage build pipelines.
+- **Lines from a component library** after [Open Industry Project](https://github.com/Open-Industry-Project/Open-Industry-Project) (MIT): belt and roller conveyors, straight and curved, a chain transfer, a stopper, a pusher, a turntable, a source of products with size, colour and code, a sink, and diffuse, through-beam, colour, laser and barcode sensors. The conveyors' and devices' logic is an IEC 61131-3 function block you can edit.
+- **A scene editor:** place from a catalogue or drag into the 3D view, move and turn with a gizmo, snap conveyors end to end, edit parameters, signals and connections in the inspector, undo and redo.
+- **Physics you can replay:** Rapier rigid-body physics with enhanced determinism, stepped every millisecond in lockstep with the components' logic and the PLC scan, on virtual time. A run is replayed exactly, the same on Linux and Windows; save a state and come back to it.
+- **The PLC inside the app:** Structured Text and Ladder (as CODESYS's LD2), built to truST's bytecode runtime with no external compiler. The scan time comes from the program's IEC task.
+- **A PLC IDE's online tools:** values beside the code and on the Ladder drawing, write and force, breakpoints that hold the line as an S7-1500's HOLD with stepping and conditions, completion with call templates, go to definition, rename, Auto Declare, and the PLC pane in a window of its own. The `.st` files can also be edited in VS Code while the line runs.
+- **Time under control:** ×0.25 to ×10 the wall clock or as fast as possible, pause, a single scan, reset, and the lag behind real time shown.
+- **Coding agents:** `twinova-agent` serves the engine over the Model Context Protocol: open, edit, build and run a project, read signals, press buttons, compare fingerprints.
+- **Desktop basics:** English and Italian, light and dark themes, an MSI for Windows and a deb and an AppImage for Linux.
 
 ## At a glance
 
 | | |
 |---|---|
-| **Stage** | Early prototype; first vertical slice is runnable |
-| **Desktop** | Tauri 2 with Svelte 5, TypeScript, and Three.js |
-| **Engine** | Rust 1.99, deterministic discrete-event core with analytic conveyor motion |
-| **PLC logic** | IEC 61131-3 Structured Text on the pinned truST runtime |
+| **Stage** | First release, v0.1.0; external PLCs not connected yet |
+| **Desktop** | Tauri 2, Svelte 5, TypeScript, Three.js, Monaco |
+| **Engine** | Rust 1.99, a 1 ms lockstep on integer virtual time, Rapier 0.36 with enhanced determinism |
+| **PLC logic** | IEC 61131-3 Structured Text and Ladder, on the pinned truST runtime |
 | **Languages** | English and Italian |
-| **Targets** | Windows and Linux desktop bundles; headless engine is the architectural direction |
-| **Quality gates** | Rust fmt/clippy/tests, frontend static checks, ≥85% coverage, mutation tests, real-app E2E, file-size cap |
-| **Release state** | CI builds unsigned installers; no public release is published yet |
+| **Targets** | Windows and Linux desktop; the engine is a library, also served over MCP |
+| **Quality gates** | Rust fmt/clippy/tests, frontend static checks, ≥85 % coverage, mutation testing with no survivor, real-app E2E on Linux and Windows, a 600-line cap per file |
+| **Release state** | [v0.1.0](https://github.com/chetto1983/Twinova/releases/tag/v0.1.0) published; the installers are not signed yet |
 
 ## Architecture
 
 ```text
 Desktop shell       Tauri 2 · Svelte 5 · Aura design tokens · English/Italian messages
-PLC workspace       Structured Text editor · truST syntax/build pipeline · bytecode VM
-Simulation API      Tauri commands and events · immutable snapshots · save/restore state
-Engine              nexosim discrete-event core · integer nanosecond time · IEC scan tasks
-Material flow       analytic belt motion · exact sensor crossings · jam and outlet behavior
-Visualization       Three.js scene · engine snapshots drive rendering, never simulation time
-Packaging           Windows MSI · Linux deb/AppImage · headless-first library boundary
+PLC workspace       Structured Text (Monaco) and Ladder editors · truST analysis · online monitoring · breakpoints
+PLC runtime         truST bytecode VM · the line program at its IEC task's period · Ladder lowered to ST
+Component logic     each component's IEC 61131-3 function block, run every millisecond in a field runtime
+Engine              1 ms lockstep on virtual time: physics, sensors, component logic, PLC scan · replay by inputs
+Physics             Rapier rigid bodies with enhanced determinism · OIP's conveyor surfaces, devices and products
+Visualization       Three.js · engine snapshots drive rendering, never simulation time
+Agents              twinova-agent: the engine over the Model Context Protocol (stdio or HTTP)
+Packaging           Windows MSI · Linux deb/AppImage
 ```
 
-The present slice deliberately keeps the engine and view separate: Rust owns simulation state and timing; the webview receives snapshots and renders them. Planned fixed-step physics will only cover interactions that cannot be solved analytically.
+Rust owns the simulation state and its time; the webview receives snapshots and renders them, so a slow frame never changes a run.
 
 ## Product direction
 
@@ -80,15 +85,29 @@ Twinova is working toward:
 
 - one open component model for geometry, joints, behaviors, properties, and typed signals;
 - a deterministic hybrid engine combining discrete events, analytic motion, and fixed-step physics only where needed;
-- free-running and PLC-synchronized lockstep modes, including repeatable PLCSIM Advanced tests;
-- S7, OPC UA, Modbus, MQTT, ADS, and other open connectivity;
+- an external PLC in the loop: PLCSIM Advanced in lockstep for repeatable tests, and free-running S7, OPC UA,
+  Modbus, MQTT, ADS and other open connectivity;
+- axes, servos and robots, and CAD import;
 - a reusable component catalog and a headless automation/test surface.
 
-These are planned capabilities, not claims about the current prototype. Milestones, phase status, and acceptance criteria live in the [Roadmap](ROADMAP.md).
+These are planned capabilities, not claims about the current release. Milestones, phase status, and acceptance criteria live in the [Roadmap](ROADMAP.md).
 
 ## Quick Start
 
-You need Node.js **22.23.4** (pinned in `.node-version`), Rust **1.99.0** (pinned by the app), and the [Tauri 2 system prerequisites](https://v2.tauri.app/start/prerequisites/) for your operating system.
+**Install:** download the MSI (Windows), the deb or the AppImage (Linux) from the [v0.1.0 release](https://github.com/chetto1983/Twinova/releases/tag/v0.1.0). The installers are not signed yet, so Windows SmartScreen asks for confirmation on the first start (More info, then Run anyway).
+
+The app opens on a bundled demo, one belt. The example lines are project folders in this repository, under [`app/src-tauri/project/tests/fixtures/valid/`](app/src-tauri/project/tests/fixtures/valid/): open one with "Open project folder…", or start the app with the folder as its argument (`twinova <folder>`).
+
+| Folder | Line |
+|---|---|
+| `two_belts_diverter` | two belts and a chain transfer sending every third carton to reject |
+| `ladder_line` | the same line, its program in Ladder |
+| `curve_line` | a line with two curves |
+| `sort_line` | sorting with a stopper, a turntable and a pusher |
+| `code_sort_line` | sorting by barcode and colour |
+| `merge_line` | a spur merging into a main line |
+
+**Build from source:** you need Node.js **22.23.4** (pinned in `.node-version`), Rust **1.99.0** (pinned by the app), and the [Tauri 2 system prerequisites](https://v2.tauri.app/start/prerequisites/) for your operating system.
 
 ```sh
 git clone https://github.com/chetto1983/Twinova.git
@@ -97,7 +116,7 @@ npm install
 npm run tauri dev
 ```
 
-Linux requires WebKitGTK 4.1 and the remaining Tauri packages. The embedded starter program needs no external IEC 61131-3 toolchain.
+Linux requires WebKitGTK 4.1 and the remaining Tauri packages. No external IEC 61131-3 toolchain is needed.
 
 ## Documentation
 
@@ -135,7 +154,7 @@ cargo test
 
 The real application is exercised through `tauri-driver` on Windows and Linux. Git hooks install with `cd app && npm run hooks`; the complete post-edit gate, mutation commands, E2E flow, and soak checks are in the [Engineering guide](CLAUDE.md).
 
-CI builds an unsigned MSI for Windows and deb/AppImage packages for Linux on pushes to `main`. A tagged release has not been published yet.
+CI builds an unsigned MSI for Windows and deb/AppImage packages for Linux on pushes to `main`. Pushing a tag `vX.Y.Z`, or running the Release workflow with one, publishes a GitHub release whose text is that version's section of the [Changelog](CHANGELOG.md).
 
 ## License
 
