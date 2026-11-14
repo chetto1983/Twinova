@@ -106,6 +106,24 @@ Consequences:
   - OIP's reduction from the graph to the series/parallel tree and its writer are ported as they are (decision 7).
 - truST's `trust-plcopen` does not cover LD: its profile refuses graphical bodies ("No import/export for SFC/LD/FBD
   bodies").
+- A POU's interface (Task 5, the user, 2026-11-14): `trust-plcopen` writes no `<interface>` and drops `AT` (measured
+  above), so the `.ld` declarations and TC6's `<interface>` are converted by Twinova, the declarations read with truST's
+  ST parser (`trust-syntax`).
+- What TC6 cannot draw, found by running random programs written and read back (Task 5, the round trip of the lowering's
+  generator, 2000 programs):
+  - TC6 has no wire. An empty path drawn as a link puts a path's two ends on one node, and the order the paths ran in
+    cannot be read back; three rules for placing such paths each failed on a new program. The user's choice
+    (2026-11-14): an empty path is written as a contact on `TRUE`, which passes its power on unchanged, and a contact on
+    `TRUE` reads back as an empty path. A bare wire in another tool's file is refused by name.
+  - A branch that ends a path of another closes on that branch's join, and a rung that is one branch runs rail to rail
+    on each path: read back, the first is flattened into the other branch, the second split into rungs, and OIP's order
+    of a branch's paths (coil-only paths last) changes with either. The writer gives such a branch a join of its own
+    with a contact on `TRUE`: after the branch inside another, before the branch that is a whole rung (so the coils stay
+    at the right end, which TIA requires). A branch closed so reads back nested.
+  - OIP's reduction merges the edges between two nodes before every series is joined, so coils drawn beside a jump
+    could take the jump inside their branch. Every series is joined first.
+  - OIP's refusal of "a value wired into a box straight from another box" can never fire: the box is always among the
+    consumers it tests. Not ported.
 
 What these do not show:
 - the scan order across programs with a CONFIGURATION and several tasks;
