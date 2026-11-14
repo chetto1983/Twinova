@@ -1,0 +1,20 @@
+[package]
+name = "twinova-ladder"
+version = "0.1.0"
+description = "Twinova's Ladder Diagram: the model, its text grammar, its lowering to Structured Text and PLCopen <LD>"
+authors = ["The Twinova contributors"]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+# PLCopen TC6 XML read in document order (spec, Task 5): the version truST's trust-plcopen already builds. MIT OR Apache-2.0.
+roxmltree = "=0.21.2"
+
+[dev-dependencies]
+# Property tests of the grammar's round trip (CLAUDE.md: property-based tests for codecs). MIT OR Apache-2.0.
+proptest = "=1.12.0"
+# The lowered ST run scan by scan in the tests, by the runtime the engine runs (the root manifest's patch applies).
+trust-runtime = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "6405915973a77587748ffb061a61d37bb8a368b0", default-features = false, features = ["full"] }

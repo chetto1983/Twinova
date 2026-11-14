@@ -4,6 +4,7 @@
 //! reference included. An edit that adds parse errors is refused. The Comment column is the comment after a
 //! declaration's `;`; a comment above it stays in the text, outside the row.
 
+use crate::ladder_table;
 use serde::{Deserialize, Serialize};
 use text_size::{TextRange, TextSize};
 use trust_ide::rename::rename_checked;
@@ -370,14 +371,31 @@ fn rename_from(
 
 /// The table's rows of a tab's text.
 #[tauri::command]
-pub fn declarations_of(text: String) -> Vec<Declaration> {
+pub fn declarations_of(file: String, text: String) -> Vec<Declaration> {
+    if ladder_table::is_ladder(&file) {
+        return ladder_table::rows(&file, &text);
+    }
     declarations(&text)
 }
 
 /// A tab's text after an edit of its table.
 #[tauri::command]
-pub fn edit_declaration(text: String, change: Change) -> Result<String, String> {
+pub fn edit_declaration(file: String, text: String, change: Change) -> Result<String, String> {
+    if ladder_table::is_ladder(&file) {
+        return ladder_table::edited(&file, &text, &change);
+    }
     edit(&text, &change)
+}
+
+/// A rename from a Ladder file would change its declarations and not the rungs that use them, which the ST frontend
+/// does not see: refused until the Ladder editor renames (plan 2026-11-13-ladder-editor.md, Task 6).
+fn refused_in_ladder(file: &str) -> Result<(), String> {
+    if ladder_table::is_ladder(file) {
+        return Err(format!(
+            "{file}: a variable of a Ladder file is renamed in the Ladder editor, which renames its rungs too"
+        ));
+    }
+    Ok(())
 }
 
 /// The tabs' texts F2 on a symbol changes, from every source the editor holds.
@@ -389,6 +407,7 @@ pub fn rename_symbol(
     column: u32,
     new_name: String,
 ) -> Result<Vec<(String, String)>, String> {
+    refused_in_ladder(&file)?;
     rename_at(&files, &file, line, column, &new_name)
 }
 
@@ -400,6 +419,7 @@ pub fn rename_declaration(
     index: usize,
     new_name: String,
 ) -> Result<Vec<(String, String)>, String> {
+    refused_in_ladder(&file)?;
     rename(&files, &file, index, &new_name)
 }
 

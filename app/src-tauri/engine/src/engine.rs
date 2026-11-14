@@ -242,7 +242,7 @@ impl Engine {
     /// The program's debugger, attached as a force attaches it (spec 2026-11-13-breakpoints-hold-design.md,
     /// decision 10). It works without the engine, which a stopped scan holds.
     pub fn debugger(&mut self) -> Debugger {
-        let files = self.project.program.clone();
+        let files = self.line.controller().sources().to_vec();
         let places = Debugger::whole_files(&files);
         let texts = files.into_iter().map(|(_, text)| text).collect();
         let writes = Some(self.held_writes.clone());

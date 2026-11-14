@@ -25,6 +25,7 @@ use twinova_engine::watch::{Scope, Watch};
 use crate::analysis::sources;
 use crate::commands::{AppState, with_engine};
 use crate::declarations::declarations;
+use crate::monitor_ladder::{LadderSpot, ladder_spots};
 use crate::positions::position;
 
 /// Where a value is drawn and what it shows.
@@ -243,11 +244,12 @@ pub(crate) struct Monitored {
     table: Vec<(Row, Watch)>,
 }
 
-/// What the editor shows of a file while monitoring: the spots in the code, then the table's rows, the values coming
-/// in that order.
+/// What the editor shows of a file while monitoring: the spots in the code, or a Ladder file's in its drawing, then
+/// the table's rows, the values coming in that order.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Watched {
     pub spots: Vec<Spot>,
+    pub ladder: Vec<LadderSpot>,
     pub rows: Vec<Row>,
 }
 
@@ -302,11 +304,18 @@ pub fn watch_range(
 ) -> Result<Watched, String> {
     let project = state.built_project()?.ok_or("build the project first")?;
     let files = sources(&project)?;
-    let found = spots(&files, &file, first, last, device.as_deref());
     let text = files
         .iter()
         .find(|(f, _)| *f == file)
         .map(|(_, t)| t.clone());
+    // a Ladder file's frontend text is its declarations alone: its values are the drawing's
+    let (found, drawn) = match (file.ends_with(".ld"), &text) {
+        (true, Some(only)) => (Vec::new(), ladder_spots(&project.program, &file, only)?),
+        _ => (
+            spots(&files, &file, first, last, device.as_deref()),
+            Vec::new(),
+        ),
+    };
     let owner = match (file.starts_with("components/"), device.as_deref()) {
         (false, _) => Some(Owner::Program),
         (true, Some(device)) => Some(Owner::Device(device)),
@@ -325,6 +334,7 @@ pub fn watch_range(
         })?,
     };
     let watches: Vec<Watch> = (found.iter().map(|(_, w)| w.clone()))
+        .chain(drawn.iter().map(|(_, w)| w.clone()))
         .chain(table.iter().map(|(_, w)| w.clone()))
         .collect();
     if held.is_none() {
@@ -337,6 +347,7 @@ pub fn watch_range(
     *monitored = Monitored { watches, table };
     Ok(Watched {
         spots: found.into_iter().map(|(s, _)| s).collect(),
+        ladder: drawn.into_iter().map(|(s, _)| s).collect(),
         rows,
     })
 }

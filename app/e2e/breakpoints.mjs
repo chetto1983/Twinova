@@ -161,7 +161,12 @@ sessions(() =>
     await check("F10 steps over to the next line, and F5 continues to the next scan", async () => {
       await browser.keys(["F10"]);
       await heldAt(38);
-      expectEqual((await marks()).includes("38 debug-held"), true, "the held line is marked");
+      // The editor asks where the program is held on its own, apart from the status bar: its mark follows within a poll.
+      await eventually(
+        async () => expectEqual((await marks()).includes("38 debug-held"), true, "the held line is marked"),
+        "the held mark",
+        5_000,
+      );
       // Line 37 comes before 38 in the scan: stopping there again is the next scan. The status bar's time does not
       // show it, since the Run loop sends a snapshot only at the end of its tick, and the tick stops again first.
       await browser.keys(["F5"]);

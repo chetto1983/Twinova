@@ -31,6 +31,13 @@ copies and translates part of it, under the licence below; each file names its s
   conveyor's behaviour block; since 4.4c the blade stop's, the diverter's and the turntable's `step()`, in
   `components/twinova.{stopper,pusher,turntable}@1.st`.
 
+Since ROADMAP 4.11 (read at commit `0572868`), `app/src-tauri/ladder/` ports its Ladder Diagram: the model, the `.ld`
+text grammar (`src/plc/parserLadder.ts`), the lowering to Structured Text and the PLCopen TC6 `<LD>` reader and writer
+(`src/plc/ladder/`), translated into Rust; the crate's `NOTICE` repeats this licence. The editor's gestures,
+`app/src/lib/ladder/edit.ts`, are copied from `src/plc/ladder/ladderEdit.ts` at `1e7488c`, with its tests, and changed
+for Twinova's model; the order of an operand's candidates, `app/src/lib/ladder/operand.ts`, from its
+`src/plc/ladder/ladderComplete.ts`.
+
 > The MIT License (MIT)
 >
 > Copyright (c) 2024-present, Automation Standard LLC and Contributors
@@ -47,3 +54,13 @@ copies and translates part of it, under the licence below; each file names its s
 > WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 > COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 > OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## nautilus
+
+<https://github.com/joyautomation/nautilus>, read at commit `2db093e1e2e967a3a1b6b09a32fb575a84791748`. Since ROADMAP
+4.11 the Ladder editor's layout, `app/src/lib/ladder/layout.ts`, is ported from its
+`tools/vscode-iec/webview-ui/src/ladderLayout.ts` and changed for Twinova's model; the file says what changed. Its box
+picker, `app/src/lib/LadderPicker.svelte` with `app/src/lib/ladder/catalog.ts`, is ported from
+`tools/vscode-iec/webview-ui/src/LdBlockPicker.svelte`, its catalogue now truST's.
+Copyright 2026 Joy Automation, under the Apache License 2.0, whose text is in `LICENSE-APACHE`. The repository has no
+`NOTICE` file.

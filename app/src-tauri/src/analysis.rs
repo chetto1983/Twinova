@@ -13,6 +13,9 @@ use trust_wasm_analysis::{
     BrowserAnalysisEngine, CompletionRequest, DiagnosticItem, DocumentInput, HoverRequest, Position,
 };
 use twinova_engine::field::{config_source, placed_variables};
+use twinova_ladder::{
+    Program, Rung, declarations_only, declarations_prefix, parse, print, program_name,
+};
 use twinova_project::Project;
 
 use crate::lsp_files::FIELD;
@@ -80,6 +83,7 @@ pub struct Problem {
 /// The nondeterminism warnings Twinova's `trust-lsp.toml` turns off in VS Code (`lsp_files.rs`).
 const HIDDEN: [&str; 2] = ["W010", "W011"];
 const UNMAPPED: &str = "E202";
+const UNUSED: &str = "W001";
 
 /// The file of a behaviour block, as the project folder holds it.
 fn block_file(key: &str) -> String {
@@ -109,7 +113,9 @@ fn shown(diagnostics: Vec<DiagnosticItem>, text: &str, placed: &BTreeSet<String>
 /// field's generated configuration last, when a component has a behaviour. The monitoring resolves references on the
 /// same files (`monitor.rs`).
 pub(crate) fn sources(project: &Project) -> Result<Vec<(String, String)>, String> {
-    let mut files: Vec<(String, String)> = (project.program.iter().cloned())
+    let program =
+        (project.program.iter()).map(|(path, text)| (path.clone(), frontend_text(path, text)));
+    let mut files: Vec<(String, String)> = program
         .chain(
             project
                 .behaviours
@@ -121,6 +127,62 @@ pub(crate) fn sources(project: &Project) -> Result<Vec<(String, String)>, String
         files.push((FIELD.into(), config));
     }
     Ok(files)
+}
+
+/// What the frontend reads of a program file: an ST file as written, a Ladder file as its declarations alone, on
+/// their own lines (`declarations_only`). Its rungs are the lowering's, which Build compiles. A Ladder file that does
+/// not read gives nothing: Build reports it.
+fn frontend_text(path: &str, text: &str) -> String {
+    if !path.ends_with(".ld") {
+        return text.to_string();
+    }
+    (program_name(path).ok())
+        .and_then(|name| declarations_only(name, text).ok())
+        .unwrap_or_default()
+}
+
+/// The names a Ladder file's rungs use, folded, when `file` is one that reads: the frontend sees its declarations
+/// alone (`frontend_text`), so to it every variable is unused, and its W001 stands only for a name no rung uses.
+fn used_in_rungs(project: &Project, file: &str) -> Option<BTreeSet<String>> {
+    let (_, text) =
+        (project.program.iter()).find(|(path, _)| path == file && path.ends_with(".ld"))?;
+    let rungs: Vec<Rung> = (parse(text).ok()?.rungs.into_iter())
+        .map(|rung| Rung {
+            comment: None,
+            ..rung
+        })
+        .collect();
+    let printed = print(&Program {
+        declarations: String::new(),
+        rungs,
+    });
+    let words = printed.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'));
+    Some(
+        words
+            .filter(|w| !w.is_empty())
+            .map(str::to_ascii_uppercase)
+            .collect(),
+    )
+}
+
+/// A Ladder file's problems at its own columns: the frontend read its first line after `declarations_prefix`.
+fn in_ladder_file(file: &str, mut problems: Vec<Problem>) -> Vec<Problem> {
+    let Some(name) = file
+        .strip_suffix(".ld")
+        .and_then(|_| program_name(file).ok())
+    else {
+        return problems;
+    };
+    let shift = u32::try_from(declarations_prefix(name).len()).unwrap_or(0);
+    for p in &mut problems {
+        if p.line == 1 {
+            p.column = p.column.saturating_sub(shift).max(1);
+        }
+        if p.end_line == 1 {
+            p.end_column = p.end_column.saturating_sub(shift).max(1);
+        }
+    }
+    problems
 }
 
 /// Analyses `project`'s sources: each shown file's problems, by path.
@@ -147,8 +209,17 @@ pub fn analyze_project(
     };
     (shown_files.iter())
         .map(|(file, text)| {
-            let found = (analysis.engine.diagnostics(file)).map_err(|e| e.to_string())?;
-            Ok((file.clone(), shown(found, text, placed_in(file))))
+            let mut found = (analysis.engine.diagnostics(file)).map_err(|e| e.to_string())?;
+            if let Some(used) = used_in_rungs(project, file) {
+                let named =
+                    |d: &DiagnosticItem| text.get(d.span.start as usize..d.span.end as usize);
+                found.retain(|d| {
+                    d.code != UNUSED
+                        || !named(d).is_some_and(|n| used.contains(&n.to_ascii_uppercase()))
+                });
+            }
+            let problems = shown(found, text, placed_in(file));
+            Ok((file.clone(), in_ladder_file(file, problems)))
         })
         .collect()
 }

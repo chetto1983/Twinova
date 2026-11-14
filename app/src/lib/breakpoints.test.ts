@@ -23,18 +23,18 @@ describe("the session's breakpoints", () => {
     backend.calls = [];
   });
 
-  it("keeps a file's breakpoints as the debugger placed them, and says whether any stops or logs", async () => {
+  it("keeps a file's breakpoints as the debugger placed them, and says whether any logs", async () => {
     backend.answer = () => Promise.resolve([{ line: 37 }, { line: 41, log: "c={count}" }]);
     const kept = new Breakpoints(
       () => false,
       () => {},
     );
-    expect([kept.armed, kept.logging, kept.of(null), kept.of("plc/Main.st")]).toEqual([false, false, [], []]);
+    expect([kept.logging, kept.of(null), kept.of("plc/Main.st")]).toEqual([false, [], []]);
     kept.set("plc/Main.st", [{ line: 34 }, { line: 41, log: "c={count}" }]);
     await settled();
     expect(backend.calls).toEqual([["plc/Main.st", [{ line: 34 }, { line: 41, log: "c={count}" }]]]);
     expect(kept.of("plc/Main.st")).toEqual([{ line: 37 }, { line: 41, log: "c={count}" }]);
-    expect([kept.armed, kept.logging]).toEqual([true, true]);
+    expect(kept.logging).toBe(true);
     kept.move("plc/Main.st", [{ line: 38 }]);
     expect([kept.of("plc/Main.st"), kept.logging]).toEqual([[{ line: 38 }], false]);
   });
@@ -65,6 +65,6 @@ describe("the session's breakpoints", () => {
     kept.set("plc/Main.st", [{ line: 41, condition: "x =" }]);
     await settled();
     expect(failed).toEqual(["line 41: the condition 'x =' does not parse"]);
-    expect(kept.armed).toBe(false);
+    expect(kept.of("plc/Main.st")).toEqual([]);
   });
 });

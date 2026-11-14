@@ -96,6 +96,79 @@ fn a_broken_program_shows_its_errors_before_build() {
     );
 }
 
+/// A Ladder file's rungs answer for its own variables only: a name they use is still unused in an ST file after it.
+#[test]
+fn an_st_file_after_a_ladder_file_keeps_its_own_unused_variables() {
+    let (app, mut project) = opened("two_belts_diverter");
+    let ld = "VAR spare : BOOL; END_VAR\n|spare| (spare);\n";
+    let st = "PROGRAM Other\nVAR\n    spare : BOOL;\nEND_VAR\nEND_PROGRAM\n";
+    project.program.push(("plc/Pump.ld".into(), ld.into()));
+    project.program.push(("plc/Other.st".into(), st.into()));
+    let found = analyzed(&app, &project);
+    let unused = |file: &str| -> Vec<String> {
+        (found[file].iter())
+            .filter(|p| p.code == "W001")
+            .map(|p| p.message.clone())
+            .collect()
+    };
+    assert_eq!(unused("plc/Other.st"), ["unused variable 'spare'"]);
+    assert_eq!(unused("plc/Pump.ld"), Vec::<String>::new());
+}
+
+/// A name in a rung's comment is not a use: only the rungs' elements use a variable.
+#[test]
+fn a_variable_named_only_in_a_rung_s_comment_is_unused() {
+    let (app, mut project) = opened("two_belts_diverter");
+    let ld = "VAR spare, run : BOOL; END_VAR\n(* spare is wired later *)\n|run| (run);\n";
+    project.program.push(("plc/Pump.ld".into(), ld.into()));
+    let found = analyzed(&app, &project);
+    let unused: Vec<String> = (found["plc/Pump.ld"].iter())
+        .filter(|p| p.code == "W001")
+        .map(|p| p.message.clone())
+        .collect();
+    assert_eq!(unused, ["unused variable 'spare'"]);
+}
+
+/// A Ladder file reaches the frontend as its declarations alone: their problems show at the file's own lines and
+/// columns, and the ST files see its program.
+#[test]
+fn a_ladder_file_shows_the_problems_of_its_declarations_where_it_has_them() {
+    let (app, mut project) = opened("two_belts_diverter");
+    let ld =
+        "VAR x : NoSuchType; END_VAR\nVAR\n    y : BOOL;\n    z : Missing;\nEND_VAR\n|y| (y);\n";
+    project.program.push(("plc/Pump.ld".into(), ld.into()));
+    project
+        .program
+        .push(("plc/Bad.ld".into(), "|y| (y)".into()));
+    let found = analyzed(&app, &project);
+    let errors: Vec<String> = (found["plc/Pump.ld"].iter())
+        .filter(|p| p.severity == "error")
+        .map(|p| {
+            format!(
+                "{}:{}-{}:{} {}",
+                p.line, p.column, p.end_line, p.end_column, p.code
+            )
+        })
+        .collect();
+    assert_eq!(errors, ["1:9-1:19 E102", "4:9-4:16 E102"]);
+    // the rungs use y: the frontend, which reads the declarations alone, would call it unused
+    let unused: Vec<String> = (found["plc/Pump.ld"].iter())
+        .filter(|p| p.code == "W001")
+        .map(|p| p.message.clone())
+        .collect();
+    assert_eq!(unused, ["unused variable 'x'", "unused variable 'z'"]);
+    assert_eq!(
+        found["plc/Bad.ld"],
+        [],
+        "Build reports a file that does not read"
+    );
+    assert!(
+        codes(&found, MAIN).iter().all(|c| !c.contains(" E")),
+        "{:?}",
+        codes(&found, MAIN)
+    );
+}
+
 /// An `AT %I*` the configuration does not place is a real E202: Build's field would refuse it.
 #[test]
 fn an_unplaced_wildcard_keeps_its_e202() {

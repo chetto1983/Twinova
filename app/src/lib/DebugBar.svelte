@@ -1,36 +1,35 @@
 <script lang="ts">
   // Continue, the steps and Run to cursor, their keys (VS Code's, decision 5) and the call stack, in the PLC pane's bar
-  // and the PLC window's (spec 2026-11-13-breakpoints-hold-design.md). A held scan sends no event, so while breakpoints
-  // are set the bar asks where the program is held (plan, decision 5).
+  // and the PLC window's (spec 2026-11-13-breakpoints-hold-design.md). Where the program is held is the window's one
+  // answer (held.svelte.ts), the one the status bar shows.
   import { onMount } from "svelte";
   import { Play, RedoDot, ArrowDownToLine, CornerUpLeft, TextCursor } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { debug } from "./backend";
-  import { holdLabel, keyAction, type Hold, type Log, type Resume } from "./debug";
+  import { holdLabel, keyAction, type Log, type Resume } from "./debug";
+  import { plcHold } from "./held.svelte";
 
   let {
     file,
     cursor,
-    armed,
     logging,
     ready,
-    hold = $bindable(null),
     logs = $bindable([]),
     onError,
   }: {
     /** The shown tab's file, a program's or a block's. */
     file: string | null;
     cursor: number;
-    /** Some breakpoint is set; some is a logpoint. */
-    armed: boolean;
+    /** Some breakpoint is a logpoint. */
     logging: boolean;
     /** The program is built. */
     ready: boolean;
-    hold?: Hold | null;
     /** The logpoints' lines, the last hundred: the editor shows them under the code. */
     logs?: Log[];
     onError: (text: string) => void;
   } = $props();
+
+  const hold = $derived(plcHold.current);
 
   const fail = (e: unknown): void => onError(String(e));
   const resume = (how: Resume): void => void debug.resume(how).catch(fail);
@@ -56,13 +55,7 @@
   }
 
   onMount(() => {
-    const timer = setInterval(() => {
-      if (!armed && !hold) return;
-      debug
-        .hold()
-        .then((h) => (hold = h))
-        .catch(() => (hold = null));
-    }, 200);
+    const unwatch = plcHold.watch();
     const logged = setInterval(() => {
       if (logging)
         debug
@@ -71,7 +64,7 @@
           .catch(fail);
     }, 500);
     return () => {
-      clearInterval(timer);
+      unwatch();
       clearInterval(logged);
     };
   });

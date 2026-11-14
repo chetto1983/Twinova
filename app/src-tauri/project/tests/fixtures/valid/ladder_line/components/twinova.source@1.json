@@ -1,0 +1,133 @@
+{
+  "behaviour": null,
+  "generator": "twinova.source/1",
+  "id": "twinova.source",
+  "joints": [],
+  "nodes": [
+    {
+      "asset": null,
+      "id": "root",
+      "parent": null,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "origin": {
+    "app": "0.1.0"
+  },
+  "parameters": [
+    {
+      "default": 2000000000,
+      "max": null,
+      "min": 1000000.0,
+      "name": "interval",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": 10000000,
+      "max": null,
+      "min": 0.0,
+      "name": "first_arrival",
+      "type": "TIME",
+      "unit": "ns"
+    },
+    {
+      "default": 0,
+      "max": null,
+      "min": 0.0,
+      "name": "max_count",
+      "type": "DINT",
+      "unit": null
+    },
+    {
+      "default": 0.3,
+      "max": null,
+      "min": 0.1,
+      "name": "length",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.3,
+      "max": null,
+      "min": 0.1,
+      "name": "width",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 0.3,
+      "max": null,
+      "min": 0.1,
+      "name": "height",
+      "type": "REAL",
+      "unit": "m"
+    },
+    {
+      "default": 2.7,
+      "max": null,
+      "min": 0.01,
+      "name": "mass",
+      "type": "REAL",
+      "unit": "kg"
+    },
+    {
+      "default": false,
+      "max": null,
+      "min": null,
+      "name": "random_size",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": [],
+      "max": null,
+      "min": null,
+      "name": "colors",
+      "type": "COLOR_LIST",
+      "unit": null
+    },
+    {
+      "default": [],
+      "max": null,
+      "min": null,
+      "name": "codes",
+      "type": "DINT_LIST",
+      "unit": null
+    },
+    {
+      "default": false,
+      "max": null,
+      "min": null,
+      "name": "random_order",
+      "type": "BOOL",
+      "unit": null
+    },
+    {
+      "default": 1,
+      "max": null,
+      "min": null,
+      "name": "seed",
+      "type": "DINT",
+      "unit": null
+    }
+  ],
+  "ports": [
+    {
+      "kind": "flow_out",
+      "name": "out"
+    }
+  ],
+  "signals": [],
+  "version": 1
+}

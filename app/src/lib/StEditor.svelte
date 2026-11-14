@@ -24,6 +24,7 @@
   import { completionKind } from "./analysis";
   import { isSnippet } from "./navigation";
   import { ST, fileOfModel } from "./stNavigation";
+  import { fullHex } from "./hexColor";
 
   monaco.languages.register({ id: ST, extensions: [".st"] });
   monaco.languages.setLanguageConfiguration(ST, conf);
@@ -64,7 +65,8 @@
     },
   });
 
-  const token = (name: string): string => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const token = (name: string): string =>
+    fullHex(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
 
   /** A Monaco theme from the app's Aura tokens, as the page computes them now. */
   function themeFromTokens(dark: boolean): monaco.editor.IStandaloneThemeData {
@@ -170,7 +172,7 @@
     const tab = shown();
     if (!tab) return;
     try {
-      tab.text = await declarations.edit(tab.text, { op: "add", row });
+      tab.text = await declarations.edit(fileOf(tab), tab.text, { op: "add", row });
       declaring = null;
     } catch (e) {
       declareError = String(e);

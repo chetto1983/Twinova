@@ -1,11 +1,11 @@
 <script lang="ts">
   // The status bar, out of App.svelte: run state, virtual time, notices, errors and build; HOLD at a breakpoint (spec
-  // 2026-11-13-breakpoints-hold-design.md, decision 2), asked of the debugger, since a held scan sends no snapshot.
+  // 2026-11-13-breakpoints-hold-design.md, decision 2), the window's one answer (held.svelte.ts).
   import { onMount } from "svelte";
   import { CircleCheck, AlertCircle, CirclePause } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
-  import { debug } from "./backend";
-  import { holdLabel, type Hold } from "./debug";
+  import { holdLabel } from "./debug";
+  import { plcHold } from "./held.svelte";
   import { formatTime, type Snapshot } from "./snapshot";
 
   let {
@@ -26,16 +26,8 @@
     objects: number;
   } = $props();
 
-  let hold = $state<Hold | null>(null);
-  onMount(() => {
-    const timer = setInterval(() => {
-      debug
-        .hold()
-        .then((h) => (hold = h))
-        .catch(() => (hold = null));
-    }, 300);
-    return () => clearInterval(timer);
-  });
+  const hold = $derived(plcHold.current);
+  onMount(() => plcHold.watch());
 </script>
 
 <footer class="statusbar">
