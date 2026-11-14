@@ -241,5 +241,15 @@
   "ladder_exit": "Ends with",
   "ladder_exit_hint": "a label to jump to, or RETURN",
   "ladder_ok": "OK",
-  "ladder_nothing_to_paste": "The clipboard holds no rungs: copy a rung or an element of the drawing first."
+  "ladder_nothing_to_paste": "The clipboard holds no rungs: copy a rung or an element of the drawing first.",
+  "plcopen_export": "Export the Ladder file to PLCopen XML",
+  "plcopen_import": "Import Ladder programs from PLCopen XML",
+  "plcopen_exported": "Written to {file}",
+  "plcopen_imported": "Added {files}",
+  "plcopen_nothing": "No Ladder program in the file",
+  "plcopen_replaced": "Replaced {files}",
+  "plcopen_build": "Build to run",
+  "plcopen_replace_ask": "Replace {files} with the imported program? The tab's text is replaced; what was built stays until Build.",
+  "plcopen_replace": "Replace",
+  "plcopen_kept": "Import cancelled: {files} kept as it was"
 }

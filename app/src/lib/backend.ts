@@ -2,7 +2,7 @@
 // loop and of the project folder's watch.
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 import type { Edit, ProjectView } from "./project";
 import type { Built, Snapshot, ScanTiming } from "./snapshot";
 import type { DiskSources } from "./sources";
@@ -12,6 +12,7 @@ import type { Breakpoint, Hold, Log, Resume } from "./debug";
 import type { Proposal, Reference, Span, Template } from "./navigation";
 import type { CatalogEntry } from "./ladder/catalog";
 import type { Lowering, Program } from "./ladder/model";
+import { exportName, type Imported } from "./ladder/plcopen";
 
 /** Each invoke is a fetch of its own (Tauri 2.12 `scripts/ipc-protocol.js`, `sendIpcMessage`), so two not awaited
  * may reach the app in either order; WebView2 was measured doing so (CI, 2026-11-13). A command that moves the line
@@ -78,6 +79,9 @@ export const navigation = {
     invoke<Proposal | null>("declare_proposal", { files, file, line, column }),
 };
 
+/** PLCopen TC6 projects, as the Ladder editor writes and reads them. */
+const PLCOPEN = [{ name: "PLCopen XML", extensions: ["xml"] }];
+
 /** The Ladder editor (ladder_commands.rs): a file read into its tree, which rejects with a `ParseError`, and lowered
  *  with the program's other files, as Build lowers it. */
 export const ladder = {
@@ -87,6 +91,22 @@ export const ladder = {
   catalog: (program: [string, string][]) => invoke<CatalogEntry[]>("ladder_catalog", { program }),
   complete: (file: string, text: string, typed: string) =>
     invoke<Completion[]>("ladder_completion", { file, text, typed }),
+  /** Writes Ladder file `file` of `program` as PLCopen XML where the save dialog says: that path, or null when the
+   *  dialog is cancelled. */
+  exportPlcopen: async (program: [string, string][], file: string): Promise<string | null> => {
+    const target = await save({ filters: PLCOPEN, defaultPath: exportName(file) });
+    if (target === null) return null;
+    const created = new Date().toISOString().slice(0, 19);
+    return invoke<void>("ladder_export", { program, file, created, target }).then(() => target);
+  },
+  /** Whether the user lets an import go on, asked in a system dialog (`ok` its button). */
+  confirm: (question: string, title: string, ok: string): Promise<boolean> =>
+    confirm(question, { title, kind: "warning", okLabel: ok }),
+  /** The Ladder programs of the PLCopen XML file the open dialog picks, or null when it is cancelled. */
+  importPlcopen: async (): Promise<Imported | null> => {
+    const source = await open({ filters: PLCOPEN });
+    return source === null ? null : invoke<Imported>("ladder_import", { source });
+  },
 };
 
 /** Online monitoring and forcing (src-tauri/src/monitor.rs). */

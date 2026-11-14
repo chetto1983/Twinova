@@ -108,6 +108,10 @@ sessions(() =>
         "drawn",
         10_000,
       );
+      // PLCopen goes through the system dialogs, which tauri-driver cannot drive (as e2e/project.mjs's archives): the
+      // commands' tests write and read the files; here, the buttons are on the Ladder file's pane
+      for (const action of ["Import Ladder programs from PLCopen XML", "Export the Ladder file to PLCopen XML"])
+        expectEqual(await browser.$(button(action)).isEnabled(), true, action);
     });
 
     await check("a start/stop rung is drawn with the toolbox and the keys, its variables declared", async () => {

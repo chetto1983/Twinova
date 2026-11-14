@@ -35,6 +35,7 @@
   import BreakpointBar from "./BreakpointBar.svelte";
   import LogList from "./LogList.svelte";
   import LadderEditor from "./LadderEditor.svelte";
+  import PlcopenButtons from "./PlcopenButtons.svelte";
   import ValueBar from "./ValueBar.svelte";
   import { applyChanged } from "./navigation";
   let {
@@ -284,7 +285,12 @@
         title={viewTitle}
         onclick={() => (drawing = !drawing)}
         >{#if drawn}<Code size={12} />{:else}<Workflow size={12} />{/if}</button
-      >
+      ><PlcopenButtons
+        bind:sources
+        file={ladderFile ? (current?.key ?? null) : null}
+        onShow={(key) => (active = sources.findIndex((s) => s.key === key))}
+        onNote={(text) => (problem = text)}
+      />
     </header>
     {#if blocked || problem}<p class="note" role="status">{problem || blocked}</p>{/if}
     {#if editing && debugFile}

@@ -87,21 +87,25 @@ pub fn ladder_catalog(program: Vec<(String, String)>) -> Result<Vec<Catalogued>,
         .collect())
 }
 
-/// The Ladder file `file` of `program`, the editor's texts, as a PLCopen TC6 project written at `created` (the
-/// webview's clock: the engine keeps none).
+/// Writes the Ladder file `file` of `program`, the editor's texts, to `target` as a PLCopen TC6 project made at
+/// `created` (the webview's clock: the engine keeps none). The webview has no file access: the path is the save
+/// dialog's, as for a project archive (`project_commands.rs`).
 #[tauri::command]
 pub fn ladder_export(
     program: Vec<(String, String)>,
     file: String,
     created: String,
-) -> Result<String, String> {
-    export_ladder(&program, &file, &created)
+    target: String,
+) -> Result<(), String> {
+    let xml = export_ladder(&program, &file, &created)?;
+    std::fs::write(&target, xml).map_err(|e| format!("{target}: {e}"))
 }
 
-/// The Ladder programs of PLCopen TC6 project `xml`, as files of the PLC, and why the rest was left out.
+/// The Ladder programs of the PLCopen TC6 project in file `source`, as files of the PLC, and why the rest was left out.
 #[tauri::command]
-pub fn ladder_import(xml: String) -> Result<Imported, String> {
-    import_ladder(&xml)
+pub fn ladder_import(source: String) -> Result<Imported, String> {
+    let xml = std::fs::read_to_string(&source).map_err(|e| format!("{source}: {e}"))?;
+    import_ladder(&xml).map_err(|e| format!("{source}: {e}"))
 }
 
 #[cfg(test)]

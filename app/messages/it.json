@@ -241,5 +241,15 @@
   "ladder_exit": "Finisce con",
   "ladder_exit_hint": "un'etichetta a cui saltare, o RETURN",
   "ladder_ok": "OK",
-  "ladder_nothing_to_paste": "Gli appunti non contengono segmenti: copia prima un segmento o un elemento del disegno."
+  "ladder_nothing_to_paste": "Gli appunti non contengono segmenti: copia prima un segmento o un elemento del disegno.",
+  "plcopen_export": "Esporta il file Ladder in PLCopen XML",
+  "plcopen_import": "Importa programmi Ladder da PLCopen XML",
+  "plcopen_exported": "Scritto in {file}",
+  "plcopen_imported": "Aggiunti {files}",
+  "plcopen_nothing": "Nessun programma Ladder nel file",
+  "plcopen_replaced": "Sostituiti {files}",
+  "plcopen_build": "Build per eseguire",
+  "plcopen_replace_ask": "Sostituire {files} con il programma importato? Il testo della scheda viene sostituito; quanto compilato resta fino al Build.",
+  "plcopen_replace": "Sostituisci",
+  "plcopen_kept": "Import annullato: {files} lasciato com'era"
 }

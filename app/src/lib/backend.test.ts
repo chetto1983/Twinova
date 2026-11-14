@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { invoke, listen, open, save } = vi.hoisted(() => ({
+const { invoke, listen, open, save, confirm } = vi.hoisted(() => ({
   invoke: vi.fn(),
   listen: vi.fn(),
   open: vi.fn(),
   save: vi.fn(),
+  confirm: vi.fn(),
 }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
-vi.mock("@tauri-apps/plugin-dialog", () => ({ open, save }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open, save, confirm }));
 
 import {
   analysis,
@@ -226,6 +227,31 @@ describe("project bridge", () => {
     expect(invoke.mock.calls.map((c) => c[0])).toEqual(["set_breakpoints", "run", "step", "resume", "run_to_cursor"]);
   });
 
+  it("writes and reads PLCopen XML where the dialogs say", async () => {
+    const PLCOPEN = [{ name: "PLCopen XML", extensions: ["xml"] }];
+    save.mockResolvedValueOnce("/p/Pump.xml");
+    open.mockResolvedValueOnce("/p/in.xml");
+    invoke.mockResolvedValueOnce(undefined).mockResolvedValueOnce({ files: [], notes: [] });
+    const program: [string, string][] = [["plc/Pump.ld", "|A| (X);\n"]];
+    expect(await ladder.exportPlcopen(program, "plc/Pump.ld")).toBe("/p/Pump.xml");
+    expect(await ladder.importPlcopen()).toEqual({ files: [], notes: [] });
+    expect(save.mock.calls).toEqual([[{ filters: PLCOPEN, defaultPath: "Pump.xml" }]]);
+    expect(open.mock.calls).toEqual([[{ filters: PLCOPEN }]]);
+    const [exported, imported] = invoke.mock.calls;
+    expect(exported?.[0]).toBe("ladder_export");
+    expect(exported?.[1]).toMatchObject({ program, file: "plc/Pump.ld", target: "/p/Pump.xml" });
+    expect(exported?.[1].created).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/);
+    expect(imported).toEqual(["ladder_import", { source: "/p/in.xml" }]);
+  });
+
+  it("asks before an import replaces a file, as a warning with its own button", async () => {
+    confirm.mockReset().mockResolvedValueOnce(false);
+    expect(await ladder.confirm("Replace plc/Main.ld?", "Import", "Replace")).toBe(false);
+    expect(confirm.mock.calls).toEqual([
+      ["Replace plc/Main.ld?", { title: "Import", kind: "warning", okLabel: "Replace" }],
+    ]);
+  });
+
   it("does nothing when a dialog is cancelled", async () => {
     open.mockResolvedValue(null);
     save.mockResolvedValue(null);
@@ -233,6 +259,8 @@ describe("project bridge", () => {
     expect(await projects.saveAs()).toBeNull();
     expect(await projects.importArchive()).toBeNull();
     expect(await projects.exportArchive()).toBeNull();
+    expect(await ladder.exportPlcopen([], "plc/Pump.ld")).toBeNull();
+    expect(await ladder.importPlcopen()).toBeNull();
     expect(invoke).not.toHaveBeenCalled();
   });
 });

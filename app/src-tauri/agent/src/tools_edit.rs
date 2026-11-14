@@ -10,6 +10,7 @@ use rmcp::{tool, tool_router};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use twinova_engine::plcopen;
 use twinova_physics::interfaces_view::interfaces_view;
 use twinova_physics::snap;
 use twinova_project::model::{Connection, Instance, Quat, Side, Vec3};
@@ -101,6 +102,23 @@ pub struct ReadSource {
 pub struct WriteSource {
     pub file: String,
     pub text: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ExportLadder {
+    /// A Ladder file of the program, `plc/<name>.ld`.
+    pub file: String,
+    /// The PLCopen TC6 XML file to write.
+    pub path: String,
+    /// The project's `creationDateTime`. The engine keeps no clock, so `1970-01-01T00:00:00` when absent, and the same
+    /// program exports to the same file.
+    pub created: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ImportLadder {
+    /// A PLCopen TC6 XML file.
+    pub path: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -314,6 +332,51 @@ impl Agent {
         let mut session = self.session()?;
         edit::write_source(session.working()?, &a.file, &a.text)?;
         structured(&a.file)
+    }
+
+    #[tool(
+        description = "Write a Ladder file of the program (plc/…ld) as a PLCopen TC6 XML project, as the app's \
+                          export does; a rung that does not lower fails it."
+    )]
+    async fn export_ladder(
+        &self,
+        Parameters(a): Parameters<ExportLadder>,
+    ) -> Result<CallToolResult, String> {
+        let mut session = self.session()?;
+        let created = a.created.as_deref().unwrap_or("1970-01-01T00:00:00");
+        let xml = plcopen::export_ladder(&session.working()?.program, &a.file, created)?;
+        std::fs::write(&a.path, xml).map_err(|e| format!("{}: {e}", a.path))?;
+        structured(&a.path)
+    }
+
+    #[tool(
+        description = "Bring the Ladder programs of a PLCopen TC6 XML file into the program, each as \
+                          plc/<name>.ld, as the app's import does: a file the program has takes the imported text, \
+                          a new one is added. Answers the files replaced and added, and what the file had that was \
+                          left out. Compiled at build."
+    )]
+    async fn import_ladder(
+        &self,
+        Parameters(a): Parameters<ImportLadder>,
+    ) -> Result<CallToolResult, String> {
+        let xml = std::fs::read_to_string(&a.path).map_err(|e| format!("{}: {e}", a.path))?;
+        let imported = plcopen::import_ladder(&xml).map_err(|e| format!("{}: {e}", a.path))?;
+        let mut session = self.session()?;
+        let program = &mut session.working()?.program;
+        let (mut replaced, mut added) = (Vec::new(), Vec::new());
+        for (path, text) in imported.files {
+            match program.iter_mut().find(|(p, _)| *p == path) {
+                Some(file) => {
+                    file.1 = text;
+                    replaced.push(path);
+                }
+                None => {
+                    program.push((path.clone(), text));
+                    added.push(path);
+                }
+            }
+        }
+        structured(&json!({ "replaced": replaced, "added": added, "notes": imported.notes }))
     }
 
     #[tool(

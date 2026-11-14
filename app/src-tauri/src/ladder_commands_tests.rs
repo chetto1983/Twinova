@@ -87,24 +87,51 @@ fn a_ladder_file_goes_to_plcopen_and_back_through_the_commands() {
         "plc/Pump.ld".to_string(),
         "VAR\n    A AT %IX0.0 : BOOL;\n    X : BOOL;\nEND_VAR\n\n|A| (X);\n".to_string(),
     )];
-    let xml = ladder_export(
+    let folder = tempfile::tempdir().unwrap();
+    let target = folder.path().join("Pump.xml").display().to_string();
+    ladder_export(
         program.clone(),
         "plc/Pump.ld".into(),
         "2026-11-14T09:00:00".into(),
+        target.clone(),
     )
     .unwrap();
+    let xml = std::fs::read_to_string(&target).unwrap();
     assert!(
         xml.contains(r#"creationDateTime="2026-11-14T09:00:00""#),
         "{xml}"
     );
-    let imported = ladder_import(xml).unwrap();
+    let imported = ladder_import(target).unwrap();
     assert_eq!(
         serde_json::to_value(&imported).unwrap(),
         json!({"files": [["plc/Pump.ld", program[0].1]], "notes": []})
     );
+    let other = folder.path().join("other.xml").display().to_string();
+    std::fs::write(&other, "<x/>").unwrap();
     assert_eq!(
-        ladder_import("<x/>".into()).unwrap_err(),
-        "the file is not a PLCopen project: its root is not <project>"
+        ladder_import(other.clone()).unwrap_err(),
+        format!("{other}: the file is not a PLCopen project: its root is not <project>")
+    );
+    let missing = folder.path().join("none.xml").display().to_string();
+    assert!(
+        ladder_import(missing.clone())
+            .unwrap_err()
+            .starts_with(&format!("{missing}: ")),
+    );
+    let unwritable = folder
+        .path()
+        .join("no/such/folder.xml")
+        .display()
+        .to_string();
+    assert!(
+        ladder_export(
+            program,
+            "plc/Pump.ld".into(),
+            "t".into(),
+            unwritable.clone()
+        )
+        .unwrap_err()
+        .starts_with(&format!("{unwritable}: ")),
     );
 }
 

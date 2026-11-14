@@ -92,6 +92,8 @@ comment), and `twinova_project::storage::open_folder` opens a project.
    | `read_source` / `write_source` | `file` (`plc/…st` or a definition's `components/…st`), `text` | the program or a behaviour |
    | `build` | — | as above: checked, then the line at time zero, with Build's warnings |
    | `save_project` | `path` (default the folder it was opened from) | the working project saved atomically |
+   | `export_ladder` | `file` (`plc/…ld`), `path`, `created` (default `1970-01-01T00:00:00`) | none: the Ladder file written to `path` as PLCopen TC6 XML, as the app's export (amended 2026-11-14, the user: everything the app does is testable over MCP) |
+   | `import_ladder` | `path` | the file's Ladder programs as `plc/<name>.ld`, as the app's import: a file the program has takes the imported text, a new one is added; answers the files replaced and added, and the notes (amended 2026-11-14) |
 
    - An edit that names an unknown instance, definition, parameter, signal or file is refused with its message. The
      format's own checks run at `build`.
