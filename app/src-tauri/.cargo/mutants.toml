@@ -42,4 +42,7 @@ exclude_re = [
   # debugger_kinds.rs `pieces`: '{' and '}' never sit at one byte offset, so `o < c` and `o <= c` agree on every
   # message.
   "engine/src/debugger_kinds.rs:.*replace < with <= in pieces",
+  # plcopen_read_graph.rs `with_heads`: a comment or a label is an element of its own, so its index in the file is
+  # never a network's, which is one of its elements' or usize::MAX for an empty one; `>` and `>=` agree on every file.
+  "ladder/src/plcopen_read_graph.rs:.*replace > with >= in Reader<'a, 'i>::with_heads",
 ]

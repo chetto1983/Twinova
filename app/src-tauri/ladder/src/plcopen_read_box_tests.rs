@@ -62,6 +62,33 @@ fn a_value_on_its_pin_an_unlinked_pin_and_an_output_bound_by_an_out_variable_rea
 }
 
 #[test]
+fn an_input_marked_plain_is_plain_and_one_sensing_an_edge_is_refused() {
+    let input = |attrs: &str| {
+        format!(
+            "<variable formalParameter=\"IN\"{attrs}><connectionPointIn><connection refLocalId=\"2\"/>\
+             </connectionPointIn></variable>"
+        )
+    };
+    let body = |attrs: &str| {
+        boxed(
+            "TON",
+            "T1",
+            &input(attrs),
+            &out_pin("Q", ""),
+            &coil_on(4, "Q", "q"),
+        )
+    };
+    assert_eq!(
+        read(&body(" negated=\"false\" edge=\"none\"")).unwrap(),
+        "|a| T1(IN, Q) (q);\n"
+    );
+    assert!(
+        (read(&body(" edge=\"rising\"")).unwrap_err())
+            .contains("'T1' with its input IN negated or edge-sensing")
+    );
+}
+
+#[test]
 fn a_contact_whose_input_has_no_link_stands_on_the_rail() {
     let body = format!(
         "{RAIL}<contact localId=\"2\"><position x=\"0\" y=\"0\"/><connectionPointIn/><connectionPointOut/><variable>a</variable></contact>{}",
