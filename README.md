@@ -47,7 +47,7 @@ The project is **headless first**: the simulation engine is a library, the deskt
 - **The PLC inside the app:** Structured Text and Ladder (as CODESYS's LD2), built to truST's bytecode runtime with no external compiler. The scan time comes from the program's IEC task.
 - **A PLC IDE's online tools:** values beside the code and on the Ladder drawing, write and force, breakpoints that hold the line as an S7-1500's HOLD with stepping and conditions, completion with call templates, go to definition, rename, Auto Declare, PLCopen `<LD>` import and export, and the PLC pane in a window of its own. The `.st` files can also be edited in VS Code while the line runs.
 - **Time under control:** ×0.25 to ×10 the wall clock or as fast as possible, pause, a single scan, reset, and the lag behind real time shown.
-- **Coding agents:** `twinova-agent` serves the engine over the Model Context Protocol: open, edit, build and run a project, read signals, press buttons, compare fingerprints.
+- **Coding agents:** `twinova-agent` serves the engine over the Model Context Protocol: open, edit, build and run a project, read signals, press buttons, export and import PLCopen Ladder, compare fingerprints.
 - **Desktop basics:** English and Italian, light and dark themes, an MSI for Windows and a deb and an AppImage for Linux.
 
 ## At a glance

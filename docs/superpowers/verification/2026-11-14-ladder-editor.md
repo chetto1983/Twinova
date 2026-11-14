@@ -73,6 +73,12 @@ Date: 2026-11-14. Spec `2026-11-13-ladder-editor-design.md`, plan `2026-11-13-la
   the commands through a temporary folder (written, read back alike, a file that is not PLCopen, a missing file, a
   folder that is not there); the dialogs' paths and the tabs in vitest; the buttons on the Ladder file's pane in
   `e2e/ladder.mjs`. Not proven: the dialogs themselves, which tauri-driver cannot drive (as for the archives).
+- **The same over MCP** (the user: everything the app does must be testable over MCP too): `twinova-agent`'s
+  `export_ladder` and `import_ladder` call the engine's `export_ladder` and `import_ladder` as the app's commands do.
+  `agent/tests/plcopen.rs`, through a real MCP client on HTTP: the 4.4a line's `Main.ld` exported (the XML carries
+  `<LD>` and the default date), an unknown file and an unwritable path refused, the export refused as an import into
+  its own program, a missing file refused, the same XML imported as `Copy`, exported again to the same file, built and
+  run 2 s beside `Main`.
 
 ## What this does not prove
 
