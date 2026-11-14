@@ -161,6 +161,14 @@ What these do not show:
    - rungs that can be selected, copied, pasted and commented;
    - undo and redo;
    - operands `???` to fill, with completion and Auto Declare (4.10).
+
+   (Amended in Task 6, 2026-11-14, measured in the app's analysis with truST's browser engine, on the diverter
+   fixture.) The completion of an operand is truST's, asked on the program a Ladder file's declarations make with
+   the operand written as a statement of its body (the user's choice over a list of Twinova's own): it offers the
+   file's variables, the globals, functions and function blocks, each variable's type in its detail. It offers no
+   member after a dot, in ST either: `deck_clear.` and `arrived.` in the diverter's `Main.st` get none, as statement,
+   expression or assignment. A block instance's members need another source, the blocks the engine compiles; until
+   then `T1.Q` is typed whole. Auto Declare declares an undeclared contact's or coil's operand as a BOOL of the file.
    
    nautilus's Svelte renderer and evaluator (Apache-2.0) are read first. What fits is reused with NOTICE and
    attribution, split under 600 lines.
