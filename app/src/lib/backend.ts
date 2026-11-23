@@ -3,7 +3,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { confirm, open, save } from "@tauri-apps/plugin-dialog";
-import type { Edit, ProjectView } from "./project";
+import type { Edit, Example, ProjectView } from "./project";
 import type { Built, Snapshot, ScanTiming } from "./snapshot";
 import type { DiskSources } from "./sources";
 import type { Problems } from "./analysis";
@@ -95,7 +95,10 @@ export const ladder = {
    *  dialog is cancelled. */
   exportPlcopen: async (program: [string, string][], file: string): Promise<string | null> => {
     const target = await save({ filters: PLCOPEN, defaultPath: exportName(file) });
-    if (target === null) return null;
+    return target === null ? null : ladder.exportPlcopenTo(program, file, target);
+  },
+  /** The same without the dialog: the control channel's way (spec 2026-11-23-app-mcp-design.md). */
+  exportPlcopenTo: (program: [string, string][], file: string, target: string): Promise<string> => {
     const created = new Date().toISOString().slice(0, 19);
     return invoke<void>("ladder_export", { program, file, created, target }).then(() => target);
   },
@@ -105,8 +108,9 @@ export const ladder = {
   /** The Ladder programs of the PLCopen XML file the open dialog picks, or null when it is cancelled. */
   importPlcopen: async (): Promise<Imported | null> => {
     const source = await open({ filters: PLCOPEN });
-    return source === null ? null : invoke<Imported>("ladder_import", { source });
+    return source === null ? null : ladder.importPlcopenFrom(source);
   },
+  importPlcopenFrom: (source: string) => invoke<Imported>("ladder_import", { source }),
 };
 
 /** Online monitoring and forcing (src-tauri/src/monitor.rs). */
@@ -144,6 +148,21 @@ export const declarations = {
     invoke<[string, string][]>("rename_declaration", { files, file, index, newName }),
 };
 
+/** A request of the control channel (control.rs), for the window's command registry (control/registry.ts). */
+export interface ControlRequest {
+  id: number;
+  method: string;
+  params: unknown;
+}
+
+/** The control channel's side of the window: its requests, their answers, and the registry's readiness. */
+export const control = {
+  onRequest: (f: (request: ControlRequest) => void): Promise<UnlistenFn> =>
+    listen<ControlRequest>("control-request", (e) => f(e.payload)),
+  reply: (id: number, ok: boolean, value: unknown) => invoke<boolean>("control_reply", { id, ok, value }),
+  ready: () => invoke<void>("control_ready"),
+};
+
 /** The monitored values after each tick of Run, in `watch_range`'s order. */
 export const onMonitor = (f: (values: (string | null)[]) => void): Promise<UnlistenFn> =>
   listen<(string | null)[]>("monitor", (e) => f(e.payload));
@@ -163,11 +182,16 @@ const ARCHIVE = [{ name: "Twinova project", extensions: ["zip"] }];
 export const projects = {
   open: async (): Promise<ProjectView | null> => {
     const folder = await open({ directory: true });
-    return folder === null ? null : invoke<ProjectView>("open_project", { folder });
+    return folder === null ? null : projects.openFolder(folder);
   },
+  /** The project in `folder`, with no dialog: the control channel's way (spec 2026-11-23-app-mcp-design.md). */
+  openFolder: (folder: string) => invoke<ProjectView>("open_project", { folder }),
   /** The project the app shows: the bundled demo at start. */
   current: () => invoke<ProjectView>("current_project"),
-  demo: () => invoke<ProjectView>("open_demo"),
+  /** The example lines the app carries, in the menu's order; the bundled demo is the first. */
+  examples: () => invoke<Example[]>("list_examples"),
+  /** Example `id` as shipped, a project with no folder: Save asks for one. */
+  example: (id: string) => invoke<ProjectView>("open_example", { id }),
   /** The folder named on the command line (spec 2026-11-08-project-format-design.md, decision 8), or null. */
   launch: () => invoke<ProjectView | null>("open_launch_project"),
   save: (folder: string) => invoke<ProjectView>("save_project", { folder }),
@@ -177,8 +201,9 @@ export const projects = {
   },
   exportArchive: async (): Promise<string | null> => {
     const file = await save({ filters: ARCHIVE });
-    return file === null ? null : invoke<void>("export_project", { file }).then(() => file);
+    return file === null ? null : projects.exportTo(file);
   },
+  exportTo: (file: string) => invoke<void>("export_project", { file }).then(() => file),
   /** An empty scene with an empty program, not yet saved to a folder. */
   create: () => invoke<ProjectView>("new_project"),
   /** One edit of the open project, one undo step (edit_commands.rs); rejects with the edit's error. */
@@ -187,6 +212,7 @@ export const projects = {
   redo: () => invoke<ProjectView>("redo"),
   importArchive: async (): Promise<ProjectView | null> => {
     const file = await open({ filters: ARCHIVE });
-    return file === null ? null : invoke<ProjectView>("import_project", { file });
+    return file === null ? null : projects.importFrom(file);
   },
+  importFrom: (file: string) => invoke<ProjectView>("import_project", { file }),
 };

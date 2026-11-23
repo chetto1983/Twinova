@@ -21,15 +21,22 @@ examine_globs = [
   "project/src/address.rs", "project/src/codec.rs", "project/src/validate.rs", "project/src/validate_scene.rs",
   "project/src/storage.rs", "project/src/archive.rs", "project/src/model.rs", "project/src/edit.rs",
   "project/src/history.rs", "project/src/library.rs", "project/src/sources.rs",
+  "control/src/protocol.rs", "control/src/file.rs", "control/src/server.rs", "control/src/client.rs", "src/control.rs", "src/screenshot.rs",
   "physics/src/world.rs", "physics/src/world_devices.rs", "physics/src/world_products.rs",
   "physics/src/world_sensors.rs", "physics/src/layout.rs", "physics/src/layout_conveyor.rs", "physics/src/layout_devices.rs",
   "physics/src/layout_sensors.rs", "physics/src/layout_merge.rs", "physics/src/interfaces.rs",
   "physics/src/snap.rs", "physics/src/interfaces_view.rs",
   "physics/src/path.rs", "physics/src/surfaces.rs",
-  "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/tools_edit.rs",
+  "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/tools_edit.rs", "agent/src/attached.rs",
 ]
+# src/screenshot_webkit.rs and src/screenshot_webview2.rs are left out: each takes the picture of a real window, which no
+# cargo test opens, and the second is compiled on Windows only, while mutation runs on Linux (every mutant of them
+# "survived" on PR #55). e2e/mcp.mjs takes a screenshot under Xvfb and on windows-2022 and checks its size.
 # Equivalent mutants, each with its reason (CLAUDE.md "MUTATION").
 exclude_re = [
+  # screenshot.rs `capture`, the one left in the file: it answers that no picture is taken on a system that is neither
+  # Linux nor Windows, so it is compiled on neither, and no test on the Linux runner reaches a mutant of it.
+  "src/screenshot.rs:.*replace capture with \\(\\)",
   # field_image.rs `place`: the slot only names which of the two counters an area uses; `!=` swaps the names, and each
   # area still counts in a counter of its own.
   "engine/src/field_image.rs:.*replace == with != in place",

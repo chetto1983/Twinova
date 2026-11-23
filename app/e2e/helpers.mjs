@@ -18,6 +18,10 @@ export function fixtureCopy(name) {
   return folder;
 }
 const APP = process.platform === "win32" ? "twinova.exe" : "twinova";
+/** Cargo's target folder, where the debug and release builds are. */
+export const target = process.env.CARGO_TARGET_DIR
+  ? resolve(process.env.CARGO_TARGET_DIR)
+  : join(root, "src-tauri/target");
 /** Failure screenshots and the driver's log; E2E_OUT names a folder CI uploads when a run fails. */
 export const out = process.env.E2E_OUT
   ? (mkdirSync(process.env.E2E_OUT, { recursive: true }), process.env.E2E_OUT)
@@ -64,8 +68,8 @@ export function expectEqual(actual, expected, what) {
 
 export const button = (text) => `//button[@aria-label="${text}" or normalize-space()="${text}"]`;
 export const dock = async (tab) => {
-  const target = await browser.$(`#dock-${tab}`);
-  if ((await target.getAttribute("aria-selected")) !== "true") await target.click();
+  const tabButton = await browser.$(`#dock-${tab}`);
+  if ((await tabButton.getAttribute("aria-selected")) !== "true") await tabButton.click();
 };
 export const click = async (selector) => {
   const element = await browser.$(selector);
@@ -162,7 +166,6 @@ export async function sessions(body) {
 
 /** Starts the app built in `profile` (debug or release) with the command-line `args`, runs `body` and closes it. */
 export async function app(profile, args, body) {
-  const target = process.env.CARGO_TARGET_DIR ? resolve(process.env.CARGO_TARGET_DIR) : join(root, "src-tauri/target");
   browser = await remote({
     hostname: "127.0.0.1",
     port: driverPort,

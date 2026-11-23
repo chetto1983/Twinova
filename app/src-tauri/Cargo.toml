@@ -1,6 +1,6 @@
 [package]
 name = "twinova"
-version = "0.2.0"
+version = "0.3.0"
 description = "Open-source 3D factory simulator and virtual-commissioning tool"
 authors = ["The Twinova contributors"]
 license = "MIT OR Apache-2.0"
@@ -10,7 +10,7 @@ rust-version = "1.99"
 # The project format and the run engine are crates of their own without Tauri, so their tests also run on Windows, where
 # a test binary that links Tauri does not start (0xc0000139, run 42378063592).
 [workspace]
-members = ["project", "physics", "engine", "agent", "ladder"]
+members = ["project", "physics", "engine", "agent", "ladder", "control"]
 
 [lib]
 name = "twinova_lib"
@@ -47,16 +47,32 @@ trust-ide = { git = "https://github.com/johannesPettersson80/trust-platform", re
 trust-hir = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "5eb7f8cd9c137840a5a5db8049edae99c481ace9" }
 trust-syntax = { git = "https://github.com/johannesPettersson80/trust-platform", rev = "5eb7f8cd9c137840a5a5db8049edae99c481ace9" }
 text-size = "=1.1.1"
+# The control channel an agent reaches the open app by (spec 2026-11-23-app-mcp-design.md); a crate of the workspace.
+twinova-control = { path = "control" }
+# A request waiting for the window's answer, with its time limit; the runtime Tauri already runs. MIT.
+tokio = { version = "1", features = ["sync", "time"] }
+# The window's picture as text in the control channel's JSON (screenshot.rs); a version the lockfile has. MIT OR Apache-2.0.
+base64 = "=0.22.1"
 
 [dev-dependencies]
 # mock_app for the command tests (src/commands_tests.rs), as in chetto1983/ModbusTool.
 tauri = { version = "2", features = ["test"] }
 # Temporary project folders for the project command tests; the version the lockfile already has.
 tempfile = "=3.27.0"
+# The control channel's time limit run on a paused clock in its tests (`control_tests.rs`). MIT.
+tokio = { version = "1", features = ["test-util", "macros", "rt"] }
 
 # The webview's language under a C locale (src/webview_locale.rs).
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
+# The window's picture written as PNG (screenshot.rs): cairo, already built for WebKitGTK, with its PNG writer. MIT.
+cairo-rs = { version = "=0.18.5", features = ["png"] }
+
+# The window's picture through WebView2's CapturePreview into a memory stream (screenshot.rs): the versions Tauri
+# already builds on Windows, with COM's structured storage. MIT (webview2-com), MIT OR Apache-2.0 (windows).
+[target.'cfg(windows)'.dependencies]
+webview2-com = "=0.39.1"
+windows = { version = "=0.62.2", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage"] }
 
 # No debug info in dev builds, as CI builds (CARGO_PROFILE_DEV_DEBUG=0): smaller and faster to link. A target dir with
 # it reached 19 GB and filled the session's disk, and each cleaning cost a full rebuild (2026-11-13).

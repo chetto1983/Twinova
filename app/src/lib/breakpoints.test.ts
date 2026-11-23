@@ -30,8 +30,7 @@ describe("the session's breakpoints", () => {
       () => {},
     );
     expect([kept.logging, kept.of(null), kept.of("plc/Main.st")]).toEqual([false, [], []]);
-    kept.set("plc/Main.st", [{ line: 34 }, { line: 41, log: "c={count}" }]);
-    await settled();
+    expect(await kept.set("plc/Main.st", [{ line: 34 }, { line: 41, log: "c={count}" }])).toBeNull();
     expect(backend.calls).toEqual([["plc/Main.st", [{ line: 34 }, { line: 41, log: "c={count}" }]]]);
     expect(kept.of("plc/Main.st")).toEqual([{ line: 37 }, { line: 41, log: "c={count}" }]);
     expect(kept.logging).toBe(true);
@@ -62,9 +61,22 @@ describe("the session's breakpoints", () => {
       () => false,
       (e) => failed.push(e),
     );
-    kept.set("plc/Main.st", [{ line: 41, condition: "x =" }]);
-    await settled();
+    expect(await kept.set("plc/Main.st", [{ line: 41, condition: "x =" }])).toBe(
+      "line 41: the condition 'x =' does not parse",
+    );
     expect(failed).toEqual(["line 41: the condition 'x =' does not parse"]);
     expect(kept.of("plc/Main.st")).toEqual([]);
+  });
+
+  it("sends a Ladder file's breakpoints to the debugger even while its edits are not built, so its refusal shows", async () => {
+    backend.answer = () => Promise.reject("plc/Main.ld: a Ladder file takes no breakpoints yet");
+    const failed: string[] = [];
+    const kept = new Breakpoints(
+      () => true,
+      (e) => failed.push(e),
+    );
+    expect(await kept.set("plc/Main.ld", [{ line: 30 }])).toBe("plc/Main.ld: a Ladder file takes no breakpoints yet");
+    expect(backend.calls).toEqual([["plc/Main.ld", [{ line: 30 }]]]);
+    expect([failed.length, kept.of("plc/Main.ld")]).toEqual([1, []]);
   });
 });

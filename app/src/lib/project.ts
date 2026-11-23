@@ -48,6 +48,12 @@ export interface Definition {
   ports: PortDef[];
 }
 
+/** An example line the app carries, as the project menu lists it (spec 2026-11-23-app-mcp-design.md, decision 5). */
+export interface Example {
+  id: string;
+  name: string;
+}
+
 export interface ProjectView {
   name: string;
   folder: string | null;

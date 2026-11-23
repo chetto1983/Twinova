@@ -1,7 +1,7 @@
 {
   "name": "twinova",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT OR Apache-2.0",
   "type": "module",
   "scripts": {
@@ -18,10 +18,11 @@
     "deadcode": "npm run -s i18n && knip",
     "dup": "jscpd",
     "mutation": "npm run -s i18n && stryker run",
-    "e2e": "node e2e/workspace.mjs && node e2e/run.mjs && node e2e/project.mjs && node e2e/line.mjs && node e2e/curve.mjs && node e2e/sort.mjs && node e2e/code_sort.mjs && node e2e/editor.mjs && node e2e/editor_st.mjs && node e2e/monitor.mjs && node e2e/plc_window.mjs && node e2e/breakpoints.mjs && node e2e/navigation.mjs && node e2e/snapping.mjs && node e2e/vscode.mjs && node e2e/ladder.mjs",
+    "e2e": "node e2e/workspace.mjs && node e2e/run.mjs && node e2e/project.mjs && node e2e/line.mjs && node e2e/curve.mjs && node e2e/sort.mjs && node e2e/code_sort.mjs && node e2e/editor.mjs && node e2e/editor_st.mjs && node e2e/monitor.mjs && node e2e/plc_window.mjs && node e2e/breakpoints.mjs && node e2e/navigation.mjs && node e2e/snapping.mjs && node e2e/vscode.mjs && node e2e/ladder.mjs && node e2e/mcp.mjs",
     "e2e:ui": "node e2e/workspace-preview.mjs",
     "e2e:workspace": "node e2e/workspace.mjs",
     "soak": "node e2e/soak.mjs",
+    "agent-check": "node e2e/agent-tools.mjs",
     "check:i18n": "inlang check --project ./project.inlang",
     "brand:check": "node ../scripts/verify_brand_assets.mjs",
     "hooks": "lefthook install"
@@ -31,6 +32,7 @@
     "@inlang/paraglide-js": "^3.2.1",
     "@inlang/plugin-m-function-matcher": "^2.4.3",
     "@inlang/plugin-message-format": "^4.6.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@stryker-mutator/core": "^10.1.1",
     "@stryker-mutator/vitest-runner": "^10.1.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",

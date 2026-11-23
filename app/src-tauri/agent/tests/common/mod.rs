@@ -29,11 +29,27 @@ pub async fn call(client: &Client, tool: &str, arguments: Value) -> CallToolResu
         .expect("the call reaches the server")
 }
 
-/// A tool's structured answer, or the panic of a tool error with its message.
+/// A tool's answer, or the panic of a tool error with its message: its structured content when the answer is an
+/// object, which is all MCP lets that field hold, else the JSON its text carries.
 pub async fn ok(client: &Client, tool: &str, arguments: Value) -> Value {
     let result = call(client, tool, arguments).await;
     assert_ne!(result.is_error, Some(true), "{tool}: {:?}", result.content);
-    result.structured_content.expect("a structured answer")
+    let text: Value =
+        serde_json::from_str(&result.content[0].as_text().expect("a text answer").text)
+            .expect("the answer as JSON text");
+    match result.structured_content {
+        Some(structured) => {
+            assert_eq!(
+                structured, text,
+                "{tool}: the text and the structured answer agree"
+            );
+            structured
+        }
+        None => {
+            assert!(!text.is_object(), "{tool}: an object answer is structured");
+            text
+        }
+    }
 }
 
 /// A tool error's message.

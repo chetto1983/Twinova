@@ -33,6 +33,8 @@
   import StatusBar from "./lib/StatusBar.svelte";
   import WorkspaceDock from "./lib/WorkspaceDock.svelte";
   import { Box, Move, RotateCw } from "@lucide/svelte";
+  import { listenControl, register } from "./lib/control/registry";
+  import { appCommands } from "./lib/control/appCommands";
   let hidden = $state<string[]>([]);
   let locked = $state<string[]>([]);
   let history = $state<{ label: string; time: string }[]>([]);
@@ -293,12 +295,46 @@
   onMount(() => {
     // A folder named on the command line opens directly; one that fails to open leaves its diagnostics on the demo,
     // built and usable.
-    void attempt(projects.launch).then(async (launched) => {
+    // The control channel waits for the first project shown: a Build sent before it would run with no sources.
+    const shown = attempt(projects.launch).then(async (launched) => {
       const failed = error;
       await showProject(launched ?? (await projects.current()));
       if (failed) error = failed;
     });
+    const commands = register(
+      ...appCommands({
+        project: () => project,
+        snapshot: () => snapshot,
+        sources: () => sources,
+        status: () => status,
+        running: () => running,
+        warnings: () => warnings,
+        notice: () => noticeText,
+        error: () => error,
+        setSources: (next) => (sources = next),
+        show: showProject,
+        build,
+        run: async (s) => {
+          speed = s;
+          if (running) await toggleRun();
+          await toggleRun();
+        },
+        pause: async () => void (running && (await toggleRun())),
+        step: () => stepLine().then(() => undefined),
+        reset: () => replace(backend.reset).then(() => void (running = false)),
+        saveState: () => attempt(backend.saveState).then(() => undefined),
+        restoreState: () => replace(backend.restoreState).then(() => void (running = false)),
+        edit,
+        undo: () => step(projects.undo),
+        redo: () => step(projects.redo),
+        select: (id) => (selected = id),
+        press: (address) => attempt(() => backend.press(address)).then(() => undefined),
+        blockSink: (sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked)),
+        theme: (next) => (theme = next),
+      }),
+    );
     const listeners = [
+      shown.then(listenControl),
       onSnapshot(receiveSnapshot),
       onStopped(() => (running = false)),
       onDiskSources((disk) => void fromFolder(disk)),
@@ -310,7 +346,10 @@
         closed: () => (detached = false),
       }),
     ];
-    return () => listeners.forEach((l) => l.then((unlisten) => unlisten()));
+    return () => {
+      commands();
+      listeners.forEach((l) => l.then((unlisten) => unlisten()));
+    };
   });
 </script>
 

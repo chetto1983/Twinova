@@ -1,6 +1,6 @@
 [package]
 name = "twinova-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "Twinova for coding agents: the run engine served over MCP, on stdio and on streamable HTTP"
 authors = ["The Twinova contributors"]
 license = "MIT OR Apache-2.0"
@@ -20,6 +20,10 @@ serde_json = "1"
 twinova-engine = { path = "../engine" }
 twinova-physics = { path = "../physics" }
 twinova-project = { path = "../project" }
+# The control channel the agent reaches the open app by (spec 2026-11-23-app-mcp-design.md).
+twinova-control = { path = "../control" }
+# The configuration folder `setup` finds Claude Desktop's file in. MIT OR Apache-2.0, as the control crate takes it.
+dirs = "=7.0.0"
 
 [dev-dependencies]
 # rmcp's own client drives the server in the tests, over both transports.

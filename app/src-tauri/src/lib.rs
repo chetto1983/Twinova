@@ -1,9 +1,9 @@
 pub mod analysis;
 pub mod call_templates;
 pub mod commands;
+pub mod control;
 pub mod debug_commands;
 pub mod declarations;
-pub mod demo;
 pub mod edit_commands;
 mod frontend;
 pub mod ladder_commands;
@@ -16,6 +16,7 @@ pub mod navigation;
 pub mod plc_window;
 mod positions;
 pub mod project_commands;
+pub mod screenshot;
 #[cfg(test)]
 mod test_fixtures;
 pub mod watch;
@@ -32,13 +33,13 @@ pub fn run() {
             let watch = watch::SourceWatch::new(move |folder| watch::settled(&handle, folder));
             app.state::<project_commands::ProjectState>()
                 .set_watch(watch);
+            control::start(app.handle())?;
             #[cfg(target_os = "linux")]
             webview_locale::apply(app)?;
-            #[cfg(not(target_os = "linux"))]
-            let _ = app;
             Ok(())
         })
         .manage(commands::AppState::default())
+        .manage(control::Control::default())
         .manage(analysis::AnalysisState::default())
         .manage(project_commands::ProjectState::launching(
             project_commands::launch_folder(std::env::args_os()),
@@ -88,7 +89,8 @@ pub fn run() {
             plc_window::open_plc_window,
             plc_window::close_plc_window,
             project_commands::current_project,
-            project_commands::open_demo,
+            project_commands::list_examples,
+            project_commands::open_example,
             project_commands::open_project,
             project_commands::open_launch_project,
             project_commands::save_project,
@@ -99,7 +101,15 @@ pub fn run() {
             edit_commands::redo,
             edit_commands::new_project,
             edit_commands::catalogue,
+            control::control_reply,
+            control::control_ready,
+            control::control_port,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Twinova");
+        .build(tauri::generate_context!())
+        .expect("error while building Twinova")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                control::close(app);
+            }
+        });
 }

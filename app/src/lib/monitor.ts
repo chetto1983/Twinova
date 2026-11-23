@@ -3,6 +3,7 @@ import type { ElementId } from "./ladder/model";
 // decisions 4 to 11): the types `monitor.rs` and `declarations.rs` send, the values drawn in the code as Monaco
 // decorations, and the small pure helpers the editor and the table share.
 import type { Source } from "./sources";
+import { monitor } from "./backend";
 
 /** What a write or a force changes (engine `controller_monitor.rs`, `Target`). */
 export type Target = { kind: "variable"; program: string; path: string } | { kind: "address"; address: string };
@@ -130,4 +131,17 @@ export function newRow(pou: string, taken: string[]): Declaration {
     initial: null,
     comment: null,
   };
+}
+
+/** A value written once, forced or released, as the value bar applies it: the forces after a force or a release. */
+export async function applyValue(
+  action: "write" | "force" | "release",
+  target: Target,
+  text: string,
+): Promise<Force[] | null> {
+  if (action === "write") {
+    await monitor.writeValue(target, text);
+    return null;
+  }
+  return action === "force" ? monitor.force(target, text) : monitor.release(target);
 }

@@ -111,6 +111,17 @@ pub fn families() -> Vec<Family> {
         .collect()
 }
 
+/// Every library file under the path a project pins it at (`components/<key>.json`, `components/<key>.st`), as stored.
+pub fn files() -> Vec<(String, &'static str)> {
+    (FAMILIES.iter().zip(families()))
+        .flat_map(|((json, behaviour, _), family)| {
+            let key = family.definition.key();
+            let block = behaviour.map(|text| (format!("components/{key}.st"), text));
+            std::iter::once((format!("components/{key}.json"), *json)).chain(block)
+        })
+        .collect()
+}
+
 /// The family pinned as `key` (`id@version`), if the library has it.
 pub fn family(key: &str) -> Option<Family> {
     families().into_iter().find(|f| f.definition.key() == key)

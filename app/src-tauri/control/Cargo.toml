@@ -1,0 +1,25 @@
+[package]
+name = "twinova-control"
+version = "0.3.0"
+description = "Twinova's control channel: how an agent reaches the open app (spec 2026-11-23-app-mcp-design.md)"
+authors = ["The Twinova contributors"]
+license = "MIT OR Apache-2.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# The channel's sockets and its tasks, the runtime Tauri and the agent already run. MIT.
+tokio = { version = "1", features = ["net", "io-util", "sync", "time", "rt", "macros"] }
+# The token's 256 bits from the operating system; the version the lockfile already has. MIT OR Apache-2.0.
+getrandom = "=0.3.4"
+# The token compared in constant time; the version the lockfile already has. BSD-3-Clause.
+subtle = "=2.6.1"
+# The system's data folder, where the app keeps its file: the version Tauri's path resolver reads it with. MIT OR Apache-2.0.
+dirs = "=7.0.0"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread"] }
+tempfile = "=3.27.0"

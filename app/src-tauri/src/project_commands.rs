@@ -1,6 +1,6 @@
 //! Tauri commands over the project format (ROADMAP 4.2, spec 2026-11-08-project-format-design.md). The webview
-//! receives a view; the validated project stays here. The app starts on the bundled M3 demo (spec
-//! 2026-11-09-component-behaviour-design.md), and a project that fails to open never replaces the current one. Build
+//! receives a view; the validated project stays here. The app starts on the bundled M3 demo, one of the
+//! example lines it carries (spec 2026-11-23-app-mcp-design.md, decision 5), and a project that fails to open never replaces the current one. Build
 //! (commands.rs) puts edited ST sources back into the current project, so Save writes them. The editor's commands
 //! (edit_commands.rs) change the current project through its history.
 
@@ -13,6 +13,7 @@ use std::collections::BTreeMap;
 use tauri::State;
 use twinova_engine::diagnostics;
 use twinova_project::archive::{export_archive, import_archive};
+use twinova_project::examples::{DEMO, Example, example, examples};
 use twinova_project::history::History;
 use twinova_project::model::{Connection, Definition, Endpoint, Instance, PanelButton, Side};
 use twinova_project::storage::{open_folder, save_folder};
@@ -39,7 +40,7 @@ impl Default for ProjectState {
 impl ProjectState {
     pub fn launching(folder: Option<PathBuf>) -> Self {
         Self {
-            current: Mutex::new(Current::new(crate::demo::demo(), None)),
+            current: Mutex::new(Current::new(bundled(DEMO), None)),
             launch: Mutex::new(folder),
             watch: OnceLock::new(),
         }
@@ -294,15 +295,22 @@ pub fn current_project(state: State<'_, ProjectState>) -> Result<ProjectView, St
     Ok(view(&*state.lock()?, Vec::new(), false))
 }
 
-/// Back to the bundled demo, as it was shipped.
+/// The example lines the app carries, in the project menu's order.
 #[tauri::command]
-pub fn open_demo(state: State<'_, ProjectState>) -> Result<ProjectView, String> {
-    replace(
-        &state,
-        Current::new(crate::demo::demo(), None),
-        Vec::new(),
-        false,
-    )
+pub fn list_examples() -> Vec<Example> {
+    examples()
+}
+
+/// Example `id` as it was shipped, a project with no folder: Save asks for one.
+#[tauri::command]
+pub fn open_example(state: State<'_, ProjectState>, id: String) -> Result<ProjectView, String> {
+    let project =
+        example(&id).ok_or_else(|| format!("no example {id}: list_examples names them"))?;
+    replace(&state, Current::new(project, None), Vec::new(), false)
+}
+
+fn bundled(id: &str) -> Project {
+    example(id).expect("the app's examples include the demo (twinova-project's examples_tests.rs)")
 }
 
 #[tauri::command]

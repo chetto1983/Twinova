@@ -18,6 +18,16 @@ fn scope_of(file: &str) -> Scope {
     }
 }
 
+/// A Ladder file takes no breakpoints yet (spec 2026-11-13-ladder-editor-design.md, decision 8): its statements are the
+/// lowered ST's, whose lines are not the file's (measured 2026-11-23: line 30 of the 42 lines of `ladder_line`'s
+/// `plc/Main.ld` held at "line 52").
+fn takes_breakpoints(file: &str) -> Result<(), String> {
+    match file.ends_with(".ld") {
+        true => Err(format!("{file}: a Ladder file takes no breakpoints yet")),
+        false => Ok(()),
+    }
+}
+
 /// The debugger of `file`'s runtime, attached at its first breakpoint (decision 10).
 fn attached(state: &AppState, file: &str) -> Result<Debugger, String> {
     let scope = scope_of(file);
@@ -41,6 +51,7 @@ pub fn set_breakpoints(
     file: String,
     breakpoints: Vec<Breakpoint>,
 ) -> Result<Vec<Breakpoint>, String> {
+    takes_breakpoints(&file)?;
     // Debug on costs even with no breakpoint (`release_idle_field`): nothing to take off attaches nothing.
     let set = match (breakpoints.is_empty(), state.debugger(scope_of(&file))?) {
         (true, None) => Vec::new(),
@@ -86,6 +97,7 @@ fn release_idle_field(state: &AppState) -> Result<(), String> {
 
 #[tauri::command]
 pub fn run_to_cursor(state: State<'_, AppState>, file: String, line: u32) -> Result<(), String> {
+    takes_breakpoints(&file)?;
     attached(&state, &file)?.run_to(&file, line)
 }
 

@@ -7159,8 +7159,10 @@ dependencies = [
 
 [[package]]
 name = "twinova"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
+ "base64 0.22.1",
+ "cairo-rs",
  "notify",
  "serde",
  "serde_json",
@@ -7169,36 +7171,55 @@ dependencies = [
  "tauri-plugin-dialog",
  "tempfile",
  "text-size",
+ "tokio",
  "trust-hir 0.39.0",
  "trust-ide 0.39.0",
  "trust-syntax 0.39.0",
  "trust-wasm-analysis 0.39.0",
+ "twinova-control",
  "twinova-engine",
  "twinova-ladder",
  "twinova-physics",
  "twinova-project",
  "webkit2gtk",
+ "webview2-com",
+ "windows 0.62.2",
 ]
 
 [[package]]
 name = "twinova-agent"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axum",
+ "dirs 7.0.0",
  "rmcp",
  "schemars 1.2.3",
  "serde",
  "serde_json",
  "tempfile",
  "tokio",
+ "twinova-control",
  "twinova-engine",
  "twinova-physics",
  "twinova-project",
 ]
 
 [[package]]
+name = "twinova-control"
+version = "0.3.0"
+dependencies = [
+ "dirs 7.0.0",
+ "getrandom 0.3.4",
+ "serde",
+ "serde_json",
+ "subtle",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "twinova-engine"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "roxmltree",
  "serde",
@@ -7212,7 +7233,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-ladder"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proptest",
  "roxmltree",
@@ -7222,7 +7243,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-physics"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "glamx",
  "rapier3d",
@@ -7232,7 +7253,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-project"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proptest",
  "serde",

@@ -221,14 +221,29 @@ fn a_launch_folder_that_fails_reports_and_leaves_the_demo() {
 }
 
 #[test]
-fn the_demo_comes_back_as_shipped() {
+fn an_example_opens_as_shipped_with_no_folder() {
     let app = app();
+    let listed = list_examples();
+    assert_eq!(listed.len(), 7);
+    assert_eq!((listed[0].id, listed[0].name.as_str()), (DEMO, "M3 demo"));
     open_project(app.state(), copied("two_belts_diverter").1).unwrap();
-    let view = open_demo(app.state()).unwrap();
-    assert_eq!((view.name.as_str(), view.folder), ("M3 demo", None));
+    let view = open_example(app.state(), "ladder_line".into()).unwrap();
+    assert_eq!(
+        (view.name.as_str(), view.folder),
+        ("Two belts and a chain transfer, in Ladder", None)
+    );
     assert_eq!(
         app.state::<ProjectState>().project().unwrap(),
-        crate::demo::demo()
+        example("ladder_line").unwrap()
+    );
+    assert_eq!(
+        open_example(app.state(), "nope".into()).unwrap_err(),
+        "no example nope: list_examples names them"
+    );
+    assert_eq!(
+        current_project(app.state()).unwrap().name,
+        "Two belts and a chain transfer, in Ladder",
+        "an unknown example leaves the current project"
     );
 }
 
@@ -284,7 +299,7 @@ fn the_watch_follows_the_project_s_folder() {
     save_project(app.state(), path(&saved, "line")).unwrap();
     std::fs::write(saved.path().join("line/plc/Main.st"), "(* edited *)\n").unwrap();
     assert_eq!(quiet.recv_timeout(wait).unwrap(), saved.path().join("line"));
-    open_demo(app.state()).unwrap();
+    open_example(app.state(), DEMO.into()).unwrap();
     std::fs::write(saved.path().join("line/plc/Main.st"), "(* again *)\n").unwrap();
     assert!(
         quiet.recv_timeout(nothing).is_err(),

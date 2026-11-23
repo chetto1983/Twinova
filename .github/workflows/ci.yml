@@ -184,9 +184,37 @@ jobs:
         if: steps.tools-cache.outputs.cache-hit != 'true'
         run: bash ../scripts/fetch-bundler-tools.sh "${{ steps.tools.outputs.dir }}" "$RUNNER_OS"
       - run: npm ci
-      - run: npx tauri build --bundles ${{ matrix.bundles }}
+      # The agent goes beside the app in every package (spec 2026-11-23-app-mcp-design.md, decision 6).
+      - run: bash ../scripts/stage-agent.sh release
+      - run: npx tauri build --bundles ${{ matrix.bundles }} --config src-tauri/tauri.agent.conf.json
       - name: One Paraglide runtime in the frontend bundle
         run: node ../scripts/check-single-runtime.mjs
+      - name: The deb and the AppImage carry the agent beside the app, and it answers
+        if: runner.os == 'Linux'
+        run: |
+          deb=$(ls src-tauri/target/release/bundle/deb/*.deb)
+          dpkg-deb -c "$deb" | grep 'usr/bin/'
+          dpkg-deb -x "$deb" "$RUNNER_TEMP/deb"
+          test -x "$RUNNER_TEMP/deb/usr/bin/twinova"
+          npm run -s agent-check -- "$RUNNER_TEMP/deb/usr/bin/twinova-agent"
+          image=$(realpath src-tauri/target/release/bundle/appimage/*.AppImage)
+          (cd "$RUNNER_TEMP" && "$image" --appimage-extract > /dev/null)
+          ls -l "$RUNNER_TEMP/squashfs-root/usr/bin"
+          npm run -s agent-check -- "$RUNNER_TEMP/squashfs-root/usr/bin/twinova-agent"
+      # An administrative install unpacks the MSI's files as the installer lays them out, without installing.
+      - name: The MSI puts the agent beside the app, and it answers
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem src-tauri/target/release/bundle/msi/*.msi).FullName
+          $dir = Join-Path $env:RUNNER_TEMP msi
+          Start-Process msiexec.exe -ArgumentList "/a `"$msi`" /qn TARGETDIR=`"$dir`"" -Wait -NoNewWindow
+          Get-ChildItem -Recurse $dir -Filter *.exe | ForEach-Object { $_.FullName }
+          $app = Get-ChildItem -Recurse $dir -Filter twinova.exe | Select-Object -First 1
+          $agent = Join-Path $app.DirectoryName twinova-agent.exe
+          if (-not (Test-Path $agent)) { throw "no twinova-agent.exe beside $($app.FullName)" }
+          npm run -s agent-check -- $agent
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       # The binary inside the installers is ROADMAP 2.5's size baseline.
       # Unsigned, so Windows SmartScreen asks once; it is not a release (release.yml makes those).
       - name: The MSI of a pull request labelled installer
@@ -230,7 +258,8 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo test -p twinova-project -p twinova-physics -p twinova-engine -p twinova-agent
 
-  # The real app through tauri-driver (npm run e2e: e2e/run.mjs, project.mjs, line.mjs, curve.mjs, sort.mjs, code_sort.mjs and editor.mjs), on both desktop platforms Tauri can drive.
+  # The real app through tauri-driver (npm run e2e: every e2e/*.mjs it lists, mcp.mjs driving the app through the
+  # agent last), on both desktop platforms Tauri can drive.
   # As in ModbusTool, Windows is tested here and not with cargo test: tauri-build embeds the Common
   # Controls v6 manifest in binaries only, so a test binary that links tauri does not start there
   # (0xc0000139, measured on this repository's run 42378063592).
@@ -287,6 +316,9 @@ jobs:
           Write-Output "WebView2 $($webview.pv), Edge $edge, $(& .\msedgedriver.exe --version)"
       - run: npm ci
       - run: npx tauri build --debug --no-bundle
+      # e2e/mcp.mjs drives the app through the agent, a binary of its own.
+      - run: cargo build -p twinova-agent
+        working-directory: app/src-tauri
       # Software GL and no DMA-BUF renderer: the three.js view under Xvfb, as measured for M1.
       - name: E2E (Linux)
         if: runner.os == 'Linux'
