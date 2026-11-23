@@ -85,10 +85,13 @@ async fn a_line_that_is_no_request_is_answered_and_the_connection_goes_on() {
 
 #[tokio::test]
 async fn a_busy_port_is_skipped_and_none_free_is_an_error() {
-    let taken = bind(0..=0).await.unwrap();
-    let busy = taken.local_addr().unwrap().port();
-    let free = bind(0..=0).await.unwrap().local_addr().unwrap().port();
-    // the free one is let go, then the range starts at the busy one
+    // Two ports the system hands out, in no promised order: the lower is held busy and the higher let go, so a range
+    // from the busy one reaches a free one.
+    let (a, b) = (bind(0..=0).await.unwrap(), bind(0..=0).await.unwrap());
+    let port = |l: &tokio::net::TcpListener| l.local_addr().unwrap().port();
+    let (taken, released) = if port(&a) < port(&b) { (a, b) } else { (b, a) };
+    let (busy, free) = (port(&taken), port(&released));
+    drop(released);
     let next = bind(busy..=busy).await;
     assert!(next.is_err(), "the busy port was bound twice");
     let skipped = bind(busy..=free)
