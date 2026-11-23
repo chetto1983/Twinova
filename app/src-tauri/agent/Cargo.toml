@@ -1,6 +1,6 @@
 [package]
 name = "twinova-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "Twinova for coding agents: the run engine served over MCP, on stdio and on streamable HTTP"
 authors = ["The Twinova contributors"]
 license = "MIT OR Apache-2.0"

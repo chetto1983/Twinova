@@ -7159,7 +7159,7 @@ dependencies = [
 
 [[package]]
 name = "twinova"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
  "cairo-rs",
@@ -7188,7 +7188,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-agent"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axum",
  "dirs 7.0.0",
@@ -7206,7 +7206,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-control"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "dirs 7.0.0",
  "getrandom 0.3.4",
@@ -7219,7 +7219,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-engine"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "roxmltree",
  "serde",
@@ -7233,7 +7233,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-ladder"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proptest",
  "roxmltree",
@@ -7243,7 +7243,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-physics"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "glamx",
  "rapier3d",
@@ -7253,7 +7253,7 @@ dependencies = [
 
 [[package]]
 name = "twinova-project"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proptest",
  "serde",

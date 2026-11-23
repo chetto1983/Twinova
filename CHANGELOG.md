@@ -4,7 +4,7 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
-## Unreleased
+## v0.3.0 — 2026-11-23
 
 Coding agents drive the app you have open, and the release carries what they need.
 
@@ -19,7 +19,7 @@ Coding agents drive the app you have open, and the release carries what they nee
   `list_examples` and `open_example`. They replace "Back to the M3 demo"; the demo is the first example.
 - Every package carries `twinova-agent` beside the app (the MSI, the deb in `/usr/bin`, the AppImage), and the release
   has the agent alone for Windows and Linux. `twinova-agent setup` registers it with Claude Code and Claude Desktop.
-- A [guide](docs/guide.md): install, the example lines, the scene, the PLC pane, the online tools, connecting an agent.
+- A [guide](https://github.com/chetto1983/Twinova/blob/main/docs/guide.md): install, the example lines, the scene, the PLC pane, the online tools, connecting an agent.
 
 ### Fixed
 
