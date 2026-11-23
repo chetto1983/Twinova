@@ -1,9 +1,11 @@
 <script lang="ts">
-  // The project button and its menu (research 13, PRJ-01): new, open, save, save to a folder, import, export, and back to
-  // the bundled M3 demo. Each action reports through onChange, onNotice or onError.
+  // The project button and its menu (research 13, PRJ-01): new, open, save, save to a folder, import, export, and the
+  // example lines the app carries, the M3 demo first (spec 2026-11-23-app-mcp-design.md, decision 5). Each action reports
+  // through onChange, onNotice or onError.
+  import { onMount } from "svelte";
   import { m } from "../paraglide/messages.js";
   import { projects } from "./backend";
-  import type { ProjectView } from "./project";
+  import type { Example, ProjectView } from "./project";
 
   let {
     project,
@@ -18,6 +20,14 @@
   } = $props();
 
   let open = $state(false);
+  let examples = $state<Example[]>([]);
+
+  onMount(() => {
+    projects.examples().then(
+      (list) => (examples = list),
+      (e: unknown) => onError(String(e)),
+    );
+  });
 
   async function act(action: () => Promise<void>): Promise<void> {
     open = false;
@@ -58,7 +68,6 @@
     { label: m.project_save_as(), run: () => saveTo(projects.saveAs()) },
     { label: m.project_export(), run: exportArchive },
     { label: m.project_import(), run: importArchive },
-    { label: m.project_back_to_demo(), run: async () => onChange(await projects.demo()) },
   ]);
 </script>
 
@@ -71,6 +80,16 @@
     <ul class="items" role="menu" aria-label={m.project_menu()}>
       {#each items as item (item.label)}
         <li><button role="menuitem" class="item" onclick={() => act(item.run)}>{item.label}</button></li>
+      {/each}
+      <li role="separator" class="heading">{m.project_examples()}</li>
+      {#each examples as example (example.id)}
+        <li>
+          <button
+            role="menuitem"
+            class="item"
+            onclick={() => act(async () => onChange(await projects.example(example.id)))}>{example.name}</button
+          >
+        </li>
       {/each}
     </ul>
   {/if}
@@ -108,6 +127,13 @@
     color: var(--color-text);
     text-align: left;
     cursor: pointer;
+  }
+  .heading {
+    padding: 8px 10px 4px;
+    border-top: 1px solid var(--color-border);
+    margin-top: 4px;
+    color: var(--color-text-muted);
+    font-size: 0.85em;
   }
   .item:hover {
     background: var(--color-surface-2);

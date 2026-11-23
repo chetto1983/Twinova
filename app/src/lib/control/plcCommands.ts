@@ -18,8 +18,9 @@ export interface PlcContext {
   setView: (ladder: boolean) => void;
   setMonitoring: (on: boolean) => void;
   setTable: (on: boolean) => void;
-  /** The table's declarations, the rows the engine reads while monitoring, and their values. */
-  table: () => { declarations: Declaration[]; rows: Row[] | null; values: (string | null)[] };
+  /** The table's declarations, the rows the engine reads while monitoring, and their values, as they are now: read again
+   *  rather than when the pane's own debounced reads come round. */
+  table: () => Promise<{ declarations: Declaration[]; rows: Row[] | null; values: (string | null)[] }>;
   setForces: (forces: Force[]) => void;
   /** The file a tab's key names: a program file's own path, a block's `components/<key>.st`. */
   pathOf: (key: string) => string;
@@ -50,8 +51,8 @@ function file(ctx: PlcContext, params: Record<string, unknown>): string {
 }
 
 /** The variables table as the pane shows it: each row's name, type and address, and its value while monitoring. */
-export function valuesOf(ctx: PlcContext): Record<string, unknown>[] {
-  const { declarations, rows, values } = ctx.table();
+export async function valuesOf(ctx: PlcContext): Promise<Record<string, unknown>[]> {
+  const { declarations, rows, values } = await ctx.table();
   if (!rows) return declarations.map((d) => ({ name: d.name, type: d.type_name, address: d.address, value: null }));
   return rows.map((row, i) => {
     const d = row.declaration === null ? null : declarations[row.declaration];
@@ -70,25 +71,25 @@ export function plcCommands(ctx: PlcContext): Command[] {
       name: "open_file",
       description: "Show a file of the PLC in the pane: a program file (plc/…) or a block (its key).",
       params: object({ file: string("as state's sources name it") }),
-      run: (p) => ctx.open(file(ctx, { file: stringOf(p, "file") })),
+      run: (p) => void ctx.open(file(ctx, { file: stringOf(p, "file") })),
     },
     {
       name: "view",
       description: "Show a Ladder file drawn or as its text.",
       params: object({ view: oneOf(["ladder", "text"], "the view") }),
-      run: (p) => ctx.setView(p.view === "ladder"),
+      run: (p) => void ctx.setView(p.view === "ladder"),
     },
     {
       name: "monitoring",
       description: "Online monitoring on or off (Ctrl+T): the values beside the code and in the table.",
       params: object({ on: boolean("on") }),
-      run: (p) => ctx.setMonitoring(Boolean(p.on)),
+      run: (p) => void ctx.setMonitoring(Boolean(p.on)),
     },
     {
       name: "variables_table",
       description: "Show or hide the variables table above the code.",
       params: object({ on: boolean("shown") }),
-      run: (p) => ctx.setTable(Boolean(p.on)),
+      run: (p) => void ctx.setTable(Boolean(p.on)),
     },
     {
       name: "values",
@@ -120,7 +121,10 @@ export function plcCommands(ctx: PlcContext): Command[] {
       description:
         "Set a file's breakpoints (each a line, with an optional condition, hit count and log message), replacing its " +
         "own; answers them as placed, each on its statement's line.",
-      params: object({ file: string("the file"), lines: { type: "array", items: { type: ["number", "object"] } } }),
+      params: object(
+        { file: string("the file; the one shown"), lines: { type: "array", items: { type: ["number", "object"] } } },
+        ["file"],
+      ),
       run: async (p) => {
         const path = ctx.pathOf(file(ctx, p));
         const list = ((p.lines as unknown[]) ?? []).map((l) =>
@@ -145,7 +149,7 @@ export function plcCommands(ctx: PlcContext): Command[] {
     {
       name: "run_to_cursor",
       description: "Run until a line of a file is reached (Ctrl+F10).",
-      params: object({ file: string("the file"), line: number("its line, from 1") }),
+      params: object({ file: string("the file; the one shown"), line: number("its line, from 1") }, ["file"]),
       run: (p) => debug.runToCursor(ctx.pathOf(file(ctx, p)), Number(p.line)),
     },
     {

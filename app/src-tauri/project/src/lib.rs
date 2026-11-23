@@ -6,6 +6,7 @@ pub mod archive;
 pub mod codec;
 pub mod diagnostic;
 pub mod edit;
+pub mod examples;
 pub mod history;
 pub mod library;
 pub mod model;

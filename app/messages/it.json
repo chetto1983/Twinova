@@ -29,7 +29,7 @@
   "project_save_as": "Salva in una cartella…",
   "project_import": "Importa archivio…",
   "project_export": "Esporta archivio…",
-  "project_back_to_demo": "Torna alla demo M3",
+  "project_examples": "Esempi",
   "project_exported": "Esportato in {file}",
   "project_saved": "Salvato in {folder}",
   "project_recovered": "Un salvataggio interrotto è stato annullato: il progetto è com'era all'ultimo salvataggio.",

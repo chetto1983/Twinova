@@ -3,7 +3,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { confirm, open, save } from "@tauri-apps/plugin-dialog";
-import type { Edit, ProjectView } from "./project";
+import type { Edit, Example, ProjectView } from "./project";
 import type { Built, Snapshot, ScanTiming } from "./snapshot";
 import type { DiskSources } from "./sources";
 import type { Problems } from "./analysis";
@@ -188,7 +188,10 @@ export const projects = {
   openFolder: (folder: string) => invoke<ProjectView>("open_project", { folder }),
   /** The project the app shows: the bundled demo at start. */
   current: () => invoke<ProjectView>("current_project"),
-  demo: () => invoke<ProjectView>("open_demo"),
+  /** The example lines the app carries, in the menu's order; the bundled demo is the first. */
+  examples: () => invoke<Example[]>("list_examples"),
+  /** Example `id` as shipped, a project with no folder: Save asks for one. */
+  example: (id: string) => invoke<ProjectView>("open_example", { id }),
   /** The folder named on the command line (spec 2026-11-08-project-format-design.md, decision 8), or null. */
   launch: () => invoke<ProjectView | null>("open_launch_project"),
   save: (folder: string) => invoke<ProjectView>("save_project", { folder }),

@@ -75,6 +75,10 @@ The user chose this design for Twinova (2026-11-23).
    the sources, online values and forces, breakpoints and the steps, PLCopen, what the window shows (panel, file, view,
    monitoring, theme, language), undo and redo. Queries answer the state as the window holds it: the project, the
    snapshot, the problems, the values, the hold.
+   The registry checks a request against the command's schema before it runs: a parameter the schema does not name,
+   or a required one missing, refuses the command by name (2026-11-23: `step` with `ms` ran one scan and said nothing).
+   A query answers the state as it is when asked: `values` reads the table again rather than waiting for the pane's
+   debounced reads (measured the same day: asked right after `monitoring`, it answered every value null).
 3. **The screenshot** is taken in Rust, not in the webview: `screenshot` (`window`: `main` or `plc`) answers the window
    as drawn, as PNG; Linux by WebKit's snapshot (measured above), Windows by WebView2's `CapturePreview` (measured first
    on windows-2022).
@@ -85,9 +89,12 @@ The user chose this design for Twinova (2026-11-23).
      (the project, the snapshot, the problems and the hold, in one answer);
    - with no app, it serves today's headless session and its tools, for CI and for a computer without a display;
    - `--http` stays, for clients that speak streamable HTTP.
-5. **The example lines ship in the binaries,** compiled in as the demo is (`demo.rs`): an example opens as the demo
-   does, a project with no folder, which Save asks a folder for. The project menu lists them, and the registry has
-   `open_example`.
+5. **The example lines ship in the binaries,** compiled in as the demo was (`demo.rs`), in `twinova-project`'s
+   `examples` module so the app and the agent share them: each valid fixture's manifest, scene and program, and the
+   library's files for the families it pins (the fixtures' copies equal them, `library_tests.rs`). An example opens as
+   a project with no folder, which Save asks a folder for. The demo is the first of them, so `open_demo` gives way to
+   `list_examples` and `open_example`, in the project menu, the registry and the headless agent. `ladder_line` is named
+   "…, in Ladder": it had the name of `two_belts_diverter`, and the menu must tell them apart.
 6. **The release carries the agent.** `twinova-agent` is built for each platform and installed with the app: in the
    deb in `/usr/bin` beside it, in the MSI beside the app's executable (Tauri's `bundle.externalBin`), and as release
    files of their own. `twinova-agent setup` writes the MCP configurations of Claude Code and Claude Desktop with the

@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use twinova_engine::engine::{Engine, Saved};
 use twinova_project::Project;
+use twinova_project::examples::example;
 use twinova_project::sources::{Kind, changed};
 use twinova_project::storage::open_folder;
 
@@ -40,8 +41,19 @@ impl Session {
     /// Opens the project in `folder` and builds it.
     pub fn open(&mut self, folder: &Path) -> Result<Opened, String> {
         let opened = open_folder(folder).map_err(|e| e.to_string())?;
-        self.folder = Some(folder.to_path_buf());
-        self.working = Some(opened.opened.project);
+        self.start(Some(folder.to_path_buf()), opened.opened.project)
+    }
+
+    /// Opens example `id` and builds it: a project with no folder, which `save_project` asks a path for.
+    pub fn open_example(&mut self, id: &str) -> Result<Opened, String> {
+        let project =
+            example(id).ok_or_else(|| format!("no example {id}: list_examples names them"))?;
+        self.start(None, project)
+    }
+
+    fn start(&mut self, folder: Option<PathBuf>, project: Project) -> Result<Opened, String> {
+        self.folder = folder;
+        self.working = Some(project);
         self.build()
     }
 

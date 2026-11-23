@@ -213,7 +213,8 @@ describe("project bridge", () => {
     await projects.save("/p/line");
     expect(await projects.launch()).toEqual({ name: "view" });
     expect(await projects.current()).toEqual({ name: "view" });
-    expect(await projects.demo()).toEqual({ name: "view" });
+    expect(await projects.examples()).toEqual({ name: "view" });
+    expect(await projects.example("sort_line")).toEqual({ name: "view" });
     expect(open.mock.calls).toEqual([[{ directory: true }], [{ directory: true }], [{ filters: ARCHIVE }]]);
     expect(save.mock.calls).toEqual([[{ filters: ARCHIVE }]]);
     expect(invoke.mock.calls).toEqual([
@@ -224,7 +225,8 @@ describe("project bridge", () => {
       ["save_project", { folder: "/p/line" }],
       ["open_launch_project"],
       ["current_project"],
-      ["open_demo"],
+      ["list_examples"],
+      ["open_example", { id: "sort_line" }],
     ]);
   });
 

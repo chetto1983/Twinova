@@ -35,13 +35,20 @@ export function described(name: string): { name: string; description: string; pa
   return { name: c.name, description: c.description, params: c.params };
 }
 
-/** Runs command `method` with `params`: the registry's own two answer what it holds. */
+/** Runs command `method` with `params`: the registry's own two answer what it holds. A parameter the command's schema
+ *  does not name, or one it requires and is missing, refuses the command before it runs. */
 export async function dispatch(method: string, params: unknown): Promise<unknown> {
   const args = (params ?? {}) as Record<string, unknown>;
   if (method === "list_commands") return listed();
   if (method === "describe_command") return described(String(args.name));
   const c = commands.get(method);
   if (!c) throw new Error(`no command ${method}: list_commands names them`);
+  const { properties = {}, required = [] } = c.params as { properties?: Schema; required?: string[] };
+  const unknown = Object.keys(args).filter((k) => !(k in properties));
+  if (unknown.length > 0)
+    throw new Error(`${method} takes no ${unknown.join(", ")}: describe_command gives its parameters`);
+  const missing = required.filter((k) => args[k] === undefined);
+  if (missing.length > 0) throw new Error(`${method} needs ${missing.join(", ")}`);
   return (await c.run(args)) ?? null;
 }
 

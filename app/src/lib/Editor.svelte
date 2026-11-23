@@ -118,15 +118,25 @@
     if (current) readRows.call(fileOf(current), current.text);
   });
 
-  const rewatch = debounce((file: string, first: number, last: number, dev: string | null, open: string[]) => {
-    monitor
-      .watchRange(file, first, last, dev, open)
-      .then(async (found) => {
-        watched = found;
-        values = await monitor.watched();
-      })
-      .catch((e) => (problem = String(e)));
+  const watch = async (file: string, first: number, last: number, dev: string | null, open: string[]) => {
+    watched = await monitor.watchRange(file, first, last, dev, open);
+    values = await monitor.watched();
+  };
+  const rewatch = debounce((...args: Parameters<typeof watch>) => {
+    watch(...args).catch((e) => (problem = String(e)));
   }, 150);
+  /** The table as it is now, for a command asked right after a change: the file's declarations read again and, while
+   *  monitoring, its rows watched again, rather than when the pane's debounced reads come round. */
+  async function tableNow() {
+    if (current) {
+      rows = await declared.of(fileOf(current), current.text);
+      if (live) {
+        rewatch.cancel();
+        await watch(fileOf(current), visible.first, visible.last, device, [...unfolded]);
+      }
+    }
+    return { declarations: rows, rows: watched?.rows ?? null, values: parts.rows };
+  }
   /** Whether a breakpoint holds the line: while held the engine cannot read a new table, so letting go watches again. */
   const held = $derived(hold !== null);
   // A new Build, a scroll, a tab, a selection, an unfolded instance or the end of a HOLD watches again; the engine
@@ -156,7 +166,7 @@
         setView: (ladder) => (drawing = ladder),
         setMonitoring: (on) => (monitoring = on),
         setTable: (on) => (showTable = on),
-        table: () => ({ declarations: rows, rows: watched?.rows ?? null, values: parts.rows }),
+        table: tableNow,
         setForces: (next) => (forces = next),
         pathOf: (key) => {
           const source = byKey(key);

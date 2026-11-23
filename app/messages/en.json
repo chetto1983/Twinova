@@ -29,7 +29,7 @@
   "project_save_as": "Save to folder…",
   "project_import": "Import archive…",
   "project_export": "Export archive…",
-  "project_back_to_demo": "Back to the M3 demo",
+  "project_examples": "Examples",
   "project_exported": "Exported to {file}",
   "project_saved": "Saved to {folder}",
   "project_recovered": "An interrupted save was rolled back: the project is as it was last saved.",

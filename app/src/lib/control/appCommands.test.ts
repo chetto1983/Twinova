@@ -16,7 +16,8 @@ const backend = vi.hoisted(() => {
 vi.mock("../backend", () => ({
   projects: {
     create: backend.answer("create"),
-    demo: backend.answer("demo"),
+    examples: () => Promise.resolve([{ id: "demo_m3", name: "M3 demo" }]),
+    example: backend.answer("example"),
     openFolder: backend.answer("openFolder"),
     save: backend.answer("save"),
     importFrom: backend.answer("importFrom"),
@@ -141,7 +142,8 @@ describe("the main window's commands", () => {
   it("opens projects as the project menu does, without its dialogs, and shows each", async () => {
     const w = windowOf();
     await w.run("new_project");
-    await w.run("open_demo");
+    expect(await w.run("list_examples")).toEqual([{ id: "demo_m3", name: "M3 demo" }]);
+    await w.run("open_example", { id: "sort_line" });
     await w.run("open_project", { folder: "/p/line" });
     await w.run("save_project", { folder: "/p/copy" });
     await w.run("save_project");
@@ -149,7 +151,7 @@ describe("the main window's commands", () => {
     expect(await w.run("export_archive", { file: "/p/out.zip" })).toBe("/p/out.zip");
     expect(backend.calls).toEqual([
       ["create"],
-      ["demo"],
+      ["example", "sort_line"],
       ["openFolder", "/p/line"],
       ["save", "/p/copy"],
       ["save", "/p/line"],

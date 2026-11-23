@@ -142,7 +142,18 @@ export function appCommands(ctx: AppContext): Command[] {
       run: (p) => ctx.select((p.id as string | null) ?? null),
     },
     { name: "new_project", description: "An empty project.", params: none, run: open(projects.create) },
-    { name: "open_demo", description: "The bundled demo, one belt.", params: none, run: open(projects.demo) },
+    {
+      name: "list_examples",
+      description: "The example lines the app carries, as the project menu lists them: each id and name.",
+      params: none,
+      run: () => projects.examples(),
+    },
+    {
+      name: "open_example",
+      description: "Open an example line as the project menu does: a project with no folder, which Save asks for.",
+      params: object({ id: string("as list_examples gives it") }),
+      run: (p) => open(() => projects.example(stringOf(p, "id")))(),
+    },
     {
       name: "open_project",
       description: "Open the project in a folder, as the project menu's Open does, without its dialog.",

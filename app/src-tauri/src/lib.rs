@@ -4,7 +4,6 @@ pub mod commands;
 pub mod control;
 pub mod debug_commands;
 pub mod declarations;
-pub mod demo;
 pub mod edit_commands;
 mod frontend;
 pub mod ladder_commands;
@@ -90,7 +89,8 @@ pub fn run() {
             plc_window::open_plc_window,
             plc_window::close_plc_window,
             project_commands::current_project,
-            project_commands::open_demo,
+            project_commands::list_examples,
+            project_commands::open_example,
             project_commands::open_project,
             project_commands::open_launch_project,
             project_commands::save_project,

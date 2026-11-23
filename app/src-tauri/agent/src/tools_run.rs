@@ -1,6 +1,6 @@
-//! The run tools (spec 2026-11-11-agent-server-design.md, decision 3): open and build a project, advance virtual time,
-//! read the line and drive what a user drives, keep and restore states. Virtual time advances only when a tool asks:
-//! there is no wall clock here.
+//! The run tools (spec 2026-11-11-agent-server-design.md, decision 3): open and build a project or an example line,
+//! advance virtual time, read the line and drive what a user drives, keep and restore states. Virtual time advances only
+//! when a tool asks: there is no wall clock here.
 
 use std::path::Path;
 
@@ -18,6 +18,12 @@ use crate::{Agent, structured};
 pub struct OpenProject {
     /// The project's folder.
     pub path: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct OpenExample {
+    /// The example's id, as list_examples gives it.
+    pub id: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -166,6 +172,23 @@ impl Agent {
         Parameters(a): Parameters<OpenProject>,
     ) -> Result<CallToolResult, String> {
         let opened = self.session()?.open(Path::new(&a.path))?;
+        structured(&opened)
+    }
+
+    #[tool(description = "The example lines the agent carries: each one's id and name.")]
+    async fn list_examples(&self) -> Result<CallToolResult, String> {
+        structured(&twinova_project::examples::examples())
+    }
+
+    #[tool(
+        description = "Open an example line and build it at time zero, as open_project answers. It has no folder: \
+                          save_project takes a path for it."
+    )]
+    async fn open_example(
+        &self,
+        Parameters(a): Parameters<OpenExample>,
+    ) -> Result<CallToolResult, String> {
+        let opened = self.session()?.open_example(&a.id)?;
         structured(&opened)
     }
 

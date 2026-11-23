@@ -45,6 +45,7 @@ vi.mock("./backend", () => ({
       panel: [{ name: "Start", address: "%IX1.0" }],
     }),
     launch: vi.fn().mockResolvedValue(null),
+    examples: vi.fn().mockResolvedValue([{ id: "demo_m3", name: "M3 demo" }]),
   },
   catalogue: vi.fn().mockResolvedValue([{ key: "twinova.belt@1", group: "conveyors" }]),
   onSnapshot: vi.fn().mockResolvedValue(() => {}),

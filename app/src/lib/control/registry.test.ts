@@ -54,6 +54,8 @@ describe("the command registry", () => {
     });
     expect(await dispatch("a", { x: "y" })).toBe("y");
     expect(await dispatch("b", null)).toBe(2);
+    await expect(dispatch("b", { ms: 500 })).rejects.toThrow("b takes no ms: describe_command gives its parameters");
+    await expect(dispatch("a", {})).rejects.toThrow("a needs x");
     off();
     expect(listed()).toEqual([]);
     await expect(dispatch("a", {})).rejects.toThrow("no command a: list_commands names them");

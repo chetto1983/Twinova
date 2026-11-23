@@ -41,15 +41,16 @@ function pane() {
     sources: () => sources,
     setSources: (next) => (sources = next),
     current: () => "plc/Main.st",
-    open: (key) => void log.push(["open", key]),
-    setView: (ladder) => void log.push(["view", ladder]),
-    setMonitoring: (on) => void log.push(["monitoring", on]),
-    setTable: (on) => void log.push(["table", on]),
-    table: () => ({
-      declarations: [{ pou: "Main", name: "run", class: "VAR", type_name: "BOOL", address: "%QX0.0" }] as never,
-      rows: null,
-      values: [],
-    }),
+    open: (key) => log.push(["open", key]),
+    setView: (ladder) => log.push(["view", ladder]),
+    setMonitoring: (on) => log.push(["monitoring", on]),
+    setTable: (on) => log.push(["table", on]),
+    table: () =>
+      Promise.resolve({
+        declarations: [{ pou: "Main", name: "run", class: "VAR", type_name: "BOOL", address: "%QX0.0" }] as never,
+        rows: null,
+        values: [],
+      }),
     setForces: (forces) => void log.push(["forces", forces]),
     pathOf: (key) => (key === BELT.key ? "components/twinova.belt@1.st" : key),
     setBreakpoints: (file, list) => {
@@ -70,11 +71,14 @@ function pane() {
 describe("the PLC pane's commands", () => {
   it("shows a file, a view, monitoring and the table as the pane's controls do", async () => {
     const p = pane();
-    await p.run("open_file", { file: "twinova.belt@1" });
-    await p.run("view", { view: "ladder" });
-    await p.run("view", { view: "text" });
-    await p.run("monitoring", { on: true });
-    await p.run("variables_table", { on: false });
+    const answers = [
+      await p.run("open_file", { file: "twinova.belt@1" }),
+      await p.run("view", { view: "ladder" }),
+      await p.run("view", { view: "text" }),
+      await p.run("monitoring", { on: true }),
+      await p.run("variables_table", { on: false }),
+    ];
+    expect(answers, "a setting answers nothing, not the value it set").toEqual(Array(5).fill(undefined));
     expect(p.log).toEqual([
       ["open", "twinova.belt@1"],
       ["view", true],
@@ -88,7 +92,7 @@ describe("the PLC pane's commands", () => {
   it("reads the table, its values while monitoring, and writes, forces and releases through the value bar's way", async () => {
     const p = pane();
     expect(await p.run("values")).toEqual([{ name: "run", type: "BOOL", address: "%QX0.0", value: null }]);
-    p.ctx.table = () => ({
+    p.ctx.table = async () => ({
       declarations: [{ name: "run", type_name: "BOOL", address: "%QX0.0" }] as never,
       rows: [
         { name: "run", declaration: 0, target: null, instance: false },
@@ -96,7 +100,7 @@ describe("the PLC pane's commands", () => {
       ],
       values: ["TRUE"],
     });
-    expect(valuesOf(p.ctx)).toEqual([
+    expect(await valuesOf(p.ctx)).toEqual([
       { name: "run", type: "BOOL", address: "%QX0.0", value: "TRUE" },
       { name: "T1.Q", type: null, address: null, value: null },
     ]);

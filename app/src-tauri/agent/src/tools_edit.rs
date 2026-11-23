@@ -396,11 +396,12 @@ impl Agent {
         Parameters(a): Parameters<SaveProject>,
     ) -> Result<CallToolResult, String> {
         let mut session = self.session()?;
+        let working = encode_project(session.working()?);
         let folder: PathBuf = match a.path {
             Some(p) => p.into(),
-            None => session.folder.clone().ok_or("open a project first")?,
+            None => (session.folder.clone()).ok_or("the project has no folder yet: name a path")?,
         };
-        let checked = parse_project(&encode_project(session.working()?))
+        let checked = parse_project(&working)
             .map_err(|d| twinova_engine::diagnostics(&d))?
             .project;
         save_folder(Path::new(&folder), &checked).map_err(|e| e.to_string())?;

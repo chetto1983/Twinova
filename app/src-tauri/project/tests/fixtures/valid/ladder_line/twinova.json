@@ -22,7 +22,7 @@
     "scene.json": "f9eaecbc2103374fad1f71bd4d29d9c812b697b449c9c1d33ebe78e4a787308f"
   },
   "format": "twinova-project",
-  "name": "Two belts and a chain transfer",
+  "name": "Two belts and a chain transfer, in Ladder",
   "program": [
     "plc/Main.ld"
   ],
