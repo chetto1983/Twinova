@@ -5,6 +5,7 @@ import { projects } from "../backend";
 import type { Edit, ProjectView } from "../project";
 import type { Snapshot } from "../snapshot";
 import { edited, type Source } from "../sources";
+import { locales, setLanguage, type Locale } from "../i18n.svelte";
 import { boolean, none, number, object, oneOf, string, stringOf, type Command } from "./registry";
 
 export interface AppContext {
@@ -216,6 +217,17 @@ export function appCommands(ctx: AppContext): Command[] {
       description: "The window's theme.",
       params: object({ theme: oneOf(["dark", "light"], "the theme") }),
       run: (p) => ctx.theme(p.theme === "light" ? "light" : "dark"),
+    },
+    {
+      name: "language",
+      description: "The window's language, as the toolbar's list sets it.",
+      params: object({ language: oneOf([...locales], "the language") }),
+      run: (p) => {
+        const language = stringOf(p, "language");
+        if (!(locales as readonly string[]).includes(language))
+          throw new Error(`no language ${language}: ${locales.join(", ")}`);
+        setLanguage(language as Locale);
+      },
     },
   ];
 }

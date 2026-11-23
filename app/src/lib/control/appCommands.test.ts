@@ -29,6 +29,7 @@ vi.mock("../backend", () => ({
 }));
 
 import { appCommands, stateOf, type AppContext } from "./appCommands";
+import { currentLocale } from "../i18n.svelte";
 import type { Source } from "../sources";
 import type { ProjectView } from "../project";
 
@@ -104,6 +105,11 @@ describe("the main window's commands", () => {
     await w.run("block_sink", { sink: 1, blocked: true });
     await w.run("theme", { theme: "light" });
     await w.run("theme", { theme: "other" });
+    await w.run("language", { language: "it" });
+    expect(currentLocale()).toBe("it");
+    await w.run("language", { language: "en" });
+    expect(currentLocale()).toBe("en");
+    await expect(w.run("language", { language: "fr" })).rejects.toThrow("no language fr: en, it");
     expect(w.log).toEqual([
       ["build"],
       ["run", null],
