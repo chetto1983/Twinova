@@ -26,14 +26,14 @@ export class Breakpoints {
   }
 
   /** Sets `file`'s breakpoints, and keeps them as the debugger placed them, each on its statement's line. */
-  set(file: string, list: Breakpoint[]): void {
+  set(file: string, list: Breakpoint[]): Promise<void> {
     if (this.waiting(file)) {
       this.byFile = { ...this.byFile, [file]: list };
-      return;
+      return Promise.resolve();
     }
-    debug
+    return debug
       .setBreakpoints(file, list)
-      .then((set) => (this.byFile = { ...this.byFile, [file]: set }))
+      .then((set) => void (this.byFile = { ...this.byFile, [file]: set }))
       .catch((e) => this.fail(String(e)));
   }
 
@@ -44,6 +44,6 @@ export class Breakpoints {
 
   /** Each file's breakpoints, set again on what was just built. */
   resend(): void {
-    for (const [file, list] of Object.entries(this.byFile)) this.set(file, list);
+    for (const [file, list] of Object.entries(this.byFile)) void this.set(file, list);
   }
 }

@@ -95,7 +95,10 @@ export const ladder = {
    *  dialog is cancelled. */
   exportPlcopen: async (program: [string, string][], file: string): Promise<string | null> => {
     const target = await save({ filters: PLCOPEN, defaultPath: exportName(file) });
-    if (target === null) return null;
+    return target === null ? null : ladder.exportPlcopenTo(program, file, target);
+  },
+  /** The same without the dialog: the control channel's way (spec 2026-11-23-app-mcp-design.md). */
+  exportPlcopenTo: (program: [string, string][], file: string, target: string): Promise<string> => {
     const created = new Date().toISOString().slice(0, 19);
     return invoke<void>("ladder_export", { program, file, created, target }).then(() => target);
   },
@@ -105,8 +108,9 @@ export const ladder = {
   /** The Ladder programs of the PLCopen XML file the open dialog picks, or null when it is cancelled. */
   importPlcopen: async (): Promise<Imported | null> => {
     const source = await open({ filters: PLCOPEN });
-    return source === null ? null : invoke<Imported>("ladder_import", { source });
+    return source === null ? null : ladder.importPlcopenFrom(source);
   },
+  importPlcopenFrom: (source: string) => invoke<Imported>("ladder_import", { source }),
 };
 
 /** Online monitoring and forcing (src-tauri/src/monitor.rs). */

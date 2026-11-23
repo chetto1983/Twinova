@@ -12,7 +12,10 @@
     ExternalLink,
     PanelBottom,
   } from "@lucide/svelte";
+  import { onMount } from "svelte";
   import { m } from "../paraglide/messages.js";
+  import { register } from "./control/registry";
+  import { dockCommands } from "./control/plcCommands";
   import type { ProjectView } from "./project";
   import type { Source } from "./sources";
   import type { Snapshot } from "./snapshot";
@@ -74,6 +77,18 @@
   const count = $derived(rows.length + warnings.length + (error ? 1 : 0));
   /** The place a clicked row opens in the PLC tab. */
   let reveal = $state<{ key: string; line: number; column: number } | null>(null);
+  // The control channel shows a tab, and lays the dock over the workspace, as its buttons do.
+  onMount(() =>
+    register(
+      ...dockCommands({
+        show: (panel) => {
+          tab = panel;
+          collapsed = false;
+        },
+        maximize: (on) => (maximized = on),
+      }),
+    ),
+  );
   function open(row: Listed): void {
     reveal = { key: row.key, line: row.line, column: row.column };
     tab = "plc";

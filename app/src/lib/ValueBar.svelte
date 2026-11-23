@@ -3,8 +3,7 @@
   // written once, forced, or released, through the monitor. While a breakpoint holds the line only a write goes.
   import { X } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
-  import { monitor } from "./backend";
-  import { labelOf, type Force, type Target } from "./monitor";
+  import { applyValue, labelOf, type Force, type Target } from "./monitor";
   import type { Hold } from "./debug";
 
   let {
@@ -24,11 +23,8 @@
   async function apply(action: "write" | "force" | "release"): Promise<void> {
     if (!picked) return;
     try {
-      if (action === "write") await monitor.writeValue(picked.target, picked.text);
-      else
-        onForces(
-          await (action === "force" ? monitor.force(picked.target, picked.text) : monitor.release(picked.target)),
-        );
+      const forces = await applyValue(action, picked.target, picked.text);
+      if (forces) onForces(forces);
       onProblem("");
     } catch (e) {
       onProblem(String(e));
