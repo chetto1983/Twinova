@@ -295,7 +295,8 @@
   onMount(() => {
     // A folder named on the command line opens directly; one that fails to open leaves its diagnostics on the demo,
     // built and usable.
-    void attempt(projects.launch).then(async (launched) => {
+    // The control channel waits for the first project shown: a Build sent before it would run with no sources.
+    const shown = attempt(projects.launch).then(async (launched) => {
       const failed = error;
       await showProject(launched ?? (await projects.current()));
       if (failed) error = failed;
@@ -333,7 +334,7 @@
       }),
     );
     const listeners = [
-      listenControl(),
+      shown.then(listenControl),
       onSnapshot(receiveSnapshot),
       onStopped(() => (running = false)),
       onDiskSources((disk) => void fromFolder(disk)),

@@ -51,6 +51,8 @@ text-size = "=1.1.1"
 twinova-control = { path = "control" }
 # A request waiting for the window's answer, with its time limit; the runtime Tauri already runs. MIT.
 tokio = { version = "1", features = ["sync", "time"] }
+# The window's picture as text in the control channel's JSON (screenshot.rs); a version the lockfile has. MIT OR Apache-2.0.
+base64 = "=0.22.1"
 
 [dev-dependencies]
 # mock_app for the command tests (src/commands_tests.rs), as in chetto1983/ModbusTool.
@@ -63,6 +65,14 @@ tokio = { version = "1", features = ["test-util", "macros", "rt"] }
 # The webview's language under a C locale (src/webview_locale.rs).
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = "2.0"
+# The window's picture written as PNG (screenshot.rs): cairo, already built for WebKitGTK, with its PNG writer. MIT.
+cairo-rs = { version = "=0.18.5", features = ["png"] }
+
+# The window's picture through WebView2's CapturePreview into a memory stream (screenshot.rs): the versions Tauri
+# already builds on Windows, with COM's structured storage. MIT (webview2-com), MIT OR Apache-2.0 (windows).
+[target.'cfg(windows)'.dependencies]
+webview2-com = "=0.39.1"
+windows = { version = "=0.62.2", features = ["Win32_Foundation", "Win32_System_Com", "Win32_System_Com_StructuredStorage"] }
 
 # No debug info in dev builds, as CI builds (CARGO_PROFILE_DEV_DEBUG=0): smaller and faster to link. A target dir with
 # it reached 19 GB and filled the session's disk, and each cleaning cost a full rebuild (2026-11-13).

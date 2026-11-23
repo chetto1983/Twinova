@@ -17,6 +17,7 @@ pub mod navigation;
 pub mod plc_window;
 mod positions;
 pub mod project_commands;
+pub mod screenshot;
 #[cfg(test)]
 mod test_fixtures;
 pub mod watch;

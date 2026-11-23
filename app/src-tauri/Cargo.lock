@@ -7161,6 +7161,8 @@ dependencies = [
 name = "twinova"
 version = "0.2.0"
 dependencies = [
+ "base64 0.22.1",
+ "cairo-rs",
  "notify",
  "serde",
  "serde_json",
@@ -7180,6 +7182,8 @@ dependencies = [
  "twinova-physics",
  "twinova-project",
  "webkit2gtk",
+ "webview2-com",
+ "windows 0.62.2",
 ]
 
 [[package]]

@@ -154,10 +154,18 @@ async fn open<R: Runtime>(app: &AppHandle<R>, data_dir: PathBuf) -> Result<(), S
     Ok(())
 }
 
+/// Runs a request: `screenshot` here, in Rust, since the window cannot picture itself; every other in the window.
 fn handler<R: Runtime>(app: AppHandle<R>) -> Handler {
     std::sync::Arc::new(move |method, params| {
         let app = app.clone();
-        Box::pin(async move { app.state::<Control>().ask(&app, method, params).await })
+        Box::pin(async move {
+            if method == "screenshot" {
+                let label = params["window"].as_str().unwrap_or("main").to_string();
+                let picture = crate::screenshot::take(&app, &label).await?;
+                return serde_json::to_value(picture).map_err(|e| e.to_string());
+            }
+            app.state::<Control>().ask(&app, method, params).await
+        })
     })
 }
 
