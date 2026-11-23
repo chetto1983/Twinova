@@ -14,6 +14,7 @@ vi.mock("@tauri-apps/plugin-dialog", () => ({ open, save, confirm }));
 import {
   analysis,
   backend,
+  control,
   debug,
   declarations,
   ladder,
@@ -176,6 +177,21 @@ describe("backend bridge", () => {
       listen.mock.calls[i][1]({ payload });
     }
     expect(seen).toEqual([{ time_ms: 10 }, "boom", "stopped", disk, ["3", null]]);
+  });
+});
+
+describe("control bridge", () => {
+  it("hears the channel's requests, answers them and says the registry is ready", async () => {
+    invoke.mockReset().mockResolvedValue(true);
+    listen.mockReset().mockResolvedValue(() => {});
+    const heard: unknown[] = [];
+    await control.onRequest((r) => heard.push(r));
+    const handler = listen.mock.calls[0]?.[1] as (e: { payload: unknown }) => void;
+    handler({ payload: { id: 1, method: "state", params: {} } });
+    expect([listen.mock.calls[0]?.[0], heard]).toEqual(["control-request", [{ id: 1, method: "state", params: {} }]]);
+    expect(await control.reply(1, true, { a: 1 })).toBe(true);
+    await control.ready();
+    expect(invoke.mock.calls).toEqual([["control_reply", { id: 1, ok: true, value: { a: 1 } }], ["control_ready"]]);
   });
 });
 

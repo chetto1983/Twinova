@@ -144,6 +144,21 @@ export const declarations = {
     invoke<[string, string][]>("rename_declaration", { files, file, index, newName }),
 };
 
+/** A request of the control channel (control.rs), for the window's command registry (control/registry.ts). */
+export interface ControlRequest {
+  id: number;
+  method: string;
+  params: unknown;
+}
+
+/** The control channel's side of the window: its requests, their answers, and the registry's readiness. */
+export const control = {
+  onRequest: (f: (request: ControlRequest) => void): Promise<UnlistenFn> =>
+    listen<ControlRequest>("control-request", (e) => f(e.payload)),
+  reply: (id: number, ok: boolean, value: unknown) => invoke<boolean>("control_reply", { id, ok, value }),
+  ready: () => invoke<void>("control_ready"),
+};
+
 /** The monitored values after each tick of Run, in `watch_range`'s order. */
 export const onMonitor = (f: (values: (string | null)[]) => void): Promise<UnlistenFn> =>
   listen<(string | null)[]>("monitor", (e) => f(e.payload));
@@ -163,8 +178,10 @@ const ARCHIVE = [{ name: "Twinova project", extensions: ["zip"] }];
 export const projects = {
   open: async (): Promise<ProjectView | null> => {
     const folder = await open({ directory: true });
-    return folder === null ? null : invoke<ProjectView>("open_project", { folder });
+    return folder === null ? null : projects.openFolder(folder);
   },
+  /** The project in `folder`, with no dialog: the control channel's way (spec 2026-11-23-app-mcp-design.md). */
+  openFolder: (folder: string) => invoke<ProjectView>("open_project", { folder }),
   /** The project the app shows: the bundled demo at start. */
   current: () => invoke<ProjectView>("current_project"),
   demo: () => invoke<ProjectView>("open_demo"),
@@ -177,8 +194,9 @@ export const projects = {
   },
   exportArchive: async (): Promise<string | null> => {
     const file = await save({ filters: ARCHIVE });
-    return file === null ? null : invoke<void>("export_project", { file }).then(() => file);
+    return file === null ? null : projects.exportTo(file);
   },
+  exportTo: (file: string) => invoke<void>("export_project", { file }).then(() => file),
   /** An empty scene with an empty program, not yet saved to a folder. */
   create: () => invoke<ProjectView>("new_project"),
   /** One edit of the open project, one undo step (edit_commands.rs); rejects with the edit's error. */
@@ -187,6 +205,7 @@ export const projects = {
   redo: () => invoke<ProjectView>("redo"),
   importArchive: async (): Promise<ProjectView | null> => {
     const file = await open({ filters: ARCHIVE });
-    return file === null ? null : invoke<ProjectView>("import_project", { file });
+    return file === null ? null : projects.importFrom(file);
   },
+  importFrom: (file: string) => invoke<ProjectView>("import_project", { file }),
 };

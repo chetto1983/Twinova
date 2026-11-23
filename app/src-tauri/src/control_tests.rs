@@ -3,9 +3,11 @@ use serde_json::json;
 use tauri::Listener;
 use tauri::test::{MockRuntime, mock_app};
 
+/// A mock app whose window's registry listens.
 fn app() -> tauri::App<MockRuntime> {
     let app = mock_app();
     app.manage(Control::default());
+    control_ready(app.state());
     app
 }
 
@@ -139,4 +141,39 @@ async fn the_channel_opens_writes_its_file_and_removes_it_at_exit() {
     assert!(ControlFile::read(data.path()).is_err());
     assert_eq!(control_port(handle.state()), None);
     opening.abort();
+}
+
+/// A request sent before the window's registry listens waits for it, and one the window never gets ready for is said so.
+#[tokio::test(start_paused = true)]
+async fn a_request_waits_for_the_window_to_be_ready() {
+    let app = mock_app();
+    app.manage(Control::default());
+    let handle = app.handle().clone();
+    let waiting = {
+        let handle = handle.clone();
+        tokio::spawn(async move {
+            let control = handle.state::<Control>();
+            control.ask(&handle, "state".into(), json!({})).await
+        })
+    };
+    tokio::task::yield_now().await;
+    assert!(
+        !control_reply(handle.state(), 1, true, json!(true)),
+        "asked before ready"
+    );
+    control_ready(handle.state());
+    while !control_reply(handle.state(), 1, true, json!("ready")) {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(waiting.await.unwrap(), Ok(json!("ready")));
+
+    let never = mock_app();
+    never.manage(Control::default());
+    let handle = never.handle().clone();
+    let control = handle.state::<Control>();
+    let answer = control.ask(&handle, "state".into(), json!({})).await;
+    assert_eq!(
+        answer,
+        Err("the window was not ready for state within 60 s".to_string())
+    );
 }

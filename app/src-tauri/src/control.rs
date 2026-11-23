@@ -7,13 +7,13 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
-use tokio::sync::oneshot;
+use tokio::sync::{Notify, oneshot};
 use twinova_control::{ControlFile, Handler, PORTS, bind, serve, token};
 
 /// How long a command may take in the window, a Build included, before its client is told (SolidCraft's 60 s).
@@ -24,6 +24,9 @@ pub struct Control {
     waiting: Mutex<HashMap<u64, oneshot::Sender<Result<Value, String>>>>,
     next: AtomicU64,
     file: Mutex<Option<(PathBuf, ControlFile)>>,
+    /// The window's registry listens: a request sent before then would be lost, so it waits (`control_ready`).
+    ready: AtomicBool,
+    readied: Notify,
 }
 
 /// A request as the window receives it.
@@ -40,13 +43,40 @@ impl Control {
         self.file.lock().ok()?.as_ref().map(|(_, f)| f.port)
     }
 
-    /// `method` run in the main window, and its answer; a window that does not answer in time is said so.
+    /// Until the window's registry listens.
+    async fn window_ready(&self) {
+        loop {
+            let readied = self.readied.notified();
+            if self.ready.load(Ordering::SeqCst) {
+                return;
+            }
+            readied.await;
+        }
+    }
+
+    /// The window's registry listens from now on.
+    pub fn set_ready(&self) {
+        self.ready.store(true, Ordering::SeqCst);
+        self.readied.notify_waiters();
+    }
+
+    /// `method` run in the main window, and its answer; a window that is not ready in time, or does not answer in
+    /// time, is said so.
     async fn ask<R: Runtime>(
         &self,
         app: &AppHandle<R>,
         method: String,
         params: Value,
     ) -> Result<Value, String> {
+        if tokio::time::timeout(ANSWER_WITHIN, self.window_ready())
+            .await
+            .is_err()
+        {
+            return Err(format!(
+                "the window was not ready for {method} within {} s",
+                ANSWER_WITHIN.as_secs()
+            ));
+        }
         let id = self.next.fetch_add(1, Ordering::SeqCst) + 1;
         let (sender, answer) = oneshot::channel();
         self.waiting
@@ -155,6 +185,12 @@ pub fn control_reply(state: State<'_, Control>, id: u64, ok: bool, value: Value)
             .map_or_else(|| value.to_string(), str::to_string))
     };
     state.answer(id, answer)
+}
+
+/// The window's command registry listens for requests (registry.ts `listenControl`).
+#[tauri::command]
+pub fn control_ready(state: State<'_, Control>) {
+    state.set_ready();
 }
 
 /// The port the channel listens on, or null when it is closed, for the status bar.

@@ -101,6 +101,7 @@ pub fn run() {
             edit_commands::new_project,
             edit_commands::catalogue,
             control::control_reply,
+            control::control_ready,
             control::control_port,
         ])
         .build(tauri::generate_context!())

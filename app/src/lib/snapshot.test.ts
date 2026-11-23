@@ -48,6 +48,7 @@ vi.mock("./backend", () => ({
   },
   catalogue: vi.fn().mockResolvedValue([{ key: "twinova.belt@1", group: "conveyors" }]),
   onSnapshot: vi.fn().mockResolvedValue(() => {}),
+  control: { onRequest: vi.fn().mockResolvedValue(() => {}), ready: vi.fn(), reply: vi.fn() },
   onStopped: vi.fn().mockResolvedValue(() => {}),
   onEngineError: vi.fn().mockResolvedValue(() => {}),
   onDiskSources: vi.fn().mockResolvedValue(() => {}),
