@@ -1,0 +1,142 @@
+use super::*;
+use serde_json::json;
+use tauri::Listener;
+use tauri::test::{MockRuntime, mock_app};
+
+fn app() -> tauri::App<MockRuntime> {
+    let app = mock_app();
+    app.manage(Control::default());
+    app
+}
+
+/// A request reaches the window as an event with its id, and the window's answer, through `control_reply`, is what the
+/// client gets: a value, or an error's text.
+#[tokio::test]
+async fn a_request_reaches_the_window_and_its_reply_comes_back() {
+    let app = app();
+    let handle = app.handle().clone();
+    let seen = std::sync::Arc::new(Mutex::new(Vec::<Value>::new()));
+    let kept = std::sync::Arc::clone(&seen);
+    app.listen_any("control-request", move |event| {
+        kept.lock()
+            .unwrap()
+            .push(serde_json::from_str(event.payload()).unwrap());
+    });
+    let asking = {
+        let handle = handle.clone();
+        tokio::spawn(async move {
+            let control = handle.state::<Control>();
+            let first = control
+                .ask(&handle, "build".into(), json!({ "a": 1 }))
+                .await;
+            let second = control.ask(&handle, "step".into(), json!(null)).await;
+            (first, second)
+        })
+    };
+    let answered = |id: u64, ok: bool, value: Value| {
+        let handle = handle.clone();
+        async move {
+            while !control_reply(handle.state(), id, ok, value.clone()) {
+                tokio::task::yield_now().await;
+            }
+        }
+    };
+    answered(1, true, json!({ "built": true })).await;
+    answered(2, false, json!("build the project first")).await;
+    let (first, second) = asking.await.unwrap();
+    assert_eq!(first, Ok(json!({ "built": true })));
+    assert_eq!(second, Err("build the project first".to_string()));
+    assert_eq!(
+        *seen.lock().unwrap(),
+        [
+            json!({ "id": 1, "method": "build", "params": { "a": 1 } }),
+            json!({ "id": 2, "method": "step", "params": null })
+        ]
+    );
+    // an error that is no string is answered as its JSON, and an id nothing waits for any more is said so
+    assert!(!control_reply(handle.state(), 2, true, json!(1)));
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_window_that_does_not_answer_in_time_is_said_so_and_its_late_answer_dropped() {
+    let app = app();
+    let handle = app.handle().clone();
+    let answer = handle
+        .state::<Control>()
+        .ask(&handle, "build".into(), json!({}))
+        .await;
+    assert_eq!(
+        answer,
+        Err("the window did not answer build within 60 s".to_string())
+    );
+    assert!(!control_reply(handle.state(), 1, true, json!(true)));
+}
+
+#[tokio::test]
+async fn an_error_that_is_no_text_comes_back_as_its_json() {
+    let app = app();
+    let handle = app.handle().clone();
+    let asking = {
+        let handle = handle.clone();
+        tokio::spawn(async move {
+            handle
+                .state::<Control>()
+                .ask(&handle, "x".into(), json!({}))
+                .await
+        })
+    };
+    while !control_reply(handle.state(), 1, false, json!({ "code": 3 })) {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(asking.await.unwrap(), Err(r#"{"code":3}"#.to_string()));
+}
+
+#[test]
+fn the_channel_is_turned_off_by_the_variable_or_by_a_file() {
+    let data = tempfile::tempdir().unwrap();
+    assert!(!turned_off(None, data.path()));
+    assert!(!turned_off(Some("on".into()), data.path()));
+    assert!(turned_off(Some("OFF".into()), data.path()));
+    std::fs::create_dir_all(data.path().join("control")).unwrap();
+    std::fs::write(data.path().join("control/off"), "").unwrap();
+    assert!(turned_off(None, data.path()));
+}
+
+/// The channel opened for the app: the port the status bar asks for, the file written for its user, a client with its
+/// token answered by the window, and the file removed when the app quits.
+#[tokio::test]
+async fn the_channel_opens_writes_its_file_and_removes_it_at_exit() {
+    let app = app();
+    let handle = app.handle().clone();
+    let data = tempfile::tempdir().unwrap();
+    assert_eq!(control_port(handle.state()), None);
+    let opening = {
+        let (handle, data) = (handle.clone(), data.path().to_path_buf());
+        tokio::spawn(async move { open(&handle, data).await })
+    };
+    let file = loop {
+        if let Ok(file) = ControlFile::read(data.path()) {
+            break file;
+        }
+        tokio::task::yield_now().await;
+    };
+    while control_port(handle.state()).is_none() {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(control_port(handle.state()), Some(file.port));
+    assert!(PORTS.contains(&file.port));
+    let window = handle.clone();
+    app.listen_any("control-request", move |event| {
+        let request: Value = serde_json::from_str(event.payload()).unwrap();
+        let id = request["id"].as_u64().unwrap();
+        control_reply(window.state(), id, true, request["params"].clone());
+    });
+    let mut client = twinova_control::Client::connect(file.port, &file.token)
+        .await
+        .unwrap();
+    assert_eq!(client.call("echo", json!([1, 2])).await, Ok(json!([1, 2])));
+    close(&handle);
+    assert!(ControlFile::read(data.path()).is_err());
+    assert_eq!(control_port(handle.state()), None);
+    opening.abort();
+}

@@ -7169,10 +7169,12 @@ dependencies = [
  "tauri-plugin-dialog",
  "tempfile",
  "text-size",
+ "tokio",
  "trust-hir 0.39.0",
  "trust-ide 0.39.0",
  "trust-syntax 0.39.0",
  "trust-wasm-analysis 0.39.0",
+ "twinova-control",
  "twinova-engine",
  "twinova-ladder",
  "twinova-physics",
@@ -7194,6 +7196,18 @@ dependencies = [
  "twinova-engine",
  "twinova-physics",
  "twinova-project",
+]
+
+[[package]]
+name = "twinova-control"
+version = "0.2.0"
+dependencies = [
+ "getrandom 0.3.4",
+ "serde",
+ "serde_json",
+ "subtle",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]
