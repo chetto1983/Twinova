@@ -125,6 +125,8 @@ const valueOf = async (name) => (await run("values")).find((row) => row.name ===
 const holdLine = async () => (await run("hold"))?.line ?? null;
 /** A batch's step renaming instance `id`. */
 const rename = (id) => ({ command: "edit", params: { op: { op: "rename", id, name: "X" } } });
+/** Whether the editor shows the glyph margin, where breakpoints are set. */
+const margin = () => browser.execute(() => document.querySelector(".monaco-host").editor.getRawOptions().glyphMargin);
 const MONITOR = 'button[aria-label="Monitoring (Ctrl+T)"]';
 const VARIABLES = 'button[aria-label="Variables"]';
 
@@ -195,6 +197,24 @@ async function theLadderPane() {
     await run("view", { view: "text" });
     await shows("text", () => pressed("button.ladder"), "false");
   });
+  await check(
+    "a Ladder file takes no breakpoint: no glyph margin, no Run to cursor, and the command refused",
+    async () => {
+      await shows("no glyph margin", margin, false);
+      const cursor = await browser.$('button[aria-label="Run to cursor (Ctrl+F10)"]');
+      expectEqual(await cursor.isEnabled(), false, "Run to cursor enabled");
+      expectEqual(
+        await refused("breakpoints", { file: "plc/Main.ld", lines: [30] }),
+        "plc/Main.ld: a Ladder file takes no breakpoints yet",
+        "breakpoints",
+      );
+      expectEqual(
+        await refused("run_to_cursor", { file: "plc/Main.ld", line: 30 }),
+        "plc/Main.ld: a Ladder file takes no breakpoints yet",
+        "run_to_cursor",
+      );
+    },
+  );
   await check("variables_table and monitoring set the pane's toggles", async () => {
     await run("variables_table", { on: false });
     await shows("table off", () => pressed(VARIABLES), "false");
@@ -257,6 +277,7 @@ async function theLine() {
     expectEqual((await run("state")).snapshot.sinks[0].blocked, true, "blocked");
   });
   await check("breakpoints, resume and run_to_cursor hold the line where asked, as the status bar says", async () => {
+    await shows("an ST file's glyph margin", margin, true);
     expectEqual(await run("breakpoints", { file: "plc/Main.st", lines: [22] }), [{ line: 22 }], "set");
     await run("run");
     await shows("held", holdLine, 22);

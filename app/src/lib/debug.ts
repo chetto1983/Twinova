@@ -105,4 +105,8 @@ export function moved(list: Breakpoint[], ranges: { startLineNumber: number }[])
 export const sameLines = (a: Breakpoint[], b: Breakpoint[]): boolean =>
   a.map((x) => x.line).join() === b.map((x) => x.line).join();
 
+/** Whether `file` takes breakpoints: a Ladder file does not yet (spec 2026-11-13-ladder-editor-design.md, decision 8;
+ *  debug_commands.rs refuses one). */
+export const takesBreakpoints = (file: string): boolean => !file.endsWith(".ld");
+
 export const holdLabel = (hold: Hold): string => `${hold.file}:${hold.line}${hold.device ? ` (${hold.device})` : ""}`;

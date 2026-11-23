@@ -218,3 +218,23 @@ fn a_block_s_breakpoint_taken_off_while_held_lets_its_debug_go_at_continue() {
     assert!(state.debugger(Scope::Field).unwrap().is_none());
     reset(app.state()).unwrap();
 }
+
+#[test]
+fn a_ladder_file_takes_no_breakpoint_and_no_run_to_cursor() {
+    let app = opened("ladder_line", true);
+    let refused = "plc/Main.ld: a Ladder file takes no breakpoints yet";
+    assert_eq!(
+        set_breakpoints(app.state(), "plc/Main.ld".into(), at(&[30])).unwrap_err(),
+        refused
+    );
+    assert_eq!(
+        run_to_cursor(app.state(), "plc/Main.ld".into(), 30).unwrap_err(),
+        refused
+    );
+    let state = app.state::<AppState>();
+    assert!(
+        state.debugger(Scope::Plc).unwrap().is_none(),
+        "nothing attached"
+    );
+    assert!(state.breakpoints.lock().unwrap().is_empty());
+}

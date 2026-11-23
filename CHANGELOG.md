@@ -23,6 +23,9 @@ Coding agents drive the app you have open, and the release carries what they nee
 
 ### Fixed
 
+- A Ladder file took breakpoints in its text view, and held the line at the line of the ST it is compiled to, past the
+  file's end. Ladder files take no breakpoints yet: their text view has no breakpoint margin and no Run to cursor, and
+  the app refuses a breakpoint in one, whoever asks.
 - The agent's answers that are lists (`list_examples`, a batch's answers) were refused by MCP clients built on the
   TypeScript SDK, Claude Code's among them: an MCP tool's structured answer must be an object.
 

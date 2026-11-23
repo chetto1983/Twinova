@@ -54,11 +54,13 @@ function pane() {
     setForces: (forces) => void log.push(["forces", forces]),
     pathOf: (key) => (key === BELT.key ? "components/twinova.belt@1.st" : key),
     setBreakpoints: (file, list) => {
+      const bad = list.find((b) => b.condition === "x =");
+      if (bad) return Promise.resolve(`line ${bad.line}: the condition 'x =' does not parse`);
       breakpoints.set(
         file,
         list.map((b) => ({ ...b, line: b.line + 1 })),
       );
-      return Promise.resolve();
+      return Promise.resolve(null);
     },
     breakpointsOf: (file) => breakpoints.get(file) ?? [],
     hold: () => null,
@@ -132,6 +134,9 @@ describe("the PLC pane's commands", () => {
       { line: 8, condition: "x" },
     ]);
     expect(await p.run("breakpoints", { lines: [] })).toEqual([]);
+    await expect(p.run("breakpoints", { lines: [{ line: 5, condition: "x =" }] })).rejects.toThrow(
+      "line 5: the condition 'x =' does not parse",
+    );
     expect(await p.run("hold")).toBeNull();
     await p.run("resume", { how: "over" });
     await p.run("run_to_cursor", { file: "twinova.belt@1", line: 12 });

@@ -8,6 +8,7 @@ import {
   moved,
   replaced,
   sameLines,
+  takesBreakpoints,
   toggle,
   trimmed,
 } from "./debug";
@@ -98,5 +99,15 @@ describe("breakpoints and HOLD in the editor", () => {
     expect(holdLabel({ file: "components/b.st", line: 20, frames: [], device: "chain_transfer" })).toBe(
       "components/b.st:20 (chain_transfer)",
     );
+  });
+});
+
+describe("which files take breakpoints", () => {
+  it("takes them in ST, a program's or a block's, and not in a Ladder file yet", () => {
+    expect(["plc/Main.st", "components/twinova.belt@1.st", "plc/Main.ld"].map(takesBreakpoints)).toEqual([
+      true,
+      true,
+      false,
+    ]);
   });
 });

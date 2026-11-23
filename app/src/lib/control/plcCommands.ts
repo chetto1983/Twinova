@@ -24,7 +24,8 @@ export interface PlcContext {
   setForces: (forces: Force[]) => void;
   /** The file a tab's key names: a program file's own path, a block's `components/<key>.st`. */
   pathOf: (key: string) => string;
-  setBreakpoints: (file: string, list: Breakpoint[]) => Promise<void>;
+  /** Answers the debugger's refusal, or null. */
+  setBreakpoints: (file: string, list: Breakpoint[]) => Promise<string | null>;
   breakpointsOf: (file: string) => Breakpoint[];
   hold: () => Hold | null;
 }
@@ -130,7 +131,8 @@ export function plcCommands(ctx: PlcContext): Command[] {
         const list = ((p.lines as unknown[]) ?? []).map((l) =>
           typeof l === "number" ? { line: l } : l,
         ) as Breakpoint[];
-        await ctx.setBreakpoints(path, list);
+        const refused = await ctx.setBreakpoints(path, list);
+        if (refused) throw new Error(refused);
         return ctx.breakpointsOf(path);
       },
     },

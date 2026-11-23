@@ -5,7 +5,7 @@
   import { edited, type Source } from "./sources";
   import { debounce, fileOf, type Problems } from "./analysis";
   import { declarations as declared, monitor, onMonitor } from "./backend";
-  import { replaced, toggle, trimmed, type Breakpoint, type Log } from "./debug";
+  import { replaced, takesBreakpoints, toggle, trimmed, type Breakpoint, type Log } from "./debug";
   import { plcHold } from "./held.svelte";
   import { Breakpoints } from "./breakpoints.svelte";
   import {
@@ -96,7 +96,11 @@
   let cursor = $state(1);
   /** The breakpoint the bar edits. */
   let editing = $state<Breakpoint | null>(null);
-  const debugFile = $derived(current ? fileOf(current) : null);
+  /** The shown tab's file when it takes breakpoints: a Ladder file has no gutter for them and no Run to cursor. */
+  const debugFile = $derived(current && takesBreakpoints(fileOf(current)) ? fileOf(current) : null);
+  const toggleIn = (file: string) => (line: number) => void breakpoints.set(file, toggle(breakpoints.of(file), line));
+  const editIn = (file: string) => (line: number) =>
+    (editing = breakpoints.of(file).find((b) => b.line === line) ?? { line });
   // A Build compiles new statements: the breakpoints are set again on them, where their lines resolve now.
   $effect(() => {
     void sources.map((s) => s.base);
@@ -332,10 +336,8 @@
           onToggleMonitor={() => (monitoring = status === "ok" && !monitoring)}
           breakpoints={breakpoints.of(debugFile)}
           heldLine={hold && hold.file === debugFile ? hold.line : null}
-          onBreakpoint={(line) => {
-            if (debugFile) breakpoints.set(debugFile, toggle(breakpoints.of(debugFile), line));
-          }}
-          onEditBreakpoint={(line) => (editing = breakpoints.of(debugFile).find((b) => b.line === line) ?? { line })}
+          onBreakpoint={debugFile ? toggleIn(debugFile) : undefined}
+          onEditBreakpoint={debugFile ? editIn(debugFile) : undefined}
           onBreakpointsMoved={(list) => {
             if (debugFile) breakpoints.move(debugFile, list);
           }}
