@@ -99,6 +99,17 @@ The user chose this design for Twinova (2026-11-23).
    deb in `/usr/bin` beside it, in the MSI beside the app's executable (Tauri's `bundle.externalBin`), and as release
    files of their own. `twinova-agent setup` writes the MCP configurations of Claude Code and Claude Desktop with the
    agent's own path.
+   - `externalBin` sits in `tauri.agent.conf.json`, which only the package builds pass (`tauri build --config`):
+     tauri-build copies an external binary in the app's build script and fails when it is missing (tauri-build 2.7.4,
+     `copy_binaries`), so in `tauri.conf.json` it would break every `cargo build`, test and clippy of the app.
+     `scripts/stage-agent.sh` builds the agent and puts it where Tauri looks. Measured 2026-11-23 on a debug deb:
+     `usr/bin/twinova` and `usr/bin/twinova-agent`, and the agent taken out of it answers the TypeScript SDK's client.
+   - `setup` takes each client's documented route. Claude Code: `claude mcp add --scope user`; its user configuration
+     file is not documented for hand editing (https://code.claude.com/docs/en/mcp). `add` refuses a name that exists
+     (measured: exit 1), so setup removes the entry first and can run again after an update. Claude Desktop:
+     `claude_desktop_config.json` in `Claude/` of the system's configuration folder, its other servers kept, written
+     only when that folder exists (https://modelcontextprotocol.io/docs/develop/connect-local-servers). Measured with
+     the real `claude` 2026-11-23 in a scratch home: `claude mcp get twinova` answered "Connected".
 7. **A guide** (`docs/guide.md`): install, the example lines, the scene, the PLC pane, ST and Ladder, the online tools,
    and connecting an agent. The release text and the README link it.
 

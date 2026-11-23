@@ -13,6 +13,7 @@ use serde::Serialize;
 
 pub mod attached;
 pub mod session;
+pub mod setup;
 mod tools_edit;
 mod tools_run;
 

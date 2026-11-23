@@ -1,4 +1,4 @@
-//! `twinova-agent`: MCP on stdio, attached to the open app when there is one and headless otherwise; `--headless` never
+//! `twinova-agent`: `setup` registers it with Claude Code and Claude Desktop (setup.rs); otherwise MCP on stdio, attached to the open app when there is one and headless otherwise; `--headless` never
 //! attaches, `--connect <port>` attaches to the app on that port; `--http <address>` serves the headless session on
 //! streamable HTTP at `/mcp` (specs 2026-11-11-agent-server-design.md, decision 2, and 2026-11-23-app-mcp-design.md,
 //! decision 4).
@@ -14,11 +14,12 @@ async fn main() -> ExitCode {
     let result = match args.as_slice() {
         [] => attached_or_headless().await,
         [flag] if flag == "--headless" => twinova_agent::serve_stdio().await,
+        [command] if command == "setup" => setup(),
         [flag, port] if flag == "--connect" => connect(port).await,
         [flag] if flag == "--http" => serve_http(DEFAULT_HTTP).await,
         [flag, address] if flag == "--http" => serve_http(address).await,
         _ => Err(format!(
-            "usage: twinova-agent [--headless | --connect <port> | --http [address, default {DEFAULT_HTTP}]]"
+            "usage: twinova-agent [setup | --headless | --connect <port> | --http [address, default {DEFAULT_HTTP}]]"
         )),
     };
     match result {
@@ -27,6 +28,28 @@ async fn main() -> ExitCode {
             eprintln!("twinova-agent: {e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+/// Registers this binary with Claude Code and Claude Desktop; fails only when neither took it.
+fn setup() -> Result<(), String> {
+    use twinova_agent::setup::{claude_code, claude_desktop};
+    let agent = std::env::current_exe().map_err(|e| format!("where am I? {e}"))?;
+    let config = dirs::config_dir().ok_or("no configuration folder on this system")?;
+    let outcomes = [
+        claude_code("claude", &agent),
+        claude_desktop(&config, &agent),
+    ];
+    for outcome in &outcomes {
+        match outcome {
+            Ok(done) => println!("{done}"),
+            Err(why) => eprintln!("{why}"),
+        }
+    }
+    if outcomes.iter().any(Result::is_ok) {
+        Ok(())
+    } else {
+        Err("no MCP client took the agent".into())
     }
 }
 

@@ -7191,6 +7191,7 @@ name = "twinova-agent"
 version = "0.2.0"
 dependencies = [
  "axum",
+ "dirs 7.0.0",
  "rmcp",
  "schemars 1.2.3",
  "serde",

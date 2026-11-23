@@ -1,9 +1,9 @@
 name: Release
 
-# Builds the Windows MSI and the Linux deb and AppImage, and publishes a GitHub release whose text
-# is the version's CHANGELOG.md section. From chetto1983/ModbusTool's release.yml, without its
-# signing (SignPath), updater (latest.json) and winget steps: Twinova has none of them yet
-# (ROADMAP 2.4; the updater is 6.4). The installers are unsigned, and the release text says so.
+# Builds the Windows MSI and the Linux deb and AppImage, each with twinova-agent beside the app, and the agent alone
+# for each platform, and publishes a GitHub release whose text is the version's CHANGELOG.md section. From
+# chetto1983/ModbusTool's release.yml, without its signing (SignPath), updater (latest.json) and winget steps: Twinova
+# has none of them yet (ROADMAP 2.4; the updater is 6.4). The installers are unsigned, and the release text says so.
 #
 # Start it by pushing a tag vX.Y.Z, or from the Actions tab (Run workflow) with the tag to
 # create: the release then creates the tag on the commit the workflow ran on.
@@ -70,13 +70,16 @@ jobs:
           - os: windows-latest
             bundles: msi
             artifact: windows
-            files: app/src-tauri/target/release/bundle/msi/*.msi
+            files: |
+              app/src-tauri/target/release/bundle/msi/*.msi
+              app/src-tauri/binaries/twinova-agent-*
           - os: ubuntu-24.04
             bundles: deb,appimage
             artifact: linux
             files: |
               app/src-tauri/target/release/bundle/deb/*.deb
               app/src-tauri/target/release/bundle/appimage/*.AppImage
+              app/src-tauri/binaries/twinova-agent-*
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -125,7 +128,10 @@ jobs:
         if: steps.tools-cache.outputs.cache-hit != 'true'
         run: bash ../scripts/fetch-bundler-tools.sh "${{ steps.tools.outputs.dir }}" "$RUNNER_OS"
       - run: npm ci
-      - run: npx tauri build --bundles ${{ matrix.bundles }}
+      # The agent beside the app in every package, and as a file of its own (spec 2026-11-23-app-mcp-design.md,
+      # decision 6); ci.yml's bundle job checks the packages carry it.
+      - run: bash ../scripts/stage-agent.sh release
+      - run: npx tauri build --bundles ${{ matrix.bundles }} --config src-tauri/tauri.agent.conf.json
       - name: One Paraglide runtime in the frontend bundle
         run: node ../scripts/check-single-runtime.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -154,9 +160,9 @@ jobs:
           printf '%s\n' "$NOTES" > notes.md
           find assets -type f -exec ls -l {} +
           shopt -s globstar nullglob
-          packages=(assets/**/*.msi assets/**/*.deb assets/**/*.AppImage)
-          if [ "${#packages[@]}" -ne 3 ]; then
-            echo "Expected an MSI, a deb and an AppImage, found: ${packages[*]}" >&2
+          packages=(assets/**/*.msi assets/**/*.deb assets/**/*.AppImage assets/**/twinova-agent-*)
+          if [ "${#packages[@]}" -ne 5 ]; then
+            echo "Expected an MSI, a deb, an AppImage and the agent for Linux and Windows, found: ${packages[*]}" >&2
             exit 1
           fi
           gh release create "$TAG" "${packages[@]}" \
