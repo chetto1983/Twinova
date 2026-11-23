@@ -5,7 +5,7 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use rmcp::handler::server::router::tool::ToolRouter;
-use rmcp::model::{CallToolResult, ServerCapabilities, ServerConfig};
+use rmcp::model::{CallToolResult, ContentBlock, ServerCapabilities, ServerConfig};
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 use rmcp::transport::streamable_http_server::{StreamableHttpServerConfig, StreamableHttpService};
 use rmcp::{ServerHandler, ServiceExt, tool_handler};
@@ -43,9 +43,16 @@ impl Agent {
 }
 
 /// A tool's answer as structured JSON content.
+/// A tool's answer as its JSON text, and as structured content too when it is a JSON object: the MCP schema allows
+/// nothing else there (2025-06-18, `CallToolResult.structuredContent`), and the TypeScript SDK's client refuses a whole
+/// answer whose structured content is an array (measured 2026-11-23, @modelcontextprotocol/sdk 1.32.2).
 pub(crate) fn structured(value: &impl Serialize) -> Result<CallToolResult, String> {
     let value = serde_json::to_value(value).map_err(|e| e.to_string())?;
-    Ok(CallToolResult::structured(value))
+    Ok(if value.is_object() {
+        CallToolResult::structured(value)
+    } else {
+        CallToolResult::success(vec![ContentBlock::text(value.to_string())])
+    })
 }
 
 #[tool_handler(router = self.tool_router)]
