@@ -4,6 +4,28 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
+## Unreleased
+
+Coding agents drive the app you have open, and the release carries what they need.
+
+### Added
+
+- `twinova-agent` attaches to the open app: what it does happens in the window you are looking at. `list_commands`
+  names every action of the window, `describe_command` gives its parameters, `execute` runs one as its button does,
+  `batch` runs several and undoes the scene's edits when one fails, `state` reads the window and `screenshot` returns it
+  as a PNG. The app listens on `127.0.0.1` only, with a token made at each start; `TWINOVA_CONTROL=off` keeps it closed.
+  With no app open the agent runs its headless session, as before.
+- The example lines ship in the app and the agent: the project menu lists them under Examples, and agents have
+  `list_examples` and `open_example`. They replace "Back to the M3 demo"; the demo is the first example.
+- Every package carries `twinova-agent` beside the app (the MSI, the deb in `/usr/bin`, the AppImage), and the release
+  has the agent alone for Windows and Linux. `twinova-agent setup` registers it with Claude Code and Claude Desktop.
+- A [guide](docs/guide.md): install, the example lines, the scene, the PLC pane, the online tools, connecting an agent.
+
+### Fixed
+
+- The agent's answers that are lists (`list_examples`, a batch's answers) were refused by MCP clients built on the
+  TypeScript SDK, Claude Code's among them: an MCP tool's structured answer must be an object.
+
 ## v0.2.0 — 2026-11-14
 
 Ladder programs to and from PLCopen XML, from the PLC pane and over MCP, so a program edited in another tool comes

@@ -47,7 +47,7 @@ The project is **headless first**: the simulation engine is a library, the deskt
 - **The PLC inside the app:** Structured Text and Ladder (as CODESYS's LD2), built to truST's bytecode runtime with no external compiler. The scan time comes from the program's IEC task.
 - **A PLC IDE's online tools:** values beside the code and on the Ladder drawing, write and force, breakpoints that hold the line as an S7-1500's HOLD with stepping and conditions, completion with call templates, go to definition, rename, Auto Declare, PLCopen `<LD>` import and export, and the PLC pane in a window of its own. The `.st` files can also be edited in VS Code while the line runs.
 - **Time under control:** ×0.25 to ×10 the wall clock or as fast as possible, pause, a single scan, reset, and the lag behind real time shown.
-- **Coding agents:** `twinova-agent` serves the engine over the Model Context Protocol: open, edit, build and run a project, read signals, press buttons, export and import PLCopen Ladder, compare fingerprints.
+- **Coding agents:** `twinova-agent` serves Twinova over the Model Context Protocol. With the app open it drives the window you are looking at, every action of it, and takes screenshots; without it, it runs a headless session that opens, edits, builds and runs a project on virtual time. `twinova-agent setup` registers it with Claude Code and Claude Desktop.
 - **Desktop basics:** English and Italian, light and dark themes, an MSI for Windows and a deb and an AppImage for Linux.
 
 ## At a glance
@@ -73,7 +73,7 @@ Component logic     each component's IEC 61131-3 function block, run every milli
 Engine              1 ms lockstep on virtual time: physics, sensors, component logic, PLC scan · replay by inputs
 Physics             Rapier rigid bodies with enhanced determinism · OIP's conveyor surfaces, devices and products
 Visualization       Three.js · engine snapshots drive rendering, never simulation time
-Agents              twinova-agent: the engine over the Model Context Protocol (stdio or HTTP)
+Agents              twinova-agent: MCP on the open app's window, or a headless session (stdio or HTTP)
 Packaging           Windows MSI · Linux deb/AppImage
 ```
 
@@ -96,16 +96,7 @@ These are planned capabilities, not claims about the current release. Milestones
 
 **Install:** download the MSI (Windows), the deb or the AppImage (Linux) from the [v0.2.0 release](https://github.com/chetto1983/Twinova/releases/tag/v0.2.0). The installers are not signed yet, so Windows SmartScreen asks for confirmation on the first start (More info, then Run anyway).
 
-The app opens on a bundled demo, one belt. The example lines are project folders in this repository, under [`app/src-tauri/project/tests/fixtures/valid/`](app/src-tauri/project/tests/fixtures/valid/): open one with "Open project folder…", or start the app with the folder as its argument (`twinova <folder>`).
-
-| Folder | Line |
-|---|---|
-| `two_belts_diverter` | two belts and a chain transfer sending every third carton to reject |
-| `ladder_line` | the same line, its program in Ladder |
-| `curve_line` | a line with two curves |
-| `sort_line` | sorting with a stopper, a turntable and a pusher |
-| `code_sort_line` | sorting by barcode and colour |
-| `merge_line` | a spur merging into a main line |
+The app opens on a bundled demo, one belt; the project menu lists the other example lines under **Examples**. A project folder also opens from the command line (`twinova <folder>`). The [guide](docs/guide.md) goes from there: the scene, the PLC pane, the online tools, and connecting an agent.
 
 **Build from source:** you need Node.js **22.23.4** (pinned in `.node-version`), Rust **1.99.0** (pinned by the app), and the [Tauri 2 system prerequisites](https://v2.tauri.app/start/prerequisites/) for your operating system.
 
@@ -122,6 +113,7 @@ Linux requires WebKitGTK 4.1 and the remaining Tauri packages. No external IEC 6
 
 | Document | Purpose |
 |---|---|
+| [Guide](docs/guide.md) | Install, the example lines, the scene, the PLC pane, the online tools, connecting an agent |
 | [Roadmap](ROADMAP.md) | Milestones, phases, acceptance criteria, and current status |
 | [Research index](docs/research/00-indice.md) | Clean-room product, engine, PLC, ecosystem, and component-catalog research (Italian) |
 | [Changelog](CHANGELOG.md) | Shipped behavior and future release text |
