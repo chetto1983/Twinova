@@ -17,6 +17,8 @@ tokio = { version = "1", features = ["net", "io-util", "sync", "time", "rt", "ma
 getrandom = "=0.3.4"
 # The token compared in constant time; the version the lockfile already has. BSD-3-Clause.
 subtle = "=2.6.1"
+# The system's data folder, where the app keeps its file: the version Tauri's path resolver reads it with. MIT OR Apache-2.0.
+dirs = "=7.0.0"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt-multi-thread"] }

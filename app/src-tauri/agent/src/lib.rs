@@ -11,6 +11,7 @@ use rmcp::transport::streamable_http_server::{StreamableHttpServerConfig, Stream
 use rmcp::{ServerHandler, ServiceExt, tool_handler};
 use serde::Serialize;
 
+pub mod attached;
 pub mod session;
 mod tools_edit;
 mod tools_run;
@@ -42,7 +43,7 @@ impl Agent {
 }
 
 /// A tool's answer as structured JSON content.
-fn structured(value: &impl Serialize) -> Result<CallToolResult, String> {
+pub(crate) fn structured(value: &impl Serialize) -> Result<CallToolResult, String> {
     let value = serde_json::to_value(value).map_err(|e| e.to_string())?;
     Ok(CallToolResult::structured(value))
 }

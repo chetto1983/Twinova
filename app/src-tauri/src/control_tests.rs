@@ -177,3 +177,16 @@ async fn a_request_waits_for_the_window_to_be_ready() {
         Err("the window was not ready for state within 60 s".to_string())
     );
 }
+
+/// The agent finds the app's file by the identifier it shares with tauri.conf.json, which names Tauri's data folder.
+#[test]
+fn the_agent_looks_in_the_folder_tauri_gives_the_app() {
+    let conf: Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+    assert_eq!(conf["identifier"], json!(twinova_control::file::IDENTIFIER));
+    let data = twinova_control::file::app_data_dir().unwrap();
+    assert!(
+        data.ends_with(twinova_control::file::IDENTIFIER),
+        "{}",
+        data.display()
+    );
+}

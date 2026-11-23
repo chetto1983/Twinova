@@ -15,6 +15,14 @@ pub struct ControlFile {
     pub pid: u32,
 }
 
+/// The app's identifier (tauri.conf.json), which names its data folder.
+pub const IDENTIFIER: &str = "io.github.chetto1983.twinova";
+
+/// The app's data folder as Tauri resolves it (`app_data_dir`: the system's data folder and the identifier).
+pub fn app_data_dir() -> Option<PathBuf> {
+    dirs::data_dir().map(|d| d.join(IDENTIFIER))
+}
+
 /// `control/current.json` in the app's data folder (Tauri's `app_data_dir`: the system's data folder and the app's
 /// identifier).
 pub fn path(data_dir: &Path) -> PathBuf {

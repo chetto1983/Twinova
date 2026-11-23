@@ -20,6 +20,8 @@ serde_json = "1"
 twinova-engine = { path = "../engine" }
 twinova-physics = { path = "../physics" }
 twinova-project = { path = "../project" }
+# The control channel the agent reaches the open app by (spec 2026-11-23-app-mcp-design.md).
+twinova-control = { path = "../control" }
 
 [dev-dependencies]
 # rmcp's own client drives the server in the tests, over both transports.

@@ -7193,6 +7193,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "twinova-control",
  "twinova-engine",
  "twinova-physics",
  "twinova-project",
@@ -7202,6 +7203,7 @@ dependencies = [
 name = "twinova-control"
 version = "0.2.0"
 dependencies = [
+ "dirs 7.0.0",
  "getrandom 0.3.4",
  "serde",
  "serde_json",

@@ -27,7 +27,7 @@ examine_globs = [
   "physics/src/layout_sensors.rs", "physics/src/layout_merge.rs", "physics/src/interfaces.rs",
   "physics/src/snap.rs", "physics/src/interfaces_view.rs",
   "physics/src/path.rs", "physics/src/surfaces.rs",
-  "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/tools_edit.rs",
+  "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/tools_edit.rs", "agent/src/attached.rs",
 ]
 # Equivalent mutants, each with its reason (CLAUDE.md "MUTATION").
 exclude_re = [
