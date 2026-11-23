@@ -161,3 +161,58 @@ fn tokens_are_256_bits_and_differ() {
     assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
     assert_ne!(a, b);
 }
+
+/// An app that greets any token, answers each request with the id `reply` makes of it, and keeps the ids it received.
+async fn recording_app(reply: fn(u64) -> u64) -> (u16, tokio::sync::mpsc::UnboundedReceiver<u64>) {
+    let listener = bind(0..=0).await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let (ids, received) = tokio::sync::mpsc::unbounded_channel();
+    tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let (reader, mut writer) = stream.into_split();
+        let mut lines = BufReader::new(reader).lines();
+        let answer = |id: u64| {
+            let mut line = serde_json::to_vec(&Reply::of(id, Ok(Value::Null))).unwrap();
+            line.push(b'\n');
+            line
+        };
+        lines.next_line().await.unwrap();
+        writer.write_all(&answer(0)).await.unwrap();
+        while let Ok(Some(line)) = lines.next_line().await {
+            let id = serde_json::from_str::<Value>(&line).unwrap()["id"]
+                .as_u64()
+                .unwrap();
+            ids.send(id).unwrap();
+            writer.write_all(&answer(reply(id))).await.unwrap();
+        }
+    });
+    (port, received)
+}
+
+#[tokio::test]
+async fn each_request_has_an_id_of_its_own_and_an_answer_to_another_is_refused() {
+    let (port, mut received) = recording_app(|id| id).await;
+    let mut client = Client::connect(port, "any").await.unwrap();
+    for _ in 0..3 {
+        client.call("echo", json!({})).await.unwrap();
+    }
+    let ids: Vec<u64> = (0..3).map(|_| received.try_recv().unwrap()).collect();
+    assert_eq!(ids, [1, 2, 3]);
+    let (port, _received) = recording_app(|id| id + 6).await;
+    let mut client = Client::connect(port, "any").await.unwrap();
+    assert_eq!(
+        client.call("echo", json!({})).await,
+        Err("the app answered request 7 for 1".into())
+    );
+}
+
+#[test]
+fn the_app_s_data_folder_is_the_system_s_with_the_app_s_identifier() {
+    let folder = twinova_control::file::app_data_dir().expect("a data folder on this system");
+    assert_eq!(
+        folder,
+        dirs::data_dir()
+            .unwrap()
+            .join("io.github.chetto1983.twinova")
+    );
+}

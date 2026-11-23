@@ -29,8 +29,14 @@ examine_globs = [
   "physics/src/path.rs", "physics/src/surfaces.rs",
   "agent/src/lib.rs", "agent/src/session.rs", "agent/src/tools_run.rs", "agent/src/tools_edit.rs", "agent/src/attached.rs",
 ]
+# src/screenshot_webkit.rs and src/screenshot_webview2.rs are left out: each takes the picture of a real window, which no
+# cargo test opens, and the second is compiled on Windows only, while mutation runs on Linux (every mutant of them
+# "survived" on PR #55). e2e/mcp.mjs takes a screenshot under Xvfb and on windows-2022 and checks its size.
 # Equivalent mutants, each with its reason (CLAUDE.md "MUTATION").
 exclude_re = [
+  # screenshot.rs `capture`, the one left in the file: it answers that no picture is taken on a system that is neither
+  # Linux nor Windows, so it is compiled on neither, and no test on the Linux runner reaches a mutant of it.
+  "src/screenshot.rs:.*replace capture with \\(\\)",
   # field_image.rs `place`: the slot only names which of the two counters an area uses; `!=` swaps the names, and each
   # area still counts in a counter of its own.
   "engine/src/field_image.rs:.*replace == with != in place",

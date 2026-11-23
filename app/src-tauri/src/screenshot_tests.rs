@@ -6,6 +6,10 @@ fn a_png_s_size_comes_from_its_header() {
     png.extend_from_slice(&1440u32.to_be_bytes());
     png.extend_from_slice(&900u32.to_be_bytes());
     assert_eq!(png_size(&png), Ok((1440, 900)));
+    // Every byte of each word differs, so a byte read from the wrong place shows.
+    let mut distinct = png[..16].to_vec();
+    distinct.extend_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+    assert_eq!(png_size(&distinct), Ok((0x0102_0304, 0x0506_0708)));
     assert!(png_size(&png[..23]).is_err());
     let mut jpeg = png.clone();
     jpeg[1] = b'J';

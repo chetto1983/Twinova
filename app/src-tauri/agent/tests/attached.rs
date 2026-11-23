@@ -67,6 +67,13 @@ async fn attached() -> (common::Client, Arc<Mutex<u32>>) {
 #[tokio::test(flavor = "multi_thread")]
 async fn the_agent_names_describes_and_runs_the_app_s_commands() {
     let (c, edits) = attached().await;
+    let info = c.peer_info().expect("the server's handshake");
+    assert!(info.capabilities.tools.is_some(), "it serves tools");
+    let instructions = info.instructions.clone().unwrap_or_default();
+    assert!(
+        instructions.starts_with("Twinova's open app: the window a person sees."),
+        "{instructions}"
+    );
     assert_eq!(
         ok(&c, "list_commands", json!({})).await,
         json!([{ "name": "edit", "description": "one edit" }])
@@ -156,5 +163,37 @@ async fn a_screenshot_comes_back_as_a_png_image() {
     );
     let plc = common::call(&c, "screenshot", json!({ "window": "plc" })).await;
     assert_eq!(plc.content[1].as_text().unwrap().text, "plc window, 2 × 1");
+    c.cancel().await.unwrap();
+}
+
+/// The built binary with no argument finds the open app through its file and serves it on stdio. The file is in a
+/// data folder of the test's own: on Linux `dirs` reads `XDG_DATA_HOME`, so the person's own app is never reached.
+#[cfg(target_os = "linux")]
+#[tokio::test(flavor = "multi_thread")]
+async fn the_binary_finds_the_open_app_through_its_file_and_serves_it_on_stdio() {
+    use rmcp::transport::{ConfigureCommandExt, TokioChildProcess};
+    let listener = bind(0..=0).await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let token = token().unwrap();
+    tokio::spawn(serve(listener, token.clone(), app(Arc::new(Mutex::new(0)))));
+    let data = tempfile::tempdir().unwrap();
+    let file = twinova_control::ControlFile {
+        port,
+        token,
+        pid: std::process::id(),
+    };
+    file.write(&data.path().join(twinova_control::file::IDENTIFIER))
+        .unwrap();
+    let agent = tokio::process::Command::new(env!("CARGO_BIN_EXE_twinova-agent")).configure(|c| {
+        c.env("XDG_DATA_HOME", data.path());
+    });
+    let c = ClientConfig::default()
+        .serve(TokioChildProcess::new(agent).expect("the agent starts"))
+        .await
+        .expect("an MCP session on stdio");
+    assert_eq!(
+        ok(&c, "list_commands", json!({})).await,
+        json!([{ "name": "edit", "description": "one edit" }])
+    );
     c.cancel().await.unwrap();
 }
