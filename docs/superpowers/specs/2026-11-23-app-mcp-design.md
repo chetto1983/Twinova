@@ -43,61 +43,74 @@
 
 What this does not show: Windows' `CapturePreview` (measured in Task 3 on windows-2022); a window hidden or minimized.
 
+## SolidCraft, read for its design (2026-11-23, the user: "Guarda come fa tangency-labs/solidcraft")
+
+A Rust CAD (egui, wgpu; MIT OR Apache-2.0), read in its documents (`docs/mcp.md`, `docs/control-protocol.md`,
+`docs/architecture.md`), not its code; ideas only, described here in Twinova's words:
+- the open app listens on a local control channel (loopback TCP, one JSON message per line), on the first free port of
+  a small range, with a token made at each launch and kept in a file only its user reads; the port is written to a file
+  a client finds it by;
+- one MCP server, a command-line binary on stdio: with no app it runs a session of its own, with one it attaches to it
+  (found through that file, or named);
+- everything the user does is a command of one registry, which the toolbar, the scripts and the channel run alike; the
+  MCP tools list the commands, describe their parameters as JSON Schemas, run one, or run a batch that rolls back on a
+  failure; a few tools are written for agents (inspect the design, undo, redo, screenshot);
+- the screenshot is the app's window as drawn, as a PNG;
+- the binary ships beside the app on the PATH, and a `setup` command writes the MCP clients' configurations.
+
+The user chose this design for Twinova (2026-11-23).
+
 ## Decisions
 
-1. **One tool set, two hosts** (new crate `twinova-mcp`, rmcp): the tools' names, arguments and answers are written
-   once, over a `Host` trait.
-   - **The headless host** is today's session: a project and an engine of its own. `twinova-agent` serves it, and the
-     tests and CI drive it without a display.
-   - **The app host** is the open app: each tool calls the function the app's own command calls, on the app's state,
-     then tells the window what changed (decision 3). What the person sees and what the agent drives are one line.
-   - A tool that needs the window (decision 4) answers "this needs the app" on the headless host.
-2. **The app serves MCP while it runs** on streamable HTTP at `127.0.0.1:7650/mcp`, the agent's address. When the port is
-   taken, the next free one up to 7659; none free, no server, and the status bar says so. The status bar shows the
-   address. Loopback only: any program of the computer's user can drive the app, as it can type into it. A setting turns
-   the server off (on by default: the user asked for everything testable over MCP).
-3. **The window follows the agent.** After a tool changes something, the app host emits what the window listens to: a
-   `snapshot` after a step, a Build or a reset; `project-changed` after an edit, an open or a new project, on which the
-   window reads the project again; `sources-changed` after a source is written or imported, on which the tabs take the
-   new texts as the folder watch's do (a tab with edits of its own is held, with its notice); `hold-changed` after a
-   breakpoint or a step.
-4. **Tools of the window** (app host only):
-   - `screenshot` (`window`: `main` or `plc`): the window as it is drawn, as an MCP image (PNG): Linux by WebKit's
-     snapshot, Windows by WebView2's `CapturePreview`;
-   - `show` (`panel`, `file`, `view` `text` or `ladder`, `maximized`, `monitoring`, `theme`): what the window shows, so a
-     screenshot shows what the agent wants to see.
-5. **The tools the agent lacks**, on both hosts, each the app's own function:
-   - `watch` (variables and members by path, as the variables table reads them), `write`, `force`, `release`, `forces`;
-   - `set_breakpoints`, `hold`, `resume` (`continue`, `over`, `into`, `out`), `run_to_cursor`, `logs`;
-   - `diagnostics` (truST's analysis of the sources as they are, without a Build);
-   - `new_project`, `undo`, `redo`, `export_archive`, `import_archive`, `rename`;
-   - `open_example` (decision 6).
-6. **The example lines ship in the binaries,** compiled in as the demo is (`demo.rs`): an example opens as the demo does,
-   a project with no folder, which Save asks a folder for. The app's project menu lists them ("Open example"), and
-   `open_example` opens one by name.
-7. **The release carries the agent.** `twinova-agent` is built for each platform and goes:
-   - into the MSI and the deb, beside the app, as Tauri's `bundle.externalBin` (a sidecar);
-   - onto the release as a file of its own per platform, for the AppImage and for a computer without the app.
-
-   `twinova-agent --app [address]` bridges stdio to the open app's HTTP server, for MCP clients that only start a
-   process (rmcp's client and server, both already dependencies); `twinova-agent` alone stays the headless server.
-8. **A guide** (`docs/guide.md`): install, the example lines, the scene, the PLC pane, ST and Ladder, online tools, and
-   connecting an agent (Claude Code over HTTP, Claude Desktop through `twinova-agent --app`). The release text and the
-   README link it.
+1. **The control channel.** While it runs, the app listens on `127.0.0.1`, on the first free port from 27650 to 27659,
+   one JSON message per line. At each launch it makes a 256-bit token and writes the port and the token to a file in
+   the app's data folder that only its user can read (`control/current.json`); the first message of a connection
+   carries the token, compared in constant time, or the connection is closed. A setting turns the channel off; it is
+   on by default (the user: everything testable over MCP). The status bar shows the port.
+2. **Everything the window does is a command of one registry, in the webview** (`src/lib/control/`): each has a name,
+   a sentence, its parameters as a JSON Schema, and a function that does what the window's own button does, through the
+   same code. A request from the channel reaches the webview as an event, the command runs there, and its answer goes
+   back through a Tauri command; the window shows the result as if the person had clicked, so it never needs telling.
+   The registry covers every action of the app: projects and examples, the scene's edits, Build and the run controls,
+   the sources, online values and forces, breakpoints and the steps, PLCopen, what the window shows (panel, file, view,
+   monitoring, theme, language), undo and redo. Queries answer the state as the window holds it: the project, the
+   snapshot, the problems, the values, the hold.
+3. **The screenshot** is taken in Rust, not in the webview: `screenshot` (`window`: `main` or `plc`) answers the window
+   as drawn, as PNG; Linux by WebKit's snapshot (measured above), Windows by WebView2's `CapturePreview` (measured first
+   on windows-2022).
+4. **`twinova-agent` is the one MCP server** (stdio, rmcp):
+   - with the app open, it attaches to it, found through `control/current.json` or named with `--connect PORT`, and
+     serves `list_commands`, `describe_command`, `execute` (a command and its arguments), `batch` (commands in order;
+     the first failure stops it, and the project's undo steps the batch made are undone), `screenshot`, and `state`
+     (the project, the snapshot, the problems and the hold, in one answer);
+   - with no app, it serves today's headless session and its tools, for CI and for a computer without a display;
+   - `--http` stays, for clients that speak streamable HTTP.
+5. **The example lines ship in the binaries,** compiled in as the demo is (`demo.rs`): an example opens as the demo
+   does, a project with no folder, which Save asks a folder for. The project menu lists them, and the registry has
+   `open_example`.
+6. **The release carries the agent.** `twinova-agent` is built for each platform and installed with the app: in the
+   deb in `/usr/bin` beside it, in the MSI beside the app's executable (Tauri's `bundle.externalBin`), and as release
+   files of their own. `twinova-agent setup` writes the MCP configurations of Claude Code and Claude Desktop with the
+   agent's own path.
+7. **A guide** (`docs/guide.md`): install, the example lines, the scene, the PLC pane, ST and Ladder, the online tools,
+   and connecting an agent. The release text and the README link it.
 
 ## Test plan
 
-- **`twinova-mcp`:** the agent's end-to-end tests (`agent/tests/*.rs`) unchanged, on the headless host; a test per new
-  tool through a real MCP client.
-- **The app host, end to end** (`e2e/mcp.mjs`, Linux and Windows): the debug app is started; an MCP client on its HTTP
-  address opens an example, builds, runs, writes and forces a variable, sets a breakpoint and steps, edits the scene
-  and a source; after each, the window is read through WebDriver and shows the change; `screenshot` answers a PNG
-  of the window's size, and `show` changes what it shows.
-- **The release:** the deb's and the MSI's contents listed in CI; the agent started from the installed path answers
-  `tools/list`.
+- **The channel:** a wrong or missing token closed; a request answered; a busy port skipped; the file written only for
+  its user (Rust tests).
+- **The registry:** every command's schema valid, and each command run against a stubbed backend (vitest).
+- **End to end, the app driven over MCP** (`e2e/mcp.mjs`, Linux and Windows): the debug app is started, `twinova-agent`
+  attaches to it, and an MCP client opens an example, edits the scene, builds, runs, writes and forces a variable, sets
+  a breakpoint and steps, imports PLCopen, undoes; after each the window, read through WebDriver, shows the change;
+  `screenshot` answers a PNG of the window's size.
+- **Headless:** the agent's end-to-end tests (`agent/tests/*.rs`) unchanged.
+- **The release:** the deb's and the MSI's contents listed in CI; the installed agent answers `tools/list`.
 
 ## What this would not prove
 
 - macOS: neither the app nor the agent ships there.
 - An agent and a person acting at the same moment on the same thing: the last one wins, as two people at one keyboard.
+- The safety of the token against a program running as the same user: such a program can read the file, as it can
+  read the person's projects.
 - The screenshot of a window covered by another or minimized (WebKit and WebView2 draw off-screen; not measured).
