@@ -49,6 +49,7 @@ pub fn run() {
             analysis::hover,
             analysis::completion,
             ladder_commands::ladder_parse,
+            ladder_commands::ladder_rung_lines,
             ladder_commands::ladder_print,
             ladder_commands::ladder_lowering,
             ladder_commands::ladder_export,

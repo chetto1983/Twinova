@@ -192,6 +192,7 @@
   "declare_title": "Declare variable",
   "declare_cancel": "Cancel",
   "ladder_view": "Ladder diagram of {file}",
+  "ladder_breakpoint": "Breakpoint on rung {number} (click; Shift+click or right click to edit)",
   "ladder_rung": "Rung {number}",
   "ladder_unreadable": "Line {line} does not read as Ladder: {message}",
   "ladder_drawing": "Ladder: draw the file's rungs",

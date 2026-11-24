@@ -2,7 +2,7 @@
 // -breakpoints-complete-design.md). A tab with edits not built keeps its breakpoints in the editor, since the engine
 // runs the built text; each Build sets them all again.
 import { debug } from "./backend";
-import { takesBreakpoints, type Breakpoint } from "./debug";
+import type { Breakpoint } from "./debug";
 
 export class Breakpoints {
   byFile = $state<Record<string, Breakpoint[]>>({});
@@ -25,10 +25,10 @@ export class Breakpoints {
     return Object.values(this.byFile).some((list) => list.some((b) => b.log));
   }
 
-  /** Sets `file`'s breakpoints, and keeps them as the debugger placed them, each on its statement's line; answers the
-   *  refusal it showed, or null. A file that takes none goes to the debugger at once, which refuses it. */
+  /** Sets `file`'s breakpoints, and keeps them as the debugger placed them, each on its statement's line (a Ladder
+   *  file's on its rung's); answers the refusal it showed, or null. */
   set(file: string, list: Breakpoint[]): Promise<string | null> {
-    if (this.waiting(file) && takesBreakpoints(file)) {
+    if (this.waiting(file)) {
       this.byFile = { ...this.byFile, [file]: list };
       return Promise.resolve(null);
     }

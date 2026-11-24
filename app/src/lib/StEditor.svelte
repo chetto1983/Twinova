@@ -131,7 +131,7 @@
     /** The shown tab's breakpoints, and the line the program is held at in it (spec 2026-11-13-breakpoints-hold-design.md). */
     breakpoints?: Breakpoint[];
     heldLine?: number | null;
-    /** A breakpoint toggled on `line`, by a click in the glyph margin or F9; none for a file that takes no breakpoint. */
+    /** A breakpoint toggled on `line`, by a click in the glyph margin or F9. */
     onBreakpoint?: (line: number) => void;
     /** The breakpoint on `line` to edit: a right click on its dot, or Shift+F9. */
     onEditBreakpoint?: (line: number) => void;
@@ -334,10 +334,6 @@
   $effect(() => {
     void breakpoints;
     if (editor) drawMarks();
-  });
-  // The glyph margin is where breakpoints are set: a file that takes none has none.
-  $effect(() => {
-    editor?.updateOptions({ glyphMargin: Boolean(onBreakpoint) });
   });
   $effect(() => {
     const drawn = heldMark(heldLine);

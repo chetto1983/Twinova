@@ -86,6 +86,8 @@ const PLCOPEN = [{ name: "PLCopen XML", extensions: ["xml"] }];
  *  with the program's other files, as Build lowers it. */
 export const ladder = {
   parse: (text: string) => invoke<Program>("ladder_parse", { text }),
+  /** Each rung's own first line, where its breakpoint goes (spec 2026-11-24-open-points-design.md, decision 2). */
+  rungLines: (text: string) => invoke<number[]>("ladder_rung_lines", { text }),
   print: (program: Program) => invoke<string>("ladder_print", { program }),
   lowering: (program: [string, string][], file: string) => invoke<Lowering>("ladder_lowering", { program, file }),
   catalog: (program: [string, string][]) => invoke<CatalogEntry[]>("ladder_catalog", { program }),

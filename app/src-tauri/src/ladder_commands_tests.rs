@@ -163,3 +163,11 @@ fn the_catalogue_groups_standard_boxes_by_their_iec_table_and_the_project_s_apar
     );
     assert_eq!(table_of("no table"), None);
 }
+
+#[test]
+fn each_rung_s_line_is_its_own_first_one_past_its_comment() {
+    let text =
+        "VAR\n    A : BOOL;\nEND_VAR\n\n(* start *)\nGo: [|A|, |/B|]\n  (S Q);\nGo2: RETURN;\n";
+    assert_eq!(ladder_rung_lines(text.into()), Ok(vec![6, 8]));
+    assert!(ladder_rung_lines("VAR\nEND_VAR\n(* alone *)\n".into()).is_err());
+}

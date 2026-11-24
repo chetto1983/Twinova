@@ -67,16 +67,4 @@ describe("the session's breakpoints", () => {
     expect(failed).toEqual(["line 41: the condition 'x =' does not parse"]);
     expect(kept.of("plc/Main.st")).toEqual([]);
   });
-
-  it("sends a Ladder file's breakpoints to the debugger even while its edits are not built, so its refusal shows", async () => {
-    backend.answer = () => Promise.reject("plc/Main.ld: a Ladder file takes no breakpoints yet");
-    const failed: string[] = [];
-    const kept = new Breakpoints(
-      () => true,
-      (e) => failed.push(e),
-    );
-    expect(await kept.set("plc/Main.ld", [{ line: 30 }])).toBe("plc/Main.ld: a Ladder file takes no breakpoints yet");
-    expect(backend.calls).toEqual([["plc/Main.ld", [{ line: 30 }]]]);
-    expect([failed.length, kept.of("plc/Main.ld")]).toEqual([1, []]);
-  });
 });

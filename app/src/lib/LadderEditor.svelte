@@ -30,6 +30,7 @@
   import type { Edit, Modifier, RungHead, Selection } from "./ladder/edit";
   import { History } from "./ladder/history";
   import type { Element, Lowering, ParseError, Program } from "./ladder/model";
+  import type { Breakpoint } from "./debug";
   import LadderRung from "./LadderRung.svelte";
   import LadderToolbar, { type Tool } from "./LadderToolbar.svelte";
   import LadderOperand from "./LadderOperand.svelte";
@@ -43,6 +44,10 @@
     online = null,
     forced = new Set(),
     onPick = () => {},
+    breakpoints = [],
+    heldLine = null,
+    onBreakpoint,
+    onEditBreakpoint,
   }: {
     source: Source;
     sources: Source[];
@@ -51,6 +56,12 @@
     online?: { spots: LadderSpot[]; values: (string | null)[] } | null;
     forced?: Set<string>;
     onPick?: (target: Target, value: string | null) => void;
+    /** The file's breakpoints and the line it is held on: a rung's own first line (spec 2026-11-24-open-points-design.md,
+     *  decision 2). A click on a rung's number toggles its breakpoint, Shift+click or a right click edits it. */
+    breakpoints?: Breakpoint[];
+    heldLine?: number | null;
+    onBreakpoint?: (line: number) => void;
+    onEditBreakpoint?: (line: number) => void;
   } = $props();
   // the tree of the text it was read from: an edit starts only from the text on screen, never from a stale tree
   let read = $state<{ key: string; text: string; program: Program } | null>(null);
@@ -90,6 +101,26 @@
       });
   }, 200);
   $effect(() => reread.call(source.key, source.text, buildArgs(sources).program));
+
+  // each rung's own first line in the text read, where its breakpoint goes
+  let lines = $state<{ text: string; at: number[] } | null>(null);
+  $effect(() => {
+    const text = read?.text;
+    if (text === undefined) return;
+    ladder
+      .rungLines(text)
+      .then((at) => (lines = { text, at }))
+      .catch(() => (lines = null));
+  });
+  const lineOfRung = (i: number): number | null => (lines && lines.text === read?.text ? (lines.at[i] ?? null) : null);
+  function onRungNumber(e: MouseEvent, i: number): void {
+    const line = lineOfRung(i);
+    if (line === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.shiftKey || e.type === "contextmenu") onEditBreakpoint?.(line);
+    else onBreakpoint?.(line);
+  }
 
   const program = $derived(read?.key === source.key ? read.program : null);
   const editable = $derived(!!read && read.key === source.key && read.text === source.text && !unreadable);
@@ -328,14 +359,24 @@
   {#if program}
     {#each program.rungs as rung, i (i)}
       {@const errors = rungErrors(lowering, i)}
+      {@const rungLine = lineOfRung(i)}
       <section
         class="rung"
         class:picked={selection?.rung === i && selection.path.length === 0}
+        class:held={heldLine !== null && heldLine === rungLine}
         data-rung={i}
         aria-label={m.ladder_rung({ number: i + 1 })}
       >
         <header>
-          <span class="number">{i + 1}</span>
+          <button
+            class="number"
+            class:breakpoint={rungLine !== null && breakpoints.some((b) => b.line === rungLine)}
+            disabled={rungLine === null || !onBreakpoint}
+            aria-label={m.ladder_breakpoint({ number: i + 1 })}
+            title={m.ladder_breakpoint({ number: i + 1 })}
+            onclick={(e) => onRungNumber(e, i)}
+            oncontextmenu={(e) => onRungNumber(e, i)}>{i + 1}</button
+          >
           {#if rung.label}<span class="label">{rung.label}:</span>{/if}
           {#if rung.comment}<span class="comment">{rung.comment}</span>{/if}
         </header>
@@ -420,8 +461,35 @@
     color: var(--color-text-muted);
   }
   .number {
+    position: relative;
     font-family: var(--font-mono);
-    min-width: 2ch;
+    font-size: 11px;
+    min-width: 3.5ch;
+    padding: 0 0 0 1.5ch;
+    border: 0;
+    background: none;
+    color: var(--color-text-muted);
+    text-align: left;
+    cursor: pointer;
+  }
+  .number:disabled {
+    cursor: default;
+  }
+  /* the breakpoint's dot, as the text view's gutter draws it */
+  .number.breakpoint::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: var(--color-danger);
+  }
+  .rung.held {
+    border-left-color: var(--color-warning);
+    background: color-mix(in oklab, var(--color-warning) 22%, transparent);
   }
   .label {
     font-family: var(--font-mono);
