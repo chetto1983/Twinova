@@ -209,18 +209,12 @@ async fn a_request_goes_to_the_window_that_holds_its_command() {
     let control = handle.state::<Control>();
     control.set_commands("main", listed(&["build", "values"]));
     control.set_commands("plc", listed(&["values", "breakpoints"]));
+    let routes =
+        || ["build", "values", "breakpoints", "fly"].map(|name| control.window_of(&handle, name));
     assert_eq!(
-        (
-            control.window_of("build"),
-            control.window_of("values"),
-            control.window_of("breakpoints")
-        ),
-        ("main".to_string(), "plc".to_string(), "plc".to_string())
-    );
-    assert_eq!(
-        control.window_of("fly"),
-        "main",
-        "the main window refuses it"
+        routes(),
+        ["main"; 4],
+        "no PLC window open: its commands go nowhere"
     );
     let names = |v: Value| -> Vec<String> {
         (v.as_array().unwrap().iter())
@@ -254,6 +248,11 @@ async fn a_request_goes_to_the_window_that_holds_its_command() {
         .unwrap();
     main.listen("control-request", to("main"));
     plc.listen("control-request", to("plc"));
+    assert_eq!(
+        routes(),
+        ["main", "plc", "plc", "main"],
+        "the PLC window wins a tie, and a command nobody holds goes to the main window, which refuses it"
+    );
     let asking = {
         let handle = handle.clone();
         tokio::spawn(async move {
@@ -272,7 +271,7 @@ async fn a_request_goes_to_the_window_that_holds_its_command() {
     assert_eq!(asking.await.unwrap(), Ok(json!("described")));
     assert_eq!(*seen.lock().unwrap(), ["plc"]);
     control.set_commands("plc", Vec::new());
-    assert_eq!(control.window_of("breakpoints"), "main");
+    assert_eq!(control.window_of(&handle, "breakpoints"), "main");
     assert_eq!(
         names(
             control

@@ -168,7 +168,7 @@ describe("the dock's commands", () => {
     const [show, plcWindow] = dockCommands({
       show: (panel) => log.push(["show", panel]),
       maximize: (on) => log.push(["max", on]),
-      plcWindow: (open) => log.push(["window", open]),
+      plcWindow: (open) => Promise.resolve(log.push(["window", open])),
     });
     await show!.run({ panel: "plc", maximized: true });
     await show!.run({ panel: "parts" });

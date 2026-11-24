@@ -111,7 +111,7 @@ impl Control {
     async fn window_for<R: Runtime>(&self, app: &AppHandle<R>, name: &str) -> String {
         let deadline = tokio::time::Instant::now() + PLC_LOADING;
         loop {
-            let window = self.window_of(name);
+            let window = self.window_of(app, name);
             let loading = window == MAIN
                 && !self.holds(MAIN, Some(name))
                 && app.get_webview_window(PLC).is_some()
@@ -124,10 +124,14 @@ impl Control {
     }
 
     /// The window that runs command `name`: the one that registered it, the PLC window on a tie, else the main window.
-    fn window_of(&self, name: &str) -> String {
+    /// A PLC window that is gone holds nothing, though its close has not reached `plc_window.rs` yet.
+    fn window_of<R: Runtime>(&self, app: &AppHandle<R>, name: &str) -> String {
         let known = self.commands.lock().map(|k| k.clone()).unwrap_or_default();
+        let plc_open = app.get_webview_window(PLC).is_some();
         let mut holders = (known.iter())
-            .filter(|(_, list)| list.iter().any(|c| c.name == name))
+            .filter(|(label, list)| {
+                (label.as_str() != PLC || plc_open) && list.iter().any(|c| c.name == name)
+            })
             .map(|(label, _)| label.as_str());
         let first = holders.next();
         let plc = first == Some(PLC) || holders.any(|label| label == PLC);
