@@ -354,3 +354,28 @@ async fn a_window_tells_its_commands_under_its_own_label() {
         "plc"
     );
 }
+
+/// While a PLC window loads, only a command nobody holds waits for it: the main window's own commands go at once, and,
+/// the PLC window loaded, a command nobody holds goes at once to the main window, which refuses it.
+#[tokio::test(start_paused = true)]
+async fn only_the_pane_s_commands_wait_for_a_loading_plc_window() {
+    let app = app();
+    let handle = app.handle().clone();
+    let control = handle.state::<Control>();
+    control.set_commands("main", listed(&["build"]));
+    tauri::WebviewWindowBuilder::new(&app, "plc", Default::default())
+        .build()
+        .unwrap();
+    let at_once = |name: &'static str| {
+        let handle = handle.clone();
+        async move {
+            let control = handle.state::<Control>();
+            tokio::time::timeout(Duration::from_millis(1), control.window_for(&handle, name)).await
+        }
+    };
+    assert_eq!(at_once("build").await, Ok("main".to_string()));
+    assert!(at_once("values").await.is_err(), "the pane's command waits");
+    control.set_commands("plc", listed(&["values"]));
+    assert_eq!(at_once("values").await, Ok("plc".to_string()));
+    assert_eq!(at_once("fly").await, Ok("main".to_string()));
+}
