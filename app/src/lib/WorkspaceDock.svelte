@@ -86,6 +86,10 @@
           collapsed = false;
         },
         maximize: (on) => (maximized = on),
+        plcWindow: (own) => {
+          if (own && !detached) onDetach();
+          else if (!own && detached) onAttach();
+        },
       }),
     ),
   );

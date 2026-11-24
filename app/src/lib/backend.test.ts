@@ -9,6 +9,8 @@ const { invoke, listen, open, save, confirm } = vi.hoisted(() => ({
 }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
+// a window's own listeners: the control channel's requests come to the window that holds their command
+vi.mock("@tauri-apps/api/webviewWindow", () => ({ getCurrentWebviewWindow: () => ({ listen }) }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open, save, confirm }));
 
 import {
@@ -191,7 +193,12 @@ describe("control bridge", () => {
     expect([listen.mock.calls[0]?.[0], heard]).toEqual(["control-request", [{ id: 1, method: "state", params: {} }]]);
     expect(await control.reply(1, true, { a: 1 })).toBe(true);
     await control.ready();
-    expect(invoke.mock.calls).toEqual([["control_reply", { id: 1, ok: true, value: { a: 1 } }], ["control_ready"]]);
+    await control.commands([{ name: "state", description: "the window" }]);
+    expect(invoke.mock.calls).toEqual([
+      ["control_reply", { id: 1, ok: true, value: { a: 1 } }],
+      ["control_ready"],
+      ["control_commands", { commands: [{ name: "state", description: "the window" }] }],
+    ]);
   });
 });
 

@@ -2,6 +2,7 @@
 // loop and of the project folder's watch.
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 import type { Edit, Example, ProjectView } from "./project";
 import type { Built, Snapshot, ScanTiming } from "./snapshot";
@@ -159,8 +160,12 @@ export interface ControlRequest {
 
 /** The control channel's side of the window: its requests, their answers, and the registry's readiness. */
 export const control = {
+  /** The requests sent to this window: the app sends each to the window whose registry holds its command (control.rs),
+   *  and `listen` alone would hear the other window's too (it listens to any target). */
   onRequest: (f: (request: ControlRequest) => void): Promise<UnlistenFn> =>
-    listen<ControlRequest>("control-request", (e) => f(e.payload)),
+    getCurrentWebviewWindow().listen<ControlRequest>("control-request", (e) => f(e.payload)),
+  /** This window's registry's commands, so their requests come here. */
+  commands: (commands: { name: string; description: string }[]) => invoke<void>("control_commands", { commands }),
   reply: (id: number, ok: boolean, value: unknown) => invoke<boolean>("control_reply", { id, ok, value }),
   ready: () => invoke<void>("control_ready"),
 };

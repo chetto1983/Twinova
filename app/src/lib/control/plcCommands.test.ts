@@ -162,19 +162,26 @@ describe("the PLC pane's commands", () => {
   });
 });
 
-describe("the dock's command", () => {
-  it("shows a tab, maximized or not", async () => {
+describe("the dock's commands", () => {
+  it("shows a tab, maximized or not, and moves the PLC pane to its window and back", async () => {
     const log: unknown[][] = [];
-    const [show] = dockCommands({
+    const [show, plcWindow] = dockCommands({
       show: (panel) => log.push(["show", panel]),
       maximize: (on) => log.push(["max", on]),
+      plcWindow: (open) => log.push(["window", open]),
     });
     await show!.run({ panel: "plc", maximized: true });
     await show!.run({ panel: "parts" });
+    expect([await plcWindow!.run({ open: true }), await plcWindow!.run({ open: false })]).toEqual([
+      undefined,
+      undefined,
+    ]);
     expect(log).toEqual([
       ["show", "plc"],
       ["max", true],
       ["show", "parts"],
+      ["window", true],
+      ["window", false],
     ]);
   });
 });

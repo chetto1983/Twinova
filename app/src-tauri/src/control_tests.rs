@@ -190,3 +190,153 @@ fn the_agent_looks_in_the_folder_tauri_gives_the_app() {
         data.display()
     );
 }
+
+fn listed(names: &[&str]) -> Vec<Listed> {
+    (names.iter())
+        .map(|n| Listed {
+            name: (*n).to_string(),
+            description: format!("{n}'s"),
+        })
+        .collect()
+}
+
+/// Each window's registry tells its commands; a request goes to the window holding its command, the PLC window on a tie,
+/// the main window when none holds it; `list_commands` merges them; a window gone takes its commands away.
+#[tokio::test]
+async fn a_request_goes_to_the_window_that_holds_its_command() {
+    let app = app();
+    let handle = app.handle().clone();
+    let control = handle.state::<Control>();
+    control.set_commands("main", listed(&["build", "values"]));
+    control.set_commands("plc", listed(&["values", "breakpoints"]));
+    assert_eq!(
+        (
+            control.window_of("build"),
+            control.window_of("values"),
+            control.window_of("breakpoints")
+        ),
+        ("main".to_string(), "plc".to_string(), "plc".to_string())
+    );
+    assert_eq!(
+        control.window_of("fly"),
+        "main",
+        "the main window refuses it"
+    );
+    let names = |v: Value| -> Vec<String> {
+        (v.as_array().unwrap().iter())
+            .map(|c| c["name"].as_str().unwrap().to_string())
+            .collect()
+    };
+    let merged = control
+        .ask(&handle, "list_commands".into(), json!({}))
+        .await
+        .unwrap();
+    assert_eq!(names(merged), ["breakpoints", "build", "values"]);
+    // the request is emitted to the PLC window only
+    let seen = std::sync::Arc::new(Mutex::new(Vec::<String>::new()));
+    for label in ["main", "plc"] {
+        let kept = std::sync::Arc::clone(&seen);
+        app.listen_any(format!("seen-{label}"), move |_| {
+            kept.lock().unwrap().push(label.into())
+        });
+    }
+    let to = |label: &'static str| {
+        let handle = handle.clone();
+        move |_: tauri::Event| {
+            let _ = handle.emit(&format!("seen-{label}"), ());
+        }
+    };
+    let main = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let plc = tauri::WebviewWindowBuilder::new(&app, "plc", Default::default())
+        .build()
+        .unwrap();
+    main.listen("control-request", to("main"));
+    plc.listen("control-request", to("plc"));
+    let asking = {
+        let handle = handle.clone();
+        tokio::spawn(async move {
+            (handle.state::<Control>())
+                .ask(
+                    &handle,
+                    "describe_command".into(),
+                    json!({ "name": "breakpoints" }),
+                )
+                .await
+        })
+    };
+    while !control_reply(handle.state(), 1, true, json!("described")) {
+        tokio::task::yield_now().await;
+    }
+    assert_eq!(asking.await.unwrap(), Ok(json!("described")));
+    assert_eq!(*seen.lock().unwrap(), ["plc"]);
+    control.set_commands("plc", Vec::new());
+    assert_eq!(control.window_of("breakpoints"), "main");
+    assert_eq!(
+        names(
+            control
+                .ask(&handle, "list_commands".into(), json!({}))
+                .await
+                .unwrap()
+        ),
+        ["build", "values"]
+    );
+}
+
+/// A PLC window just opened has not told its commands yet: a request for one of the pane's waits for it, rather than
+/// going to the main window, which gave the pane up.
+#[tokio::test(start_paused = true)]
+async fn a_request_waits_for_a_plc_window_that_is_loading() {
+    let app = app();
+    let handle = app.handle().clone();
+    handle
+        .state::<Control>()
+        .set_commands("main", listed(&["build"]));
+    let seen = std::sync::Arc::new(Mutex::new(Vec::<String>::new()));
+    for label in ["main", "plc"] {
+        let window = tauri::WebviewWindowBuilder::new(&app, label, Default::default())
+            .build()
+            .unwrap();
+        let kept = std::sync::Arc::clone(&seen);
+        window.listen("control-request", move |_| {
+            kept.lock().unwrap().push(label.into())
+        });
+    }
+    let asking = {
+        let handle = handle.clone();
+        tokio::spawn(async move {
+            (handle.state::<Control>())
+                .ask(&handle, "values".into(), json!({}))
+                .await
+        })
+    };
+    tokio::task::yield_now().await;
+    assert!(
+        seen.lock().unwrap().is_empty(),
+        "nothing sent while the PLC window loads"
+    );
+    handle
+        .state::<Control>()
+        .set_commands("plc", listed(&["values"]));
+    // the clock is paused: a sleep lets the request's own wait go by
+    while !control_reply(handle.state(), 1, true, json!([])) {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(asking.await.unwrap(), Ok(json!([])));
+    assert_eq!(*seen.lock().unwrap(), ["plc"]);
+    // a command no window holds, the PLC window loaded, goes to the main window at once
+    let fly = {
+        let handle = handle.clone();
+        tokio::spawn(async move {
+            (handle.state::<Control>())
+                .ask(&handle, "fly".into(), json!({}))
+                .await
+        })
+    };
+    while !control_reply(handle.state(), 2, false, json!("no command fly")) {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(fly.await.unwrap(), Err("no command fly".into()));
+    assert_eq!(seen.lock().unwrap().last().unwrap(), "main");
+}

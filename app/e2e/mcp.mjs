@@ -43,6 +43,7 @@ const COMMANDS = [
   "open_file",
   "open_project",
   "pause",
+  "plc_window",
   "plcopen_export",
   "plcopen_import",
   "press",
@@ -309,6 +310,41 @@ async function theLine() {
   });
 }
 
+async function thePlcWindow() {
+  await check(
+    "with the PLC pane in its own window, its commands reach it there, and the dock again after",
+    async () => {
+      const main = await browser.getWindowHandle();
+      await run("plc_window", { open: true });
+      const plc = await eventually(
+        async () => {
+          const other = (await browser.getWindowHandles()).find((h) => h !== main);
+          if (!other) throw new Error("one window");
+          return other;
+        },
+        "the PLC window",
+        15_000,
+      );
+      // the first command waits for the window to tell its commands
+      await run("open_file", { file: "plc/Main.st" });
+      await run("monitoring", { on: true });
+      const motor = { program: "Main", path: "motor" };
+      await run("force", { target: motor, value: "TRUE" });
+      await run("step");
+      expectEqual(await valueOf("motor"), "TRUE", "the PLC window's table");
+      await browser.switchToWindow(plc);
+      await shows("forced in the PLC window", () => cell("motor"), ["TRUE", true]);
+      await browser.switchToWindow(main);
+      const shot = await mcp.callTool({ name: "screenshot", arguments: { window: "plc" } });
+      expectEqual(shot.content.find((c) => c.type === "text")?.text.startsWith("plc window, "), true, "its picture");
+      await run("release", { target: motor });
+      await run("plc_window", { open: false });
+      await shows("one window", async () => (await browser.getWindowHandles()).length, 1, 15_000);
+      await eventually(async () => run("values"), "the pane back in the dock", 15_000);
+    },
+  );
+}
+
 async function theWindow() {
   await check("theme and language change the window", async () => {
     await run("theme", { theme: "light" });
@@ -372,6 +408,7 @@ await sessions(async () => {
       await theScene();
       await theLadderPane();
       await theLine();
+      await thePlcWindow();
       await theWindow();
     } finally {
       await mcp.close();

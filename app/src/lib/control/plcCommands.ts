@@ -179,6 +179,8 @@ export function plcCommands(ctx: PlcContext): Command[] {
 export interface DockContext {
   show: (panel: string) => void;
   maximize: (on: boolean) => void;
+  /** The PLC pane in a window of its own, or back in the dock, as the dock's buttons do. */
+  plcWindow: (open: boolean) => void;
 }
 
 export const dockCommands = (ctx: DockContext): Command[] => [
@@ -193,5 +195,13 @@ export const dockCommands = (ctx: DockContext): Command[] => [
       ctx.show(stringOf(p, "panel"));
       if (p.maximized !== undefined) ctx.maximize(Boolean(p.maximized));
     },
+  },
+  {
+    name: "plc_window",
+    description:
+      "Move the PLC pane to a window of its own, or back into the dock, as the dock's buttons do. The pane's commands " +
+      "go to its window while it is open; screenshot it with window `plc`.",
+    params: object({ open: boolean("in its own window") }),
+    run: (p) => void ctx.plcWindow(Boolean(p.open)),
   },
 ];

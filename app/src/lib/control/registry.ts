@@ -17,10 +17,18 @@ export interface Command {
 
 const commands = new Map<string, Command>();
 
+/** Tells the app this window's commands, so it sends their requests here (spec 2026-11-24-open-points-design.md,
+ *  decision 3). */
+const report = (): void => void control.commands(listed()).catch(() => {});
+
 /** Registers `list`; the function returned takes them away again (a component unmounted). */
 export function register(...list: Command[]): () => void {
   for (const c of list) commands.set(c.name, c);
-  return () => list.forEach((c) => commands.get(c.name) === c && commands.delete(c.name));
+  report();
+  return () => {
+    list.forEach((c) => commands.get(c.name) === c && commands.delete(c.name));
+    report();
+  };
 }
 
 /** The registry's commands, by name. */
