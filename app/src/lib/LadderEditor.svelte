@@ -70,6 +70,10 @@
   let picker = $state<{ entries: CatalogEntry[]; taken: string[]; problem: string } | null>(null);
   const histories = new Map<string, History>();
   let changes = $state(0);
+  /** The pane's inner width: the rungs fill it (spec 2026-11-24-open-points-design.md, decision 1). */
+  let paneWidth = $state(0);
+  /** A rung's padding and its left border, around its drawing. */
+  const RUNG_FRAME = 20;
 
   const reread = debounce((file: string, text: string, files: [string, string][]) => {
     ladder
@@ -89,7 +93,9 @@
 
   const program = $derived(read?.key === source.key ? read.program : null);
   const editable = $derived(!!read && read.key === source.key && read.text === source.text && !unreadable);
-  const layouts = $derived(program ? layoutRungs(program.rungs, resolver(lowering)) : []);
+  const layouts = $derived(
+    program ? layoutRungs(program.rungs, resolver(lowering), Math.max(0, paneWidth - RUNG_FRAME)) : [],
+  );
   const history = $derived.by(() => {
     const known = histories.get(source.key) ?? new History();
     histories.set(source.key, known);
@@ -292,6 +298,7 @@
   aria-label={m.ladder_view({ file: source.label })}
   tabindex="0"
   bind:this={view}
+  bind:clientWidth={paneWidth}
   {onclick}
   ondblclick={() => openAt(selection)}
   {onkeydown}

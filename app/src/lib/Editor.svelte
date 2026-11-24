@@ -457,7 +457,8 @@
   }
   .table-area {
     flex: none;
-    height: 35%;
+    /* about five rows: a maximized pane leaves the code, or the rungs, most of its height */
+    height: min(35%, 13rem);
     min-height: 48px;
     max-height: 70%;
     overflow: hidden;

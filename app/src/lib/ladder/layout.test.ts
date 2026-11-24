@@ -6,6 +6,7 @@ import {
   isReference,
   layoutRung,
   layoutRungs,
+  pinLabels,
   rungMinWidth,
   textW,
   type LNode,
@@ -23,6 +24,17 @@ const rung = (elements: Element[], exit: Rung["exit"] = null): Rung => ({ commen
 const none: Resolve = () => undefined;
 const feeds = (list: { feed: number[] | null }[]) => list.map((w) => (w.feed === null ? "rail" : w.feed.join(".")));
 const at = (nodes: LNode[], path: number[]) => nodes.find((n) => "path" in n && n.path.join() === path.join());
+
+/** An ADD that adds 1 to `target`, as ladder_line's rung 3 writes it. */
+const increment = (target: string): Element => ({
+  kind: "box",
+  head: "ADD",
+  pins: [
+    { name: "IN1", value: target, out: false },
+    { name: "IN2", value: "1", out: false },
+    { name: "OUT", value: target, out: true },
+  ],
+});
 
 const TON: BoxPins = { function: false, type_name: "TON", input: "IN", output: "Q" };
 const timer: Element = {
@@ -96,8 +108,9 @@ describe("a rung laid out (nautilus's layout, ported)", () => {
     ]);
     // the first pins sit on the rung's wire
     expect(box.y + L.BOX_HEAD + L.PIN_STEP / 2).toBe(r.wireY);
-    // room before it for T#2s, and after it for W, and for W's value online under it
-    expect(r.wires.some((w) => w.x2 - w.x1 === Math.max(Math.ceil(textW("W", 10)) + 8, READING_MIN))).toBe(true);
+    // room after it for W, its value online beside it, and the wire to ET
+    const room = L.PIN_STUB + 3 * L.LABEL_GAP + Math.ceil(textW("W", 10)) + READING_MIN;
+    expect(r.wires.some((w) => w.x2 - w.x1 === room)).toBe(true);
     expect([
       isReference("W"),
       isReference("T1.Q"),
@@ -156,6 +169,64 @@ describe("a rung laid out (nautilus's layout, ported)", () => {
     expect(exit && x && exit.x).toBeGreaterThan((x?.x ?? 0) + (x?.w ?? 0));
     const ret = layoutRung(rung([], { kind: "return" }), 600, none);
     expect(ret.nodes.find((n) => n.kind === "exit")).toMatchObject({ text: "RETURN" });
+  });
+
+  it("writes each pin's place on its own row, joined to the pin, with room for its reading (ladder_line's rung 3)", () => {
+    const move: Element = {
+      kind: "box",
+      head: "MOVE",
+      pins: [
+        { name: "IN", value: "count MOD 3 = 0", out: false },
+        { name: "OUT", value: "reject_next", out: true },
+      ],
+    };
+    const fn: BoxPins = { function: true, type_name: "ADD", input: "EN", output: "ENO" };
+    const r = layoutRung(rung([contact("entered.Q"), increment("count"), increment("in_zone"), move]), 600, () => fn);
+    const boxes = r.nodes.filter((n) => n.kind === "box");
+    const extents = boxes.flatMap((box) =>
+      pinLabels(box).map((label) => {
+        const reading = isReference(label.text) ? READING_MIN + L.LABEL_GAP : 0;
+        const text = textW(label.text, 10);
+        return label.side === "left"
+          ? { y: label.y, from: label.textX - text - reading, to: label.stub?.x2 ?? label.textX, box }
+          : { y: label.y, from: label.stub?.x1 ?? label.textX, to: label.textX + text + reading, box };
+      }),
+    );
+    // IN1's place and reading, then IN2's constant, each on its own row of the box
+    const first = pinLabels(boxes[0]!);
+    expect(first.map((l) => [l.side, l.text])).toEqual([
+      ["left", "count"],
+      ["left", "1"],
+      ["right", "count"],
+    ]);
+    expect(new Set(first.filter((l) => l.side === "left").map((l) => l.y)).size).toBe(2);
+    // every valued pin has a wire from its place to the box's edge
+    for (const box of boxes) {
+      for (const label of pinLabels(box).filter((l) => l.stub !== null)) {
+        expect(label.side === "left" ? label.stub?.x2 : label.stub?.x1).toBe(
+          label.side === "left" ? box.x : box.x + box.w,
+        );
+        expect(label.stub?.y).toBe(label.y);
+      }
+    }
+    // no place or reading reaches into the element before or after it, or into another place on its row
+    const placed = r.nodes.map((n) => [n.x, n.x + n.w] as const);
+    for (const e of extents) {
+      for (const [from, to] of placed) expect(e.to <= from || e.from >= to || e.box.x === from).toBe(true);
+      for (const other of extents)
+        if (other !== e && other.y === e.y) expect(e.to <= other.from || e.from >= other.to).toBe(true);
+    }
+    // MOVE's expression is joined to IN, and the room left of MOVE holds it
+    const expression = pinLabels(boxes[2]!).find((l) => l.text === "count MOD 3 = 0");
+    expect(expression?.stub).not.toBeNull();
+  });
+
+  it("lays the rungs out as wide as the pane, or as the widest rung when the pane is narrower", () => {
+    const short = rung([contact("A"), coil("X")]);
+    expect(layoutRungs([short], () => none, 1200)[0]?.width).toBe(1200);
+    expect(layoutRungs([short], () => none, 300)[0]?.width).toBe(L.MIN_WIDTH);
+    const coilAt = (width: number) => at(layoutRungs([short], () => none, width)[0]!.nodes, [1]);
+    expect((coilAt(1200)?.x ?? 0) - (coilAt(600)?.x ?? 0)).toBe(600);
   });
 
   it("lays every rung as wide as the widest, its right rail with the others'", () => {
