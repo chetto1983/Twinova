@@ -4,7 +4,7 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
-## Unreleased
+## v0.4.0 — 2026-11-24
 
 The points v0.3.0 left open.
 
