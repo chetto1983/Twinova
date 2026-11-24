@@ -22,10 +22,27 @@ pub struct ParseError {
 }
 
 pub fn parse(text: &str) -> Result<Program, ParseError> {
+    parse_spans(text).map(|(program, _)| program)
+}
+
+/// Where a rung is in the text, as byte offsets: from its first comment (or its own text when it has none), its own
+/// text, and its end past the `;`. A breakpoint goes on a rung through them (spec 2026-11-24-open-points-design.md,
+/// decision 2); they stay out of `Rung`, which the round trips compare.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RungSpan {
+    pub from: usize,
+    pub at: usize,
+    pub to: usize,
+}
+
+/// The program, and where each of its rungs is in `text`.
+pub fn parse_spans(text: &str) -> Result<(Program, Vec<RungSpan>), ParseError> {
     let mut p = Parser { text, at: 0 };
     let declarations = p.declarations()?;
-    let mut rungs = Vec::new();
+    let (mut rungs, mut spans) = (Vec::new(), Vec::new());
     loop {
+        p.skip_space();
+        let from = p.at;
         let comment = p.comments()?;
         if p.at == text.len() {
             if comment.is_some() {
@@ -33,12 +50,18 @@ pub fn parse(text: &str) -> Result<Program, ParseError> {
             }
             break;
         }
+        p.skip_space();
+        let at = p.at;
         rungs.push(p.rung(comment)?);
+        spans.push(RungSpan { from, at, to: p.at });
     }
-    Ok(Program {
-        declarations,
-        rungs,
-    })
+    Ok((
+        Program {
+            declarations,
+            rungs,
+        },
+        spans,
+    ))
 }
 
 struct Parser<'a> {

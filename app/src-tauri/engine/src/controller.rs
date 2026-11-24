@@ -9,6 +9,7 @@ use trust_runtime::value::{Duration, Value};
 use twinova_project::Project;
 use twinova_project::model::SignalType;
 
+use crate::debugger::Place;
 use crate::locate::locate_in_files;
 use crate::program_files::ProgramFiles;
 use crate::timing::ScanTiming;
@@ -47,6 +48,8 @@ pub struct Controller {
     harness: TestHarness,
     /// The files truST compiled, Ladder files lowered (`program_files.rs`), in the order of its file ids.
     sources: Vec<(String, String)>,
+    /// Where those files' lines are for the debugger (`ProgramFiles::places`).
+    places: Vec<Place>,
     scan_ns: i64,
     declared: Vec<Declared>,
     /// Panel bits pressed since the last scan; each holds for the next scan only.
@@ -112,6 +115,7 @@ impl Controller {
         let controller = Self {
             timing: ScanTiming::default(),
             harness,
+            places: program.places(),
             sources: program.files,
             scan_ns,
             declared,
@@ -167,6 +171,7 @@ impl Controller {
         let images = [("I", io.inputs().to_vec()), ("Q", io.outputs().to_vec())];
         let program = ProgramFiles::of(&project.program)?;
         (self.harness.reload_sources(&texts(&program))).map_err(|e| located(&program, &e))?;
+        self.places = program.places();
         self.sources = program.files;
         self.scan_ns = checked.scan_ns;
         self.timing = ScanTiming::default();
@@ -303,6 +308,11 @@ impl Controller {
     /// The files truST compiled, in the order of its file ids.
     pub(crate) fn sources(&self) -> &[(String, String)] {
         &self.sources
+    }
+
+    /// Where the compiled files' lines are for the debugger, by file id.
+    pub(crate) fn places(&self) -> &[Place] {
+        &self.places
     }
 
     pub(crate) fn harness_mut(&mut self) -> &mut TestHarness {

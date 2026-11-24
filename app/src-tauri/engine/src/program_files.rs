@@ -12,6 +12,7 @@ use twinova_ladder::{
     Block, BlockPin, Lowered, Origin, declarations_only, lower, parse, program_name,
 };
 
+use crate::debugger_places::Place;
 use crate::locate::line_of;
 
 /// A Ladder file read: its path, its text, its program's name, its rungs and its declarations alone.
@@ -23,10 +24,11 @@ pub(crate) type Parsed<'a> = (
     String,
 );
 
-struct Ladder {
-    path: String,
-    text: String,
-    lowered: Lowered,
+/// A Ladder file of the program: its path, its text and what it lowered to.
+pub(crate) struct Ladder {
+    pub path: String,
+    pub text: String,
+    pub lowered: Lowered,
 }
 
 /// The files truST compiles, in the project's order, and the Ladder files they were lowered from.
@@ -68,6 +70,20 @@ impl ProgramFiles {
             )
             .collect();
         Ok(Self { files, ladders })
+    }
+
+    /// Where each compiled file's lines are for the debugger, by file id: an ST file's as written, a Ladder file's
+    /// through its rungs (spec 2026-11-24-open-points-design.md, decision 2).
+    pub(crate) fn places(&self) -> Vec<Place> {
+        (self.files.iter().enumerate())
+            .map(|(id, (path, text))| {
+                let file_id = u32::try_from(id).unwrap_or(u32::MAX);
+                match self.ladders.iter().find(|l| l.path == *path) {
+                    Some(ladder) => Place::ladder(ladder, file_id),
+                    None => Place::whole(path, file_id, text),
+                }
+            })
+            .collect()
     }
 
     /// The Ladder file `path` of `program` lowered, its rungs that do not lower reported in it rather than failing it:

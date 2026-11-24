@@ -305,3 +305,21 @@ fn trusts_diagnostic_on_the_lowered_st_maps_back_to_the_contact() {
         lowered.st
     );
 }
+
+#[test]
+fn each_rung_s_generated_lines_are_found_in_order_from_its_first_to_its_last() {
+    let l = lowered("VAR\n a : BOOL;\n b : BOOL;\nEND_VAR\n|a| (b);\n[|a|, |b|] (a) (b);\n(b);\n");
+    let rungs = l.rung_lines();
+    assert_eq!(rungs.iter().map(|r| r.0).collect::<Vec<_>>(), [0, 1, 2]);
+    let line = |offset: usize| l.st[offset..].lines().next().unwrap();
+    for (_, first, last) in &rungs {
+        assert!(first <= last);
+        assert!(!line(*first).is_empty() && !line(*last).is_empty());
+    }
+    assert!(
+        rungs[1].1 < rungs[1].2,
+        "the branch rung makes more than one line"
+    );
+    assert!(rungs.windows(2).all(|w| w[0].2 < w[1].1));
+    assert_eq!(line(rungs[2].1), "b := TRUE;");
+}
