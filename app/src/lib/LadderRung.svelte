@@ -4,8 +4,9 @@
   // A click is read off `data-path` by the view (LadderEditor.svelte): an element's, or a branch path's on its wire.
   // Online (spec 2026-11-13-ladder-editor-design.md, decision 6, as LD2's): a wire or a symbol carrying power is thick
   // and green, one without it thick and dark, one not read yet thin; thickness tells as well as colour. Each operand's
-  // and box pin's value is drawn under it, and a click on it prepares a write or a force (`data-spot`).
-  import { L, OPERAND_MAX, textW, type Feed, type LNode, type RungLayout } from "./ladder/layout";
+  // value is drawn under it and a box pin's beside its place, on the pin's row; a click on it prepares a write or a force
+  // (`data-spot`).
+  import { L, OPERAND_MAX, pinLabels, textW, type Feed, type LNode, type RungLayout } from "./ladder/layout";
   import { powered, type Online } from "./ladder/view";
   import { keyOf } from "./ladder/model";
   let {
@@ -97,17 +98,22 @@
         <rect class="symbol {power(n.path)}" x={n.x} y={n.y} width={n.w} height={n.h} rx="2" />
         <text class="title" x={mid(n)} y={n.y + 13}>{n.title}</text>
         {#if n.instance}<text class="operand" x={mid(n)} y={n.y - 5}>{n.instance}</text>{/if}
-        {#each n.left as pin, k (k)}
-          <text class="pin" x={n.x + 4} y={row(n, k) + 3}>{pin.name}</text>
-          {#if pin.value !== null}<text class="value end" x={n.x - 4} y={row(n, k) - 3}>{pin.value}</text>{/if}
-          {@const live = valueAt(n.path, pin.name)}
-          {#if live}{@render reading(live, n.x - 4, row(n, k) + 10, "end")}{/if}
-        {/each}
-        {#each n.right as pin, k (k)}
-          <text class="pin end" x={n.x + n.w - 4} y={row(n, k) + 3}>{pin.name}</text>
-          {#if pin.value !== null}<text class="value" x={n.x + n.w + 4} y={row(n, k) - 3}>{pin.value}</text>{/if}
-          {@const live = valueAt(n.path, pin.name)}
-          {#if live}{@render reading(live, n.x + n.w + 4, row(n, k) + 10, "start")}{/if}
+        {#each n.left as pin, k (k)}<text class="pin" x={n.x + 4} y={row(n, k) + 3}>{pin.name}</text>{/each}
+        {#each n.right as pin, k (k)}<text class="pin end" x={n.x + n.w - 4} y={row(n, k) + 3}>{pin.name}</text>{/each}
+        {#each pinLabels(n) as label (`${label.side}${label.pin}`)}
+          <!-- on its own row and joined to its pin; above the rung's wire, which joins it already -->
+          {@const baseline = label.stub ? label.y + 3 : label.y - 3}
+          {@const anchor = label.side === "left" ? "end" : "start"}
+          {#if label.stub}<line
+              class="stub"
+              x1={label.stub.x1}
+              y1={label.stub.y}
+              x2={label.stub.x2}
+              y2={label.stub.y}
+            />{/if}
+          <text class="value" class:end={label.side === "left"} x={label.textX} y={baseline}>{label.text}</text>
+          {@const live = valueAt(n.path, label.pin)}
+          {#if live}{@render reading(live, label.readingX, baseline, anchor)}{/if}
         {/each}
       </g>
     {:else}
@@ -223,6 +229,10 @@
   }
   .mark {
     font-weight: 600;
+  }
+  .stub {
+    stroke: var(--color-text-muted);
+    stroke-width: 1.5;
   }
   .operand.blank {
     fill: var(--color-warning);

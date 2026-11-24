@@ -209,7 +209,9 @@ fn calling(lines: &[u32]) -> (Debugger, JoinHandle<()>) {
     let mut harness = TestHarness::from_source(BLOCK).unwrap();
     let control = harness.runtime_mut().enable_debug();
     let files = vec![(MAIN.to_string(), BLOCK.to_string())];
-    let places = Debugger::whole_files(&files);
+    let places = crate::program_files::ProgramFiles::of(&files)
+        .unwrap()
+        .places();
     let debugger = Debugger::new(
         control,
         &harness,
@@ -292,6 +294,66 @@ fn a_breakpoint_on_an_if_s_line_stops_at_the_if_once_a_scan() {
     debugger.resume(Resume::Continue);
     assert_eq!(held(&debugger), at(39), "the next scan");
     assert!(time.load(Ordering::SeqCst) > first);
+    debugger.let_go();
+    thread.join().unwrap();
+}
+
+/// ladder_line's program, lowered from `plc/Main.ld`, scanned on a thread until `debugger` lets it go, its breakpoints
+/// at `lines` of the Ladder file set before the first scan (spec 2026-11-24-open-points-design.md, decision 2).
+fn ladder(lines: &[u32]) -> (Debugger, Vec<u32>, JoinHandle<()>) {
+    const LD: &str = "plc/Main.ld";
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../project/tests/fixtures/valid/ladder_line/plc/Main.ld");
+    let files = [(LD.to_string(), std::fs::read_to_string(path).unwrap())];
+    let program = crate::program_files::ProgramFiles::of(&files).unwrap();
+    let st = program.files[0].1.clone();
+    let mut harness = TestHarness::from_source(&st).unwrap();
+    let control = harness.runtime_mut().enable_debug();
+    let debugger = Debugger::new(
+        control,
+        &harness,
+        vec![st],
+        program.places(),
+        Vec::new(),
+        None,
+    );
+    let set = set(&debugger, LD, lines).unwrap();
+    let thread = std::thread::spawn(move || {
+        for _ in 0..20 {
+            harness.cycle();
+        }
+    });
+    (debugger, set, thread)
+}
+
+#[test]
+fn a_ladder_breakpoint_holds_on_its_rung_and_a_step_goes_to_the_next_rung() {
+    // line 28 is rung 2's comment, line 5 a declaration
+    let (debugger, placed, thread) = ladder(&[28, 5]);
+    assert_eq!(
+        placed,
+        [29],
+        "on the rung's own line; a declaration takes none"
+    );
+    let hold = held(&debugger);
+    assert_eq!((hold.file.as_str(), hold.line), ("plc/Main.ld", 29));
+    debugger.resume(Resume::Over);
+    assert_eq!(
+        held(&debugger).line,
+        30,
+        "rung 2's three statements stepped over"
+    );
+    debugger.resume(Resume::Over);
+    assert_eq!(held(&debugger).line, 31, "rung 3's four");
+    debugger.resume(Resume::Into);
+    assert_eq!(
+        held(&debugger).line,
+        32,
+        "into a standard block stays in the file"
+    );
+    set(&debugger, "plc/Main.ld", &[]).unwrap();
+    debugger.run_to("plc/Main.ld", 38).unwrap();
+    assert_eq!(held(&debugger).line, 38);
     debugger.let_go();
     thread.join().unwrap();
 }

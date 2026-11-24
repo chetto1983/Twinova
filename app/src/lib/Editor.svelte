@@ -5,7 +5,7 @@
   import { edited, type Source } from "./sources";
   import { debounce, fileOf, type Problems } from "./analysis";
   import { declarations as declared, monitor, onMonitor } from "./backend";
-  import { replaced, takesBreakpoints, toggle, trimmed, type Breakpoint, type Log } from "./debug";
+  import { replaced, toggle, trimmed, type Breakpoint, type Log } from "./debug";
   import { plcHold } from "./held.svelte";
   import { Breakpoints } from "./breakpoints.svelte";
   import {
@@ -96,8 +96,7 @@
   let cursor = $state(1);
   /** The breakpoint the bar edits. */
   let editing = $state<Breakpoint | null>(null);
-  /** The shown tab's file when it takes breakpoints: a Ladder file has no gutter for them and no Run to cursor. */
-  const debugFile = $derived(current && takesBreakpoints(fileOf(current)) ? fileOf(current) : null);
+  const debugFile = $derived(current ? fileOf(current) : null);
   const toggleIn = (file: string) => (line: number) => void breakpoints.set(file, toggle(breakpoints.of(file), line));
   const editIn = (file: string) => (line: number) =>
     (editing = breakpoints.of(file).find((b) => b.line === line) ?? { line });
@@ -350,6 +349,10 @@
               online={watched && live ? { spots: watched.ladder, values: parts.ladder } : null}
               {forced}
               onPick={pick}
+              breakpoints={breakpoints.of(debugFile)}
+              heldLine={hold && hold.file === debugFile ? hold.line : null}
+              onBreakpoint={debugFile ? toggleIn(debugFile) : undefined}
+              onEditBreakpoint={debugFile ? editIn(debugFile) : undefined}
               onText={(text) => {
                 if (current) current.text = text;
               }}
@@ -457,7 +460,8 @@
   }
   .table-area {
     flex: none;
-    height: 35%;
+    /* about five rows: a maximized pane leaves the code, or the rungs, most of its height */
+    height: min(35%, 13rem);
     min-height: 48px;
     max-height: 70%;
     overflow: hidden;

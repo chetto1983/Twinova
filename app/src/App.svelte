@@ -95,10 +95,11 @@
   $effect(() => {
     if (detached) void plcWindow.send(plcState());
   });
-  function detach(): void {
+  /** The PLC pane to a window of its own, done once the window is there. */
+  async function detach(): Promise<void> {
     inbox.reset();
     detached = true;
-    plcWindow.open().catch((e) => {
+    await plcWindow.open().catch((e) => {
       detached = false;
       error = String(e);
     });
@@ -457,7 +458,7 @@
         {selected}
         {detached}
         onDetach={detach}
-        onAttach={() => void plcWindow.close()}
+        onAttach={() => plcWindow.close()}
         onPlace={place}
         onDrag={(family) => (dragging = family)}
         onSinkBlocked={(sink, blocked) => replace(() => backend.setSinkBlocked(sink, blocked))}

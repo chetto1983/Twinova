@@ -43,6 +43,7 @@ const COMMANDS = [
   "open_file",
   "open_project",
   "pause",
+  "plc_window",
   "plcopen_export",
   "plcopen_import",
   "press",
@@ -127,6 +128,11 @@ const holdLine = async () => (await run("hold"))?.line ?? null;
 const rename = (id) => ({ command: "edit", params: { op: { op: "rename", id, name: "X" } } });
 /** Whether the editor shows the glyph margin, where breakpoints are set. */
 const margin = () => browser.execute(() => document.querySelector(".monaco-host").editor.getRawOptions().glyphMargin);
+/** Whether rung `i` of the drawing is the held one, and whether its number shows a breakpoint. */
+const rungHeld = (i) =>
+  browser.execute((n) => document.querySelector(`[data-rung="${n}"]`)?.classList.contains("held"), i);
+const rungDot = (i) =>
+  browser.execute((n) => Boolean(document.querySelector(`[data-rung="${n}"] .number.breakpoint`)), i);
 const MONITOR = 'button[aria-label="Monitoring (Ctrl+T)"]';
 const VARIABLES = 'button[aria-label="Variables"]';
 
@@ -198,21 +204,23 @@ async function theLadderPane() {
     await shows("text", () => pressed("button.ladder"), "false");
   });
   await check(
-    "a Ladder file takes no breakpoint: no glyph margin, no Run to cursor, and the command refused",
+    "a breakpoint on a rung holds there, as the status bar and the drawing show, and a step goes on",
     async () => {
-      await shows("no glyph margin", margin, false);
-      const cursor = await browser.$('button[aria-label="Run to cursor (Ctrl+F10)"]');
-      expectEqual(await cursor.isEnabled(), false, "Run to cursor enabled");
-      expectEqual(
-        await refused("breakpoints", { file: "plc/Main.ld", lines: [30] }),
-        "plc/Main.ld: a Ladder file takes no breakpoints yet",
-        "breakpoints",
-      );
-      expectEqual(
-        await refused("run_to_cursor", { file: "plc/Main.ld", line: 30 }),
-        "plc/Main.ld: a Ladder file takes no breakpoints yet",
-        "run_to_cursor",
-      );
+      await shows("the text view's gutter", margin, true);
+      await run("view", { view: "ladder" });
+      expectEqual(await run("breakpoints", { file: "plc/Main.ld", lines: [28] }), [{ line: 29 }], "on rung 2's line");
+      await shows("rung 2's dot", () => rungDot(1), true);
+      await run("run");
+      await shows("held", holdLine, 29);
+      await shows("status", () => textOf(".statusbar .hold"), "HOLD at plc/Main.ld:29");
+      await shows("rung 2 marked", () => rungHeld(1), true);
+      await run("resume", { how: "over" });
+      await shows("the next rung", holdLine, 30);
+      await shows("rung 3 marked", () => rungHeld(2), true);
+      await run("breakpoints", { file: "plc/Main.ld", lines: [] });
+      await run("resume", { how: "continue" });
+      await run("pause");
+      await run("reset");
     },
   );
   await check("variables_table and monitoring set the pane's toggles", async () => {
@@ -302,6 +310,41 @@ async function theLine() {
   });
 }
 
+async function thePlcWindow() {
+  await check(
+    "with the PLC pane in its own window, its commands reach it there, and the dock again after",
+    async () => {
+      const main = await browser.getWindowHandle();
+      await run("plc_window", { open: true });
+      const plc = await eventually(
+        async () => {
+          const other = (await browser.getWindowHandles()).find((h) => h !== main);
+          if (!other) throw new Error("one window");
+          return other;
+        },
+        "the PLC window",
+        15_000,
+      );
+      // the first command waits for the window to tell its commands
+      await run("open_file", { file: "plc/Main.st" });
+      await run("monitoring", { on: true });
+      const motor = { program: "Main", path: "motor" };
+      await run("force", { target: motor, value: "TRUE" });
+      await run("step");
+      expectEqual(await valueOf("motor"), "TRUE", "the PLC window's table");
+      await browser.switchToWindow(plc);
+      await shows("forced in the PLC window", () => cell("motor"), ["TRUE", true]);
+      await browser.switchToWindow(main);
+      const shot = await mcp.callTool({ name: "screenshot", arguments: { window: "plc" } });
+      expectEqual(shot.content.find((c) => c.type === "text")?.text.startsWith("plc window, "), true, "its picture");
+      await run("release", { target: motor });
+      await run("plc_window", { open: false });
+      await shows("one window", async () => (await browser.getWindowHandles()).length, 1, 15_000);
+      await eventually(async () => run("values"), "the pane back in the dock", 15_000);
+    },
+  );
+}
+
 async function theWindow() {
   await check("theme and language change the window", async () => {
     await run("theme", { theme: "light" });
@@ -365,6 +408,7 @@ await sessions(async () => {
       await theScene();
       await theLadderPane();
       await theLine();
+      await thePlcWindow();
       await theWindow();
     } finally {
       await mcp.close();

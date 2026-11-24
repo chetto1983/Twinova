@@ -49,6 +49,7 @@ pub fn run() {
             analysis::hover,
             analysis::completion,
             ladder_commands::ladder_parse,
+            ladder_commands::ladder_rung_lines,
             ladder_commands::ladder_print,
             ladder_commands::ladder_lowering,
             ladder_commands::ladder_export,
@@ -103,6 +104,7 @@ pub fn run() {
             edit_commands::catalogue,
             control::control_reply,
             control::control_ready,
+            control::control_commands,
             control::control_port,
         ])
         .build(tauri::generate_context!())

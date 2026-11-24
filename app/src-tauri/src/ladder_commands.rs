@@ -8,11 +8,22 @@ use trust_ide::stdlib_docs::{standard_fb_doc, standard_function_doc, standard_fu
 use twinova_engine::ladder_catalog::{CatalogEntry, catalog};
 use twinova_engine::plcopen::{Imported, export_ladder, import_ladder};
 use twinova_engine::program_files::ProgramFiles;
-use twinova_ladder::{BoxPins, ElementId, LowerError, ParseError, Power, Program, parse, print};
+use twinova_ladder::{
+    BoxPins, ElementId, LowerError, ParseError, Power, Program, parse, parse_spans, print,
+};
 
 #[tauri::command]
 pub fn ladder_parse(text: String) -> Result<Program, ParseError> {
     parse(&text)
+}
+
+/// Each rung's own first line in `text`, from 1: where the drawing sets its breakpoint, the line the debugger answers
+/// for it (spec 2026-11-24-open-points-design.md, decision 2).
+#[tauri::command]
+pub fn ladder_rung_lines(text: String) -> Result<Vec<u32>, ParseError> {
+    let (_, spans) = parse_spans(&text)?;
+    let line = |at: usize| u32::try_from(text[..at].matches('\n').count() + 1).unwrap_or(u32::MAX);
+    Ok(spans.iter().map(|span| line(span.at)).collect())
 }
 
 #[tauri::command]

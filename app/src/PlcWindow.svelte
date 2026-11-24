@@ -8,6 +8,7 @@
   import { Outbox, plcWindow, type PlcState, type Request } from "./lib/plcWindow";
   import Editor from "./lib/Editor.svelte";
   import Transport from "./lib/Transport.svelte";
+  import { listenControl } from "./lib/control/registry";
 
   let shown = $state<PlcState | null>(null);
   const outbox = new Outbox();
@@ -36,7 +37,12 @@
   onMount(() => {
     const unlisten = plcWindow.onState(receive);
     void unlisten.then(() => plcWindow.ready());
-    return () => void unlisten.then((stop) => stop());
+    // the pane's commands come here while it is in this window (spec 2026-11-24-open-points-design.md, decision 3)
+    const control = listenControl();
+    return () => {
+      void unlisten.then((stop) => stop());
+      void control.then((stop) => stop());
+    };
   });
 </script>
 

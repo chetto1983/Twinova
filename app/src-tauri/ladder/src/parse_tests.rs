@@ -292,3 +292,41 @@ proptest! {
         prop_assert_eq!(parse(&text), Ok(program), "{}", text);
     }
 }
+
+#[test]
+fn each_rung_s_span_holds_its_comment_and_its_text_and_ends_past_its_semicolon() {
+    let text = include_str!("../../project/tests/fixtures/valid/ladder_line/plc/Main.ld");
+    let (program, spans) = parse_spans(text).unwrap();
+    assert_eq!(program, parse(text).unwrap());
+    assert_eq!(spans.len(), 13);
+    let mut previous = spans[0].from;
+    for (rung, span) in program.rungs.iter().zip(&spans) {
+        assert!(previous <= span.from && span.from <= span.at && span.at < span.to);
+        assert!(text[..span.to].ends_with(';'));
+        let before = text[span.from..span.at].trim();
+        assert_eq!(before.is_empty(), rung.comment.is_none(), "{before}");
+        assert!(before.is_empty() || before.starts_with("(*"));
+        assert_eq!(
+            text[previous..span.from].trim(),
+            "",
+            "nothing between two rungs"
+        );
+        previous = span.to;
+    }
+    assert_eq!(&text[spans[0].at..spans[0].to], "(belt_b_run);");
+}
+
+#[test]
+fn a_rung_written_on_several_lines_with_a_comment_of_several_is_one_span() {
+    let text = "VAR\n  a : BOOL;\nEND_VAR\n(* first\n   second *)\nTop: |a|\n  (a);\n|a| (a);\n";
+    let (_, spans) = parse_spans(text).unwrap();
+    let line = |offset: usize| {
+        text[..offset].lines().count() + usize::from(text[..offset].ends_with('\n'))
+    };
+    let lines: Vec<_> = spans
+        .iter()
+        .map(|s| (line(s.from), line(s.at), line(s.to)))
+        .collect();
+    assert_eq!(lines, [(4, 6, 7), (8, 8, 8)]);
+    assert!(parse_spans("VAR\nEND_VAR\n(* alone *)\n").is_err());
+}

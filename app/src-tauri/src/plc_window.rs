@@ -59,6 +59,10 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
     let app = window.app_handle();
     match follow(window.label(), event) {
         Follow::TellMain => {
+            // its commands go with it: the main window's editor, mounted again, registers the pane's
+            if let Some(control) = app.try_state::<crate::control::Control>() {
+                control.set_commands(LABEL, Vec::new());
+            }
             let _ = app.emit_to(MAIN, CLOSED, ());
         }
         Follow::ClosePlc => {

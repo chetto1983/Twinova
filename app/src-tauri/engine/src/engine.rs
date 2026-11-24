@@ -243,7 +243,7 @@ impl Engine {
     /// decision 10). It works without the engine, which a stopped scan holds.
     pub fn debugger(&mut self) -> Debugger {
         let files = self.line.controller().sources().to_vec();
-        let places = Debugger::whole_files(&files);
+        let places = self.line.controller().places().to_vec();
         let texts = files.into_iter().map(|(_, text)| text).collect();
         let writes = Some(self.held_writes.clone());
         let controller = self.line.controller_mut();

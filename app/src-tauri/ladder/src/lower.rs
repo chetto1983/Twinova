@@ -104,6 +104,20 @@ pub struct Lowered {
 }
 
 impl Lowered {
+    /// Each lowered rung's generated lines, in order: the rung's index and the byte offsets in `st` where its first and
+    /// its last line start. A breakpoint on a rung stops at its first (spec 2026-11-24-open-points-design.md, decision
+    /// 2).
+    pub fn rung_lines(&self) -> Vec<(usize, usize, usize)> {
+        let mut rungs: Vec<(usize, usize, usize)> = Vec::new();
+        for (at, element) in &self.lines {
+            match rungs.last_mut() {
+                Some((rung, _, last)) if *rung == element.rung => *last = *at,
+                _ => rungs.push((element.rung, *at, *at)),
+            }
+        }
+        rungs
+    }
+
     pub fn origin(&self, offset: usize) -> Option<Origin> {
         let (start, len) = self.declarations;
         if (start..start + len).contains(&offset) {

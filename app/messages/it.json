@@ -192,6 +192,7 @@
   "declare_title": "Dichiara variabile",
   "declare_cancel": "Annulla",
   "ladder_view": "Schema Ladder di {file}",
+  "ladder_breakpoint": "Breakpoint sul rung {number} (clic; Maiusc+clic o clic destro per modificarlo)",
   "ladder_rung": "Segmento {number}",
   "ladder_unreadable": "La riga {line} non si legge come Ladder: {message}",
   "ladder_drawing": "Ladder: disegna i segmenti del file",

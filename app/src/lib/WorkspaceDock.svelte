@@ -54,8 +54,9 @@
     selected?: string | null;
     /** The PLC pane is in its own window (spec 2026-11-13-plc-window-design.md): one editor at a time. */
     detached?: boolean;
-    onDetach: () => void;
-    onAttach: () => void;
+    /** The PLC pane to its own window, and back; each done when its promise settles. */
+    onDetach: () => Promise<unknown>;
+    onAttach: () => Promise<unknown>;
     onPlace: (key: string) => void;
     onDrag: (key: string) => void;
     onSinkBlocked: (sink: number, blocked: boolean) => void;
@@ -86,6 +87,11 @@
           collapsed = false;
         },
         maximize: (on) => (maximized = on),
+        plcWindow: (own) => {
+          if (own && !detached) return onDetach();
+          if (!own && detached) return onAttach();
+          return Promise.resolve();
+        },
       }),
     ),
   );
@@ -152,7 +158,7 @@
         class="icon-button"
         aria-label={m.plc_window_open()}
         title={m.plc_window_open()}
-        onclick={onDetach}><ExternalLink size={14} /></button
+        onclick={() => void onDetach()}><ExternalLink size={14} /></button
       >{/if}
     <button
       class="icon-button"
@@ -182,7 +188,9 @@
     <div class="tab-content" id="panel-plc" role="tabpanel" aria-labelledby="dock-plc" hidden={tab !== "plc"}>
       {#if detached}<div class="all-clear">
           <ExternalLink size={22} /><strong>{m.plc_window_detached()}</strong>
-          <button class="btn small" onclick={onAttach}><PanelBottom size={14} />{m.plc_window_attach()}</button>
+          <button class="btn small" onclick={() => void onAttach()}
+            ><PanelBottom size={14} />{m.plc_window_attach()}</button
+          >
         </div>{:else}<Editor bind:sources {status} {problems} {reveal} {selected} instances={project.instances} />{/if}
     </div>
     <div

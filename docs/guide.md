@@ -70,10 +70,11 @@ The PLC tab holds the organizer (the task, the programs, the function blocks) an
 - **Monitoring** (Ctrl+T): values beside the code, on the Ladder drawing and in the table's Value column.
 - **Write and force**: click a value to open the bar under it; Write sets it once, Force holds it until Release. A
   forced value is marked.
-- **Breakpoints** in Structured Text: click the gutter. A breakpoint holds the line as an S7-1500's HOLD: virtual time
-  stands, the call stack and the values are shown, and Continue (F5), Step over (F10), Step into (F11), Step out
-  (Shift+F11) and Run to cursor (Ctrl+F10) go on. A breakpoint takes a condition, a hit count or a log message.
-  Ladder files do not take breakpoints yet.
+- **Breakpoints**: click the gutter, or in a Ladder drawing a rung's number. A breakpoint holds the line as an
+  S7-1500's HOLD: virtual time stands, the call stack and the values are shown, and Continue (F5), Step over (F10), Step
+  into (F11), Step out (Shift+F11) and Run to cursor (Ctrl+F10) go on. A breakpoint takes a condition, a hit count or a
+  log message (Shift+click, or a right click). In a Ladder file a breakpoint goes on a rung, as on a CODESYS network:
+  the held rung is marked, and a step goes to the next rung.
 - **VS Code**: a saved project's `.st` files can be edited in VS Code while the line runs ([ST in VS Code](vscode.md)).
 
 ## Connecting an agent (MCP)
@@ -100,7 +101,8 @@ stdio server.
 
 The commands cover the projects and the examples, the scene's edits, Build and the run controls, the sources, the PLC
 pane (file, view, monitoring, the table's values, write, force, release, breakpoints and the steps, PLCopen), the
-panel's buttons and the sinks, the dock's tabs, the theme and the language.
+panel's buttons and the sinks, the dock's tabs, the theme and the language. `plc_window` moves the PLC pane to a window
+of its own and back; while it is there, the pane's commands go to it, and `screenshot` takes it with window `plc`.
 
 **With no app open**, or with `twinova-agent --headless`, the agent runs a session of its own, without a window:
 `open_project`, `open_example`, `list_examples`, the scene's edits (`add_instance`, `move_instance`, `join`,

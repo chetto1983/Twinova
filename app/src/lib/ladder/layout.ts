@@ -27,6 +27,9 @@ export const L = {
   BOX_MIN_W: 72,
   BOX_HEAD: 18,
   PIN_STEP: 24,
+  /** The wire from a pin's place to the box, and the space between a place, its reading and that wire. */
+  PIN_STUB: 10,
+  LABEL_GAP: 4,
 } as const;
 
 /** A pin drawn on a box: its name, the value or place written beside it, and whether the rung's wire meets it. */
@@ -164,13 +167,59 @@ export const isReference = (value: string | null): boolean =>
  *  FALSE. Kept offline too, so the drawing does not move when monitoring starts. */
 export const READING_MIN = Math.ceil(textW("FALSE", 9)) + 8;
 
+/** The room a pin's place takes beside its box, on its row: the place, its reading when it names a variable, and the
+ *  wire to the pin. */
+const placeRoom = (value: string): number =>
+  L.PIN_STUB +
+  L.LABEL_GAP +
+  Math.ceil(textW(value, 10)) +
+  (isReference(value) ? L.LABEL_GAP + READING_MIN : 0) +
+  L.LABEL_GAP;
+
 const labelWidth = (rows: readonly PinRow[]): number =>
-  Math.max(
-    0,
-    ...rows.map((r) =>
-      r.value === null ? 0 : Math.max(Math.ceil(textW(r.value, 10)) + 8, isReference(r.value) ? READING_MIN : 0),
-    ),
-  );
+  Math.max(0, ...rows.map((r) => (r.value === null ? 0 : placeRoom(r.value))));
+
+/** A pin's place drawn beside its box, on the pin's row `y`: its text ends (left) or starts (right) at `textX`, its
+ *  reading online ends or starts at `readingX`, and a wire joins it to the pin. On the rung's own wire, the first row of a
+ *  box that did not lower, the place stands above the wire, which is already there. */
+export interface PinLabel {
+  side: "left" | "right";
+  pin: string;
+  y: number;
+  text: string;
+  textX: number;
+  readingX: number;
+  stub: { x1: number; x2: number; y: number } | null;
+}
+
+/** The places of a box's valued pins (decision 1 of spec 2026-11-24-open-points-design.md): each on its own row, so a
+ *  place, its reading and the next row's place never meet. */
+export function pinLabels(box: Extract<LNode, { kind: "box" }>): PinLabel[] {
+  const rowY = (k: number) => box.y + L.BOX_HEAD + L.PIN_STEP * k + L.PIN_STEP / 2;
+  const side = (rows: readonly PinRow[], left: boolean): PinLabel[] =>
+    rows.flatMap((pin, k) => {
+      if (pin.value === null) return [];
+      const y = rowY(k);
+      const edge = left ? box.x : box.x + box.w;
+      const out = left ? -1 : 1;
+      const onWire = k === 0;
+      const textX = edge + out * (onWire ? L.LABEL_GAP : L.PIN_STUB + L.LABEL_GAP);
+      return [
+        {
+          side: left ? "left" : "right",
+          pin: pin.name,
+          y,
+          text: pin.value,
+          textX,
+          readingX: textX + out * (Math.ceil(textW(pin.value, 10)) + L.LABEL_GAP),
+          stub: onWire
+            ? null
+            : { x1: Math.min(edge, edge + out * L.PIN_STUB), x2: Math.max(edge, edge + out * L.PIN_STUB), y },
+        },
+      ];
+    });
+  return [...side(box.left, true), ...side(box.right, false)];
+}
 
 /** Lay out a series of elements on the wire at `cy` from `x`; `path` addresses the series in the rung's tree, `feed`
  *  the power it takes. */
@@ -392,8 +441,9 @@ export function layoutRung(rung: Rung, width: number, resolve: Resolve): RungLay
   };
 }
 
-/** Every rung of a program laid out as wide as the widest, so their right rails line up. */
-export function layoutRungs(rungs: readonly Rung[], resolve: (rung: number) => Resolve): RungLayout[] {
-  const width = Math.max(L.MIN_WIDTH, ...rungs.map((r, i) => rungMinWidth(r, resolve(i))));
+/** Every rung of a program laid out as wide as the pane (`pane`, 0 when unknown), or as the widest rung when the pane is
+ *  narrower, so their right rails line up (decision 1 of spec 2026-11-24-open-points-design.md). */
+export function layoutRungs(rungs: readonly Rung[], resolve: (rung: number) => Resolve, pane = 0): RungLayout[] {
+  const width = Math.max(pane, L.MIN_WIDTH, ...rungs.map((r, i) => rungMinWidth(r, resolve(i))));
   return rungs.map((r, i) => layoutRung(r, width, resolve(i)));
 }

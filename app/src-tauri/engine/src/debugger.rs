@@ -22,6 +22,7 @@ use trust_runtime::value::{Value, format_user_value};
 use crate::controller::Target;
 pub use crate::debugger_kinds::{Breakpoint, Hit, HitOp, Log};
 use crate::debugger_kinds::{compile, message};
+pub(crate) use crate::debugger_places::{Place, line_count};
 use crate::watch::{scalar, value_from};
 
 /// Where the program is held: a file, a 1-based line, the call stack innermost first, and in a block, the device whose
@@ -47,21 +48,6 @@ pub enum Resume {
 /// Writes made while held, for the engine to log at its next millisecond (spec decision 6).
 pub(crate) type HeldWrites = Arc<Mutex<Vec<(Target, Value)>>>;
 
-/// How many lines `text` has, its last one counted though unterminated.
-pub(crate) fn line_count(text: &str) -> u32 {
-    u32::try_from(text.lines().count()).unwrap_or(u32::MAX)
-}
-
-/// A file the user edits, inside a runtime file: its path, the runtime file's id, its first line there (0-based) and
-/// its number of lines.
-#[derive(Debug, Clone)]
-pub(crate) struct Place {
-    pub path: String,
-    pub file_id: u32,
-    pub first_line: u32,
-    pub lines: u32,
-}
-
 /// A breakpoint as the user set it, and as truST takes it.
 type Built = (Breakpoint, DebugBreakpoint);
 
@@ -81,6 +67,9 @@ pub struct Debugger {
     /// The user's breakpoints by place, as set and as built for truST; Run to cursor adds one for a single stop.
     breakpoints: Arc<Mutex<BTreeMap<usize, Vec<Built>>>>,
     cursor: Arc<Mutex<Option<u32>>>,
+    /// A step taken from a Ladder rung: how, and the file and line it left. The stop goes on stepping while it stays on
+    /// that rung (spec 2026-11-24-open-points-design.md, decision 2).
+    stepping: Arc<Mutex<Option<(Resume, String, u32)>>>,
     read: Arc<Reader>,
     parse: Arc<Parser>,
     /// The PLC's: where a write made while held goes. A block is read-only, so the field has none.
@@ -129,22 +118,11 @@ impl Debugger {
             devices,
             breakpoints: Arc::default(),
             cursor: Arc::default(),
+            stepping: Arc::default(),
             read: Arc::new(read),
             parse: Arc::new(parse),
             writes,
         }
-    }
-
-    /// The places of a runtime whose every file is one place: the PLC's.
-    pub(crate) fn whole_files(files: &[(String, String)]) -> Vec<Place> {
-        (files.iter().enumerate())
-            .map(|(id, (path, text))| Place {
-                path: path.clone(),
-                file_id: u32::try_from(id).unwrap_or(u32::MAX),
-                first_line: 0,
-                lines: line_count(text),
-            })
-            .collect()
     }
 
     fn place(&self, path: &str) -> Result<usize, String> {
@@ -162,7 +140,7 @@ impl Debugger {
     /// (`resolve_breakpoint_location`, searched from the line's start).
     fn statement(&self, at: usize, line: u32) -> Option<SourceLocation> {
         let place = &self.places[at];
-        let row = place.first_line + line.checked_sub(1)?;
+        let row = place.row_of(line)?;
         let (id, text) = (place.file_id as usize, &self.texts[place.file_id as usize]);
         let found = resolve_breakpoint_location(text, place.file_id, &self.statements[id], row, 0)?;
         (self.line_of(&found)?.0 == place.path).then_some(found)
@@ -171,10 +149,9 @@ impl Debugger {
     fn line_of(&self, location: &SourceLocation) -> Option<(String, u32)> {
         let text = self.texts.get(usize::try_from(location.file_id).ok()?)?;
         let row = location_to_line_col(text, location).0;
-        let place = (self.places.iter()).find(|p| {
-            p.file_id == location.file_id && (p.first_line..p.first_line + p.lines).contains(&row)
-        })?;
-        Some((place.path.clone(), row - place.first_line + 1))
+        (self.places.iter())
+            .filter(|p| p.file_id == location.file_id)
+            .find_map(|p| Some((p.path.clone(), p.line_at(row)?)))
     }
 
     /// Arms runtime file `file_id` with every place's breakpoints in it, and `extra`.
@@ -244,6 +221,9 @@ impl Debugger {
             self.arm(file_id, None);
         }
         let (file, line) = self.line_of(&self.control.last_location()?)?;
+        if self.still_on_rung(&file, line) {
+            return None;
+        }
         let mut frames: Vec<_> = self.control.frame_locations().into_iter().collect();
         frames.sort_by_key(|(id, _)| std::cmp::Reverse(id.0));
         let frames = frames
@@ -272,11 +252,43 @@ impl Debugger {
     }
 
     pub fn resume(&self, how: Resume) {
+        let rung = matches!(how, Resume::Over | Resume::Into)
+            .then(|| self.held())
+            .flatten()
+            .filter(|hold| {
+                (self.places.iter())
+                    .find(|p| p.path == hold.file)
+                    .is_some_and(Place::steps_by_rung)
+            });
+        if let Ok(mut stepping) = self.stepping.lock() {
+            *stepping = rung.map(|hold| (how, hold.file, hold.line));
+        }
+        self.step(how);
+    }
+
+    fn step(&self, how: Resume) {
         match how {
             Resume::Continue => self.control.continue_run(),
             Resume::Over => self.control.step_over(),
             Resume::Into => self.control.step(),
             Resume::Out => self.control.step_out(),
+        }
+    }
+
+    /// Whether a step taken from a Ladder rung stopped on that rung again, a statement further: it then steps once
+    /// more, so a step goes to the next rung, or into a block of the project's (decision 2). The editor and the `hold`
+    /// command ask where the program is held, and this is where the stop is seen.
+    fn still_on_rung(&self, file: &str, line: u32) -> bool {
+        let Ok(mut stepping) = self.stepping.lock() else {
+            return false;
+        };
+        match stepping.take() {
+            Some((how, left, from)) if left == file && from == line => {
+                *stepping = Some((how, left, from));
+                self.step(how);
+                true
+            }
+            _ => false,
         }
     }
 

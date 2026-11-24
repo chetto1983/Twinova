@@ -220,21 +220,18 @@ fn a_block_s_breakpoint_taken_off_while_held_lets_its_debug_go_at_continue() {
 }
 
 #[test]
-fn a_ladder_file_takes_no_breakpoint_and_no_run_to_cursor() {
+fn a_ladder_file_s_breakpoint_goes_on_its_rung_and_holds_there() {
+    // line 28 is the comment of ladder_line's rung 2, on line 29 (spec 2026-11-24-open-points-design.md, decision 2)
     let app = opened("ladder_line", true);
-    let refused = "plc/Main.ld: a Ladder file takes no breakpoints yet";
     assert_eq!(
-        set_breakpoints(app.state(), "plc/Main.ld".into(), at(&[30])).unwrap_err(),
-        refused
+        set_breakpoints(app.state(), "plc/Main.ld".into(), at(&[28])).unwrap(),
+        at(&[29])
     );
-    assert_eq!(
-        run_to_cursor(app.state(), "plc/Main.ld".into(), 30).unwrap_err(),
-        refused
-    );
-    let state = app.state::<AppState>();
-    assert!(
-        state.debugger(Scope::Plc).unwrap().is_none(),
-        "nothing attached"
-    );
-    assert!(state.breakpoints.lock().unwrap().is_empty());
+    run(app.handle().clone(), app.state(), None).unwrap();
+    let hold = held(&app);
+    assert_eq!((hold.file.as_str(), hold.line), ("plc/Main.ld", 29));
+    set_breakpoints(app.state(), "plc/Main.ld".into(), vec![]).unwrap();
+    resume(app.state(), Resume::Over).unwrap();
+    assert_eq!(held(&app).line, 30, "the next rung");
+    reset(app.state()).unwrap();
 }

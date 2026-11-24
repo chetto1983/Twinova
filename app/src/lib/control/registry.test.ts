@@ -7,6 +7,7 @@ vi.mock("../backend", () => ({
     onRequest: (f: (r: unknown) => void) => listen("control-request", (e: { payload: unknown }) => f(e.payload)),
     reply: (id: number, ok: boolean, value: unknown) => invoke("control_reply", { id, ok, value }),
     ready: () => invoke("control_ready"),
+    commands: (commands: unknown) => invoke("control_commands", { commands }),
   },
 }));
 
@@ -56,8 +57,10 @@ describe("the command registry", () => {
     expect(await dispatch("b", null)).toBe(2);
     await expect(dispatch("b", { ms: 500 })).rejects.toThrow("b takes no ms: describe_command gives its parameters");
     await expect(dispatch("a", {})).rejects.toThrow("a needs x");
+    expect(invoke.mock.calls).toEqual([["control_commands", { commands: listed() }]]);
     off();
     expect(listed()).toEqual([]);
+    expect(invoke.mock.calls.at(-1)).toEqual(["control_commands", { commands: [] }]);
     await expect(dispatch("a", {})).rejects.toThrow("no command a: list_commands names them");
     expect(() => described("a")).toThrow("no command a");
   });
@@ -84,7 +87,20 @@ describe("the command registry", () => {
       { name: "rejects", description: "", params: none, run: () => Promise.reject("plain") },
     );
     await listenControl();
-    expect(invoke.mock.calls).toEqual([["control_ready"]]);
+    // the registry told the app its commands as they came, then that it listens
+    expect(invoke.mock.calls).toEqual([
+      [
+        "control_commands",
+        {
+          commands: [
+            { name: "fails", description: "" },
+            { name: "ok", description: "" },
+            { name: "rejects", description: "" },
+          ],
+        },
+      ],
+      ["control_ready"],
+    ]);
     invoke.mockClear();
     const handler = listen.mock.calls[0]?.[1] as (e: { payload: unknown }) => void;
     expect(listen.mock.calls[0]?.[0]).toBe("control-request");

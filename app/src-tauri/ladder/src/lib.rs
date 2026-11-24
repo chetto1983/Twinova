@@ -17,7 +17,7 @@ pub use lower::{
     Block, BlockPin, BoxPins, ElementId, Field, LowerError, Lowered, Origin, Power, lower,
 };
 pub use model::{CoilMode, ContactMode, Element, Exit, Pin, Program, Rung};
-pub use parse::{ParseError, parse};
+pub use parse::{ParseError, RungSpan, parse, parse_spans};
 pub use plcopen_read::read_ld_body;
 pub use plcopen_write::{esc, ld_body};
 pub use print::print;

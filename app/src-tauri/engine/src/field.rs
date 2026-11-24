@@ -270,6 +270,7 @@ impl Field {
                 file_id: 0,
                 first_line: line_count(&self.text[..*start]),
                 lines: line_count(&self.text[*start..*end]),
+                rungs: None,
             })
             .collect();
         let devices = (self.blocks.iter())
