@@ -1,6 +1,6 @@
 [package]
 name = "twinova-ladder"
-version = "0.3.0"
+version = "0.4.0"
 description = "Twinova's Ladder Diagram: the model, its text grammar, its lowering to Structured Text and PLCopen <LD>"
 authors = ["The Twinova contributors"]
 license = "MIT OR Apache-2.0"

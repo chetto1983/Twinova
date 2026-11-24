@@ -25,7 +25,7 @@ Twinova is an open-source 3D factory simulator and virtual-commissioning tool fo
 
 The project is **headless first**: the simulation engine is a library, the desktop app one client of it and an MCP server for coding agents another. PLC-in-the-loop, repeatable runs, open component models and open industrial connectivity are product foundations rather than paid extensions.
 
-> **Status: [v0.3.0](https://github.com/chetto1983/Twinova/releases/tag/v0.3.0).** Lines run in the app against its built-in PLC (truST's IEC 61131-3 runtime). Connecting an external PLC (PLCSIM Advanced in lockstep, S7, Modbus TCP, OPC UA) is [Roadmap](ROADMAP.md) phase 5; robots, axes and CAD import come after it.
+> **Status: [v0.4.0](https://github.com/chetto1983/Twinova/releases/tag/v0.4.0).** Lines run in the app against its built-in PLC (truST's IEC 61131-3 runtime). Connecting an external PLC (PLCSIM Advanced in lockstep, S7, Modbus TCP, OPC UA) is [Roadmap](ROADMAP.md) phase 5; robots, axes and CAD import come after it.
 
 <div align="center">
 
@@ -54,14 +54,14 @@ The project is **headless first**: the simulation engine is a library, the deskt
 
 | | |
 |---|---|
-| **Stage** | Early releases, v0.3.0; external PLCs not connected yet |
+| **Stage** | Early releases, v0.4.0; external PLCs not connected yet |
 | **Desktop** | Tauri 2, Svelte 5, TypeScript, Three.js, Monaco |
 | **Engine** | Rust 1.99, a 1 ms lockstep on integer virtual time, Rapier 0.36 with enhanced determinism |
 | **PLC logic** | IEC 61131-3 Structured Text and Ladder, on the pinned truST runtime |
 | **Languages** | English and Italian |
 | **Targets** | Windows and Linux desktop; the engine is a library, also served over MCP |
 | **Quality gates** | Rust fmt/clippy/tests, frontend static checks, ≥85 % coverage, mutation testing with no survivor, real-app E2E on Linux and Windows, a 600-line cap per file |
-| **Release state** | [v0.3.0](https://github.com/chetto1983/Twinova/releases/tag/v0.3.0) published; the installers are not signed yet |
+| **Release state** | [v0.4.0](https://github.com/chetto1983/Twinova/releases/tag/v0.4.0) published; the installers are not signed yet |
 
 ## Architecture
 
@@ -94,7 +94,7 @@ These are planned capabilities, not claims about the current release. Milestones
 
 ## Quick Start
 
-**Install:** download the MSI (Windows), the deb or the AppImage (Linux) from the [v0.3.0 release](https://github.com/chetto1983/Twinova/releases/tag/v0.3.0). The installers are not signed yet, so Windows SmartScreen asks for confirmation on the first start (More info, then Run anyway).
+**Install:** download the MSI (Windows), the deb or the AppImage (Linux) from the [v0.4.0 release](https://github.com/chetto1983/Twinova/releases/tag/v0.4.0). The installers are not signed yet, so Windows SmartScreen asks for confirmation on the first start (More info, then Run anyway).
 
 The app opens on a bundled demo, one belt; the project menu lists the other example lines under **Examples**. A project folder also opens from the command line (`twinova <folder>`). The [guide](docs/guide.md) goes from there: the scene, the PLC pane, the online tools, and connecting an agent.
 
