@@ -16,6 +16,17 @@ The points v0.3.0 left open.
 - The agent's commands reach the PLC pane in its own window. Each request goes to the window that holds its command,
   and the new `plc_window` command moves the pane to its own window and back.
 
+### Security
+
+- The dependency alerts on `main` are closed where a fix exists. `npm audit` and `cargo audit` report 0 vulnerabilities.
+  - DOMPurify is 3.4.17 in the PLC editor.
+  - minimatch and qs are updated in the test tools.
+  - cookie and url are updated.
+  - rustls 0.20 and ring 0.16 are gone: truST's web server, which Twinova never starts, has its HTTPS behind a feature
+    Twinova leaves out.
+  - heapless and glib remain, under rapier and Tauri. Their advisories are "unsound", none of the code they name is
+    reached, and no fix exists yet.
+
 ### Fixed
 
 - The Ladder drawing:
