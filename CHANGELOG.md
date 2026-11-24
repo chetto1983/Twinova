@@ -4,6 +4,27 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
+## Unreleased
+
+The points v0.3.0 left open.
+
+### Added
+
+- Breakpoints in Ladder files, on rungs, as CODESYS sets them on networks. A click on a rung's number in the drawing
+  sets one, and the text view's gutter works too. The held rung is marked, the status bar names its line, and a step
+  goes to the next rung. Conditions, hit counts, log messages and Run to cursor work as in Structured Text.
+- The agent's commands reach the PLC pane in its own window. Each request goes to the window that holds its command,
+  and the new `plc_window` command moves the pane to its own window and back.
+
+### Fixed
+
+- The Ladder drawing:
+  - each box pin's variable, constant or expression is written on the pin's own row and joined to the pin by a short
+    wire;
+  - its value online sits beside it, so the rows no longer run into each other;
+  - the rungs are as wide as the pane;
+  - the variables table opens about five rows high, so a maximized pane shows the rungs.
+
 ## v0.3.0 — 2026-11-23
 
 Coding agents drive the app you have open, and the release carries what they need.

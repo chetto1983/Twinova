@@ -77,21 +77,21 @@ Rust (twinova-ladder, twinova-engine, the app), TypeScript and Svelte 5, truST's
 
 ## Tasks
 
-- [ ] **Task 1: the Ladder view.**
+- [x] **Task 1: the Ladder view.**
   - Layout tests first: the rows do not overlap, a valued pin has a stub, the width fills the pane.
   - Then `layout.ts`, `LadderRung.svelte`, the ResizeObserver, and the table's height.
   - Check: `npx vitest run src/lib/ladder`, then `ladder.mjs` and pictures of rung 3 on the real app. Commit.
-- [ ] **Task 2: breakpoints on rungs.**
+- [x] **Task 2: breakpoints on rungs.**
   - `parse_spans`, with tests on every fixture.
   - The places from `ProgramFiles`, and the line map in the debugger, tested on `ladder_line`: set, hold, the
     declarations, Run to cursor, a condition.
   - The continued step, tested: Over from rung 3 holds on rung 4.
   - The refusal removed. Commit.
-- [ ] **Task 3: Ladder breakpoints in the view.**
+- [x] **Task 3: Ladder breakpoints in the view.**
   - `takesBreakpoints` goes, and the text view's gutter is back for `.ld` files.
   - The drawing gets the rung's dot, its click and the held rung, with vitest.
   - `e2e/mcp.mjs` gets its rung checks. Commit.
-- [ ] **Task 4: the commands go to their window.**
+- [x] **Task 4: the commands go to their window.**
   - `control.rs`'s routing, tested.
   - The registry reports its commands; the PLC window listens; `plc_window` in the dock.
   - `e2e/mcp.mjs` drives the detached pane. Commit.
