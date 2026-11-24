@@ -256,9 +256,9 @@ impl Debugger {
             .then(|| self.held())
             .flatten()
             .filter(|hold| {
-                self.places
-                    .iter()
-                    .any(|p| p.path == hold.file && p.steps_by_rung())
+                (self.places.iter())
+                    .find(|p| p.path == hold.file)
+                    .is_some_and(Place::steps_by_rung)
             });
         if let Ok(mut stepping) = self.stepping.lock() {
             *stepping = rung.map(|hold| (how, hold.file, hold.line));

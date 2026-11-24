@@ -339,3 +339,18 @@ async fn a_request_waits_for_a_plc_window_that_is_loading() {
     assert_eq!(fly.await.unwrap(), Err("no command fly".into()));
     assert_eq!(seen.lock().unwrap().last().unwrap(), "main");
 }
+
+/// `control_commands`, as a window's registry invokes it, keeps the commands under that window's own label.
+#[tokio::test]
+async fn a_window_tells_its_commands_under_its_own_label() {
+    let app = app();
+    let handle = app.handle().clone();
+    let plc = tauri::WebviewWindowBuilder::new(&app, "plc", Default::default())
+        .build()
+        .unwrap();
+    control_commands(plc.as_ref().window(), app.state(), listed(&["values"]));
+    assert_eq!(
+        handle.state::<Control>().window_of(&handle, "values"),
+        "plc"
+    );
+}
