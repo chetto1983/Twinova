@@ -3,7 +3,7 @@
   import { Search, Plus, PackageOpen } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { catalogue, type CatalogueEntry } from "./backend";
-  import { familyName } from "./familyNames";
+  import { familyName, familyOf } from "./familyNames";
   let { onPlace, onDrag }: { onPlace: (key: string) => void; onDrag: (key: string) => void } = $props();
   let entries = $state<CatalogueEntry[]>([]);
   let previews = $state<Record<string, string>>({});
@@ -63,7 +63,13 @@
   </div>
   <div class="cards">
     {#each filtered as entry (entry.key)}
-      <button class="card" title={entry.key} onpointerdown={() => onDrag(entry.key)} onclick={() => onPlace(entry.key)}>
+      <button
+        class="card"
+        title={entry.key}
+        data-family={familyOf(entry.key)}
+        onpointerdown={() => onDrag(entry.key)}
+        onclick={() => onPlace(entry.key)}
+      >
         <div class="preview">
           {#if previews[entry.key]}<img src={previews[entry.key]} alt="" draggable="false" />{:else}<PackageOpen
               size={25}

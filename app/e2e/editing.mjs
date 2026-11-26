@@ -37,8 +37,10 @@ export function emptyProject(name) {
 
 export const inspector = `//section[contains(@class,"inspector")]`;
 export const canvas = `//section[contains(@class,"stage")]//canvas`;
+/** A catalogue card by its family ("sensor diffuse" is `sensor_diffuse`), not by its name, which is translated since U1
+ *  ("Photo-eye", "Fotocellula"). */
 const catalogueButton = (label) =>
-  `//section[contains(@class,"catalogue")]//button[.//span[contains(@class,"name") and normalize-space()="${label}"]]`;
+  `//section[contains(@class,"catalogue")]//button[@data-family="${label.replaceAll(" ", "_")}"]`;
 
 export const treeNames = () =>
   browser.execute(() => [...document.querySelectorAll("section.tree .item-name")].map((span) => span.textContent));

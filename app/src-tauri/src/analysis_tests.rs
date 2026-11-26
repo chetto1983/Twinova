@@ -70,6 +70,20 @@ fn the_diverter_s_sources_show_what_vscode_shows_without_the_false_e202() {
     );
 }
 
+/// The keyword `PROGRAM` before a name, and only as a word of its own, in any case: what drops a W009.
+#[test]
+fn a_program_s_name_is_the_word_after_the_keyword() {
+    let at = |text: &str| names_a_program(text, text.rfind(' ').unwrap() + 1);
+    assert!(at("PROGRAM Main"));
+    assert!(at("END_VAR\n  program Main"));
+    assert!(!at("XPROGRAM Main"));
+    assert!(!at("_PROGRAM Main"));
+    assert!(!at("FUNCTION_BLOCK Spare"));
+    assert!(!at(";\n  STRUCT Spare"));
+    assert!(!names_a_program("PROGRAM Main", 99));
+    assert!(!names_a_program("RAM Main", 4));
+}
+
 /// truST's runtime runs every PROGRAM at each cycle, in a task or as a background program (trust-runtime at 6405915,
 /// `runtime/cycle.rs`, `execute_background_programs`), so no program is unused; a block nothing calls still is.
 #[test]
