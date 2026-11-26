@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readPreference, writePreference } from "./preferences";
+import { readPreference, savedTheme, writePreference } from "./preferences";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -19,5 +19,15 @@ describe("preferences", () => {
     vi.stubGlobal("localStorage", { getItem: blocked, setItem: blocked });
     expect(() => writePreference("k", "v")).not.toThrow();
     expect(readPreference("k")).toBeNull();
+  });
+
+  it("opens in the light theme unless dark was chosen", () => {
+    expect(savedTheme()).toBe("light");
+    writePreference("theme", "dark");
+    expect(savedTheme()).toBe("dark");
+    writePreference("theme", "light");
+    expect(savedTheme()).toBe("light");
+    writePreference("theme", "sepia");
+    expect(savedTheme()).toBe("light");
   });
 });

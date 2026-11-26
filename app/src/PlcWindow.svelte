@@ -4,7 +4,7 @@
   import { onMount } from "svelte";
   import { PanelBottom } from "@lucide/svelte";
   import { m } from "./paraglide/messages.js";
-  import { readPreference } from "./lib/preferences";
+  import { savedTheme } from "./lib/preferences";
   import { Outbox, plcWindow, type PlcState, type Request } from "./lib/plcWindow";
   import Editor from "./lib/Editor.svelte";
   import Transport from "./lib/Transport.svelte";
@@ -14,7 +14,7 @@
   const outbox = new Outbox();
   /** The texts as last sent or taken: an edit is a change from them. */
   let last = "";
-  document.documentElement.dataset.theme = readPreference("theme") === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = savedTheme();
 
   function receive(state: PlcState): void {
     const current = shown && JSON.stringify($state.snapshot(shown.sources));

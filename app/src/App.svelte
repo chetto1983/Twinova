@@ -7,7 +7,7 @@
   // the running line (2026-11-12-st-vscode): the program online, a behaviour by a rebuild.
   import { onMount, tick } from "svelte";
   import { m } from "./paraglide/messages.js";
-  import { readPreference, writePreference } from "./lib/preferences";
+  import { savedTheme, writePreference } from "./lib/preferences";
   import { analysis, backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
   import { Inbox, hostPlcWindow, plcWindow } from "./lib/plcWindow";
   import { debounce, type Problems } from "./lib/analysis";
@@ -62,7 +62,7 @@
   let error = $state("");
   let running = $state(false);
   let speed = $state<number | null>(1);
-  let theme = $state(readPreference("theme") === "light" ? "light" : "dark");
+  let theme = $state(savedTheme());
   let selected = $state<string | null>(null);
   /** What opening the project reported, and what the last Build warned about. */
   let notice = $state<string | (() => string)>("");
