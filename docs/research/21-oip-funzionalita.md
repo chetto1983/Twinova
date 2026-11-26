@@ -168,7 +168,7 @@ Il layout di Twinova è stato preso da OIP (ricerca 13): stessi pannelli e stess
 
 | Tema | OIP | Twinova v0.4.0 |
 |---|---|---|
-| Stato in 3D | raggi verde/rosso, rulli animati, frecce, lampade, annotazioni live | nessuno stato visibile; contatori in un angolo |
+| Stato in 3D | raggi verde/rosso, rulli animati, frecce, lampade, annotazioni live | tessuto dei nastri che scorre e lampade del pusher (`ProjectScene.svelte`); sensori senza raggio né stato, nessuna freccia, nessun valore nella scena; contatori in un angolo |
 | Segnale nell'Inspector | direzione e tipo, verdetto, valore live con Force | indirizzo come testo libero, etichette `PLC`/`TAG` poco chiare, nessun valore live |
 | Elenco I/O | Watch con "Wired to" che seleziona la parte | Watch con nome, indirizzo, valore e forzatura, senza legame con la scena |
 | Modello dell'impianto e PLC | la logica delle parti sta nella parte (Part Editor) | i comportamenti dei componenti compaiono come "Function blocks" del PLC |
