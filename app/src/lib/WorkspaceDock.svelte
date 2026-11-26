@@ -31,6 +31,7 @@
     warnings,
     buildHints,
     problems,
+    checking = false,
     notice,
     snapshot,
     selected = null,
@@ -51,6 +52,8 @@
     buildHints: string[];
     /** truST's analysis of the editor's texts, by file. */
     problems: Problems;
+    /** The analysis of the texts shown has not answered yet. */
+    checking?: boolean;
     notice: string;
     snapshot: Snapshot | null;
     /** The instance selected in the scene, for a block's tab to monitor. */
@@ -213,7 +216,8 @@
       {#snippet hintsToggle()}<button class="btn small hints" aria-pressed={hints} onclick={() => (hints = !hints)}
           >{hints ? m.ui_hints_hide() : m.ui_hints_show({ count: hintCount })}</button
         >{/snippet}
-      {#if clear}<div class="all-clear">
+      {#if clear && checking}<div class="all-clear checking">{m.ui_checking()}</div>
+      {:else if clear}<div class="all-clear">
           <CircleCheck size={26} /><strong>{m.ui_no_problems()}</strong>{#if hintCount}{@render hintsToggle()}{/if}
         </div>{:else if hintCount}{@render hintsToggle()}{/if}
       {#each rows as row, i (i)}<button

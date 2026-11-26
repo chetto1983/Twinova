@@ -112,6 +112,7 @@
   "ui_guards": "Protezioni",
   "ui_connections": "Collegamenti",
   "ui_no_problems": "Nessun problema rilevato",
+  "ui_checking": "Controllo del programma…",
   "ui_hints_show": "Mostra i suggerimenti ({count})",
   "ui_hints_hide": "Nascondi i suggerimenti",
   "ui_no_history": "Le modifiche alla scena appariranno qui.",

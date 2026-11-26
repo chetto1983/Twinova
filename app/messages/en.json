@@ -112,6 +112,7 @@
   "ui_guards": "Guards",
   "ui_connections": "Connections",
   "ui_no_problems": "No problems detected",
+  "ui_checking": "Checking the program…",
   "ui_hints_show": "Show hints ({count})",
   "ui_hints_hide": "Hide hints",
   "ui_no_history": "Scene edits appear here.",

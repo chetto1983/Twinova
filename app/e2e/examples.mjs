@@ -41,7 +41,8 @@ await session("debug", async () => {
           const shown = await browser.execute(() => ({
             rows: document.querySelectorAll("#panel-problems .problem").length,
             badge: Boolean(document.querySelector("#dock-problems .badge")),
-            clear: Boolean(document.querySelector("#panel-problems .all-clear")),
+            // "Checking the program" until the analysis answers: only then is the pane's all-clear a verdict.
+            clear: Boolean(document.querySelector("#panel-problems .all-clear:not(.checking)")),
           }));
           expectEqual(shown, { rows: 0, badge: false, clear: true }, "problems");
         },

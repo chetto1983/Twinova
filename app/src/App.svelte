@@ -72,15 +72,20 @@
   /** truST's analysis of the editor's texts, 300 ms after the last change (spec 2026-11-12-st-editor-design.md,
    *  decision 6); a failure of the analysis itself is a notice, since Build stays the referee. */
   let problems = $state<Problems>({});
-  const analyzeLater = debounce((program: [string, string][], behaviours: Record<string, string>) => {
+  /** Until the analysis of the texts shown answers, Problems says it is checking, not that there is nothing. */
+  let checking = $state(true);
+  /** The latest request: an answer to an older one is dropped. */
+  let asked = 0;
+  const analyzeLater = debounce((n: number, program: [string, string][], behaviours: Record<string, string>) => {
     analysis.analyze(program, behaviours).then(
-      (found) => (problems = found),
-      (e) => (notice = String(e)),
+      (found) => n === asked && ((problems = found), (checking = false)),
+      (e) => n === asked && ((notice = String(e)), (checking = false)),
     );
   }, 300);
   $effect(() => {
     const { program, behaviours } = buildArgs(sources);
-    analyzeLater.call(program, behaviours);
+    checking = true;
+    analyzeLater.call(++asked, program, behaviours);
     return analyzeLater.cancel;
   });
   /** The PLC pane is in its own window (spec 2026-11-13-plc-window-design.md): this window keeps the texts and sends
@@ -456,6 +461,7 @@
         {warnings}
         {buildHints}
         {problems}
+        {checking}
         notice={noticeText}
         {snapshot}
         {selected}
