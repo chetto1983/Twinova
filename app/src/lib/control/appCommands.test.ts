@@ -54,6 +54,7 @@ function windowOf() {
     status: () => "ok",
     running: () => false,
     warnings: () => ["w"],
+    hints: () => ["h"],
     notice: () => "n",
     error: () => error,
     show: did("show"),
@@ -87,7 +88,7 @@ describe("the main window's commands", () => {
 
   it("runs the window's own actions for the line and the scene", async () => {
     const w = windowOf();
-    expect(await w.run("build")).toEqual({ build: "ok", warnings: ["w"] });
+    expect(await w.run("build")).toEqual({ build: "ok", warnings: ["w"], hints: ["h"] });
     await w.run("run", { speed: null });
     await w.run("run");
     expect(await w.run("step")).toEqual({ time_ms: null });
@@ -191,6 +192,7 @@ describe("the main window's commands", () => {
       snapshot: null,
       sources: [{ file: "plc/Main.st", kind: "program", edited: false }],
       warnings: ["w"],
+      hints: ["h"],
       notice: "n",
       error: "",
     });

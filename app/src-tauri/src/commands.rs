@@ -103,6 +103,8 @@ impl AppState {
 pub struct Built {
     pub snapshot: Snapshot,
     pub warnings: Vec<String>,
+    /// The scene's signals into the PLC that the program does not read, which Problems lists with its hints.
+    pub hints: Vec<String>,
 }
 
 fn poisoned<T>(_: T) -> String {
@@ -166,8 +168,13 @@ pub fn build(
                 .map(|e| format!("the files for VS Code were not written: {e}")),
         );
     }
+    let hints = engine.unread().to_vec();
     let snapshot = install(&state, project, engine)?;
-    Ok(Built { snapshot, warnings })
+    Ok(Built {
+        snapshot,
+        warnings,
+        hints,
+    })
 }
 
 /// An online change of the line program (spec 2026-11-12-st-vscode-design.md, decision 1): the engine takes `program`
@@ -179,9 +186,9 @@ pub fn change_program(
     projects: State<'_, ProjectState>,
     program: Vec<(String, String)>,
 ) -> Result<Built, String> {
-    let (warnings, snapshot) = with_engine(&state, |e| {
+    let (warnings, hints, snapshot) = with_engine(&state, |e| {
         let warnings = e.change_program(program.clone())?;
-        Ok((warnings, e.snapshot()))
+        Ok((warnings, e.unread().to_vec(), e.snapshot()))
     })?;
     // The new program has new statements: the editor sets its breakpoints again.
     state.forget_debuggers()?;
@@ -191,7 +198,11 @@ pub fn change_program(
     if let Some(built) = state.built.lock().map_err(poisoned)?.as_mut() {
         built.program = program;
     }
-    Ok(Built { snapshot, warnings })
+    Ok(Built {
+        snapshot,
+        warnings,
+        hints,
+    })
 }
 
 /// Back to time zero with the last built project.

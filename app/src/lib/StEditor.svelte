@@ -203,7 +203,7 @@
     applyTheme();
     const made = monaco.editor.create(host!, {
       automaticLayout: true,
-      fontSize: 12,
+      fontSize: 13,
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
       tabSize: 4,

@@ -165,7 +165,8 @@ impl Condition {
 impl Agent {
     #[tool(
         description = "Open a Twinova project folder and build it at time zero. Answers its name, its instances \
-                          (id, definition) and Build's warnings; a project that does not open or build is an error."
+                          (id, definition), Build's warnings, and its hints: the scene's signals into the PLC that the \
+                          program does not read. A project that does not open or build is an error."
     )]
     async fn open_project(
         &self,

@@ -59,6 +59,7 @@ WASM**. Le note che valutano il WASM (07, 08, 09, 10) restano come registro; non
 | [18](18-ld2-codesys.md) | CODESYS LD2 ("CODESYS Ladder"), dall'help pubblico: layout automatico ad albero, marcatori di inserimento, varianti come modificatori, box con EN/ENO, modo online (power flow ricalcolato nell'IDE), ordine di esecuzione; confronto con TIA LAD V20 | – |
 | [19](19-ladder-oip.md) | Il Ladder di Open Industry Project (MIT): albero serie/parallelo, elementi, lowering a ST, PLCopen `<LD>`, monitoraggio, editor, test; confronto con trust-visual di truST | – |
 | [20](20-ladder-open-source.md) | Editor e motori Ladder open source più avanzati di truST, con licenze lette: nautilus (Apache-2.0, Svelte 5), SoftLadder, il crate `plcopen`; OpenPLC Editor, Beremiz e LDmicro solo come idee (GPL) | – |
+| [21](21-oip-funzionalita.md) | Tutte le funzionalità di Open Industry Project al commit `49fd7c7` (editor, 36 parti, PLC e sei protocolli, server, test con guasti, piattaforma), cosa manca anche a OIP rispetto a VC e SIMIT, e il confronto con Twinova v0.4.0 dal vivo | – |
 | [benchmark/](benchmark/) | Schede prodotto con URL: virtual commissioning (g1), flusso/DES (g2), didattici e open source (g3) | – |
 | [ricerca/](ricerca/) | Note di ricerca con URL: eventi discreti (r1), passo fisso e fisica (r2), virtual commissioning e PLCSIM (r3) | – |
 

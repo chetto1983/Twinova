@@ -44,10 +44,7 @@ fn codes(found: &BTreeMap<String, Vec<Problem>>, file: &str) -> Vec<String> {
 fn the_diverter_s_sources_show_what_vscode_shows_without_the_false_e202() {
     let (app, project) = opened("two_belts_diverter");
     let found = analyzed(&app, &project);
-    assert_eq!(
-        codes(&found, MAIN),
-        ["11:9 W009", "14:5 W001", "21:5 W001", "22:5 W001"]
-    );
+    assert_eq!(codes(&found, MAIN), ["14:5 W001", "21:5 W001", "22:5 W001"]);
     assert_eq!(codes(&found, "components/twinova.belt@1.st"), ["34:3 W013"]);
     assert_eq!(
         codes(&found, "components/twinova.chain_transfer@1.st"),
@@ -61,7 +58,7 @@ fn the_diverter_s_sources_show_what_vscode_shows_without_the_false_e202() {
         !found.contains_key(FIELD),
         "the generated configuration is not shown"
     );
-    let first = &found[MAIN][1];
+    let first = &found[MAIN][0];
     assert_eq!(
         (
             first.severity.as_str(),
@@ -69,8 +66,54 @@ fn the_diverter_s_sources_show_what_vscode_shows_without_the_false_e202() {
             first.end_line,
             first.end_column
         ),
-        ("warning", "unused variable 'detected_b'", 14, 15)
+        ("hint", "unused variable 'detected_b'", 14, 15)
     );
+}
+
+/// The keyword `PROGRAM` before a name, and only as a word of its own, in any case: what drops a W009.
+#[test]
+fn a_program_s_name_is_the_word_after_the_keyword() {
+    let at = |text: &str| names_a_program(text, text.rfind(' ').unwrap() + 1);
+    assert!(at("PROGRAM Main"));
+    assert!(at("END_VAR\n  program Main"));
+    assert!(!at("XPROGRAM Main"));
+    assert!(!at("_PROGRAM Main"));
+    assert!(!at("FUNCTION_BLOCK Spare"));
+    assert!(!at(";\n  STRUCT Spare"));
+    assert!(!names_a_program("PROGRAM Main", 99));
+    assert!(!names_a_program("RAM Main", 4));
+}
+
+/// truST's runtime runs every PROGRAM at each cycle, in a task or as a background program (trust-runtime at 6405915,
+/// `runtime/cycle.rs`, `execute_background_programs`), so no program is unused; a block nothing calls still is.
+#[test]
+fn a_program_is_never_unused_but_a_block_nothing_calls_is() {
+    let (app, mut project) = opened("two_belts_diverter");
+    let st = "FUNCTION_BLOCK Spare\nEND_FUNCTION_BLOCK\nprogram Other\nEND_PROGRAM\n";
+    project.program.push(("plc/Other.st".into(), st.into()));
+    let found = analyzed(&app, &project);
+    let unused_pous: Vec<&str> = (found.values().flatten())
+        .filter(|p| p.code == "W009")
+        .map(|p| p.message.as_str())
+        .collect();
+    assert_eq!(unused_pous, ["unused function block 'Spare'"]);
+}
+
+/// The acceptance A3 of spec 2026-11-26-ux-consolidation-design.md: every shipped example's PLC files show hints at
+/// most, so its Problems are empty at the default level.
+#[test]
+fn every_example_s_plc_files_show_hints_at_most() {
+    for listed in twinova_project::examples::examples() {
+        let project = twinova_project::examples::example(listed.id).unwrap();
+        let found = analyze_project(&mut Analysis::default(), &project).unwrap();
+        let shown: Vec<String> = (found.iter())
+            .filter(|(file, _)| file.starts_with("plc/"))
+            .flat_map(|(file, problems)| problems.iter().map(move |p| (file, p)))
+            .filter(|(_, p)| p.severity != "hint")
+            .map(|(file, p)| format!("{} {file}:{} {}", listed.id, p.line, p.code))
+            .collect();
+        assert_eq!(shown, Vec::<String>::new());
+    }
 }
 
 #[test]

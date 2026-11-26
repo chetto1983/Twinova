@@ -140,6 +140,11 @@ impl Engine {
         self.line.controller().timing()
     }
 
+    /// The scene's signals into the PLC that the program does not read: Build's notes, beside its warnings.
+    pub fn unread(&self) -> &[String] {
+        self.line.controller().unread()
+    }
+
     /// The engine of `project` at time zero, with the warnings Build shows.
     pub fn new(project: &Project) -> Result<(Self, Vec<String>), String> {
         let (line, warnings) = Line::build(project)?;

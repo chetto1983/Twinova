@@ -36,6 +36,9 @@ pre-commit:
     file-size:
       glob: "*.{rs,ts,svelte,mjs,st}"
       run: bash scripts/check-file-size.sh {staged_files}
+    font-size:
+      glob: "app/src/**/*.{svelte,css}"
+      run: bash scripts/check-font-size.sh
 
 pre-push:
   parallel: true

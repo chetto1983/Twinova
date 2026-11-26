@@ -7,7 +7,7 @@
   // the running line (2026-11-12-st-vscode): the program online, a behaviour by a rebuild.
   import { onMount, tick } from "svelte";
   import { m } from "./paraglide/messages.js";
-  import { readPreference, writePreference } from "./lib/preferences";
+  import { savedTheme, writePreference } from "./lib/preferences";
   import { analysis, backend, onDiskSources, onEngineError, onSnapshot, onStopped, projects } from "./lib/backend";
   import { Inbox, hostPlcWindow, plcWindow } from "./lib/plcWindow";
   import { debounce, type Problems } from "./lib/analysis";
@@ -32,7 +32,7 @@
   import Toolbar from "./lib/Toolbar.svelte";
   import StatusBar from "./lib/StatusBar.svelte";
   import WorkspaceDock from "./lib/WorkspaceDock.svelte";
-  import { Box, Move, RotateCw } from "@lucide/svelte";
+  import { Move, RotateCw } from "@lucide/svelte";
   import { listenControl, register } from "./lib/control/registry";
   import { appCommands } from "./lib/control/appCommands";
   let hidden = $state<string[]>([]);
@@ -62,24 +62,30 @@
   let error = $state("");
   let running = $state(false);
   let speed = $state<number | null>(1);
-  let theme = $state(readPreference("theme") === "light" ? "light" : "dark");
+  let theme = $state(savedTheme());
   let selected = $state<string | null>(null);
   /** What opening the project reported, and what the last Build warned about. */
   let notice = $state<string | (() => string)>("");
   const noticeText = $derived(typeof notice === "function" ? notice() : notice);
   let warnings = $state<string[]>([]);
+  let buildHints = $state<string[]>([]);
   /** truST's analysis of the editor's texts, 300 ms after the last change (spec 2026-11-12-st-editor-design.md,
    *  decision 6); a failure of the analysis itself is a notice, since Build stays the referee. */
   let problems = $state<Problems>({});
-  const analyzeLater = debounce((program: [string, string][], behaviours: Record<string, string>) => {
+  /** Until the analysis of the texts shown answers, Problems says it is checking, not that there is nothing. */
+  let checking = $state(true);
+  /** The latest request: an answer to an older one is dropped. */
+  let asked = 0;
+  const analyzeLater = debounce((n: number, program: [string, string][], behaviours: Record<string, string>) => {
     analysis.analyze(program, behaviours).then(
-      (found) => (problems = found),
-      (e) => (notice = String(e)),
+      (found) => n === asked && ((problems = found), (checking = false)),
+      (e) => n === asked && ((notice = String(e)), (checking = false)),
     );
   }, 300);
   $effect(() => {
     const { program, behaviours } = buildArgs(sources);
-    analyzeLater.call(program, behaviours);
+    checking = true;
+    analyzeLater.call(++asked, program, behaviours);
     return analyzeLater.cancel;
   });
   /** The PLC pane is in its own window (spec 2026-11-13-plc-window-design.md): this window keeps the texts and sends
@@ -157,6 +163,7 @@
       changed = false;
       snapshot = built.snapshot;
       warnings = built.warnings;
+      buildHints = built.hints;
     }
   }
 
@@ -171,6 +178,7 @@
     selected = null;
     snapshot = null;
     warnings = [];
+    buildHints = [];
     notice = () =>
       [
         next.recovered ? m.project_recovered() : "",
@@ -199,6 +207,7 @@
       sources = builtFrom(sources);
       snapshot = result.snapshot;
       warnings = result.warnings;
+      buildHints = result.hints;
       notice = () => m.disk_changed_online({ time: (result.snapshot.time_ms / 1000).toFixed(2) });
       return;
     }
@@ -310,6 +319,7 @@
         status: () => status,
         running: () => running,
         warnings: () => warnings,
+        hints: () => buildHints,
         notice: () => noticeText,
         error: () => error,
         setSources: (next) => (sources = next),
@@ -359,6 +369,7 @@
 <div class="shell">
   <Toolbar
     {project}
+    {changed}
     {running}
     {ready}
     bind:speed
@@ -390,10 +401,6 @@
         />
       </aside>
       <section class="stage">
-        <header class="scene-header">
-          <Box size={14} /><span>{project.name}</span>{#if changed}<span class="modified" title={m.scene_changed()}
-            ></span>{/if}<span class="spacer"></span><span class="muted">{m.ui_view()}</span>
-        </header>
         <div class="stage-body">
           <ProjectScene
             {project}
@@ -452,7 +459,9 @@
         {status}
         {error}
         {warnings}
+        {buildHints}
         {problems}
+        {checking}
         notice={noticeText}
         {snapshot}
         {selected}
@@ -466,15 +475,7 @@
       />
     </main>
   {/if}
-  <StatusBar
-    {running}
-    {status}
-    {snapshot}
-    notice={noticeText}
-    {error}
-    {changed}
-    objects={project?.instances.length ?? 0}
-  />
+  <StatusBar {running} {status} {snapshot} notice={noticeText} {error} />
 </div>
 
 <style>
@@ -489,7 +490,7 @@
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 224px minmax(280px, 1fr) 292px;
+    grid-template-columns: 248px minmax(280px, 1fr) 292px;
     grid-template-rows: minmax(200px, 1fr) auto;
   }
   .left-sidebar,
@@ -511,22 +512,6 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
-  }
-  .scene-header {
-    height: 35px;
-    padding: 0 12px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-surface);
-    font-size: 11px;
-  }
-  .modified {
-    width: 5px;
-    height: 5px;
-    background: var(--color-warning);
-    border-radius: 50%;
   }
   .stage-body {
     flex: 1;
@@ -557,7 +542,7 @@
     border: 1px solid var(--color-border);
     background: color-mix(in oklab, var(--color-surface) 92%, transparent);
     border-radius: 12px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .scene-counters b {
     margin-left: 8px;
@@ -576,12 +561,12 @@
     background: color-mix(in oklab, var(--color-surface) 90%, transparent);
     border-top: 1px solid var(--color-border);
     padding: 5px 10px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
   }
   .view-footer :global(input) {
     height: 23px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   @media (max-width: 1200px) {
     .workspace {

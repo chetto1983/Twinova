@@ -19,7 +19,7 @@
   import type { ProjectView } from "./project";
   import type { Source } from "./sources";
   import type { Snapshot } from "./snapshot";
-  import { listed, type Listed, type Problems } from "./analysis";
+  import { listed, tally, type Listed, type Problems } from "./analysis";
   import Catalogue from "./Catalogue.svelte";
   import Editor from "./Editor.svelte";
   import IoPanel from "./IoPanel.svelte";
@@ -29,7 +29,9 @@
     status,
     error,
     warnings,
+    buildHints,
     problems,
+    checking = false,
     notice,
     snapshot,
     selected = null,
@@ -46,8 +48,12 @@
     status: "none" | "ok" | "failed";
     error: string;
     warnings: string[];
+    /** Build's notes on the scene's signals into the PLC that the program does not read. */
+    buildHints: string[];
     /** truST's analysis of the editor's texts, by file. */
     problems: Problems;
+    /** The analysis of the texts shown has not answered yet. */
+    checking?: boolean;
     notice: string;
     snapshot: Snapshot | null;
     /** The instance selected in the scene, for a block's tab to monitor. */
@@ -74,8 +80,15 @@
       collapsed = false;
     }
   });
-  const rows = $derived(listed(problems, sources));
-  const count = $derived(rows.length + warnings.length + (error ? 1 : 0));
+  /** Hints listed too (spec 2026-11-26-ux-consolidation-design.md, decision 7). */
+  let hints = $state(false);
+  const all = $derived(listed(problems, sources));
+  const counted = $derived(tally(all));
+  const hintCount = $derived(counted.hints + buildHints.length);
+  const rows = $derived(hints ? all : all.filter((r) => r.severity !== "hint"));
+  /** The badge counts errors only: the analysis' and the build's. */
+  const errors = $derived(counted.errors + (error ? 1 : 0));
+  const clear = $derived(!rows.length && !warnings.length && !error && !notice);
   /** The place a clicked row opens in the PLC tab. */
   let reveal = $state<{ key: string; line: number; column: number } | null>(null);
   // The control channel shows a tab, and lays the dock over the workspace, as its buttons do.
@@ -147,7 +160,7 @@
             collapsed = false;
           }}
         >
-          <item.icon size={14} />{item.label}{#if item.id === "problems" && count}<span class="badge">{count}</span
+          <item.icon size={14} />{item.label}{#if item.id === "problems" && errors}<span class="badge">{errors}</span
             >{/if}
         </button>
       {/each}
@@ -200,12 +213,17 @@
       aria-labelledby="dock-problems"
       hidden={tab !== "problems"}
     >
-      {#if !count && !notice}<div class="all-clear">
-          <CircleCheck size={26} /><strong>{m.ui_no_problems()}</strong>
-        </div>{/if}
+      {#snippet hintsToggle()}<button class="btn small hints" aria-pressed={hints} onclick={() => (hints = !hints)}
+          >{hints ? m.ui_hints_hide() : m.ui_hints_show({ count: hintCount })}</button
+        >{/snippet}
+      {#if clear && checking}<div class="all-clear checking">{m.ui_checking()}</div>
+      {:else if clear}<div class="all-clear">
+          <CircleCheck size={26} /><strong>{m.ui_no_problems()}</strong>{#if hintCount}{@render hintsToggle()}{/if}
+        </div>{:else if hintCount}{@render hintsToggle()}{/if}
       {#each rows as row, i (i)}<button
           class="problem analysis"
           class:err={row.severity === "error"}
+          class:hint={row.severity === "hint"}
           onclick={() => open(row)}
           ><CircleAlert size={14} /><span class="where">{row.file}:{row.line}:{row.column}</span><span
             >{row.code} {row.message}</span
@@ -213,26 +231,30 @@
         >{/each}
       {#if error}<pre class="problem error-line"><CircleAlert size={15} />{error}</pre>{/if}
       {#each warnings as warning, i (i)}<p class="problem"><CircleAlert size={14} />{warning}</p>{/each}
+      {#if hints}{#each buildHints as hint, i (i)}<p class="problem hint">
+            <CircleAlert size={14} />{hint}
+          </p>{/each}{/if}
       {#if notice}<p class="problem">{notice}</p>{/if}
     </div>
     <div
       class="tab-content watch"
+      class:operated={project.panel.length > 0}
       id="panel-watch"
       role="tabpanel"
       aria-labelledby="dock-watch"
       hidden={tab !== "watch"}
     >
       <IoPanel {snapshot} {onSinkBlocked} active={tab === "watch" && !collapsed} />
-      <section class="operator">
-        <h3>{m.ui_operator()}</h3>
-        <div class="operator-buttons">
-          {#each project.panel as button (button.address)}<button
-              class="btn small"
-              disabled={!snapshot}
-              onclick={() => onPress(button.address)}>{button.name}</button
-            >{/each}
-        </div>
-      </section>
+      {#if project.panel.length}<section class="operator">
+          <h3>{m.ui_operator()}</h3>
+          <div class="operator-buttons">
+            {#each project.panel as button (button.address)}<button
+                class="btn small"
+                disabled={!snapshot}
+                onclick={() => onPress(button.address)}>{button.name}</button
+              >{/each}
+          </div>
+        </section>{/if}
     </div>
   </div>
 </section>
@@ -287,13 +309,13 @@
     border: 0;
   }
   .dock-hint {
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
     padding-right: 12px;
   }
   .badge {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--text-xs);
     color: var(--color-warning);
   }
   .dock-content,
@@ -315,7 +337,7 @@
     justify-content: center;
     gap: 12px;
     color: var(--color-text-faint);
-    font-size: 12px;
+    font-size: var(--text-md);
   }
   .all-clear :global(svg) {
     color: var(--color-success);
@@ -327,7 +349,7 @@
     margin: 0;
     padding: 10px 16px;
     border-bottom: 1px solid var(--color-border);
-    font-size: 11px;
+    font-size: var(--text-sm);
     white-space: pre-wrap;
   }
   .problem.analysis {
@@ -344,6 +366,12 @@
   .problem.analysis.err :global(svg) {
     color: var(--color-danger);
   }
+  .problem.hint {
+    color: var(--color-text-muted);
+  }
+  .hints {
+    margin: 8px 16px;
+  }
   .where {
     flex: none;
     color: var(--color-text-muted);
@@ -351,6 +379,9 @@
   }
   .watch {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+  .watch.operated {
     grid-template-columns: 1fr 240px;
   }
   .operator {
@@ -359,7 +390,7 @@
   }
   h3 {
     margin: 0 0 12px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--color-text-faint);

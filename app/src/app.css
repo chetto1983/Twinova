@@ -105,13 +105,18 @@
   --font-display: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Commit Mono", ui-monospace, SFMono-Regular, monospace;
+  /* One type scale (spec 2026-11-26-ux-consolidation-design.md, decision 8): a 13 px body, nothing below 11 px. */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-xl: 17px;
   --shadow-popover: 0 18px 44px rgb(0 0 0 / 0.18);
   --shadow-focus: 0 0 0 3px rgb(138 180 248 / 0.32);
   --motion-fast: 140ms;
   --motion-base: 220ms;
   --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--text-md);
   line-height: 1.45;
   color: var(--color-text);
   background: var(--color-bg);
@@ -165,7 +170,7 @@ body {
 .panel-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -186,7 +191,7 @@ body {
 label.field {
   display: grid;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--color-text-muted);
 }
@@ -196,6 +201,20 @@ select,
 button {
   font: inherit;
   color: inherit;
+}
+
+/* Every control a person can hit is at least WCAG 2.2's Target Size (Minimum), 24 x 24 px (spec
+   2026-11-26-ux-consolidation-design.md, decision 8). The dock's resize grip spans the dock's width and stays thin;
+   Monaco's widgets are its own. */
+:where(button:not(.resize), select, input:not([type="checkbox"], [type="radio"])):not(.monaco-editor *) {
+  min-height: 24px;
+}
+:where(button:not(.resize)):not(.monaco-editor *) {
+  min-width: 24px;
+}
+/* A checkbox's target is the label around it. */
+:where(label:has(> input[type="checkbox"], > input[type="radio"])) {
+  min-height: 24px;
 }
 
 input,
@@ -208,7 +227,7 @@ select {
   border-radius: var(--radius-sm);
   background: var(--color-surface-3);
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 400;
   color: var(--color-text);
   outline: none;
@@ -278,7 +297,7 @@ input[type="checkbox"] {
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: var(--color-surface-2);
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -336,7 +355,7 @@ input[type="checkbox"] {
 .segmented button {
   all: unset;
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--color-text-muted);
   cursor: pointer;
@@ -389,7 +408,7 @@ input[type="checkbox"] {
 
 .data {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--text-md);
 }
 
 .error-line {
@@ -399,7 +418,7 @@ input[type="checkbox"] {
   border-radius: var(--radius-sm);
   background: var(--color-danger-soft);
   color: var(--color-danger);
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 
 /* status dot, as Aura's readiness indicators */
@@ -494,7 +513,7 @@ input[type="checkbox"] {
   padding: 0 13px;
   background: transparent;
   color: var(--color-text-faint);
-  font-size: 11px;
+  font-size: var(--text-sm);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -522,7 +541,7 @@ input[type="checkbox"] {
   padding: 0;
   background: transparent;
   height: 28px;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 .search-field:focus-within {
   outline: 1px solid var(--color-ring);

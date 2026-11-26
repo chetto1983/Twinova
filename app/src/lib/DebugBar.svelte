@@ -115,7 +115,7 @@
     margin: 0;
     padding: 4px 8px 4px 22px;
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
     background: var(--color-surface-2);
     border: 1px solid var(--color-border);

@@ -14,16 +14,12 @@
     snapshot,
     notice,
     error,
-    changed,
-    objects,
   }: {
     running: boolean;
     status: "none" | "ok" | "failed";
     snapshot: Snapshot | null;
     notice: string;
     error: string;
-    changed: boolean;
-    objects: number;
   } = $props();
 
   const hold = $derived(plcHold.current);
@@ -42,7 +38,6 @@
   <span class="divider"></span><span class="data">{formatTime(snapshot?.time_ms ?? 0)}</span>
   <p class="status-notice" role="status" title={notice}>{notice}</p>
   {#if error}<AlertCircle size={13} /><span class="error-status" title={error}>{error}</span>{/if}
-  {#if changed}<span class="scene-status">{m.scene_changed()}</span>{/if}
   {#if snapshot}<CircleCheck size={13} />{/if}<span class="build-status"
     >{status === "ok"
       ? m.built_ok()
@@ -51,9 +46,6 @@
         : status === "failed"
           ? m.build_failed()
           : m.not_built()}</span
-  >
-  <span class="divider"></span><span>{objects} {m.ui_objects()}</span><span class="divider"></span><span
-    >truST · IEC 61131-3</span
   >
 </footer>
 
@@ -68,7 +60,7 @@
     background: var(--color-surface);
     border-top: 1px solid var(--color-border);
     color: var(--color-text-faint);
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .status {
     display: flex;
@@ -93,12 +85,6 @@
     flex: none;
     white-space: nowrap;
     color: var(--color-text-muted);
-  }
-  .scene-status {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
   }
   .status-notice {
     flex: 1;

@@ -22,8 +22,11 @@ import {
 } from "./helpers.mjs";
 
 const folder = fixtureCopy("two_belts_diverter");
+/** The Problems rows, hints included: the pane hides them until asked (spec 2026-11-26-ux-consolidation-design.md,
+ *  decision 7), and W001 is one. */
 const rows = async () => {
   await dock("problems");
+  await browser.execute(() => document.querySelector('#panel-problems .hints[aria-pressed="false"]')?.click());
   return browser.execute(() =>
     [...document.querySelectorAll("#panel-problems .problem.analysis")].map((r) => r.innerText.replace(/\s+/g, " ")),
   );

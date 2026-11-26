@@ -37,7 +37,11 @@ fn signal<'a>(s: &'a Snapshot, name: &str) -> &'a str {
 #[test]
 fn the_snapshot_lists_the_signals_the_sinks_and_the_jam() {
     let (engine, warnings) = Engine::new(&demo()).unwrap();
-    assert_eq!(warnings.len(), 1, "{warnings:?}");
+    assert_eq!(
+        (warnings.len(), engine.unread().len()),
+        (0, 1),
+        "{warnings:?}"
+    );
     let s = engine.snapshot();
     let names: Vec<(&str, &str)> = s
         .signals

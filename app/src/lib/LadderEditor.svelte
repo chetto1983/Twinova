@@ -457,13 +457,13 @@
     display: flex;
     gap: 8px;
     align-items: baseline;
-    font-size: 11px;
+    font-size: var(--text-sm);
     color: var(--color-text-muted);
   }
   .number {
     position: relative;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--text-sm);
     min-width: 3.5ch;
     padding: 0 0 0 1.5ch;
     border: 0;
@@ -512,16 +512,16 @@
     align-items: center;
     gap: 6px;
     margin: 4px 10px;
-    font-size: 11px;
+    font-size: var(--text-sm);
     color: var(--color-warning);
   }
   .declare button {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .note,
   .error {
     margin: 4px 10px;
-    font-size: 11px;
+    font-size: var(--text-sm);
     color: var(--color-warning);
   }
 </style>

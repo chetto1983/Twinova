@@ -3,7 +3,7 @@
   import { Search, Plus, PackageOpen } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { catalogue, type CatalogueEntry } from "./backend";
-  import { familyLabel } from "./project";
+  import { familyName, familyOf } from "./familyNames";
   let { onPlace, onDrag }: { onPlace: (key: string) => void; onDrag: (key: string) => void } = $props();
   let entries = $state<CatalogueEntry[]>([]);
   let previews = $state<Record<string, string>>({});
@@ -20,7 +20,7 @@
   const categoryOf = (e: CatalogueEntry): string =>
     e.group === "conveyors" || e.group === "devices" ? "equipment" : e.group === "sensors" ? "devices" : "products";
   const filtered = $derived(
-    entries.filter((e) => categoryOf(e) === category && familyLabel(e.key).includes(search.toLowerCase())),
+    entries.filter((e) => categoryOf(e) === category && familyName(e.key).toLowerCase().includes(search.toLowerCase())),
   );
   onMount(() => {
     let alive = true;
@@ -63,14 +63,20 @@
   </div>
   <div class="cards">
     {#each filtered as entry (entry.key)}
-      <button class="card" title={entry.key} onpointerdown={() => onDrag(entry.key)} onclick={() => onPlace(entry.key)}>
+      <button
+        class="card"
+        title={entry.key}
+        data-family={familyOf(entry.key)}
+        onpointerdown={() => onDrag(entry.key)}
+        onclick={() => onPlace(entry.key)}
+      >
         <div class="preview">
           {#if previews[entry.key]}<img src={previews[entry.key]} alt="" draggable="false" />{:else}<PackageOpen
               size={25}
               strokeWidth={1}
             />{/if}<span class="add"><Plus size={12} /></span>
         </div>
-        <span class="name">{familyLabel(entry.key)}</span><span class="version">Twinova · v1</span>
+        <span class="name">{familyName(entry.key)}</span>
       </button>
     {/each}
     {#if !filtered.length && !loading}<p class="empty">
@@ -102,7 +108,7 @@
     border: 1px solid transparent;
     padding: 4px 11px;
     border-radius: 4px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     background: transparent;
     color: var(--color-text-faint);
     cursor: pointer;
@@ -166,17 +172,10 @@
   .name {
     display: block;
     padding: 2px 9px;
-    font-size: 10px;
-    text-transform: capitalize;
+    font-size: var(--text-xs);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .version {
-    display: block;
-    padding: 0 9px;
-    font-size: 9px;
-    color: var(--color-text-faint);
   }
   .empty {
     display: flex;
@@ -185,7 +184,7 @@
     gap: 12px;
     width: 100%;
     margin: auto;
-    font-size: 11px;
+    font-size: var(--text-sm);
     color: var(--color-text-faint);
   }
 </style>

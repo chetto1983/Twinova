@@ -1,0 +1,397 @@
+<!doctype html>
+<!-- Low-fidelity wireframes for spec 2026-11-26-ux-consolidation-design.md. Open with ?view=layout, signals or plc. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Twinova wireframes</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        width: 1440px;
+        height: 900px;
+        font: 13px/1.4 system-ui, sans-serif;
+        color: #1d2329;
+        background: #f4f5f7;
+        display: grid;
+        grid-template-rows: 48px 1fr 26px;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 12px;
+        background: #fff;
+        border-bottom: 1px solid #d5d9de;
+      }
+      .tabs {
+        display: flex;
+        gap: 2px;
+      }
+      .tab {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-weight: 600;
+        color: #4a535c;
+      }
+      .tab.on {
+        background: #dde8f7;
+        color: #0d3f7a;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .btn {
+        padding: 5px 10px;
+        border: 1px solid #c3c9cf;
+        border-radius: 6px;
+        background: #fff;
+      }
+      .play {
+        background: #2e8b46;
+        color: #fff;
+        border-color: #2e8b46;
+      }
+      .main {
+        display: grid;
+        grid-template-columns: 240px 1fr 320px;
+        grid-template-rows: 1fr 260px;
+        min-height: 0;
+      }
+      .panel {
+        background: #fff;
+        border: 1px solid #d5d9de;
+        margin: 4px;
+        border-radius: 6px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .head {
+        padding: 8px 10px;
+        font-weight: 600;
+        border-bottom: 1px solid #e3e6ea;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .row {
+        padding: 5px 10px;
+        border-bottom: 1px solid #f0f1f3;
+        display: flex;
+        gap: 8px;
+      }
+      .muted {
+        color: #66707a;
+      }
+      .sel {
+        background: #e8f0fb;
+      }
+      .view {
+        background: #cfd5db;
+        position: relative;
+      }
+      .note {
+        position: absolute;
+        background: #fffbe6;
+        border: 1px dashed #b38f00;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        max-width: 260px;
+      }
+      .line {
+        position: absolute;
+        height: 34px;
+        background: #6d7780;
+        border-radius: 3px;
+      }
+      .beam {
+        position: absolute;
+        width: 3px;
+        height: 54px;
+      }
+      .chip {
+        position: absolute;
+        background: #fff;
+        border: 1px solid #9aa4ad;
+        border-radius: 12px;
+        padding: 2px 9px;
+        font-size: 12px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 5px 10px;
+        border-bottom: 1px solid #eef0f2;
+      }
+      th {
+        font-size: 12px;
+        color: #4a535c;
+      }
+      .on-v {
+        color: #1a7f37;
+        font-weight: 600;
+      }
+      .card {
+        width: 104px;
+        height: 104px;
+        border: 1px solid #d5d9de;
+        border-radius: 6px;
+        display: flex;
+        align-items: flex-end;
+        padding: 6px;
+        background: linear-gradient(#eef1f4, #fff);
+      }
+      .status {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        padding: 0 12px;
+        background: #fff;
+        border-top: 1px solid #d5d9de;
+        font-size: 12px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <b>Twinova</b>
+      <span class="btn">Sorting line ▾</span>
+      <div class="tabs">
+        <span class="tab" data-ctx="layout">Layout</span><span class="tab" data-ctx="signals">Signals</span
+        ><span class="tab" data-ctx="plc">PLC</span>
+      </div>
+      <span class="spacer"></span>
+      <span class="btn">Build</span><span class="btn play" id="play">▶ Run</span><span class="btn">❚❚</span
+      ><span class="btn">■</span><span class="btn">Step</span><span class="btn">1×</span>
+      <span class="spacer"></span>
+      <span class="btn">↶</span><span class="btn">↷</span><span class="btn">Save</span><span class="btn">⚙</span
+      ><span class="btn">?</span>
+    </div>
+
+    <div class="main" id="main">
+      <!-- Left column: the component tree (Layout, Signals) or the organizer (PLC). -->
+      <div class="panel" id="left" style="grid-column: 1; grid-row: 1 / 3">
+        <div class="head" id="left-head">Components</div>
+        <div id="tree">
+          <div class="row muted">▾ Infeed</div>
+          <div class="row">&nbsp;&nbsp;Source <span class="muted">Source</span></div>
+          <div class="row">&nbsp;&nbsp;Belt In <span class="muted">Belt</span></div>
+          <div class="row">&nbsp;&nbsp;Infeed eye <span class="muted">Photo-eye</span></div>
+          <div class="row muted">▾ Stopper zone</div>
+          <div class="row">&nbsp;&nbsp;Roller A <span class="muted">Roller</span></div>
+          <div class="row sel">&nbsp;&nbsp;Stopper <span class="muted">Stopper</span></div>
+          <div class="row">&nbsp;&nbsp;Stopper eye <span class="muted">Photo-eye</span></div>
+          <div class="row muted">▾ Operator</div>
+          <div class="row">&nbsp;&nbsp;Start <span class="muted">Push button</span></div>
+          <div class="row">&nbsp;&nbsp;Stop <span class="muted">Push button</span></div>
+          <div class="row">&nbsp;&nbsp;E-stop <span class="muted">Emergency stop</span></div>
+        </div>
+        <div id="organizer" hidden>
+          <div class="row muted">▾ Controller</div>
+          <div class="row">&nbsp;&nbsp;MainTask <span class="muted">10 ms</span></div>
+          <div class="row sel">&nbsp;&nbsp;&nbsp;&nbsp;Main <span class="muted">ST</span></div>
+          <div class="row muted">▾ Devices (signals)</div>
+          <div class="row">&nbsp;&nbsp;Belt In <span class="muted">2</span></div>
+          <div class="row">&nbsp;&nbsp;Stopper <span class="muted">2</span></div>
+          <div class="row">&nbsp;&nbsp;Stopper eye <span class="muted">1</span></div>
+          <div class="note" style="position: static; margin: 10px">
+            Component behaviours are not here: they open from the component (Inspector › Behaviour).
+          </div>
+        </div>
+      </div>
+
+      <!-- Centre: the 3D view, or the code in the PLC context. -->
+      <div class="panel view" id="centre" style="grid-column: 2; grid-row: 1">
+        <div class="line" style="left: 90px; top: 260px; width: 420px"></div>
+        <div class="line" style="left: 520px; top: 260px; width: 260px"></div>
+        <div class="line" style="left: 790px; top: 180px; width: 34px; height: 200px"></div>
+        <div class="beam" id="beam1" style="left: 300px; top: 250px; background: #1a9e3f"></div>
+        <div class="beam" id="beam2" style="left: 600px; top: 250px; background: #d93025"></div>
+        <div class="chip" style="left: 60px; top: 320px">Source · 12 made</div>
+        <div class="chip" style="left: 760px; top: 395px">Reject · 3</div>
+        <div class="chip" id="value-chip" style="left: 560px; top: 210px" hidden>Stopper eye · TRUE</div>
+        <div class="note" style="left: 20px; top: 16px" id="note-centre">
+          Layout: catalogue below, gizmo on the selection, snapping. The camera opens on the line.
+        </div>
+        <div class="note" style="left: 330px; top: 360px" id="note-beam">
+          Beams: green clear, red interrupted. Counters stand at their source and sink.
+        </div>
+        <pre id="code" hidden style="margin: 0; padding: 12px; background: #fff; height: 100%; font: 13px/1.5 monospace">
+PROGRAM Main
+VAR
+    at_in   AT %IX0.0 : BOOL;   (* Infeed eye *)
+    at_stop AT %IX0.1 : BOOL;   (* Stopper eye *)
+    stop    AT %QX0.5 : BOOL;   (* Stopper blade *)
+END_VAR
+
+IF at_stop AND NOT occupied THEN    (* TRUE  FALSE *)
+    stop := TRUE;                    (* TRUE *)
+END_IF;
+…  (full height: about 30 lines at 1366 × 768)</pre
+        >
+      </div>
+
+      <!-- Right: the Inspector, or the file's variables in the PLC context. -->
+      <div class="panel" id="right" style="grid-column: 3; grid-row: 1 / 3">
+        <div class="head">Stopper <span class="muted">Stopper</span></div>
+        <div class="row muted">TRANSFORM</div>
+        <div class="row">Position (m) &nbsp; 3.72 · 0 · 0</div>
+        <div class="row muted">PARAMETERS</div>
+        <div class="row">Raise height &nbsp; 0.04 m</div>
+        <div class="row">Raise time &nbsp; 150 ms</div>
+        <div class="row muted">SIGNALS</div>
+        <div class="row">
+          <div>
+            <b>stop</b> · PLC output · BOOL<br />%QX0.5 → <span class="muted">Main.stop</span> ✓ connected<br /><span
+              id="live1"
+              class="muted"
+              >value shown while running</span
+            >
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <b>raised_fb</b> · PLC input · BOOL<br />%IX0.4 → <span class="muted">Main.raised</span> ✓ connected<br /><span
+              id="live2"
+              class="muted"
+              >value shown while running</span
+            >
+          </div>
+        </div>
+        <div class="row muted">BEHAVIOUR</div>
+        <div class="row"><span class="btn">Edit behaviour</span></div>
+      </div>
+
+      <!-- Below the centre: catalogue (Layout), signal table (Signals), Problems (PLC). -->
+      <div class="panel" id="below" style="grid-column: 2; grid-row: 2">
+        <div class="head" id="below-head">Catalogue</div>
+        <div id="catalogue" style="display: flex; gap: 8px; padding: 10px">
+          <div class="card">Belt</div>
+          <div class="card">Roller</div>
+          <div class="card">Curve</div>
+          <div class="card">Turntable</div>
+          <div class="card">Pusher</div>
+          <div class="card">Photo-eye</div>
+          <div class="card">Push button</div>
+          <div class="card">Stack light</div>
+        </div>
+        <table id="signals" hidden>
+          <tr>
+            <th>Component</th>
+            <th>Signal</th>
+            <th>Direction</th>
+            <th>Type</th>
+            <th>Address</th>
+            <th>PLC variable</th>
+            <th>Value</th>
+            <th>Force</th>
+          </tr>
+          <tr>
+            <td>Belt In</td>
+            <td>run</td>
+            <td>PLC output</td>
+            <td>BOOL</td>
+            <td>%QX0.0</td>
+            <td>Main.belt_in_run</td>
+            <td class="on-v">TRUE</td>
+            <td>☐</td>
+          </tr>
+          <tr>
+            <td>Infeed eye</td>
+            <td>detected</td>
+            <td>PLC input</td>
+            <td>BOOL</td>
+            <td>%IX0.0</td>
+            <td>Main.at_in</td>
+            <td>FALSE</td>
+            <td>☐</td>
+          </tr>
+          <tr class="sel">
+            <td>Stopper</td>
+            <td>stop</td>
+            <td>PLC output</td>
+            <td>BOOL</td>
+            <td>%QX0.5</td>
+            <td>Main.stop</td>
+            <td class="on-v">TRUE</td>
+            <td>☐</td>
+          </tr>
+          <tr class="sel">
+            <td>Stopper</td>
+            <td>raised_fb</td>
+            <td>PLC input</td>
+            <td>BOOL</td>
+            <td>%IX0.4</td>
+            <td>Main.raised</td>
+            <td class="on-v">TRUE</td>
+            <td>☑ TRUE</td>
+          </tr>
+          <tr>
+            <td>Stopper eye</td>
+            <td>detected</td>
+            <td>PLC input</td>
+            <td>BOOL</td>
+            <td>%IX0.1</td>
+            <td>Main.at_stop</td>
+            <td class="on-v">TRUE</td>
+            <td>☐</td>
+          </tr>
+          <tr>
+            <td colspan="8" class="muted">
+              A row selects its component in the tree and the view; a selected component filters the table. Assign
+              addresses · Export CSV · Import CSV
+            </td>
+          </tr>
+        </table>
+        <div id="problems" hidden>
+          <div class="row">✓ No errors. <span class="muted">2 hints hidden · Show</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status">
+      <span id="state">● Stopped</span><span>0:00.00</span><span class="spacer"></span><span>Built: ready to run</span>
+    </div>
+
+    <script>
+      const view = new URLSearchParams(location.search).get("view") ?? "layout";
+      const running = view === "signals";
+      document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.ctx === view));
+      const show = (id, on) => (document.getElementById(id).hidden = !on);
+      show("catalogue", view === "layout");
+      show("signals", view === "signals");
+      show("problems", view === "plc");
+      show("tree", view !== "plc");
+      show("organizer", view === "plc");
+      show("code", view === "plc");
+      show("value-chip", running);
+      for (const id of ["beam1", "beam2", "note-beam", "note-centre"]) show(id, view !== "plc");
+      document.querySelectorAll(".line, .chip").forEach((e) => (e.hidden = view === "plc" || e.hidden));
+      document.getElementById("below-head").textContent = { layout: "Catalogue", signals: "Signals", plc: "Problems" }[
+        view
+      ];
+      document.getElementById("left-head").textContent = view === "plc" ? "Organizer" : "Components";
+      if (view === "plc") document.getElementById("right").innerHTML =
+          '<div class="head">Variables of Main</div><div class="row">at_in · %IX0.0 · BOOL · FALSE</div><div class="row">at_stop · %IX0.1 · BOOL · TRUE</div><div class="row">stop · %QX0.5 · BOOL · TRUE</div>';
+      if (running) {
+        document.getElementById("state").textContent = "● Running";
+        document.getElementById("play").textContent = "▶ Running";
+        document.getElementById("note-centre").textContent =
+          "Running: the layout is locked (no gizmo, no catalogue). The Operator strip appears with Start, Stop, E-stop.";
+        document.getElementById("live1").innerHTML = '<span class="on-v">TRUE</span> · Force';
+        document.getElementById("live2").innerHTML = '<span class="on-v">TRUE</span> · Force';
+      }
+    </script>
+  </body>
+</html>

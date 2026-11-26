@@ -73,7 +73,8 @@ jobs:
             files: |
               app/src-tauri/target/release/bundle/msi/*.msi
               app/src-tauri/binaries/twinova-agent-*
-          - os: ubuntu-24.04
+          # The oldest Ubuntu LTS still supported, so the packages need its glibc at most (2.35).
+          - os: ubuntu-22.04
             bundles: deb,appimage
             artifact: linux
             files: |
@@ -101,7 +102,7 @@ jobs:
       - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
         with:
           workspaces: app/src-tauri
-          shared-key: bundle
+          shared-key: bundle-${{ matrix.os }}
           save-if: false
       - name: System dependencies
         if: runner.os == 'Linux'
@@ -134,6 +135,13 @@ jobs:
       - run: npx tauri build --bundles ${{ matrix.bundles }} --config src-tauri/tauri.agent.conf.json
       - name: One Paraglide runtime in the frontend bundle
         run: node ../scripts/check-single-runtime.mjs
+      - name: The Linux packages need at most Ubuntu 22.04's glibc
+        if: runner.os == 'Linux'
+        run: |
+          image=$(realpath src-tauri/target/release/bundle/appimage/*.AppImage)
+          (cd "$RUNNER_TEMP" && "$image" --appimage-extract > /dev/null)
+          mapfile -t libraries < <(find "$RUNNER_TEMP/squashfs-root/usr/lib" -name '*.so*' -type f)
+          bash ../scripts/check-glibc.sh 2.35 "$RUNNER_TEMP"/squashfs-root/usr/bin/* "${libraries[@]}" src-tauri/binaries/twinova-agent-*
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ matrix.artifact }}

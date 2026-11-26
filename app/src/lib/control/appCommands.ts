@@ -16,6 +16,8 @@ export interface AppContext {
   status: () => "none" | "ok" | "failed";
   running: () => boolean;
   warnings: () => string[];
+  /** Build's notes: the scene's signals into the PLC that the program does not read. */
+  hints: () => string[];
   notice: () => string;
   /** The error the window shows now, "" for none. */
   error: () => string;
@@ -53,6 +55,7 @@ export function stateOf(ctx: AppContext): Record<string, unknown> {
     snapshot: ctx.snapshot(),
     sources: ctx.sources().map((s) => ({ file: s.key, kind: s.kind, edited: edited(s) })),
     warnings: ctx.warnings(),
+    hints: ctx.hints(),
     notice: ctx.notice(),
     error: ctx.error(),
   };
@@ -88,7 +91,8 @@ export function appCommands(ctx: AppContext): Command[] {
       name: "build",
       description: "Build the project with the sources as the editor holds them, as the Build button does.",
       params: none,
-      run: () => checked(ctx, ctx.build).then(() => ({ build: ctx.status(), warnings: ctx.warnings() })),
+      run: () =>
+        checked(ctx, ctx.build).then(() => ({ build: ctx.status(), warnings: ctx.warnings(), hints: ctx.hints() })),
     },
     {
       name: "run",

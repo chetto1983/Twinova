@@ -408,7 +408,7 @@
     border-right: 1px solid var(--color-border);
     background: transparent;
     padding: 0 12px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     white-space: nowrap;
     cursor: pointer;
     color: var(--color-text-faint);
@@ -424,7 +424,7 @@
   }
   .language,
   .ladder {
-    font-size: 9px;
+    font-size: var(--text-xs);
     padding: 3px 6px;
   }
   .language {
@@ -488,7 +488,7 @@
   .note {
     margin: 0;
     padding: 3px 10px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
     border-bottom: 1px solid var(--color-border);
   }
@@ -497,7 +497,7 @@
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    font-size: 9px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
     border-top: 1px solid var(--color-border);
   }
@@ -508,7 +508,7 @@
   .revert {
     background: transparent;
     border: 0;
-    font-size: 9px;
+    font-size: var(--text-xs);
     color: var(--color-ring);
     cursor: pointer;
   }

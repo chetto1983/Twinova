@@ -96,6 +96,8 @@ CASE step OF
         IF in_position THEN
             step := 0;
         END_IF;
+ELSE
+    step := 0;
 END_CASE;
 stop := step <> 1;
 belt_in_run := NOT (at_in AND occupied);

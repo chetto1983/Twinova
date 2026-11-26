@@ -38,10 +38,12 @@ export interface Snapshot {
   lag_ms: number;
 }
 
-/** What Build returns: the line at time zero and what the program leaves undeclared. */
+/** What Build returns: the line at time zero, what the program leaves undeclared, and the scene's signals into the
+ *  PLC that it does not read, which Problems lists with its hints. */
 export interface Built {
   snapshot: Snapshot;
   warnings: string[];
+  hints: string[];
 }
 
 export interface ScanTiming {

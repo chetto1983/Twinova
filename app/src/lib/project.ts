@@ -137,9 +137,6 @@ export function family(definitionId: string): string {
   return definitionId.slice(definitionId.lastIndexOf(".") + 1);
 }
 
-/** A family's name as the catalogue shows it: `twinova.sensor_diffuse@1` is `sensor diffuse`. */
-export const familyLabel = (key: string): string => family(key.split("@")[0]).replaceAll("_", " ");
-
 /** A TIME is stored in nanoseconds; it reads best in the largest unit that keeps it whole. */
 export function formatTime(ns: number): string {
   for (const [unit, size] of [

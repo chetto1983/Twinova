@@ -32,8 +32,7 @@
   const signals = $derived(
     (snapshot?.signals ?? []).filter((s) => `${s.name} ${s.address}`.toLowerCase().includes(filter.toLowerCase())),
   );
-  const duration = (us: number | undefined): string =>
-    us === undefined ? "—" : us >= 1000 ? `${(us / 1000).toFixed(2)} ms` : `${us.toFixed(1)} µs`;
+  const duration = (us: number): string => (us >= 1000 ? `${(us / 1000).toFixed(2)} ms` : `${us.toFixed(1)} µs`);
   $effect(() => {
     if (!active) return;
     let alive = true;
@@ -70,11 +69,13 @@
 <section class="io">
   <div class="timing" title={timingError || m.ui_task()}>
     <Timer size={14} /><strong>{m.ui_task()}</strong>
-    <span>{m.ui_last()} <b>{duration(timing?.scans ? timing.last_us : undefined)}</b></span>
-    <span>{m.ui_average()} <b>{duration(timing?.scans ? timing.average_us : undefined)}</b></span>
-    <span>{m.ui_maximum()} <b>{duration(timing?.scans ? timing.maximum_us : undefined)}</b></span>
-    <span class="spacer"></span>
-    <span>{timing ? `${timing.interval_ms} ms · ${timing.scans} scans` : "—"}</span>
+    {#if timing?.scans}
+      <span>{m.ui_last()} <b>{duration(timing.last_us)}</b></span>
+      <span>{m.ui_average()} <b>{duration(timing.average_us)}</b></span>
+      <span>{m.ui_maximum()} <b>{duration(timing.maximum_us)}</b></span>
+      <span class="spacer"></span>
+      <span>{m.ui_scans({ interval: timing.interval_ms, count: timing.scans })}</span>
+    {:else}<span>{m.ui_run_to_measure()}</span>{/if}
   </div>
   <div class="io-body">
     <div class="signal-table">
@@ -174,7 +175,7 @@
     gap: 14px;
     flex-wrap: wrap;
     padding: 7px 12px;
-    font-size: 9px;
+    font-size: var(--text-xs);
     border-bottom: 1px solid var(--color-border);
     color: var(--color-text-faint);
     background: var(--color-bg);
@@ -185,7 +186,8 @@
   }
   .timing b {
     color: var(--color-text);
-    font: 9px var(--font-mono);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
     margin-left: 5px;
   }
   .io-body {
@@ -206,7 +208,7 @@
     padding: 7px 12px;
   }
   h2 {
-    font-size: 10px;
+    font-size: var(--text-xs);
     font-weight: 500;
     margin: 0;
     color: var(--color-text-faint);
@@ -216,10 +218,12 @@
   }
   .search-field input {
     height: 22px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .force {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 0;
     background: transparent;
     color: var(--color-text-disabled);
@@ -233,7 +237,7 @@
     display: flex;
     gap: 4px;
     align-items: center;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .forcing input {
     width: 60px;
@@ -243,7 +247,7 @@
     list-style: none;
     padding: 0;
     margin: 4px 0;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .forces li {
     display: flex;
@@ -263,7 +267,7 @@
     border-top: 1px solid var(--color-border);
   }
   .bits .data {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .bits .led {
     width: 5px;
@@ -275,7 +279,7 @@
   aside {
     border-left: 1px solid var(--color-border);
     padding: 12px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   dl {
     display: grid;
@@ -287,11 +291,11 @@
   dd {
     margin: 0;
     color: var(--color-text);
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   h3 {
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: var(--text-xs);
     letter-spacing: 0.8px;
     color: var(--color-text-faint);
     margin: 10px 0;
@@ -309,6 +313,6 @@
     color: var(--color-warning);
   }
   .timing-error {
-    font-size: 9px;
+    font-size: var(--text-xs);
   }
 </style>

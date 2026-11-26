@@ -118,7 +118,7 @@
   input {
     width: 100%;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--text-sm);
     padding: 1px 4px;
   }
   ul {
@@ -131,7 +131,7 @@
     border-radius: 3px;
     background: var(--color-surface-2);
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   li {
     padding: 2px 6px;
