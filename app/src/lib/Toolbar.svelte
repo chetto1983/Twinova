@@ -1,15 +1,17 @@
 <script lang="ts">
-  import { Undo2, Redo2, Save, History, Sun, Moon } from "@lucide/svelte";
+  import { Undo2, Redo2, Save, History } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
-  import { currentLocale, languageName, locales, setLanguage, type Locale } from "./i18n.svelte";
+  import { currentLocale } from "./i18n.svelte";
   import { SPEEDS, formatSpeed } from "./snapshot";
   import type { ProjectView } from "./project";
   import ProjectMenu from "./ProjectMenu.svelte";
+  import SettingsMenu from "./SettingsMenu.svelte";
   import Transport from "./Transport.svelte";
   import twinovaMark from "../assets/twinova-mark.svg";
 
   let {
     project,
+    changed,
     running,
     ready,
     speed = $bindable(),
@@ -28,6 +30,7 @@
     onError,
   }: {
     project: ProjectView | null;
+    changed: boolean;
     running: boolean;
     ready: boolean;
     speed: number | null;
@@ -56,7 +59,7 @@
         >Twinova</strong
       ></span
     ><span class="divider"></span>
-    {#if project}<ProjectMenu {project} onChange={onProject} {onNotice} {onError} />{/if}
+    {#if project}<ProjectMenu {project} {changed} onChange={onProject} {onNotice} {onError} />{/if}
   </div>
   <div class="transport" aria-label={m.ui_simulation()}>
     <Transport canBuild={project !== null} {running} {ready} {onBuild} {onRun} {onStep} onReset={onStop} />
@@ -88,22 +91,8 @@
       disabled={!ready}
       onclick={onRestore}><History size={16} /></button
     >
-    <select
-      class="lang"
-      aria-label={m.language()}
-      value={currentLocale()}
-      onchange={(e) => setLanguage(e.currentTarget.value as Locale)}
-    >
-      {#each locales as locale (locale)}<option value={locale}>{languageName(locale)}</option>{/each}
-    </select>
-    <button
-      class="icon-button"
-      title={m.theme_switch()}
-      aria-label={m.theme_switch()}
-      onclick={() => (theme = theme === "dark" ? "light" : "dark")}
-    >
-      {#if theme === "dark"}<Sun size={16} />{:else}<Moon size={16} />{/if}
-    </button>
+    <span class="divider"></span>
+    <SettingsMenu bind:theme />
   </div>
 </header>
 
@@ -179,9 +168,6 @@
   }
   .speed {
     width: 66px;
-  }
-  .lang {
-    width: 87px;
   }
   .actual {
     width: 53px;

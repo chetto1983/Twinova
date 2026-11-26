@@ -1,19 +1,8 @@
 <script lang="ts">
-  import {
-    Box,
-    Boxes,
-    ChevronDown,
-    Eye,
-    EyeOff,
-    LockKeyhole,
-    UnlockKeyhole,
-    Search,
-    History,
-    Layers,
-    Circle,
-  } from "@lucide/svelte";
+  import { Box, Eye, EyeOff, LockKeyhole, UnlockKeyhole, Search, History, Layers, Circle } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
-  import { familyLabel, type ProjectView } from "./project";
+  import { familyName } from "./familyNames";
+  import type { ProjectView } from "./project";
   let {
     project,
     selected = $bindable(),
@@ -33,18 +22,17 @@
   } = $props();
   let tab = $state("scene");
   let search = $state("");
-  let expanded = $state(true);
   const filtered = $derived(
     project.instances.filter((i) =>
-      `${i.name} ${familyLabel(i.definition)}`.toLowerCase().includes(search.toLowerCase()),
+      `${i.name} ${familyName(i.definition)}`.toLowerCase().includes(search.toLowerCase()),
     ),
   );
 </script>
 
 <section class="tree">
-  <div class="panel-tabs" role="tablist" aria-label={m.tree_title()}>
+  <div class="panel-tabs" role="tablist" aria-label={m.tree_components()}>
     <button role="tab" aria-selected={tab === "scene"} onclick={() => (tab = "scene")}
-      ><Layers size={13} />{m.tree_title()}</button
+      ><Layers size={13} />{m.tree_components()}<span class="count">{project.instances.length}</span></button
     >
     <button role="tab" aria-selected={tab === "history"} onclick={() => (tab = "history")}
       ><History size={13} />{m.ui_history()}</button
@@ -58,48 +46,40 @@
         bind:value={search}
       /></label
     >
-    <button class="tree-root" aria-expanded={expanded} onclick={() => (expanded = !expanded)}
-      ><ChevronDown size={13} style={expanded ? "" : "transform:rotate(-90deg)"} /><Boxes size={15} /><span
-        >{project.name}</span
-      ><small>{project.instances.length}</small></button
-    >
-    {#if expanded}
-      <ul>
-        {#each filtered as instance (instance.id)}
-          <li class:on={instance.id === selected} class:hidden-object={hidden.includes(instance.id)}>
-            <button
-              class="item"
-              aria-pressed={instance.id === selected}
-              onclick={() => (selected = instance.id)}
-              title={`${instance.name} · ${familyLabel(instance.definition)}`}
-            >
-              {#if instance.definition.includes("sensor")}<Circle size={13} />{:else}<Box size={14} />{/if}
-              <span class="item-name">{instance.name}</span><small>{familyLabel(instance.definition)}</small>
-            </button>
-            <button
-              class="row-action"
-              title={locked.includes(instance.id) ? m.ui_unlock() : m.ui_lock()}
-              aria-label={`${locked.includes(instance.id) ? m.ui_unlock() : m.ui_lock()} ${instance.name}`}
-              aria-pressed={locked.includes(instance.id)}
-              onclick={() => onLock(instance.id)}
-            >
-              {#if locked.includes(instance.id)}<LockKeyhole size={12} />{:else}<UnlockKeyhole size={12} />{/if}
-            </button>
-            <button
-              class="row-action"
-              title={hidden.includes(instance.id) ? m.ui_show() : m.ui_hide()}
-              aria-label={`${hidden.includes(instance.id) ? m.ui_show() : m.ui_hide()} ${instance.name}`}
-              aria-pressed={hidden.includes(instance.id)}
-              onclick={() => onVisibility(instance.id)}
-            >
-              {#if hidden.includes(instance.id)}<EyeOff size={13} />{:else}<Eye size={13} />{/if}
-            </button>
-          </li>
-        {/each}
-      </ul>
-      {#if !filtered.length}<p class="empty">{m.ui_no_results()}</p>{/if}
-    {/if}
-    <div class="tree-footer"><span class="led on"></span>{project.instances.length} {m.ui_objects()}</div>
+    <ul>
+      {#each filtered as instance (instance.id)}
+        <li class:on={instance.id === selected} class:hidden-object={hidden.includes(instance.id)}>
+          <button
+            class="item"
+            aria-pressed={instance.id === selected}
+            onclick={() => (selected = instance.id)}
+            title={`${instance.name} · ${familyName(instance.definition)}`}
+          >
+            {#if instance.definition.includes("sensor")}<Circle size={13} />{:else}<Box size={14} />{/if}
+            <span class="item-name">{instance.name}</span><small>{familyName(instance.definition)}</small>
+          </button>
+          <button
+            class="row-action"
+            title={locked.includes(instance.id) ? m.ui_unlock() : m.ui_lock()}
+            aria-label={`${locked.includes(instance.id) ? m.ui_unlock() : m.ui_lock()} ${instance.name}`}
+            aria-pressed={locked.includes(instance.id)}
+            onclick={() => onLock(instance.id)}
+          >
+            {#if locked.includes(instance.id)}<LockKeyhole size={12} />{:else}<UnlockKeyhole size={12} />{/if}
+          </button>
+          <button
+            class="row-action"
+            title={hidden.includes(instance.id) ? m.ui_show() : m.ui_hide()}
+            aria-label={`${hidden.includes(instance.id) ? m.ui_show() : m.ui_hide()} ${instance.name}`}
+            aria-pressed={hidden.includes(instance.id)}
+            onclick={() => onVisibility(instance.id)}
+          >
+            {#if hidden.includes(instance.id)}<EyeOff size={13} />{:else}<Eye size={13} />{/if}
+          </button>
+        </li>
+      {/each}
+    </ul>
+    {#if !filtered.length}<p class="empty">{m.ui_no_results()}</p>{/if}
   {:else}
     <ol class="history">
       {#each history as item, i (i)}<li>
@@ -184,31 +164,8 @@
   .hidden-object .item {
     opacity: 0.45;
   }
-  .tree-root {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    background: transparent;
-    border: 0;
-    padding: 7px 10px;
-    text-align: left;
-    font-size: 11px;
-    cursor: pointer;
-  }
-  .tree-root span {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .tree-footer {
-    margin-top: auto;
-    padding: 12px;
-    display: flex;
-    gap: 7px;
-    align-items: center;
-    font-size: 10px;
+  .count {
+    margin-left: 4px;
     color: var(--color-text-faint);
   }
   .empty {

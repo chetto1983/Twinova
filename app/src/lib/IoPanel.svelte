@@ -32,8 +32,7 @@
   const signals = $derived(
     (snapshot?.signals ?? []).filter((s) => `${s.name} ${s.address}`.toLowerCase().includes(filter.toLowerCase())),
   );
-  const duration = (us: number | undefined): string =>
-    us === undefined ? "—" : us >= 1000 ? `${(us / 1000).toFixed(2)} ms` : `${us.toFixed(1)} µs`;
+  const duration = (us: number): string => (us >= 1000 ? `${(us / 1000).toFixed(2)} ms` : `${us.toFixed(1)} µs`);
   $effect(() => {
     if (!active) return;
     let alive = true;
@@ -70,11 +69,13 @@
 <section class="io">
   <div class="timing" title={timingError || m.ui_task()}>
     <Timer size={14} /><strong>{m.ui_task()}</strong>
-    <span>{m.ui_last()} <b>{duration(timing?.scans ? timing.last_us : undefined)}</b></span>
-    <span>{m.ui_average()} <b>{duration(timing?.scans ? timing.average_us : undefined)}</b></span>
-    <span>{m.ui_maximum()} <b>{duration(timing?.scans ? timing.maximum_us : undefined)}</b></span>
-    <span class="spacer"></span>
-    <span>{timing ? `${timing.interval_ms} ms · ${timing.scans} scans` : "—"}</span>
+    {#if timing?.scans}
+      <span>{m.ui_last()} <b>{duration(timing.last_us)}</b></span>
+      <span>{m.ui_average()} <b>{duration(timing.average_us)}</b></span>
+      <span>{m.ui_maximum()} <b>{duration(timing.maximum_us)}</b></span>
+      <span class="spacer"></span>
+      <span>{m.ui_scans({ interval: timing.interval_ms, count: timing.scans })}</span>
+    {:else}<span>{m.ui_run_to_measure()}</span>{/if}
   </div>
   <div class="io-body">
     <div class="signal-table">

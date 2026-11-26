@@ -4,7 +4,8 @@
   import { headingOf, headingQuat, parseValue, valueText } from "./inspector";
   import InspectorLinks from "./InspectorLinks.svelte";
   import NumberField from "./NumberField.svelte";
-  import { familyLabel, signalRows, type Edit, type ParameterDef, type ProjectView, type Vec3 } from "./project";
+  import { familyName } from "./familyNames";
+  import { signalRows, type Edit, type ParameterDef, type ProjectView, type Vec3 } from "./project";
   let {
     project,
     selected,
@@ -61,7 +62,7 @@
   {#if instance && def}
     <div class="identity">
       <span class="object-icon"><Box size={19} /></span>
-      <div><strong>{instance.name}</strong><small>{familyLabel(def.id)} · v{def.version}</small></div>
+      <div><strong>{instance.name}</strong><small>{familyName(def.id)}</small></div>
     </div>
     <label class="search-field"
       ><Search size={13} /><input
@@ -221,11 +222,6 @@
     <div class="empty">
       <Box size={32} strokeWidth={1} /><strong>{m.ui_select_hint()}</strong>
       <p>{m.inspector_hint()}</p>
-    </div>
-    <div class="project-info">
-      <span>{m.tree_title()}</span><strong>{project.name}</strong><span
-        >{project.instances.length} {m.ui_objects()}</span
-      >
     </div>
   {/if}
 </section>
@@ -389,19 +385,6 @@
   .empty p {
     font-size: 11px;
     line-height: 1.6;
-  }
-  .project-info {
-    display: grid;
-    gap: 8px;
-    margin: 0 18px;
-    padding: 16px 0;
-    border-top: 1px solid var(--color-border);
-    font-size: 10px;
-    color: var(--color-text-faint);
-  }
-  .project-info strong {
-    color: var(--color-text-muted);
-    font-weight: 500;
   }
   .locked {
     padding: 6px 12px;

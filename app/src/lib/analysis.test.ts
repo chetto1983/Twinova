@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { completionKind, debounce, fileOf, listed, marker, type Problem, type Problems } from "./analysis";
+import { completionKind, debounce, fileOf, listed, marker, tally, type Problem, type Problems } from "./analysis";
 import type { Source } from "./sources";
 
 const source = (key: string, kind: Source["kind"]): Source => ({ key, label: key, kind, text: "", base: "" });
@@ -42,21 +42,32 @@ describe("the editor's analysis", () => {
     expect(marker(problem(1, 1, "X", "unknown")).severity).toBe(2);
   });
 
-  it("lists the problems in the tabs' order, by line and column within a file", () => {
+  it("lists the PLC files' problems in the tabs' order, by line and column, and no behaviour's", () => {
+    const other = source("plc/Other.st", "program");
     const problems: Problems = {
       "components/twinova.belt@1.st": [problem(34, 3, "W013")],
       "plc/Main.st": [problem(16, 5), problem(9, 7), problem(9, 5)],
+      "plc/Other.st": [problem(2, 1)],
       "plc/Gone.st": [problem(1, 1)],
     };
-    const rows = listed(problems, [main, belt]);
+    const rows = listed(problems, [main, belt, other]);
     expect(rows.map((r) => `${r.key} ${r.line}:${r.column}`)).toEqual([
       "plc/Main.st 9:5",
       "plc/Main.st 9:7",
       "plc/Main.st 16:5",
-      "twinova.belt@1 34:3",
+      "plc/Other.st 2:1",
     ]);
-    expect(rows[3].file).toBe("components/twinova.belt@1.st");
+    expect(rows[3].file).toBe("plc/Other.st");
     expect(listed({}, [main])).toEqual([]);
+  });
+
+  it("counts the errors and the hints apart from the warnings", () => {
+    const rows = listed(
+      { "plc/Main.st": [problem(1, 1, "E101", "error"), problem(2, 1, "W001", "hint"), problem(3, 1), problem(4, 1)] },
+      [main],
+    );
+    expect(tally(rows)).toEqual({ errors: 1, hints: 1 });
+    expect(tally([])).toEqual({ errors: 0, hints: 0 });
   });
 
   it("maps the engine's completion kinds onto Monaco's", () => {

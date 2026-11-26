@@ -9,11 +9,14 @@
 
   let {
     project,
+    changed = false,
     onChange,
     onNotice,
     onError,
   }: {
     project: ProjectView;
+    /** The scene differs from what was saved or opened: the one place that says so. */
+    changed?: boolean;
     onChange: (next: ProjectView) => void;
     onNotice: (text: () => string) => void;
     onError: (text: string) => void;
@@ -73,7 +76,12 @@
 
 <div class="menu">
   <button class="btn project" aria-haspopup="menu" aria-expanded={open} onclick={() => (open = !open)}>
-    <span>{project.name}</span>
+    <span>{project.name}</span>{#if changed}<span
+        class="modified"
+        role="img"
+        aria-label={m.scene_changed()}
+        title={m.scene_changed()}
+      ></span>{/if}
     <span aria-hidden="true">▾</span>
   </button>
   {#if open}
@@ -103,6 +111,12 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+  }
+  .modified {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-warning);
   }
   .items {
     position: absolute;

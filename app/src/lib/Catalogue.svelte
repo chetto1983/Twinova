@@ -3,7 +3,7 @@
   import { Search, Plus, PackageOpen } from "@lucide/svelte";
   import { m } from "../paraglide/messages.js";
   import { catalogue, type CatalogueEntry } from "./backend";
-  import { familyLabel } from "./project";
+  import { familyName } from "./familyNames";
   let { onPlace, onDrag }: { onPlace: (key: string) => void; onDrag: (key: string) => void } = $props();
   let entries = $state<CatalogueEntry[]>([]);
   let previews = $state<Record<string, string>>({});
@@ -20,7 +20,7 @@
   const categoryOf = (e: CatalogueEntry): string =>
     e.group === "conveyors" || e.group === "devices" ? "equipment" : e.group === "sensors" ? "devices" : "products";
   const filtered = $derived(
-    entries.filter((e) => categoryOf(e) === category && familyLabel(e.key).includes(search.toLowerCase())),
+    entries.filter((e) => categoryOf(e) === category && familyName(e.key).toLowerCase().includes(search.toLowerCase())),
   );
   onMount(() => {
     let alive = true;
@@ -70,7 +70,7 @@
               strokeWidth={1}
             />{/if}<span class="add"><Plus size={12} /></span>
         </div>
-        <span class="name">{familyLabel(entry.key)}</span><span class="version">Twinova · v1</span>
+        <span class="name">{familyName(entry.key)}</span>
       </button>
     {/each}
     {#if !filtered.length && !loading}<p class="empty">
@@ -167,16 +167,9 @@
     display: block;
     padding: 2px 9px;
     font-size: 10px;
-    text-transform: capitalize;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .version {
-    display: block;
-    padding: 0 9px;
-    font-size: 9px;
-    color: var(--color-text-faint);
   }
   .empty {
     display: flex;

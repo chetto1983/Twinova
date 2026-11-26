@@ -45,14 +45,23 @@ export function marker(problem: Problem) {
   };
 }
 
-/** Every problem, the tabs' order first, then by line and column within a file. */
+/** The Problems pane's rows: the PLC's files only, in the tabs' order, then by line and column within a file. A
+ *  behaviour's problems stay in its own editor (spec 2026-11-26-ux-consolidation-design.md, decision 2). */
 export function listed(problems: Problems, sources: Source[]): Listed[] {
-  return sources.flatMap((source) => {
-    const file = fileOf(source);
-    const rows = (problems[file] ?? []).map((p): Listed => Object.assign({}, p, { file, key: source.key }));
-    return rows.toSorted((a, b) => a.line - b.line || a.column - b.column);
-  });
+  return sources
+    .filter((source) => source.kind === "program")
+    .flatMap((source) => {
+      const file = fileOf(source);
+      const rows = (problems[file] ?? []).map((p): Listed => Object.assign({}, p, { file, key: source.key }));
+      return rows.toSorted((a, b) => a.line - b.line || a.column - b.column);
+    });
 }
+
+/** How many of `rows` are errors, and how many are hints, which the pane lists only when asked. */
+export const tally = (rows: Listed[]): { errors: number; hints: number } => ({
+  errors: rows.filter((r) => r.severity === "error").length,
+  hints: rows.filter((r) => r.severity === "hint").length,
+});
 
 /** The completion kinds of `trust-wasm-analysis` (`completion_kind_label`), by the name of Monaco's
  *  `CompletionItemKind` that suits each. */

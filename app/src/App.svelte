@@ -32,7 +32,7 @@
   import Toolbar from "./lib/Toolbar.svelte";
   import StatusBar from "./lib/StatusBar.svelte";
   import WorkspaceDock from "./lib/WorkspaceDock.svelte";
-  import { Box, Move, RotateCw } from "@lucide/svelte";
+  import { Move, RotateCw } from "@lucide/svelte";
   import { listenControl, register } from "./lib/control/registry";
   import { appCommands } from "./lib/control/appCommands";
   let hidden = $state<string[]>([]);
@@ -359,6 +359,7 @@
 <div class="shell">
   <Toolbar
     {project}
+    {changed}
     {running}
     {ready}
     bind:speed
@@ -390,10 +391,6 @@
         />
       </aside>
       <section class="stage">
-        <header class="scene-header">
-          <Box size={14} /><span>{project.name}</span>{#if changed}<span class="modified" title={m.scene_changed()}
-            ></span>{/if}<span class="spacer"></span><span class="muted">{m.ui_view()}</span>
-        </header>
         <div class="stage-body">
           <ProjectScene
             {project}
@@ -466,15 +463,7 @@
       />
     </main>
   {/if}
-  <StatusBar
-    {running}
-    {status}
-    {snapshot}
-    notice={noticeText}
-    {error}
-    {changed}
-    objects={project?.instances.length ?? 0}
-  />
+  <StatusBar {running} {status} {snapshot} notice={noticeText} {error} />
 </div>
 
 <style>
@@ -511,22 +500,6 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
-  }
-  .scene-header {
-    height: 35px;
-    padding: 0 12px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-surface);
-    font-size: 11px;
-  }
-  .modified {
-    width: 5px;
-    height: 5px;
-    background: var(--color-warning);
-    border-radius: 50%;
   }
   .stage-body {
     flex: 1;

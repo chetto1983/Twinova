@@ -131,7 +131,14 @@ function seconds(shown) {
 const choose = async (cls, label) =>
   (await browser.$(`//header//select[contains(concat(" ", @class, " "), " ${cls} ")]`)).selectByVisibleText(label);
 export const selectSpeed = (label) => choose("speed", label);
-export const selectLanguage = (label) => choose("lang", label);
+/** The language, in Settings (spec 2026-11-26-ux-consolidation-design.md, decision 8): the menu opened, the language
+ *  chosen, the menu closed. */
+export async function selectLanguage(label) {
+  const settings = await browser.$("//header//div[contains(@class,'settings')]/button");
+  if ((await settings.getAttribute("aria-expanded")) !== "true") await settings.click();
+  await choose("lang", label);
+  await settings.click();
+}
 
 async function whenStarted() {
   try {
