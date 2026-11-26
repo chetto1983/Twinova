@@ -134,7 +134,8 @@ jobs:
         include:
           - os: windows-latest
             bundles: msi
-          - os: ubuntu-24.04
+          # The oldest Ubuntu LTS still supported, so the packages need its glibc at most (2.35).
+          - os: ubuntu-22.04
             bundles: deb,appimage
     runs-on: ${{ matrix.os }}
     defaults:
@@ -157,7 +158,8 @@ jobs:
       - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
         with:
           workspaces: app/src-tauri
-          shared-key: bundle
+          # The image in the key: build scripts compiled on a newer glibc would not start on 22.04.
+          shared-key: bundle-${{ matrix.os }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: System dependencies
         if: runner.os == 'Linux'
@@ -201,6 +203,13 @@ jobs:
           (cd "$RUNNER_TEMP" && "$image" --appimage-extract > /dev/null)
           ls -l "$RUNNER_TEMP/squashfs-root/usr/bin"
           npm run -s agent-check -- "$RUNNER_TEMP/squashfs-root/usr/bin/twinova-agent"
+      # v0.4.0's AppImage, built on 24.04, stopped on 22.04 with "GLIBC_2.39 not found" (AppImageHub, 2026-11-25).
+      - name: The Linux packages need at most Ubuntu 22.04's glibc
+        if: runner.os == 'Linux'
+        run: |
+          root="$RUNNER_TEMP/squashfs-root"
+          mapfile -t libraries < <(find "$root/usr/lib" -name '*.so*' -type f)
+          bash ../scripts/check-glibc.sh 2.35 "$root"/usr/bin/* "${libraries[@]}" "$RUNNER_TEMP"/deb/usr/bin/*
       # An administrative install unpacks the MSI's files as the installer lays them out, without installing.
       - name: The MSI puts the agent beside the app, and it answers
         if: runner.os == 'Windows'
