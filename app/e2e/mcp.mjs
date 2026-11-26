@@ -345,15 +345,18 @@ async function thePlcWindow() {
   );
 }
 
+/** The window's language, which i18n.svelte.ts sets on the document: the select is in Settings since U1. */
+const language = () => browser.execute(() => document.documentElement.lang);
+
 async function theWindow() {
   await check("theme and language change the window", async () => {
     await run("theme", { theme: "light" });
     await shows("light", () => browser.execute(() => document.documentElement.dataset.theme), "light");
     await run("theme", { theme: "dark" });
     await run("language", { language: "it" });
-    await shows("Italiano", () => browser.$("header select.lang").getValue(), "it");
+    await shows("Italiano", language, "it");
     await run("language", { language: "en" });
-    await shows("English", () => browser.$("header select.lang").getValue(), "en");
+    await shows("English", language, "en");
   });
   await check("export_archive, new_project, import_archive, save_project and open_project", async () => {
     const zip = join(work, "demo.zip");
