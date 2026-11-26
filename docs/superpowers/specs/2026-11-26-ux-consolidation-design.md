@@ -122,7 +122,12 @@ are shown there too. The examples gain Start, Stop and E-stop.
 ### 8. Visual rules
 
 - **Type:** body 13 px; labels at least 11 px; code 13 px. Nothing smaller.
-- **Targets:** at least 28 px high.
+- **Targets** (amended 2026-11-26 with U7's plan):
+  - every control at least 24 × 24 px, WCAG 2.2's "Target Size (Minimum)", level AA;
+  - the bars' controls at least 28 px.
+
+  Measured on v0.4.0, Watch's force buttons were 11 px high, the variables table's delete icons 16 px and the tree's
+  lock and eye 20–21 px. 28 px everywhere would double the tree's and the tables' rows.
 - **Hierarchy:**
   - the scene's name appears once, in the project button;
   - the object count appears once, in the tree;
@@ -183,11 +188,11 @@ are shown there too. The examples gain Start, Stop and E-stop.
 |---|---|---|---|
 | U1 | Remove the noise: problems, duplicates, empty sections, names, language and theme out of the bar, AppImage built on Ubuntu 22.04 | 7, 8 (part) | A3; the audit's list cleared |
 | U2 | Plant apart from controller: Behaviour section, Devices list | 2 | A7 |
-| U3 | State in the scene | 4 | A4 |
+| U3 | State in the scene; the opening camera on the line and a lighter, optional warehouse | 4, 8 (the scene) | A4 |
 | U4 | Signals: the table, the Inspector section, assign, CSV | 3 | A5, A6 |
 | U5 | Operator devices | 5 | examples with Start/Stop/E-stop |
 | U6 | The three contexts; layout locked while running | 1, 6 | A2, A8 |
-| U7 | Visual rules; the light theme by default | 8, answer 3 | A1 |
+| U7 | Visual rules (type, targets, disabled controls that say why); the light theme by default | 8, answer 3 | A1 |
 | U8 | Tutorial and example descriptions | 9 | T1–T4 by the user |
 
 **Proposed order:** U1, U7, U6, U2, U4, U3, U5, U8. The type sizes and the contexts come first, because every later
