@@ -117,7 +117,7 @@ No new feature before this milestone: 4.11b, 4.11c and M5 wait. Spec `2026-11-26
 
 | Phase | Deliverable | Acceptance | Status |
 |---|---|---|---|
-| U0 | Spec: the usage model (Layout, Signals and PLC contexts; plant apart from controller; signals at the centre; state in the scene; operator devices; layout locked while running), visual rules, wireframes, task tests | spec with the user's answers to its open questions | 🔶 spec and wireframes written; five questions open |
+| U0 | Spec: the usage model (Layout, Signals and PLC contexts; plant apart from controller; signals at the centre; state in the scene; operator devices; layout locked while running), visual rules, wireframes, task tests | spec with the user's answers to its open questions | ✅ spec and wireframes; answered 2026-11-26 (tabs, layout locked while running, light theme by default) |
 | U1 | Remove the noise: problems that are not problems, duplicates, empty sections, internal names, the AppImage built on Ubuntu 22.04 | A3: every example builds with 0 problems at the default level | ⬜ |
 | U2 | The plant apart from the controller: behaviours from the component, a Devices list in the organizer | A7 | ⬜ |
 | U3 | The state in the scene: sensor beams, flow arrows, counters at their place, live labels | A4 | ⬜ |

@@ -187,20 +187,19 @@ are shown there too. The examples gain Start, Stop and E-stop.
 | U4 | Signals: the table, the Inspector section, assign, CSV | 3 | A5, A6 |
 | U5 | Operator devices | 5 | examples with Start/Stop/E-stop |
 | U6 | The three contexts; layout locked while running | 1, 6 | A2, A8 |
-| U7 | Visual rules | 8 | A1 |
+| U7 | Visual rules; the light theme by default | 8, answer 3 | A1 |
 | U8 | Tutorial and example descriptions | 9 | T1–T4 by the user |
 
 **Proposed order:** U1, U7, U6, U2, U4, U3, U5, U8. The type sizes and the contexts come first, because every later
 phase draws inside them.
 
-## Open questions for the user
+## The user's answers (2026-11-26: "sì a tutto, tema chiaro, parti con U1")
 
-1. **Contexts:** Layout / Signals / PLC as tabs (decision 1), or one screen with modes?
-2. **Layout locked while running** (decision 6): yes?
-3. **Default theme:** light, as Visual Components and TIA Portal, or dark as today?
-4. **Task tests:** who runs them besides the user?
-5. **SIMIT:** what of its windows should Twinova take: the signal table per coupling, the live values on the model,
-   the trends? This spec assumes the first two.
+1. **Contexts:** Layout / Signals / PLC as tabs (decision 1).
+2. **Layout locked while running** (decision 6).
+3. **Default theme: light**, as Visual Components and TIA Portal. Dark stays a choice in Settings.
+4. **Task tests:** run by the user; anyone else is a bonus, not a condition.
+5. **SIMIT:** the signal table and live values on the model, as assumed; trends wait (below).
 
 ## What this spec does not decide
 
