@@ -6,7 +6,8 @@
 set -euo pipefail
 max=$1
 shift
-highest() { objdump -T "$1" 2>/dev/null | grep -o 'GLIBC_[0-9][0-9.]*' | sed 's/^GLIBC_//' | sort -V | tail -1; }
+# A file that needs no glibc symbol (grep finds none) has no version: it passes.
+highest() { objdump -T "$1" 2>/dev/null | { grep -o 'GLIBC_[0-9][0-9.]*' || true; } | sed 's/^GLIBC_//' | sort -V | tail -1; }
 above=0
 checked=0
 for file in "$@"; do
