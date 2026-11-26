@@ -1,6 +1,7 @@
-// The visual rules of spec 2026-11-26-ux-consolidation-design.md (decision 8, U7) measured on the real app, in each
-// dock tab of the M3 demo, running: no visible text below 11 px, no visible control below WCAG 2.2's 24 x 24 px target,
-// and the top bar's controls at least 28 px high. Monaco's own widgets are its, not the app's, and are left out.
+// The visual rules of spec 2026-11-26-ux-consolidation-design.md (decision 8, U7) measured on the real app: a disabled
+// control's tooltip says why, and in each dock tab of the M3 demo, running, no visible text is below 11 px, no visible
+// control below WCAG 2.2's 24 x 24 px target, and the top bar's controls are at least 28 px high. Monaco's own widgets
+// are its, not the app's, and are left out.
 //
 //   npx tauri build --debug --no-bundle && node e2e/sizes.mjs
 //
@@ -30,6 +31,9 @@ const breaches = () =>
   });
 
 await session("debug", async () => {
+  await check("a disabled control says why: nothing to undo on a project just opened", async () =>
+    expectEqual(await browser.$(button("Undo")).getAttribute("title"), "Undo: nothing to undo", "title"),
+  );
   await click(button("Build"));
   await click(button("Run"));
   for (const tab of ["parts", "plc", "problems", "watch"]) {

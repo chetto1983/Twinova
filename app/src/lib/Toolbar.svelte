@@ -6,6 +6,7 @@
   import type { ProjectView } from "./project";
   import ProjectMenu from "./ProjectMenu.svelte";
   import SettingsMenu from "./SettingsMenu.svelte";
+  import { tip } from "./tip";
   import Transport from "./Transport.svelte";
   import twinovaMark from "../assets/twinova-mark.svg";
 
@@ -64,7 +65,13 @@
   <div class="transport" aria-label={m.ui_simulation()}>
     <Transport canBuild={project !== null} {running} {ready} {onBuild} {onRun} {onStep} onReset={onStop} />
     <span class="divider"></span>
-    <select class="speed" aria-label={m.speed()} bind:value={speed} disabled={running}>
+    <select
+      class="speed"
+      aria-label={m.speed()}
+      title={tip(m.speed(), running ? m.why_running_speed() : null)}
+      bind:value={speed}
+      disabled={running}
+    >
       {#each SPEEDS as option (option)}<option value={option}
           >{formatSpeed(option, currentLocale(), m.speed_max())}</option
         >{/each}
@@ -74,19 +81,31 @@
     >
   </div>
   <div class="utilities">
-    <button class="icon-button" title={m.undo()} aria-label={m.undo()} disabled={!project?.can_undo} onclick={onUndo}
-      ><Undo2 size={16} /></button
-    >
-    <button class="icon-button" title={m.redo()} aria-label={m.redo()} disabled={!project?.can_redo} onclick={onRedo}
-      ><Redo2 size={16} /></button
-    >
-    <span class="divider"></span>
-    <button class="icon-button" title={m.save_state()} aria-label={m.save_state()} disabled={!ready} onclick={onSave}
-      ><Save size={16} /></button
+    <button
+      class="icon-button"
+      title={tip(m.undo(), project?.can_undo ? null : m.why_nothing_undo())}
+      aria-label={m.undo()}
+      disabled={!project?.can_undo}
+      onclick={onUndo}><Undo2 size={16} /></button
     >
     <button
       class="icon-button"
-      title={m.restore_state()}
+      title={tip(m.redo(), project?.can_redo ? null : m.why_nothing_redo())}
+      aria-label={m.redo()}
+      disabled={!project?.can_redo}
+      onclick={onRedo}><Redo2 size={16} /></button
+    >
+    <span class="divider"></span>
+    <button
+      class="icon-button"
+      title={tip(m.save_state(), ready ? null : m.why_not_built())}
+      aria-label={m.save_state()}
+      disabled={!ready}
+      onclick={onSave}><Save size={16} /></button
+    >
+    <button
+      class="icon-button"
+      title={tip(m.restore_state(), ready ? null : m.why_not_built())}
       aria-label={m.restore_state()}
       disabled={!ready}
       onclick={onRestore}><History size={16} /></button

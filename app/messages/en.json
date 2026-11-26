@@ -273,5 +273,10 @@
   "family_sink": "Sink",
   "family_source": "Source",
   "family_stopper": "Stopper",
-  "family_turntable": "Turntable"
+  "family_turntable": "Turntable",
+  "why_no_project": "open a project first",
+  "why_not_built": "build the project first",
+  "why_running_speed": "stop the line to change it",
+  "why_nothing_undo": "nothing to undo",
+  "why_nothing_redo": "nothing to redo"
 }

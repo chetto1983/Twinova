@@ -14,7 +14,8 @@
     "src/lib/shortcuts.ts",
     "src/lib/snapping.ts",
     "src/lib/analysis.ts",
-    "src/lib/familyNames.ts"
+    "src/lib/familyNames.ts",
+    "src/lib/tip.ts"
   ],
   "reporters": ["clear-text", "progress", "json"],
   "thresholds": {

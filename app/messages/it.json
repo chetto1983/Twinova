@@ -273,5 +273,10 @@
   "family_sink": "Scarico",
   "family_source": "Sorgente",
   "family_stopper": "Fermo",
-  "family_turntable": "Tavola rotante"
+  "family_turntable": "Tavola rotante",
+  "why_no_project": "apri prima un progetto",
+  "why_not_built": "prima compila il progetto",
+  "why_running_speed": "ferma la linea per cambiarla",
+  "why_nothing_undo": "niente da annullare",
+  "why_nothing_redo": "niente da ripetere"
 }
