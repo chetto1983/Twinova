@@ -4,6 +4,37 @@ Notable changes to Twinova, newest first. Each section is also the text of its
 [GitHub release](https://github.com/chetto1983/Twinova/releases): the Release workflow
 publishes the section whose heading matches the pushed `vX.Y.Z` tag. The full history is in git.
 
+## Unreleased
+
+A usable app before M5: the first phase (U1) removes the noise.
+
+### Changed
+
+- **Problems lists real problems.**
+  - It lists the PLC's files only; a behaviour's notes stay in its own editor.
+  - Errors come first, and the tab's count is the number of errors.
+  - Style notes are hints, hidden behind "Show hints": an unused variable (W001), a high complexity (W008), or a
+    plant signal into the PLC that the program does not read.
+  - An undeclared output or panel button is still a warning.
+  - While the analysis runs the pane says so, instead of "No problems detected".
+- **Each fact shows once.**
+  - The project's name and its modified dot are on the project button.
+  - The tree's heading counts the components.
+  - The status bar keeps the run state, the time, the notices and the build.
+- **No empty section.**
+  - The operator panel appears only when the project has buttons.
+  - The scan line asks to run the line instead of showing dashes.
+- **Components are named as a person names them,** in English and Italian ("Photo-eye", "Fotocellula"), without
+  versions or "Twinova · v1".
+- **Language and theme are in a Settings menu.**
+- **The Linux packages are built on Ubuntu 22.04,** so they start there and on newer systems. A check fails the build
+  when a file needs a glibc above 2.35.
+
+### Fixed
+
+- **"unused program 'Main'" is gone:** the runtime always runs every program.
+- **The two sort lines' step chains gain an `ELSE`,** which resets the step.
+
 ## v0.4.0 — 2026-11-24
 
 The points v0.3.0 left open.
