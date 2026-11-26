@@ -222,6 +222,8 @@
   }
   .force {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 0;
     background: transparent;
     color: var(--color-text-disabled);
