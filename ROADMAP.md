@@ -108,6 +108,25 @@ accepted through the real app.
 | 4.11b | **ST inside Ladder** (user, 2026-11-14, after 4.11 merges; left out of 4.11 by its spec, decision 8): both forms, an EXECUTE element inside a rung as CODESYS's, its ST run when power reaches it and the power passed on, and a whole rung of ST as TIA Portal's SCL network, run in its place among the rungs; truST's errors at the code's own lines | E2E: a rung with an EXECUTE and an ST rung built, run against the panel; how PLCopen TC6 carries inline ST measured first (CODESYS's export), refused by name if it cannot | ⬜ |
 | 4.11c | **Insertion markers and drag and drop in Ladder** (left out of 4.11 when it closed, user, 2026-11-14): the places an element can go marked while one is dragged from the toolbox or moved within the drawing, and the per-element shortcuts, as CODESYS LD2's | E2E: a start/stop rung drawn by dragging alone | ⬜ |
 
+## M4b — A usable app 🔶
+
+The user, 2026-11-26, after testing v0.4.0: the UI "is not presentable" and "the UX of an industrial simulator is
+missing"; consolidate what exists first, like Visual Components and SIMIT; "M5 makes no sense if the app is not usable".
+No new feature before this milestone: 4.11b, 4.11c and M5 wait. Spec `2026-11-26-ux-consolidation-design`; the audit is
+`verification/2026-11-26-ux-audit.md`, the comparison with Open Industry Project research [21].
+
+| Phase | Deliverable | Acceptance | Status |
+|---|---|---|---|
+| U0 | Spec: the usage model (Layout, Signals and PLC contexts; plant apart from controller; signals at the centre; state in the scene; operator devices; layout locked while running), visual rules, wireframes, task tests | spec with the user's answers to its open questions | 🔶 spec and wireframes written; five questions open |
+| U1 | Remove the noise: problems that are not problems, duplicates, empty sections, internal names, the AppImage built on Ubuntu 22.04 | A3: every example builds with 0 problems at the default level | ⬜ |
+| U2 | The plant apart from the controller: behaviours from the component, a Devices list in the organizer | A7 | ⬜ |
+| U3 | The state in the scene: sensor beams, flow arrows, counters at their place, live labels | A4 | ⬜ |
+| U4 | Signals: one table linked to the scene, the Inspector's live section with Force, assign addresses, CSV | A5, A6 | ⬜ |
+| U5 | Operator devices: push buttons, E-stop, selector, lamps, stack light | the examples run from Start, Stop and E-stop | ⬜ |
+| U6 | The three contexts; the layout locked while the line runs | A2, A8 | ⬜ |
+| U7 | Visual rules: type sizes, targets, hierarchy, disabled controls that say why | A1 | ⬜ |
+| U8 | A tutorial driven by real actions; examples that describe themselves | task tests T1–T4 passed by a person | ⬜ |
+
 ## M5 — PLC in the loop ⬜
 
 The gap the commercial tools leave [06 §3, 03].
