@@ -192,7 +192,11 @@ fn a_change_binds_the_line_to_the_new_declarations() {
     );
     let renamed = renamed.replace("    jam : BOOL;\n", "    jam : BOOL;\n    sensor : BOOL;\n");
     let (mut engine, built) = Engine::new(&with_main(demo.clone(), &blind)).unwrap();
-    assert!(built.contains(&"sensor_a.detected at %IX0.0: the program does not declare it".into()));
+    assert!(built.is_empty(), "{built:?}");
+    assert!(
+        (engine.unread())
+            .contains(&"sensor_a.detected at %IX0.0: the program does not read it".into())
+    );
     // The first carton reaches the photocell at scan 494, about 4.9 s after Start (measured 2026-11-12).
     let seen = |engine: &mut Engine, name: &str| {
         (0..700).any(|_| {
@@ -201,9 +205,10 @@ fn a_change_binds_the_line_to_the_new_declarations() {
         })
     };
     let warnings = engine.change_program(main(&renamed)).unwrap();
+    assert_eq!(warnings, Vec::<String>::new());
     assert_eq!(
-        warnings,
-        ["sink.count at %ID4: the program does not declare it"]
+        engine.unread(),
+        ["sink.count at %ID4: the program does not read it"]
     );
     // After the change: the warm restart drops the latched motor (`a_latched_output_drops_...`).
     engine.press(START);

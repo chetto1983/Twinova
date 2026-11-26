@@ -68,6 +68,7 @@
   let notice = $state<string | (() => string)>("");
   const noticeText = $derived(typeof notice === "function" ? notice() : notice);
   let warnings = $state<string[]>([]);
+  let buildHints = $state<string[]>([]);
   /** truST's analysis of the editor's texts, 300 ms after the last change (spec 2026-11-12-st-editor-design.md,
    *  decision 6); a failure of the analysis itself is a notice, since Build stays the referee. */
   let problems = $state<Problems>({});
@@ -157,6 +158,7 @@
       changed = false;
       snapshot = built.snapshot;
       warnings = built.warnings;
+      buildHints = built.hints;
     }
   }
 
@@ -171,6 +173,7 @@
     selected = null;
     snapshot = null;
     warnings = [];
+    buildHints = [];
     notice = () =>
       [
         next.recovered ? m.project_recovered() : "",
@@ -199,6 +202,7 @@
       sources = builtFrom(sources);
       snapshot = result.snapshot;
       warnings = result.warnings;
+      buildHints = result.hints;
       notice = () => m.disk_changed_online({ time: (result.snapshot.time_ms / 1000).toFixed(2) });
       return;
     }
@@ -310,6 +314,7 @@
         status: () => status,
         running: () => running,
         warnings: () => warnings,
+        hints: () => buildHints,
         notice: () => noticeText,
         error: () => error,
         setSources: (next) => (sources = next),
@@ -449,6 +454,7 @@
         {status}
         {error}
         {warnings}
+        {buildHints}
         {problems}
         notice={noticeText}
         {snapshot}

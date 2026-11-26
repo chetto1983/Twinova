@@ -36,14 +36,15 @@ mod tests {
         open_folder(&dir).unwrap().opened.project
     }
 
-    /// The demo builds with its warning; a project the format refuses fails with each diagnostic on its own line.
+    /// The demo builds with its note; a project the format refuses fails with each diagnostic on its own line.
     #[test]
     fn build_checks_a_project_as_the_format_does_on_open() {
         let (project, engine, warnings) = build(&demo()).unwrap();
         assert_eq!((project, engine.time_ms()), (demo(), 0));
+        assert_eq!(warnings, Vec::<String>::new());
         assert_eq!(
-            warnings,
-            ["sink.count at %ID4: the program does not declare it"]
+            engine.unread(),
+            ["sink.count at %ID4: the program does not read it"]
         );
         let mut broken = demo();
         for instance in &mut broken.scene.instances {

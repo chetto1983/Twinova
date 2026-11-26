@@ -5,6 +5,7 @@
 
 use trust_runtime::harness::{CompileSession, SourceFile, TestHarness};
 use trust_runtime::io::{IoAddress, IoSize};
+use trust_runtime::memory::IoArea;
 use trust_runtime::value::{Duration, Value};
 use twinova_project::Project;
 use twinova_project::model::SignalType;
@@ -55,6 +56,15 @@ pub struct Controller {
     /// Panel bits pressed since the last scan; each holds for the next scan only.
     pressed: Vec<String>,
     forces: monitor::Forces,
+    /// The scene's signals into the PLC that the program does not read: a note, not a warning (`unread`).
+    unread: Vec<String>,
+}
+
+/// Whether `address` is in the input area (`%I`): what the plant gives the PLC, which it may leave unread. An
+/// undeclared output (`%Q`) is a device nothing drives, and an undeclared button does nothing: those stay warnings
+/// (spec 2026-11-26-ux-consolidation-design.md, decision 7).
+fn is_input(address: &str) -> bool {
+    IoAddress::parse(address).is_ok_and(|a| a.area == IoArea::Input)
 }
 
 fn st_type(ty: SignalType) -> &'static str {
@@ -112,7 +122,7 @@ impl Controller {
                     .map_or_else(String::new, |t| t.to_string()),
             })
             .collect();
-        let controller = Self {
+        let mut controller = Self {
             timing: ScanTiming::default(),
             harness,
             places: program.places(),
@@ -121,6 +131,7 @@ impl Controller {
             declared,
             pressed: Vec::new(),
             forces: monitor::Forces::new(),
+            unread: Vec::new(),
         };
         let scene = &project.scene;
         let signals = scene.instances.iter().flat_map(|i| {
@@ -131,17 +142,24 @@ impl Controller {
                     .iter()
                     .find(|s| &s.name == name)
                     .map(|s| st_type(s.ty));
-                (format!("{}.{name}", i.id), address, ty.unwrap_or("BOOL"))
+                (
+                    format!("{}.{name}", i.id),
+                    address,
+                    ty.unwrap_or("BOOL"),
+                    true,
+                )
             })
         });
-        let buttons = scene
-            .controller
-            .panel
-            .iter()
-            .map(|b| (format!("the button '{}'", b.name), &b.address, "BOOL"));
+        let buttons = scene.controller.panel.iter().map(|b| {
+            let what = format!("the button '{}'", b.name);
+            (what, &b.address, "BOOL", false)
+        });
         let (mut warnings, mut errors) = (Vec::new(), Vec::new());
-        for (what, address, ty) in signals.chain(buttons) {
+        for (what, address, ty, from_scene) in signals.chain(buttons) {
             match controller.at(address) {
+                None if from_scene && is_input(address) => controller
+                    .unread
+                    .push(format!("{what} at {address}: the program does not read it")),
                 None => warnings.push(format!(
                     "{what} at {address}: the program does not declare it"
                 )),
@@ -176,6 +194,7 @@ impl Controller {
         self.scan_ns = checked.scan_ns;
         self.timing = ScanTiming::default();
         self.declared = checked.declared;
+        self.unread = checked.unread;
         for (area, bytes) in images {
             // The new image reaches as far as the new program declares: a byte past it is one it does not declare.
             let io = self.harness.runtime().io();
@@ -223,6 +242,11 @@ impl Controller {
                 && d.address.byte == a.byte
                 && (a.size != IoSize::Bit || d.address.bit == a.bit)
         })
+    }
+
+    /// The scene's signals into the PLC that the program does not read, one note each.
+    pub fn unread(&self) -> &[String] {
+        &self.unread
     }
 
     /// Whether the program declares a variable at `address`.

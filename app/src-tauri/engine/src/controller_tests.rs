@@ -16,12 +16,15 @@ fn with_program(text: &str) -> Project {
 const BELT: &str = "PROGRAM Main\nVAR\n  sensor AT %IX0.0 : BOOL;\n  motor AT %QX0.0 : BOOL;\nEND_VAR\n\
                     motor := sensor;\nEND_PROGRAM\n";
 
+/// A plant signal into the PLC that the program does not read is a note, not a warning (spec
+/// 2026-11-26-ux-consolidation-design.md, decision 7): the demo's sink count.
 #[test]
-fn the_demo_program_builds_and_warns_about_what_it_leaves_undeclared() {
+fn the_demo_program_builds_and_notes_the_input_it_leaves_unread() {
     let (controller, warnings) = Controller::build(&demo()).unwrap();
+    assert_eq!(warnings, Vec::<String>::new());
     assert_eq!(
-        warnings,
-        ["sink.count at %ID4: the program does not declare it"]
+        controller.unread(),
+        ["sink.count at %ID4: the program does not read it"]
     );
     assert_eq!(controller.scan_ns(), DEFAULT_SCAN_NS);
     assert!(controller.declares("%IX1.0"));
@@ -130,7 +133,7 @@ fn the_program_variable_at_a_scene_signal_must_have_its_type() {
 
 #[test]
 fn a_bit_is_declared_only_at_its_own_bit() {
-    let (c, warnings) = Controller::build(&with_program(BELT)).unwrap();
+    let (c, _) = Controller::build(&with_program(BELT)).unwrap();
     assert!(c.declares("%IX0.0"));
     assert!(!c.declares("%IX0.1"));
     assert!(!c.declares("%QX0.1"));
@@ -140,7 +143,35 @@ fn a_bit_is_declared_only_at_its_own_bit() {
     );
     assert!(!c.declares("%QB1"));
     assert!(
-        warnings.contains(&"belt_a.running at %IX0.1: the program does not declare it".to_string())
+        (c.unread())
+            .contains(&"belt_a.running at %IX0.1: the program does not read it".to_string())
+    );
+}
+
+/// What the program leaves undeclared at an output is a device nothing drives, and an undeclared button does nothing:
+/// both stay warnings.
+#[test]
+fn an_undeclared_output_or_button_warns() {
+    let inputs_only = "PROGRAM Main\nVAR\n  sensor AT %IX0.0 : BOOL;\nEND_VAR\nEND_PROGRAM\n";
+    let (c, warnings) = Controller::build(&with_program(inputs_only)).unwrap();
+    assert!(
+        warnings.contains(&"belt_a.run at %QX0.0: the program does not declare it".to_string()),
+        "{warnings:?}"
+    );
+    assert!(
+        warnings.iter().any(|w| w.starts_with("the button 'Start'")),
+        "{warnings:?}"
+    );
+    assert!(
+        warnings
+            .iter()
+            .all(|w| !w.contains("%I") || w.starts_with("the button")),
+        "{warnings:?}"
+    );
+    assert!(
+        c.unread().iter().all(|n| n.contains(" at %I")),
+        "{:?}",
+        c.unread()
     );
 }
 

@@ -22,12 +22,14 @@ pub struct Session {
     pub saved: Vec<Saved>,
 }
 
-/// What `open_project` and `build` answer: the project's name, its instances and Build's warnings.
+/// What `open_project` and `build` answer: the project's name, its instances, Build's warnings and its hints (the
+/// scene's signals into the PLC that the program does not read).
 #[derive(Debug, serde::Serialize)]
 pub struct Opened {
     pub name: String,
     pub instances: Vec<(String, String)>,
     pub warnings: Vec<String>,
+    pub hints: Vec<String>,
 }
 
 /// What `reload_sources` took from the folder: an online change or a rebuild, and Build's warnings.
@@ -67,6 +69,7 @@ impl Session {
                 .map(|i| (i.id.clone(), i.definition.clone()))
                 .collect(),
             warnings,
+            hints: engine.unread().to_vec(),
         };
         self.built = Some(project);
         self.engine = Some(engine);

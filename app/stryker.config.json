@@ -13,7 +13,8 @@
     "src/lib/picking.ts",
     "src/lib/shortcuts.ts",
     "src/lib/snapping.ts",
-    "src/lib/analysis.ts"
+    "src/lib/analysis.ts",
+    "src/lib/familyNames.ts"
   ],
   "reporters": ["clear-text", "progress", "json"],
   "thresholds": {
@@ -29,6 +30,9 @@
     "!src-tauri/project/tests",
     "src-tauri/project/tests/*",
     "!src-tauri/project/tests/fixtures",
+    "!src-tauri/library",
+    "src-tauri/library/*",
+    "!src-tauri/library/components",
     "dist",
     "coverage",
     "reports"

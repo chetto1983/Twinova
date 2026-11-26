@@ -57,9 +57,10 @@ fn every_command_but_build_needs_a_built_project() {
 fn a_failed_build_keeps_the_running_line_and_the_project_sources() {
     let app = app();
     let built = build_demo(&app);
+    assert_eq!(built.warnings, Vec::<String>::new());
     assert_eq!(
-        built.warnings,
-        ["sink.count at %ID4: the program does not declare it"]
+        built.hints,
+        ["sink.count at %ID4: the program does not read it"]
     );
     tauri::async_runtime::block_on(step(app.state())).unwrap();
     let (program, mut behaviours) = sources(&app);

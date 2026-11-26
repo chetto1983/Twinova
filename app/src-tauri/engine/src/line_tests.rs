@@ -25,11 +25,12 @@ fn bit(line: &Line, address: &str) -> bool {
 }
 
 #[test]
-fn the_demo_builds_and_warns_about_the_unused_counter() {
+fn the_demo_builds_and_notes_the_unread_counter() {
     let (line, warnings) = Line::build(&fixture("demo_m3")).unwrap();
+    assert_eq!(warnings, Vec::<String>::new());
     assert_eq!(
-        warnings,
-        ["sink.count at %ID4: the program does not declare it"]
+        line.controller().unread(),
+        ["sink.count at %ID4: the program does not read it"]
     );
     assert_eq!(line.scan_ns(), 10_000_000);
 }

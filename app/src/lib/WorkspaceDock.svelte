@@ -29,6 +29,7 @@
     status,
     error,
     warnings,
+    buildHints,
     problems,
     notice,
     snapshot,
@@ -46,6 +47,8 @@
     status: "none" | "ok" | "failed";
     error: string;
     warnings: string[];
+    /** Build's notes on the scene's signals into the PLC that the program does not read. */
+    buildHints: string[];
     /** truST's analysis of the editor's texts, by file. */
     problems: Problems;
     notice: string;
@@ -78,6 +81,7 @@
   let hints = $state(false);
   const all = $derived(listed(problems, sources));
   const counted = $derived(tally(all));
+  const hintCount = $derived(counted.hints + buildHints.length);
   const rows = $derived(hints ? all : all.filter((r) => r.severity !== "hint"));
   /** The badge counts errors only: the analysis' and the build's. */
   const errors = $derived(counted.errors + (error ? 1 : 0));
@@ -207,11 +211,11 @@
       hidden={tab !== "problems"}
     >
       {#snippet hintsToggle()}<button class="btn small hints" aria-pressed={hints} onclick={() => (hints = !hints)}
-          >{hints ? m.ui_hints_hide() : m.ui_hints_show({ count: counted.hints })}</button
+          >{hints ? m.ui_hints_hide() : m.ui_hints_show({ count: hintCount })}</button
         >{/snippet}
       {#if clear}<div class="all-clear">
-          <CircleCheck size={26} /><strong>{m.ui_no_problems()}</strong>{#if counted.hints}{@render hintsToggle()}{/if}
-        </div>{:else if counted.hints}{@render hintsToggle()}{/if}
+          <CircleCheck size={26} /><strong>{m.ui_no_problems()}</strong>{#if hintCount}{@render hintsToggle()}{/if}
+        </div>{:else if hintCount}{@render hintsToggle()}{/if}
       {#each rows as row, i (i)}<button
           class="problem analysis"
           class:err={row.severity === "error"}
@@ -223,6 +227,9 @@
         >{/each}
       {#if error}<pre class="problem error-line"><CircleAlert size={15} />{error}</pre>{/if}
       {#each warnings as warning, i (i)}<p class="problem"><CircleAlert size={14} />{warning}</p>{/each}
+      {#if hints}{#each buildHints as hint, i (i)}<p class="problem hint">
+            <CircleAlert size={14} />{hint}
+          </p>{/each}{/if}
       {#if notice}<p class="problem">{notice}</p>{/if}
     </div>
     <div
@@ -355,7 +362,7 @@
   .problem.analysis.err :global(svg) {
     color: var(--color-danger);
   }
-  .problem.analysis.hint {
+  .problem.hint {
     color: var(--color-text-muted);
   }
   .hints {
