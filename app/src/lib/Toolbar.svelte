@@ -161,7 +161,7 @@
     flex: none;
   }
   select {
-    height: 27px;
+    height: 28px;
     border: 0;
     background-color: transparent;
     font-size: var(--text-sm);

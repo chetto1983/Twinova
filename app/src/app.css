@@ -203,6 +203,20 @@ button {
   color: inherit;
 }
 
+/* Every control a person can hit is at least WCAG 2.2's Target Size (Minimum), 24 x 24 px (spec
+   2026-11-26-ux-consolidation-design.md, decision 8). The dock's resize grip spans the dock's width and stays thin;
+   Monaco's widgets are its own. */
+:where(button:not(.resize), select, input:not([type="checkbox"], [type="radio"])):not(.monaco-editor *) {
+  min-height: 24px;
+}
+:where(button:not(.resize)):not(.monaco-editor *) {
+  min-width: 24px;
+}
+/* A checkbox's target is the label around it. */
+:where(label:has(> input[type="checkbox"], > input[type="radio"])) {
+  min-height: 24px;
+}
+
 input,
 select {
   width: 100%;
