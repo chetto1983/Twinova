@@ -147,7 +147,7 @@
     border-top: 1px solid var(--color-border);
     margin-top: 4px;
     color: var(--color-text-muted);
-    font-size: 0.85em;
+    font-size: var(--text-xs);
   }
   .item:hover {
     background: var(--color-surface-2);

@@ -129,7 +129,7 @@
     padding: 3px 7px 3px 4px;
   }
   .brand strong {
-    font-size: 17px;
+    font-size: var(--text-xl);
     font-weight: 650;
     letter-spacing: -0.5px;
   }
@@ -137,7 +137,7 @@
     border: none;
     background: transparent;
     max-width: 200px;
-    font-size: 12px;
+    font-size: var(--text-md);
     font-weight: 400;
   }
   .brand :global(.project span:first-child) {
@@ -164,7 +164,7 @@
     height: 27px;
     border: 0;
     background-color: transparent;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .speed {
     width: 66px;
@@ -172,7 +172,7 @@
   .actual {
     width: 53px;
     color: var(--color-text-faint);
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   @media (max-width: 1250px) {
     .brand strong {

@@ -26,7 +26,7 @@
     overflow: auto;
     border-top: 1px solid var(--color-border);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
   }
   ol {
@@ -43,6 +43,6 @@
     float: right;
     top: 2px;
     margin: 2px 6px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
 </style>

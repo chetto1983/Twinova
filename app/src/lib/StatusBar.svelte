@@ -60,7 +60,7 @@
     background: var(--color-surface);
     border-top: 1px solid var(--color-border);
     color: var(--color-text-faint);
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .status {
     display: flex;

@@ -48,14 +48,14 @@
 <style>
   .held-note {
     color: var(--color-warning);
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .prepare {
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface-2);
   }
@@ -64,7 +64,7 @@
     font-family: var(--font-mono);
   }
   .prepare button {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .prepare .close {
     margin-left: auto;

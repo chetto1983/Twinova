@@ -129,11 +129,16 @@ interface Res {
 /** A monospace text's width at `px`. */
 export const textW = (s: string, px: number): number => s.length * px * 0.62;
 
+/** The drawing's text sizes, as LadderRung.svelte's styles take them from app.css's type tokens: `--text-xs` for
+ *  operands, values, readings and pins, `--text-sm` for a box's title and a jump's label. A change of either token
+ *  changes these. */
+export const TEXT = { small: 11, title: 12 } as const;
+
 /** The longest operand a contact or a coil grows to fit; a longer one is cut in the view. */
 export const OPERAND_MAX = 20;
 
 const symbolWidth = (operand: string | null): number =>
-  Math.max(L.SYMBOL_W, Math.ceil(textW((operand ?? "???").slice(0, OPERAND_MAX), 10)) + 8);
+  Math.max(L.SYMBOL_W, Math.ceil(textW((operand ?? "???").slice(0, OPERAND_MAX), TEXT.small)) + 8);
 
 const halfH = L.SYMBOL_H / 2;
 
@@ -165,14 +170,14 @@ export const isReference = (value: string | null): boolean =>
 
 /** The least room beside a box for a pin's reference: its value online is drawn under it, and may be as wide as
  *  FALSE. Kept offline too, so the drawing does not move when monitoring starts. */
-export const READING_MIN = Math.ceil(textW("FALSE", 9)) + 8;
+export const READING_MIN = Math.ceil(textW("FALSE", TEXT.small)) + 8;
 
 /** The room a pin's place takes beside its box, on its row: the place, its reading when it names a variable, and the
  *  wire to the pin. */
 const placeRoom = (value: string): number =>
   L.PIN_STUB +
   L.LABEL_GAP +
-  Math.ceil(textW(value, 10)) +
+  Math.ceil(textW(value, TEXT.small)) +
   (isReference(value) ? L.LABEL_GAP + READING_MIN : 0) +
   L.LABEL_GAP;
 
@@ -211,7 +216,7 @@ export function pinLabels(box: Extract<LNode, { kind: "box" }>): PinLabel[] {
           y,
           text: pin.value,
           textX,
-          readingX: textX + out * (Math.ceil(textW(pin.value, 10)) + L.LABEL_GAP),
+          readingX: textX + out * (Math.ceil(textW(pin.value, TEXT.small)) + L.LABEL_GAP),
           stub: onWire
             ? null
             : { x1: Math.min(edge, edge + out * L.PIN_STUB), x2: Math.max(edge, edge + out * L.PIN_STUB), y },
@@ -298,8 +303,8 @@ function placeBox(
   const rows = Math.max(left.length, right.length, 1);
   const w = Math.max(
     L.BOX_MIN_W,
-    Math.ceil(textW(title, 11)) + 16,
-    Math.ceil(textW("x".repeat(longestName(left) + longestName(right)), 9)) + 24,
+    Math.ceil(textW(title, TEXT.title)) + 16,
+    Math.ceil(textW("x".repeat(longestName(left) + longestName(right)), TEXT.small)) + 24,
   );
   const h = L.BOX_HEAD + rows * L.PIN_STEP + 4;
   // the first pins are on the rung's wire
@@ -373,7 +378,7 @@ function coilZone(rung: Rung): { coils: Element[]; widths: number[]; exitW: numb
   const coils = rung.elements.slice(rung.elements.length - trailingCoils(rung));
   const widths = coils.map((c) => symbolWidth(c.kind === "coil" ? c.operand : null));
   const exit = exitText(rung);
-  const exitW = exit === null ? 0 : Math.ceil(textW(exit, 11)) + 16;
+  const exitW = exit === null ? 0 : Math.ceil(textW(exit, TEXT.title)) + 16;
   const width = widths.reduce((a, b) => a + b, 0) + Math.max(0, coils.length - 1) * L.WIRE_GAP + exitW;
   return { coils, widths, exitW, width };
 }

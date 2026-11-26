@@ -490,7 +490,7 @@
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 224px minmax(280px, 1fr) 292px;
+    grid-template-columns: 248px minmax(280px, 1fr) 292px;
     grid-template-rows: minmax(200px, 1fr) auto;
   }
   .left-sidebar,
@@ -542,7 +542,7 @@
     border: 1px solid var(--color-border);
     background: color-mix(in oklab, var(--color-surface) 92%, transparent);
     border-radius: 12px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .scene-counters b {
     margin-left: 8px;
@@ -561,12 +561,12 @@
     background: color-mix(in oklab, var(--color-surface) 90%, transparent);
     border-top: 1px solid var(--color-border);
     padding: 5px 10px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
   }
   .view-footer :global(input) {
     height: 23px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   @media (max-width: 1200px) {
     .workspace {

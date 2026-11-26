@@ -129,7 +129,7 @@
     padding: 7px 2px 7px 14px;
     text-align: left;
     cursor: pointer;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .item :global(svg) {
     flex: none;
@@ -142,7 +142,7 @@
   }
   small {
     color: var(--color-text-faint);
-    font-size: 9px;
+    font-size: var(--text-xs);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -171,7 +171,7 @@
   .empty {
     color: var(--color-text-faint);
     padding: 14px;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .history {
     padding: 10px;
@@ -183,7 +183,7 @@
     align-items: start;
     padding: 9px 0;
     border-bottom: 1px solid var(--color-border);
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .history small {
     display: block;

@@ -166,7 +166,7 @@
   .vars {
     overflow: auto;
     height: 100%;
-    font-size: 11px;
+    font-size: var(--text-sm);
     border-bottom: 1px solid var(--color-border);
   }
   table {

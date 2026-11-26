@@ -102,7 +102,7 @@
     border: 1px solid transparent;
     padding: 4px 11px;
     border-radius: 4px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     background: transparent;
     color: var(--color-text-faint);
     cursor: pointer;
@@ -166,7 +166,7 @@
   .name {
     display: block;
     padding: 2px 9px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -178,7 +178,7 @@
     gap: 12px;
     width: 100%;
     margin: auto;
-    font-size: 11px;
+    font-size: var(--text-sm);
     color: var(--color-text-faint);
   }
 </style>

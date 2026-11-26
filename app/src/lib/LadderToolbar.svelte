@@ -130,7 +130,7 @@
   .mark {
     font-family: var(--font-mono);
     font-weight: 600;
-    font-size: 12px;
+    font-size: var(--text-md);
   }
   .separator {
     width: 1px;

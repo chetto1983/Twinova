@@ -309,13 +309,13 @@
     border: 0;
   }
   .dock-hint {
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
     padding-right: 12px;
   }
   .badge {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: var(--text-xs);
     color: var(--color-warning);
   }
   .dock-content,
@@ -337,7 +337,7 @@
     justify-content: center;
     gap: 12px;
     color: var(--color-text-faint);
-    font-size: 12px;
+    font-size: var(--text-md);
   }
   .all-clear :global(svg) {
     color: var(--color-success);
@@ -349,7 +349,7 @@
     margin: 0;
     padding: 10px 16px;
     border-bottom: 1px solid var(--color-border);
-    font-size: 11px;
+    font-size: var(--text-sm);
     white-space: pre-wrap;
   }
   .problem.analysis {
@@ -390,7 +390,7 @@
   }
   h3 {
     margin: 0 0 12px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--color-text-faint);

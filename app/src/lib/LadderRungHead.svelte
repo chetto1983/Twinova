@@ -67,7 +67,7 @@
     border: 1px solid var(--color-border);
     border-radius: 4px;
     background: var(--color-surface-2);
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   label {
     display: flex;
@@ -82,7 +82,7 @@
   textarea {
     flex: 1;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .comment {
     grid-column: 1 / -1;

@@ -121,6 +121,8 @@ jobs:
         with:
           persist-credentials: false
       - run: bash scripts/check-file-size.sh
+      # A1 of spec 2026-11-26-ux-consolidation-design.md: every font size is a --text-* token.
+      - run: bash scripts/check-font-size.sh
 
   # The installers release.yml publishes (ROADMAP 2.4): MSI on Windows, deb and AppImage on Linux.
   # Built, not uploaded: the sizes are in the log. Unlike ModbusTool, only on main (user, 2026-11-08):

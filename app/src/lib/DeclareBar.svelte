@@ -56,12 +56,12 @@
     padding: 4px 10px;
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface-2);
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   input,
   select {
     height: 24px;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   strong {
     white-space: nowrap;

@@ -166,11 +166,11 @@
     border: 1px solid var(--color-border);
     border-radius: 5px;
     background: var(--color-surface-2);
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   input {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--text-sm);
     padding: 2px 4px;
   }
   .list {
@@ -183,7 +183,7 @@
   }
   .group {
     padding: 4px 8px 1px;
-    font-size: 9px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--color-text-muted);
@@ -196,7 +196,7 @@
     padding: 2px 8px;
     background: transparent;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--text-sm);
     text-align: left;
     white-space: nowrap;
     cursor: pointer;
@@ -213,7 +213,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--color-text-muted);
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .none {
     padding: 4px 8px;

@@ -60,7 +60,7 @@
     padding: 10px 8px;
   }
   h3 {
-    font-size: 9px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--color-text-faint);
@@ -70,7 +70,7 @@
     display: flex;
     gap: 7px;
     align-items: center;
-    font-size: 11px;
+    font-size: var(--text-sm);
     padding: 4px 5px;
   }
   .tree-line .led {
@@ -84,11 +84,11 @@
   }
   small {
     margin-left: auto;
-    font-size: 9px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
   }
   summary {
-    font-size: 10px;
+    font-size: var(--text-xs);
     padding: 6px 5px 5px 18px;
     color: var(--color-text-faint);
   }
@@ -104,7 +104,7 @@
     border: 0;
     background: transparent;
     padding: 5px 8px 5px 32px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     text-align: left;
     cursor: pointer;
     border-radius: 4px;

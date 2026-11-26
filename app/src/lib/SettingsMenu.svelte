@@ -61,11 +61,11 @@
   label {
     display: grid;
     gap: 4px;
-    font-size: 12px;
+    font-size: var(--text-md);
     color: var(--color-text-muted);
   }
   select {
     height: 28px;
-    font-size: 13px;
+    font-size: var(--text-md);
   }
 </style>

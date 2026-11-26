@@ -175,7 +175,7 @@
     gap: 14px;
     flex-wrap: wrap;
     padding: 7px 12px;
-    font-size: 9px;
+    font-size: var(--text-xs);
     border-bottom: 1px solid var(--color-border);
     color: var(--color-text-faint);
     background: var(--color-bg);
@@ -186,7 +186,8 @@
   }
   .timing b {
     color: var(--color-text);
-    font: 9px var(--font-mono);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
     margin-left: 5px;
   }
   .io-body {
@@ -207,7 +208,7 @@
     padding: 7px 12px;
   }
   h2 {
-    font-size: 10px;
+    font-size: var(--text-xs);
     font-weight: 500;
     margin: 0;
     color: var(--color-text-faint);
@@ -217,7 +218,7 @@
   }
   .search-field input {
     height: 22px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .force {
     display: inline-flex;
@@ -234,7 +235,7 @@
     display: flex;
     gap: 4px;
     align-items: center;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .forcing input {
     width: 60px;
@@ -244,7 +245,7 @@
     list-style: none;
     padding: 0;
     margin: 4px 0;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .forces li {
     display: flex;
@@ -264,7 +265,7 @@
     border-top: 1px solid var(--color-border);
   }
   .bits .data {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   .bits .led {
     width: 5px;
@@ -276,7 +277,7 @@
   aside {
     border-left: 1px solid var(--color-border);
     padding: 12px;
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   dl {
     display: grid;
@@ -288,11 +289,11 @@
   dd {
     margin: 0;
     color: var(--color-text);
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   h3 {
     text-transform: uppercase;
-    font-size: 9px;
+    font-size: var(--text-xs);
     letter-spacing: 0.8px;
     color: var(--color-text-faint);
     margin: 10px 0;
@@ -310,6 +311,6 @@
     color: var(--color-warning);
   }
   .timing-error {
-    font-size: 9px;
+    font-size: var(--text-xs);
   }
 </style>

@@ -247,12 +247,12 @@
     background: var(--color-accent-soft);
   }
   .identity strong {
-    font-size: 12px;
+    font-size: var(--text-md);
   }
   .identity small {
     display: block;
     color: var(--color-text-faint);
-    font-size: 10px;
+    font-size: var(--text-xs);
     margin-top: 3px;
   }
   .search-field {
@@ -270,7 +270,7 @@
     align-items: center;
     padding: 0 12px 12px;
     color: var(--color-text-muted);
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   details {
     border-top: 1px solid var(--color-border);
@@ -279,7 +279,7 @@
     padding: 10px 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
     font-weight: 650;
   }
@@ -295,7 +295,7 @@
   .field-label {
     display: block;
     margin-bottom: 6px;
-    font-size: 10px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
   }
   .triple {
@@ -311,7 +311,7 @@
     gap: 8px;
     margin-top: 7px;
     min-width: 0;
-    font-size: 11px;
+    font-size: var(--text-sm);
     color: var(--color-text-muted);
   }
   .property > label {
@@ -338,19 +338,19 @@
     margin-top: 9px;
   }
   .signal label {
-    font-size: 10px;
+    font-size: var(--text-xs);
     overflow-wrap: anywhere;
   }
   .signal small {
     grid-column: 2;
-    font-size: 9px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
   }
   .chip {
     margin-left: 5px;
     padding: 1px 3px;
     border-radius: 2px;
-    font-size: 8px;
+    font-size: var(--text-xs);
     color: var(--color-text-faint);
     background: var(--color-surface-3);
   }
@@ -367,7 +367,7 @@
     border: 0;
     color: var(--color-danger);
     cursor: pointer;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .empty {
     display: flex;
@@ -380,15 +380,15 @@
   .empty strong {
     color: var(--color-text-muted);
     margin-top: 14px;
-    font-size: 12px;
+    font-size: var(--text-md);
   }
   .empty p {
-    font-size: 11px;
+    font-size: var(--text-sm);
     line-height: 1.6;
   }
   .locked {
     padding: 6px 12px;
     color: var(--color-warning);
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
 </style>

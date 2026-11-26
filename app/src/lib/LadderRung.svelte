@@ -6,7 +6,7 @@
   // and green, one without it thick and dark, one not read yet thin; thickness tells as well as colour. Each operand's
   // value is drawn under it and a box pin's beside its place, on the pin's row; a click on it prepares a write or a force
   // (`data-spot`).
-  import { L, OPERAND_MAX, pinLabels, textW, type Feed, type LNode, type RungLayout } from "./ladder/layout";
+  import { L, OPERAND_MAX, TEXT, pinLabels, textW, type Feed, type LNode, type RungLayout } from "./ladder/layout";
   import { powered, type Online } from "./ladder/view";
   import { keyOf } from "./ladder/model";
   let {
@@ -128,7 +128,7 @@
 
 {#snippet reading(live: { value: string; spot: number }, x: number, y: number, anchor: "start" | "middle" | "end")}
   <!-- a value read online sits on a pill, so it is not taken for a constant written on the pin -->
-  {@const w = textW(live.value, 9) + 6}
+  {@const w = textW(live.value, TEXT.small) + 6}
   {@const left = anchor === "start" ? x - 3 : anchor === "end" ? x - w + 3 : x - w / 2}
   <g class="reading" class:true={live.value === "TRUE"} class:forced={forced(live.spot)} data-spot={live.spot}>
     <rect x={left} y={y - 9} width={w} height="12" rx="2" />
@@ -181,7 +181,7 @@
     fill: var(--color-surface-3);
   }
   .reading text {
-    font-size: 9px;
+    font-size: var(--text-xs);
     fill: var(--color-text-muted);
   }
   .reading.true text {
@@ -210,12 +210,12 @@
   text {
     fill: var(--color-text);
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: var(--text-xs);
     text-anchor: middle;
   }
   .title {
     font-weight: 600;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
   .pin {
     text-anchor: start;
@@ -240,6 +240,6 @@
   .exit {
     text-anchor: start;
     font-weight: 600;
-    font-size: 11px;
+    font-size: var(--text-sm);
   }
 </style>

@@ -182,7 +182,7 @@
     cursor: ew-resize;
     touch-action: none;
     user-select: none;
-    font-size: 10px;
+    font-size: var(--text-xs);
     font-weight: 600;
     border-radius: 4px 0 0 4px;
   }
@@ -209,7 +209,7 @@
     outline: none;
     box-shadow: none;
     background: transparent;
-    font-size: 12px;
+    font-size: var(--text-md);
     font-weight: 400;
     font-variant-numeric: tabular-nums;
   }
@@ -217,7 +217,7 @@
     flex: none;
     padding: 0 6px 0 3px;
     color: var(--color-text-faint);
-    font-size: 10px;
+    font-size: var(--text-xs);
     white-space: nowrap;
     user-select: none;
   }
