@@ -84,25 +84,52 @@ pub struct Problem {
 const HIDDEN: [&str; 2] = ["W010", "W011"];
 const UNMAPPED: &str = "E202";
 const UNUSED: &str = "W001";
+const UNUSED_POU: &str = "W009";
+/// Style notes, shown as hints that Problems lists only when asked (spec 2026-11-26-ux-consolidation-design.md,
+/// decision 7): an unused variable, a high complexity.
+const HINTS: [&str; 2] = [UNUSED, "W008"];
 
 /// The file of a behaviour block, as the project folder holds it.
 fn block_file(key: &str) -> String {
     format!("components/{key}.st")
 }
 
-/// The diagnostics the editor shows of `file`: none of `HIDDEN`, and no E202 on a variable of `placed`, the block
-/// variables the field's configuration places.
+/// Whether the text before `start` ends with the keyword `PROGRAM`: the span is then a program's name.
+fn names_a_program(text: &str, start: usize) -> bool {
+    let before = text.get(..start).unwrap_or_default().trim_end();
+    let Some(keyword) = before.len().checked_sub("PROGRAM".len()) else {
+        return false;
+    };
+    let ends_with_keyword = before
+        .get(keyword..)
+        .is_some_and(|w| w.eq_ignore_ascii_case("PROGRAM"));
+    let word_starts = (before.get(..keyword))
+        .is_some_and(|b| !b.ends_with(|c: char| c.is_ascii_alphanumeric() || c == '_'));
+    ends_with_keyword && word_starts
+}
+
+/// The diagnostics the editor shows of `file`:
+/// - none of `HIDDEN`;
+/// - no E202 on a variable of `placed`, the block variables the field's configuration places;
+/// - no W009 on a program, which truST's runtime runs at each cycle in a task or in the background (trust-runtime
+///   at 6405915, `runtime/cycle.rs`, `execute_background_programs`);
+/// - `HINTS` at the severity `hint`.
 fn shown(diagnostics: Vec<DiagnosticItem>, text: &str, placed: &BTreeSet<String>) -> Vec<Problem> {
     let named = |d: &DiagnosticItem| text.get(d.span.start as usize..d.span.end as usize);
     (diagnostics.into_iter())
         .filter(|d| !HIDDEN.contains(&d.code.as_str()))
         .filter(|d| d.code != UNMAPPED || !named(d).is_some_and(|name| placed.contains(name)))
+        .filter(|d| d.code != UNUSED_POU || !names_a_program(text, d.span.start as usize))
         .map(|d| Problem {
             line: d.range.start.line + 1,
             column: d.range.start.character + 1,
             end_line: d.range.end.line + 1,
             end_column: d.range.end.character + 1,
-            severity: d.severity,
+            severity: if HINTS.contains(&d.code.as_str()) {
+                "hint".into()
+            } else {
+                d.severity
+            },
             code: d.code,
             message: d.message,
         })
